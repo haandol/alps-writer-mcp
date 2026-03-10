@@ -1,0 +1,207 @@
+# PRD Writer MCP Server
+
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that helps you write PRD (Product Requirements Document) interactively with AI. Guides you through 9 structured sections with templates, conversation guides, and document management.
+
+## Features
+
+- 9-section PRD template with structured XML templates and conversation guides
+- Interactive Q&A workflow — AI asks focused questions, never auto-generates
+- Document management — create, save, load, and export as clean Markdown
+- Section dependency tracking — ensures referenced sections are reviewed first
+- Works with Claude Desktop, Cursor, Kiro, and any MCP-compatible client
+
+## Installation
+
+### Running with npx
+
+```bash
+npx -y prd-mcp-server
+```
+
+### Manual Installation
+
+```bash
+npm install -g prd-mcp-server
+```
+
+## Configuration
+
+### Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "prd-writer": {
+      "command": "npx",
+      "args": ["-y", "prd-mcp-server"]
+    }
+  }
+}
+```
+
+### Cursor
+
+1. Open Cursor Settings
+2. Go to Features > MCP Servers
+3. Click "+ Add new global MCP server"
+4. Enter the following:
+
+```json
+{
+  "mcpServers": {
+    "prd-writer": {
+      "command": "npx",
+      "args": ["-y", "prd-mcp-server"]
+    }
+  }
+}
+```
+
+### Kiro
+
+1. Open the command palette (`Cmd + Shift + P` on Mac, `Ctrl + Shift + P` on Windows/Linux)
+2. Search for "MCP" and select **Kiro: Open user MCP config (JSON)** (or workspace-level)
+3. Add the following:
+
+```json
+{
+  "mcpServers": {
+    "prd-writer": {
+      "command": "npx",
+      "args": ["-y", "prd-mcp-server"]
+    }
+  }
+}
+```
+
+Configuration file locations:
+- User level: `~/.kiro/settings/mcp.json`
+- Workspace level: `.kiro/settings/mcp.json`
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PRD_OUTPUT_DIR` | Directory for document files (`.prd.xml`, exported markdown) | Current working directory |
+
+Example with Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "prd-writer": {
+      "command": "npx",
+      "args": ["-y", "prd-mcp-server"],
+      "env": {
+        "PRD_OUTPUT_DIR": "~/Documents/prd"
+      }
+    }
+  }
+}
+```
+
+### Running from Source
+
+```bash
+git clone https://github.com/haandol/prd-writer.git
+cd prd-writer
+pnpm install
+pnpm build
+```
+
+Then configure your MCP client:
+
+```json
+{
+  "mcpServers": {
+    "prd-writer": {
+      "command": "node",
+      "args": ["/path/to/prd-writer/dist/index.js"]
+    }
+  }
+}
+```
+
+## Available Tools
+
+### Template Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_prd_overview` | Get the PRD template overview with conversation guide |
+| `list_prd_sections` | List all available template sections |
+| `get_prd_section` | Get a specific template section by number (1-9) |
+| `get_prd_full_template` | Get the complete template with all sections |
+| `get_prd_section_guide` | Get conversation guide for writing a section |
+
+### Document Management Tools
+
+| Tool | Description |
+|------|-------------|
+| `init_prd_document` | Create a new PRD document (`.prd.xml`) |
+| `load_prd_document` | Load an existing document to resume editing |
+| `save_prd_section` | Save content to a specific subsection |
+| `read_prd_section` | Read current content of a section |
+| `get_prd_document_status` | Get status of all sections |
+| `export_prd_markdown` | Export as clean Markdown |
+
+## Workflow
+
+The server guides AI through a structured workflow:
+
+1. **Initialize** — `init_prd_document()` or `load_prd_document()`
+2. **Overview** — `get_prd_overview()` to get the conversation guide
+3. **For each section (1-9):**
+   - `get_prd_section_guide(N)` — get questions and criteria
+   - `get_prd_section(N)` — get the template structure
+   - Ask focused questions (1-2 at a time)
+   - `save_prd_section(N, ...)` — save after user confirmation
+4. **Export** — `export_prd_markdown()` for the final document
+
+## PRD Sections
+
+| # | Section | Dependencies |
+|---|---------|-------------|
+| 1 | Overview | — |
+| 2 | MVP Goals and Key Metrics | — |
+| 3 | Demo Scenario | Section 2 |
+| 4 | High-Level Architecture | — |
+| 5 | Design Specification | Section 6 |
+| 6 | Requirements Summary | — |
+| 7 | Feature-Level Specification | Section 6 |
+| 8 | MVP Metrics | Section 2, 6 |
+| 9 | Out of Scope | — |
+
+## Document Format
+
+Documents are stored in XML for reliable section parsing:
+
+```xml
+<prd-document project="My Project">
+
+<section id="1" title="Overview">
+<subsection id="1.1" title="Purpose">
+Content here...
+</subsection>
+</section>
+
+...
+</prd-document>
+```
+
+Export to clean Markdown via `export_prd_markdown()`.
+
+## Development
+
+```bash
+pnpm install
+pnpm dev        # Run with tsx (watch mode)
+pnpm build      # Build for production
+pnpm start      # Run built version
+```
+
+## License
+
+Apache-2.0

@@ -1,0 +1,60 @@
+<section id="6" title="Requirements Summary">
+  <description>
+- List all core features (functional requirements) and non-functional requirements for the MVP.
+- Each core feature is assigned a unique ID (F1, F2, …), and will be mapped to Section 7.
+- Prioritize each requirement using: Must-Have, Should-Have, or Nice-to-Have.
+- Only features defined in this section are included in the MVP scope; additional features must be listed in Section 9.
+- Up to 3 non-functional requirements are allowed.
+  </description>
+  <subsection id="6.1" title="Core Features (Functional Requirements)">
+    <example>
+| ID | Feature | Priority |
+|----|---------|----------|
+| F1 | Email Sign-up | Must-Have |
+| F2 | Email Login | Must-Have |
+| F3 | Main Screen | Must-Have |
+| F4 | Post Creation | Should-Have |
+| F5 | Post List/Detail | Nice-to-Have |
+    </example>
+  </subsection>
+  <subsection id="6.2" title="Non-Functional Requirements">
+    <description>
+- Define non-functional requirements such as security, performance, and scalability.
+- Set the minimum standards for the MVP phase.
+- Non-functional requirements are validated through Section 8 (MVP Metrics) or release testing.
+    </description>
+    <example>
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| NF1 | Minimum security (no email verification) | Must-Have |
+| NF2 | Performance (up to 1,000 daily users) | Should-Have |
+| NF3 | Latency (under 3 seconds) | Must-Have |
+    </example>
+  </subsection>
+  <subsection id="6.3" title="Feature Dependency Diagram">
+    <description>
+- After completing 6.1 and 6.2, the AI automatically analyzes feature dependencies and generates this diagram.
+- Visualize the dependency relationships between features using a Mermaid diagram.
+- Use a top-down tree structure (graph TD) to show which features depend on other features.
+- An arrow from A to B means "A depends on B" (B must be implemented before A).
+- Features with no dependencies are root nodes in the tree.
+- This diagram helps determine the implementation order and identify critical paths.
+- Present the auto-generated diagram to the user for confirmation or correction.
+    </description>
+    <example>
+```mermaid
+graph TD
+    F1[F1: Email Sign-up]
+    F2[F2: Email Login]
+    F3[F3: Main Screen]
+    F4[F4: Post Creation]
+    F5[F5: Post List/Detail]
+
+    F2 -->|depends on| F1
+    F3 -->|depends on| F2
+    F4 -->|depends on| F2
+    F5 -->|depends on| F3
+```
+    </example>
+  </subsection>
+</section>
