@@ -14,7 +14,8 @@ export class DocumentService {
       sections.set(parseInt(m[1], 10), m[2].trim());
     }
     if (sections.size === 0) {
-      const re2 = /<section id="(\d+)">\s*## Section \d+\.[^\n]*\n+([\s\S]*?)<\/section>/g;
+      const re2 =
+        /<section id="(\d+)">\s*## Section \d+\.[^\n]*\n+([\s\S]*?)<\/section>/g;
       while ((m = re2.exec(content)) !== null) {
         sections.set(parseInt(m[1], 10), m[2].trim());
       }
@@ -24,17 +25,17 @@ export class DocumentService {
 
   private parseSubsections(
     sectionContent: string,
-    sectionId: number
+    sectionId: number,
   ): Map<string, { title: string; content: string }> {
     const subs = new Map<string, { title: string; content: string }>();
     const re = new RegExp(
       `<subsection id="${sectionId}\\.([^"]+)" title="([^"]*)">[\\s\\S]*?([\\s\\S]*?)<\\/subsection>`,
-      "g"
+      "g",
     );
     // Simpler approach
     const re2 = new RegExp(
       `<subsection id="${sectionId}\\.([^"]+)" title="([^"]*)">\n([\\s\\S]*?)\n</subsection>`,
-      "g"
+      "g",
     );
     let m: RegExpExecArray | null;
     while ((m = re2.exec(sectionContent)) !== null) {
@@ -43,7 +44,11 @@ export class DocumentService {
     return subs;
   }
 
-  private buildSubsection(subId: string, title: string, content: string): string {
+  private buildSubsection(
+    subId: string,
+    title: string,
+    content: string,
+  ): string {
     return `<subsection id="${subId}" title="${title}">\n${content}\n</subsection>`;
   }
 
@@ -51,10 +56,15 @@ export class DocumentService {
     return `<section id="${sectionId}" title="${SECTION_TITLES[sectionId]}">\n${content}\n</section>`;
   }
 
-  private buildDocument(projectName: string, sections: Map<number, string>): string {
+  private buildDocument(
+    projectName: string,
+    sections: Map<number, string>,
+  ): string {
     const lines = [`<prd-document project="${projectName}">`];
     for (let i = 1; i <= 9; i++) {
-      lines.push(this.buildSection(i, sections.get(i) || "<!-- Not started -->"));
+      lines.push(
+        this.buildSection(i, sections.get(i) || "<!-- Not started -->"),
+      );
     }
     lines.push("</prd-document>");
     return lines.join("\n\n");
@@ -90,7 +100,11 @@ export class DocumentService {
     }
 
     fs.mkdirSync(path.dirname(filepath), { recursive: true });
-    fs.writeFileSync(filepath, this.buildDocument(projectName, new Map()), "utf-8");
+    fs.writeFileSync(
+      filepath,
+      this.buildDocument(projectName, new Map()),
+      "utf-8",
+    );
     this.workingDoc = filepath;
     return `Created PRD document at ${filepath}`;
   }
@@ -110,7 +124,12 @@ export class DocumentService {
 NEVER auto-fill sections without user Q&A, even if content already exists.`;
   }
 
-  saveSection(section: number, subsectionId: string, title: string, content: string): string {
+  saveSection(
+    section: number,
+    subsectionId: string,
+    title: string,
+    content: string,
+  ): string {
     if (!this.workingDoc) {
       return "No document loaded. Call init_prd_document() or load_prd_document() first.";
     }
@@ -123,7 +142,10 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
     const sections = this.parseSections(docContent);
 
     const subId = `${section}.${subsectionId}`;
-    const existing = this.parseSubsections(sections.get(section) || "", section);
+    const existing = this.parseSubsections(
+      sections.get(section) || "",
+      section,
+    );
     existing.set(subId, { title, content });
 
     const parts = [...existing.entries()]
@@ -131,7 +153,11 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
       .map(([k, v]) => this.buildSubsection(k, v.title, v.content));
     sections.set(section, parts.join("\n"));
 
-    fs.writeFileSync(this.workingDoc, this.buildDocument(projectName, sections), "utf-8");
+    fs.writeFileSync(
+      this.workingDoc,
+      this.buildDocument(projectName, sections),
+      "utf-8",
+    );
     return `✅ Saved ${subId}. ${title}
 
 ---
@@ -147,7 +173,9 @@ ${content}
     }
     if (!(section in SECTION_TITLES)) return `Section ${section} not found.`;
 
-    const sections = this.parseSections(fs.readFileSync(this.workingDoc, "utf-8"));
+    const sections = this.parseSections(
+      fs.readFileSync(this.workingDoc, "utf-8"),
+    );
     const content = sections.get(section) || "";
 
     if (subsectionId != null) {
@@ -158,7 +186,10 @@ ${content}
       return `Subsection ${subId} not found.`;
     }
 
-    const display = !content || content.includes("<!-- Not started -->") ? "*Not yet written*" : content;
+    const display =
+      !content || content.includes("<!-- Not started -->")
+        ? "*Not yet written*"
+        : content;
     return `## Section ${section}. ${SECTION_TITLES[section]}\n\n${display}`;
   }
 
@@ -171,7 +202,11 @@ ${content}
     const projectName = this.extractProjectName(docContent);
     const sections = this.parseSections(docContent);
 
-    const lines = [`PRD Document: ${projectName}`, `Location: ${this.workingDoc}`, ""];
+    const lines = [
+      `PRD Document: ${projectName}`,
+      `Location: ${this.workingDoc}`,
+      "",
+    ];
     for (const [num, title] of Object.entries(SECTION_TITLES)) {
       const content = sections.get(parseInt(num, 10)) || "";
       let status: string;

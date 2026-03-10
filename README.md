@@ -77,13 +77,14 @@ Add to your `claude_desktop_config.json`:
 ```
 
 Configuration file locations:
+
 - User level: `~/.kiro/settings/mcp.json`
 - Workspace level: `.kiro/settings/mcp.json`
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable         | Description                                                  | Default                   |
+| ---------------- | ------------------------------------------------------------ | ------------------------- |
 | `PRD_OUTPUT_DIR` | Directory for document files (`.prd.xml`, exported markdown) | Current working directory |
 
 Example with Claude Desktop:
@@ -128,24 +129,24 @@ Then configure your MCP client:
 
 ### Template Tools
 
-| Tool | Description |
-|------|-------------|
-| `get_prd_overview` | Get the PRD template overview with conversation guide |
-| `list_prd_sections` | List all available template sections |
-| `get_prd_section` | Get a specific template section by number (1-9) |
-| `get_prd_full_template` | Get the complete template with all sections |
-| `get_prd_section_guide` | Get conversation guide for writing a section |
+| Tool                    | Description                                           |
+| ----------------------- | ----------------------------------------------------- |
+| `get_prd_overview`      | Get the PRD template overview with conversation guide |
+| `list_prd_sections`     | List all available template sections                  |
+| `get_prd_section`       | Get a specific template section by number (1-9)       |
+| `get_prd_full_template` | Get the complete template with all sections           |
+| `get_prd_section_guide` | Get conversation guide for writing a section          |
 
 ### Document Management Tools
 
-| Tool | Description |
-|------|-------------|
-| `init_prd_document` | Create a new PRD document (`.prd.xml`) |
-| `load_prd_document` | Load an existing document to resume editing |
-| `save_prd_section` | Save content to a specific subsection |
-| `read_prd_section` | Read current content of a section |
-| `get_prd_document_status` | Get status of all sections |
-| `export_prd_markdown` | Export as clean Markdown |
+| Tool                      | Description                                 |
+| ------------------------- | ------------------------------------------- |
+| `init_prd_document`       | Create a new PRD document (`.prd.xml`)      |
+| `load_prd_document`       | Load an existing document to resume editing |
+| `save_prd_section`        | Save content to a specific subsection       |
+| `read_prd_section`        | Read current content of a section           |
+| `get_prd_document_status` | Get status of all sections                  |
+| `export_prd_markdown`     | Export as clean Markdown                    |
 
 ## Workflow
 
@@ -162,17 +163,17 @@ The server guides AI through a structured workflow:
 
 ## PRD Sections
 
-| # | Section | Dependencies |
-|---|---------|-------------|
-| 1 | Overview | — |
-| 2 | MVP Goals and Key Metrics | — |
-| 3 | Demo Scenario | Section 2 |
-| 4 | High-Level Architecture | — |
-| 5 | Design Specification | Section 6 |
-| 6 | Requirements Summary | — |
-| 7 | Feature-Level Specification | Section 6 |
-| 8 | MVP Metrics | Section 2, 6 |
-| 9 | Out of Scope | — |
+| #   | Section                     | Dependencies |
+| --- | --------------------------- | ------------ |
+| 1   | Overview                    | —            |
+| 2   | MVP Goals and Key Metrics   | —            |
+| 3   | Demo Scenario               | Section 2    |
+| 4   | High-Level Architecture     | —            |
+| 5   | Design Specification        | Section 6    |
+| 6   | Requirements Summary        | —            |
+| 7   | Feature-Level Specification | Section 6    |
+| 8   | MVP Metrics                 | Section 2, 6 |
+| 9   | Out of Scope                | —            |
 
 ## Document Format
 
