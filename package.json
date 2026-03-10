@@ -15,7 +15,8 @@
     "build": "tsc && cp -r src/templates dist/ && cp -r src/guides dist/",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "prepare": "pnpm build"
   },
   "keywords": [
     "mcp",
