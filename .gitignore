@@ -2,3 +2,4 @@ node_modules
 dist
 .devcontainer
 .codex
+.claude/settings.local.json
