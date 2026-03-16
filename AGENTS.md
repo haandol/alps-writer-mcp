@@ -1,6 +1,6 @@
 # AGENTS.md
 
-PRD Writer — MCP 서버 기반의 인터랙티브 PRD (Product Requirements Document) 작성 도구. `prd-mcp-server`로 npm 배포.
+PRD Writer — MCP 서버 기반의 인터랙티브 PRD (Product Requirements Document) 작성 도구. `prd-writer-mcp`로 npm 배포.
 
 ## Commands
 
