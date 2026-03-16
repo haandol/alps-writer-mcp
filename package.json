@@ -1,12 +1,12 @@
 {
-  "name": "prd-mcp-server",
+  "name": "prd-writer-mcp",
   "version": "0.1.0",
   "description": "MCP server for interactive PRD (Product Requirements Document) writing with AI",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "prd-mcp-server": "dist/index.js"
+    "prd-writer-mcp": "dist/index.js"
   },
   "files": [
     "dist"

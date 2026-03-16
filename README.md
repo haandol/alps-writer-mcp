@@ -15,13 +15,13 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that he
 ### Running with npx
 
 ```bash
-npx -y prd-mcp-server
+npx -y prd-writer-mcp
 ```
 
 ### Manual Installation
 
 ```bash
-npm install -g prd-mcp-server
+npm install -g prd-writer-mcp
 ```
 
 ## Configuration
@@ -35,7 +35,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "prd-writer": {
       "command": "npx",
-      "args": ["-y", "prd-mcp-server"]
+      "args": ["-y", "prd-writer-mcp"]
     }
   }
 }
@@ -53,7 +53,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "prd-writer": {
       "command": "npx",
-      "args": ["-y", "prd-mcp-server"]
+      "args": ["-y", "prd-writer-mcp"]
     }
   }
 }
@@ -70,7 +70,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "prd-writer": {
       "command": "npx",
-      "args": ["-y", "prd-mcp-server"]
+      "args": ["-y", "prd-writer-mcp"]
     }
   }
 }
@@ -94,7 +94,7 @@ Example with Claude Desktop:
   "mcpServers": {
     "prd-writer": {
       "command": "npx",
-      "args": ["-y", "prd-mcp-server"],
+      "args": ["-y", "prd-writer-mcp"],
       "env": {
         "PRD_OUTPUT_DIR": "~/Documents/prd"
       }
