@@ -20,12 +20,14 @@ pnpm start            # Run built version (node dist/index.js)
 **MCP Server** (`src/index.ts`) — 진입점. `McpServer` 인스턴스 생성, Zod 스키마로 모든 도구 등록, `StdioServerTransport`로 연결. Tool handler는 controller에 위임하는 thin wrapper.
 
 **Controller/Service 패턴** — 도메인별 controller(MCP 인터페이스)와 service(비즈니스 로직) 분리:
+
 - `src/tools/templates/` — PRD 템플릿·대화 가이드 읽기 전용
 - `src/tools/documents/` — 문서 CRUD (init, load, save, read, export) 상태 관리
 
 **Constants** (`src/constants.ts`) — 섹션 메타데이터 중앙 관리: 타이틀(1-9), 의존성 그래프(`SECTION_REFERENCES`), `__dirname` 기반 파일시스템 경로.
 
 **Static assets** (런타임 파일시스템 읽기):
+
 - `src/templates/chapters/01-09.xml` — XML 섹션 템플릿
 - `src/templates/overview.md` — PRD 개요
 - `src/guides/01-09.md` — 섹션별 대화 가이드

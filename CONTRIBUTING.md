@@ -27,23 +27,23 @@ We follow the [Conventional Commits v1.0.0](https://www.conventionalcommits.org/
 
 ### Type (required)
 
-| Type       | Purpose                                    | SemVer Impact |
-|------------|--------------------------------------------|---------------|
-| `feat`     | New feature                                | MINOR         |
-| `fix`      | Bug fix                                    | PATCH         |
-| `refactor` | Code refactoring without behavior change   | -             |
-| `docs`     | Documentation changes                      | -             |
-| `test`     | Adding or updating tests                   | -             |
-| `chore`    | Build config, dependency updates, etc.     | -             |
-| `style`    | Code formatting (no logic change)          | -             |
-| `perf`     | Performance improvement                    | -             |
-| `ci`       | CI/CD configuration changes                | -             |
-| `build`    | Build system or external dependency changes| -             |
+| Type       | Purpose                                     | SemVer Impact |
+| ---------- | ------------------------------------------- | ------------- |
+| `feat`     | New feature                                 | MINOR         |
+| `fix`      | Bug fix                                     | PATCH         |
+| `refactor` | Code refactoring without behavior change    | -             |
+| `docs`     | Documentation changes                       | -             |
+| `test`     | Adding or updating tests                    | -             |
+| `chore`    | Build config, dependency updates, etc.      | -             |
+| `style`    | Code formatting (no logic change)           | -             |
+| `perf`     | Performance improvement                     | -             |
+| `ci`       | CI/CD configuration changes                 | -             |
+| `build`    | Build system or external dependency changes | -             |
 
 ### Scope (optional)
 
 | Scope       | Target                                  |
-|-------------|-----------------------------------------|
+| ----------- | --------------------------------------- |
 | `server`    | MCP server entry point (`src/index.ts`) |
 | `templates` | Template tools (`src/tools/templates/`) |
 | `documents` | Document tools (`src/tools/documents/`) |
@@ -120,13 +120,13 @@ Each commit should contain exactly one logical change:
 <type>/<short-description>
 ```
 
-| Prefix      | Purpose          | Example                        |
-|-------------|------------------|--------------------------------|
-| `feat/`     | New feature      | `feat/section-validation`      |
-| `fix/`      | Bug fix          | `fix/xml-parsing-edge-case`    |
-| `refactor/` | Refactoring      | `refactor/document-service`    |
-| `docs/`     | Documentation    | `docs/contributing-guide`      |
-| `chore/`    | Maintenance      | `chore/update-dependencies`    |
+| Prefix      | Purpose       | Example                     |
+| ----------- | ------------- | --------------------------- |
+| `feat/`     | New feature   | `feat/section-validation`   |
+| `fix/`      | Bug fix       | `fix/xml-parsing-edge-case` |
+| `refactor/` | Refactoring   | `refactor/document-service` |
+| `docs/`     | Documentation | `docs/contributing-guide`   |
+| `chore/`    | Maintenance   | `chore/update-dependencies` |
 
 ### Workflow
 
@@ -148,6 +148,31 @@ git push -u origin feat/my-feature
 ---
 
 ## Code Style
+
+### Linting & Formatting
+
+This project uses **ESLint** for linting and **Prettier** for code formatting.
+
+```bash
+pnpm lint            # Run ESLint on src/
+pnpm lint:fix        # Run ESLint with auto-fix
+pnpm format          # Format all files with Prettier
+pnpm format:check    # Check formatting without writing
+```
+
+- Run `pnpm lint` and `pnpm format:check` before committing to ensure code quality
+- ESLint config: `eslint.config.mjs` (flat config with typescript-eslint)
+- Prettier config: `.prettierrc`
+
+### Prettier Rules
+
+| Rule            | Value   |
+| --------------- | ------- |
+| `semi`          | `true`  |
+| `singleQuote`   | `false` |
+| `trailingComma` | `"all"` |
+| `tabWidth`      | `2`     |
+| `printWidth`    | `100`   |
 
 ### TypeScript
 

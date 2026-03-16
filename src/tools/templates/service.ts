@@ -15,12 +15,7 @@ export class TemplateService {
     return lines.join("\n").trim();
   }
 
-  private renderXml(
-    xml: string,
-    lines: string[],
-    level: number,
-    includeExamples: boolean
-  ): void {
+  private renderXml(xml: string, lines: string[], level: number, includeExamples: boolean): void {
     // Match top-level tags iteratively
     const tagRe =
       /<(section|subsection|template|description|example|header)(\s[^>]*)?>([^]*?)<\/\1>/g;
@@ -46,9 +41,7 @@ export class TemplateService {
       const id = idMatch?.[1] ?? "";
       if (title) {
         lines.push(
-          id
-            ? `${"#".repeat(level)} ${id} ${title}\n`
-            : `${"#".repeat(level)} ${title}\n`
+          id ? `${"#".repeat(level)} ${id} ${title}\n` : `${"#".repeat(level)} ${title}\n`,
         );
       }
       this.renderXml(inner, lines, level + 1, includeExamples);
@@ -78,15 +71,18 @@ export class TemplateService {
     if (!file) return `Section ${section} not found.`;
     return this.xmlToMarkdown(
       fs.readFileSync(path.join(CHAPTERS_DIR, file), "utf-8"),
-      includeExamples
+      includeExamples,
     );
   }
 
   getFullTemplate(includeExamples = true): string {
     const parts = [this.getOverview(), "\n---\n"];
-    for (const f of fs.readdirSync(CHAPTERS_DIR).filter((f) => f.endsWith(".xml")).sort()) {
+    for (const f of fs
+      .readdirSync(CHAPTERS_DIR)
+      .filter((f) => f.endsWith(".xml"))
+      .sort()) {
       parts.push(
-        this.xmlToMarkdown(fs.readFileSync(path.join(CHAPTERS_DIR, f), "utf-8"), includeExamples)
+        this.xmlToMarkdown(fs.readFileSync(path.join(CHAPTERS_DIR, f), "utf-8"), includeExamples),
       );
       parts.push("\n---\n");
     }

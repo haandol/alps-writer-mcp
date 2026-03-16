@@ -29,16 +29,21 @@ const server = new McpServer(
 - NEVER generate multiple sections at once
 - NEVER proceed without user confirmation
 </RULES>`,
-  }
+  },
 );
 
 const tc = new TemplateController(new TemplateService());
 const dc = new DocumentController(new DocumentService());
 
 // Template tools
-server.tool("get_prd_overview", "Get the PRD template overview with all section descriptions. IMPORTANT: After calling this, you MUST call get_prd_section_guide(1) to start the interactive Q&A process.", {}, () => ({
-  content: [{ type: "text", text: tc.getPrdOverview() }],
-}));
+server.tool(
+  "get_prd_overview",
+  "Get the PRD template overview with all section descriptions. IMPORTANT: After calling this, you MUST call get_prd_section_guide(1) to start the interactive Q&A process.",
+  {},
+  () => ({
+    content: [{ type: "text", text: tc.getPrdOverview() }],
+  }),
+);
 
 server.tool("list_prd_sections", "List all available PRD template sections.", {}, () => ({
   content: [{ type: "text", text: JSON.stringify(tc.listPrdSections()) }],
@@ -47,10 +52,13 @@ server.tool("list_prd_sections", "List all available PRD template sections.", {}
 server.tool(
   "get_prd_section",
   "Get a specific PRD template section by number.",
-  { section: z.number().min(1).max(9).describe("Section number (1-9)"), include_examples: z.boolean().default(false).describe("Include example content") },
+  {
+    section: z.number().min(1).max(9).describe("Section number (1-9)"),
+    include_examples: z.boolean().default(false).describe("Include example content"),
+  },
   ({ section, include_examples }) => ({
     content: [{ type: "text", text: tc.getPrdSection(section, include_examples) }],
-  })
+  }),
 );
 
 server.tool(
@@ -59,7 +67,7 @@ server.tool(
   { include_examples: z.boolean().default(false).describe("Include example content") },
   ({ include_examples }) => ({
     content: [{ type: "text", text: tc.getPrdFullTemplate(include_examples) }],
-  })
+  }),
 );
 
 server.tool(
@@ -68,7 +76,7 @@ server.tool(
   { section: z.number().min(1).max(9).describe("Section number (1-9)") },
   ({ section }) => ({
     content: [{ type: "text", text: tc.getPrdSectionGuide(section) }],
-  })
+  }),
 );
 
 // Document tools
@@ -77,11 +85,13 @@ server.tool(
   "Initialize a new PRD document file.",
   {
     project_name: z.string().describe("Name of the project"),
-    output_path: z.string().describe("File path for the document (e.g., ~/Documents/my-project.prd.xml)"),
+    output_path: z
+      .string()
+      .describe("File path for the document (e.g., ~/Documents/my-project.prd.xml)"),
   },
   ({ project_name, output_path }) => ({
     content: [{ type: "text", text: dc.initPrdDocument(project_name, output_path) }],
-  })
+  }),
 );
 
 server.tool(
@@ -95,7 +105,7 @@ server.tool(
   { doc_path: z.string().describe("Path to the .prd.xml file") },
   ({ doc_path }) => ({
     content: [{ type: "text", text: dc.loadPrdDocument(doc_path) }],
-  })
+  }),
 );
 
 server.tool(
@@ -113,7 +123,7 @@ server.tool(
   },
   ({ section, subsection_id, title, content }) => ({
     content: [{ type: "text", text: dc.savePrdSection(section, subsection_id, title, content) }],
-  })
+  }),
 );
 
 server.tool(
@@ -121,24 +131,37 @@ server.tool(
   "Read the current content of a section or subsection.",
   {
     section: z.number().min(1).max(9).describe("Section number (1-9)"),
-    subsection_id: z.string().optional().describe('Subsection ID (e.g., "1" for X.1). If omitted, returns entire section.'),
+    subsection_id: z
+      .string()
+      .optional()
+      .describe('Subsection ID (e.g., "1" for X.1). If omitted, returns entire section.'),
   },
   ({ section, subsection_id }) => ({
     content: [{ type: "text", text: dc.readPrdSection(section, subsection_id) }],
-  })
+  }),
 );
 
-server.tool("get_prd_document_status", "Get the status of all sections in the current document.", {}, () => ({
-  content: [{ type: "text", text: dc.getPrdDocumentStatus() }],
-}));
+server.tool(
+  "get_prd_document_status",
+  "Get the status of all sections in the current document.",
+  {},
+  () => ({
+    content: [{ type: "text", text: dc.getPrdDocumentStatus() }],
+  }),
+);
 
 server.tool(
   "export_prd_markdown",
   "Export the PRD document as clean markdown.",
-  { output_path: z.string().optional().describe("Optional output file path. If not provided, returns the content.") },
+  {
+    output_path: z
+      .string()
+      .optional()
+      .describe("Optional output file path. If not provided, returns the content."),
+  },
   ({ output_path }) => ({
     content: [{ type: "text", text: dc.exportPrdMarkdown(output_path) }],
-  })
+  }),
 );
 
 async function main() {

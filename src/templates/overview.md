@@ -6,12 +6,12 @@ This document provides a comprehensive framework to capture and validate all ess
 
 1. Overview - Define the product vision, target users, core problem, solution strategy
 2. MVP Goals and Key Metrics - Articulate measurable goals that validate the MVP hypothesis
-3. Demo Scenario - Describe the demo scenario showing how key hypotheses can be validated *(references: Section 2)*
+3. Demo Scenario - Describe the demo scenario showing how key hypotheses can be validated _(references: Section 2)_
 4. High-Level Architecture - Provide C4 model diagrams illustrating the system architecture
-5. Design Specification - Detail the UX and page flow *(references: Section 6)*
+5. Design Specification - Detail the UX and page flow _(references: Section 6)_
 6. Requirements Summary - Enumerate all core functional and non-functional requirements
-7. Feature-Level Specification - Present complete user stories for each feature *(references: Section 6)*
-8. MVP Metrics - Detail methods for collecting and analyzing data *(references: Section 2, 6)*
+7. Feature-Level Specification - Present complete user stories for each feature _(references: Section 6)_
+8. MVP Metrics - Detail methods for collecting and analyzing data _(references: Section 2, 6)_
 9. Out of Scope - List features deferred for future iterations
 
 ---
