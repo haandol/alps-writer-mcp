@@ -9,9 +9,18 @@ import { DocumentService } from "./tools/documents/service.js";
 import { DocumentController } from "./tools/documents/controller.js";
 
 const server = new McpServer(
-  { name: "alps-writer", version: "0.1.1" },
+  { name: "alps-writer", version: "0.1.2" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
+
+<TRIGGER>
+MUST use this server's tools when the user wants to:
+- Write, create, or edit a PRD (Product Requirements Document)
+- Write a product specification or product spec
+- Create an ALPS (Agentic Lean Product Spec) document
+- Draft product requirements, feature specs, or product plans
+Keywords: PRD, ALPS, 기획서, 기획 문서, 제품 요구사항, 제품 스펙, 프로덕트 스펙, 요구사항 문서
+</TRIGGER>
 
 <WORKFLOW>
 1. init_alps_document() or load_alps_document()
