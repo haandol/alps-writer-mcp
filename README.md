@@ -143,4 +143,4 @@ pnpm start      # Run built version
 
 ## License
 
-Apache-2.0
+MIT
