@@ -29,17 +29,17 @@ No installation required — just add the MCP config to your client:
 
 ### Client Setup
 
-| Client | Config location |
-| --- | --- |
-| **Claude Desktop** | Settings > Developer > Edit Config (`claude_desktop_config.json`) |
-| **Claude Code** | `claude mcp add alps-writer -- npx -y alps-writer-mcp` |
-| **Cursor** | Settings > Features > MCP Servers > + Add new global MCP server |
-| **Kiro** | `Cmd+Shift+P` > "Kiro: Open user MCP config (JSON)" (`~/.kiro/settings/mcp.json`) |
+| Client             | Config location                                                                   |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **Claude Desktop** | Settings > Developer > Edit Config (`claude_desktop_config.json`)                 |
+| **Claude Code**    | `claude mcp add alps-writer -- npx -y alps-writer-mcp`                            |
+| **Cursor**         | Settings > Features > MCP Servers > + Add new global MCP server                   |
+| **Kiro**           | `Cmd+Shift+P` > "Kiro: Open user MCP config (JSON)" (`~/.kiro/settings/mcp.json`) |
 
 ### Environment Variables
 
-| Variable | Description | Default |
-| --- | --- | --- |
+| Variable          | Description                                                   | Default                   |
+| ----------------- | ------------------------------------------------------------- | ------------------------- |
 | `ALPS_OUTPUT_DIR` | Directory for document files (`.alps.xml`, exported markdown) | Current working directory |
 
 Config example with `ALPS_OUTPUT_DIR`:
@@ -62,24 +62,24 @@ Config example with `ALPS_OUTPUT_DIR`:
 
 ### Template Tools
 
-| Tool | Description |
-| --- | --- |
-| `get_alps_overview` | Get the ALPS template overview with conversation guide |
-| `list_alps_sections` | List all available template sections |
-| `get_alps_section` | Get a specific template section by number (1-9) |
-| `get_alps_full_template` | Get the complete template with all sections |
-| `get_alps_section_guide` | Get conversation guide for writing a section |
+| Tool                     | Description                                            |
+| ------------------------ | ------------------------------------------------------ |
+| `get_alps_overview`      | Get the ALPS template overview with conversation guide |
+| `list_alps_sections`     | List all available template sections                   |
+| `get_alps_section`       | Get a specific template section by number (1-9)        |
+| `get_alps_full_template` | Get the complete template with all sections            |
+| `get_alps_section_guide` | Get conversation guide for writing a section           |
 
 ### Document Management Tools
 
-| Tool | Description |
-| --- | --- |
-| `init_alps_document` | Create a new ALPS document (`.alps.xml`) |
-| `load_alps_document` | Load an existing document to resume editing |
-| `save_alps_section` | Save content to a specific subsection |
-| `read_alps_section` | Read current content of a section |
-| `get_alps_document_status` | Get status of all sections |
-| `export_alps_markdown` | Export as clean Markdown |
+| Tool                       | Description                                 |
+| -------------------------- | ------------------------------------------- |
+| `init_alps_document`       | Create a new ALPS document (`.alps.xml`)    |
+| `load_alps_document`       | Load an existing document to resume editing |
+| `save_alps_section`        | Save content to a specific subsection       |
+| `read_alps_section`        | Read current content of a section           |
+| `get_alps_document_status` | Get status of all sections                  |
+| `export_alps_markdown`     | Export as clean Markdown                    |
 
 ## Workflow
 
@@ -96,17 +96,17 @@ The server guides AI through a structured workflow:
 
 ## ALPS Sections
 
-| # | Section | Dependencies |
-| --- | --- | --- |
-| 1 | Overview | — |
-| 2 | MVP Goals and Key Metrics | — |
-| 3 | Demo Scenario | Section 2 |
-| 4 | High-Level Architecture | — |
-| 5 | Design Specification | Section 6 |
-| 6 | Requirements Summary | — |
-| 7 | Feature-Level Specification | Section 6 |
-| 8 | MVP Metrics | Section 2, 6 |
-| 9 | Out of Scope | — |
+| #   | Section                     | Dependencies |
+| --- | --------------------------- | ------------ |
+| 1   | Overview                    | —            |
+| 2   | MVP Goals and Key Metrics   | —            |
+| 3   | Demo Scenario               | Section 2    |
+| 4   | High-Level Architecture     | —            |
+| 5   | Design Specification        | Section 6    |
+| 6   | Requirements Summary        | —            |
+| 7   | Feature-Level Specification | Section 6    |
+| 8   | MVP Metrics                 | Section 2, 6 |
+| 9   | Out of Scope                | —            |
 
 ## Development
 

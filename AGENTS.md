@@ -1,6 +1,8 @@
 # AGENTS.md
 
-ALPS Writer — MCP 서버 기반의 인터랙티브 ALPS (PRD) 작성 도구. `alps-writer-mcp`로 npm 배포.
+ALPS Writer — Interactive ALPS (PRD) writing tool based on MCP server. Published as `alps-writer-mcp` on npm.
+
+**Tech Stack**: TypeScript 5.9+, Node.js >= 20, pnpm, MCP SDK (`@modelcontextprotocol/sdk`), Zod
 
 ## Commands
 
@@ -11,36 +13,70 @@ pnpm dev              # Run with tsx in watch mode (development)
 pnpm start            # Run built version (node dist/index.js)
 ```
 
-빌드 시 `tsc && cp -r src/templates dist/ && cp -r src/guides dist/`로 정적 자산(XML 템플릿, MD 가이드)을 `dist/`에 복사한다. 서버가 런타임에 `fs.readFileSync`로 읽기 때문에 필수.
+Build runs `tsc && cp -r src/templates dist/ && cp -r src/guides dist/` to copy static assets (XML templates, MD guides) into `dist/`. Required because the server reads them at runtime via `fs.readFileSync`.
 
-테스트 프레임워크 미구성.
+No test framework configured.
+
+## Repository Structure
+
+```
+src/
+├── index.ts              # MCP server entry point + tool registration
+├── constants.ts          # Section titles, dependencies, file paths
+├── tools/
+│   ├── templates/        # Template tools (controller + service)
+│   └── documents/        # Document tools (controller + service)
+├── guides/               # Section conversation guides (01-09.md)
+└── templates/            # ALPS templates (overview.md + chapters/*.xml)
+```
 
 ## Architecture
 
-**MCP Server** (`src/index.ts`) — 진입점. `McpServer` 인스턴스 생성, Zod 스키마로 모든 도구 등록, `StdioServerTransport`로 연결. Tool handler는 controller에 위임하는 thin wrapper.
+**MCP Server** (`src/index.ts`) — Entry point. Creates `McpServer` instance, registers all tools with Zod schemas, connects via `StdioServerTransport`. Tool handlers are thin wrappers that delegate to controllers.
 
-**Controller/Service 패턴** — 도메인별 controller(MCP 인터페이스)와 service(비즈니스 로직) 분리:
+**Controller/Service pattern** — Separates domain-specific controllers (MCP interface) from services (business logic):
 
-- `src/tools/templates/` — ALPS 템플릿·대화 가이드 읽기 전용
-- `src/tools/documents/` — 문서 CRUD (init, load, save, read, export) 상태 관리
+- `src/tools/templates/` — Read-only access to ALPS templates and conversation guides
+- `src/tools/documents/` — Document CRUD (init, load, save, read, export) with state management
 
-**Constants** (`src/constants.ts`) — 섹션 메타데이터 중앙 관리: 타이틀(1-9), 의존성 그래프(`SECTION_REFERENCES`), `__dirname` 기반 파일시스템 경로.
+**Constants** (`src/constants.ts`) — Centralized section metadata: titles (1-9), dependency graph (`SECTION_REFERENCES`), `__dirname`-based filesystem paths.
 
-**Static assets** (런타임 파일시스템 읽기):
+**Static assets** (read from filesystem at runtime):
 
-- `src/templates/chapters/01-09.xml` — XML 섹션 템플릿
-- `src/templates/overview.md` — ALPS 개요
-- `src/guides/01-09.md` — 섹션별 대화 가이드
+- `src/templates/chapters/01-09.xml` — XML section templates
+- `src/templates/overview.md` — ALPS overview
+- `src/guides/01-09.md` — Per-section conversation guides
 
-**Document format** — `.alps.xml` 파일에 `<alps-document>`, `<section>`, `<subsection>` 태그로 저장. regex로 파싱 (XML 파서 라이브러리 미사용). 출력 디렉토리는 `ALPS_OUTPUT_DIR` 환경변수로 제어 (`PRD_OUTPUT_DIR`도 하위호환 지원).
+**Document format** — Stored as `.alps.xml` files with `<alps-document>`, `<section>`, `<subsection>` tags. Parsed via regex (no XML parser library). Output directory controlled by `ALPS_OUTPUT_DIR` env var (`PRD_OUTPUT_DIR` also supported for backward compatibility).
 
-**DocumentService state** — `workingDoc`이 현재 문서 경로를 메모리에 보유. `initDocument()` 또는 `loadDocument()` 호출 후에만 read/write 가능.
+**DocumentService state** — `workingDoc` holds the current document path in memory. Read/write operations require `initDocument()` or `loadDocument()` to be called first.
 
 ## Conventions
 
 - TypeScript strict mode, ES modules (`"type": "module"`)
 - Node.js >= 20
 - pnpm as package manager
-- Conventional Commits (상세: CONTRIBUTING.md)
+- Conventional Commits (details: CONTRIBUTING.md)
 - Scopes: `server`, `templates`, `documents`, `guides`, `deps`
 - Branch naming: `<type>/<short-description>` (e.g., `feat/section-validation`)
+
+## Definition of Done
+
+Verify before completing any task:
+
+1. `pnpm build` succeeds
+2. `pnpm lint` passes
+3. `pnpm format:check` passes
+4. Related docs (README, AGENTS.md, CONTRIBUTING.md) are up to date
+
+## Do-Not Rules
+
+- Do not introduce XML parser libraries — maintain current regex-based parsing
+- Do not auto-generate content in `src/templates/` or `src/guides/` — manually curated
+- Do not modify `dist/` directly — always generate via `pnpm build`
+- Do not bypass git hooks with `--no-verify`
+- Do not delete or modify tests to make them pass — fix the code instead
+
+## References
+
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — Commit messages, branching, code style, PR rules
