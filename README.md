@@ -29,12 +29,13 @@ No installation required — just add the MCP config to your client:
 
 ### Client Setup
 
-| Client             | Config location                                                                   |
-| ------------------ | --------------------------------------------------------------------------------- |
-| **Claude Desktop** | Settings > Developer > Edit Config (`claude_desktop_config.json`)                 |
-| **Claude Code**    | `claude mcp add alps-writer -- npx -y alps-writer`                                |
-| **Cursor**         | Settings > Features > MCP Servers > + Add new global MCP server                   |
-| **Kiro**           | `Cmd+Shift+P` > "Kiro: Open user MCP config (JSON)" (`~/.kiro/settings/mcp.json`) |
+| Client             | Config location                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| **Claude Desktop** | Settings > Developer > Edit Config (`claude_desktop_config.json`)                                      |
+| **Claude Code**    | `claude mcp add alps-writer -- npx -y alps-writer`                                                     |
+| **Cursor**         | Settings > Features > MCP Servers > + Add new global MCP server                                        |
+| **Kiro**           | `Cmd+Shift+P` > "Kiro: Open user MCP config (JSON)" (`~/.kiro/settings/mcp.json`)                     |
+| **Kiro CLI**       | `kiro-cli mcp add --name alps-writer --command npx --args "-y" --args "alps-writer" --scope global`    |
 
 ### Environment Variables
 
