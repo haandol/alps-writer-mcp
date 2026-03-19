@@ -39,6 +39,7 @@
     "url": "https://github.com/haandol/alps-writer-mcp"
   },
   "author": "haandol",
+  "packageManager": "pnpm@10.32.1",
   "engines": {
     "node": ">=20"
   },
