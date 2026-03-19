@@ -33,7 +33,7 @@
     "llm",
     "model-context-protocol"
   ],
-  "license": "Apache-2.0",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/haandol/alps-writer-mcp"
