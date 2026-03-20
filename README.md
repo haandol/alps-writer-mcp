@@ -41,7 +41,7 @@ No installation required — just add the MCP config to your client:
 
 | Variable          | Description                                                   | Default                   |
 | ----------------- | ------------------------------------------------------------- | ------------------------- |
-| `ALPS_OUTPUT_DIR` | Directory for document files (`.alps.xml`, exported markdown) | Current working directory |
+| `ALPS_OUTPUT_DIR` | Directory for document files (`.alps.xml`, exported markdown) | `<cwd>/prd/` |
 
 Config example with `ALPS_OUTPUT_DIR`:
 
