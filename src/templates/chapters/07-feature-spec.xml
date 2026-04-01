@@ -33,19 +33,20 @@
     </subsection>
     <subsection id="7.x.3" title="Technical Description">
       <description>
-- Describe the implementation details from a developer's perspective.
-- Break down each user story into detailed technical steps.
+- Describe the implementation as a vertical slice: trace each user action end-to-end from UI through API to data store, so this feature can be developed and tested independently.
+- For each key action in the user flow, describe what happens at each layer it touches (e.g., UI component, API endpoint, database operation).
+- If this feature shares resources with other features (e.g., a common table or auth middleware), note the shared interface rather than redefining it.
       </description>
       <example>
-1. Email Validation
-   - Validate email format using regex
-   - Check for duplicate emails in the database
-2. Password Processing
-   - Ensure a minimum of 8 characters, including at least one special character
-   - Hash the password using bcrypt
-3. User Creation Process
-   - Insert a new record into the users table
-   - Generate and return a JWT token
+1. Submit Sign-up Form
+   - UI: Sign-up form component sends POST /api/auth/signup with email and password
+   - API: /api/auth/signup endpoint validates email format, checks for duplicates, hashes password with bcrypt
+   - Data: Insert new row into `users` table (id, email, password_hash, created_at)
+   - Response: Return JWT token → UI stores token and redirects to main screen
+2. Validate Email (real-time)
+   - UI: On blur, send GET /api/auth/check-email?email={email}
+   - API: Query `users` table for existing email
+   - Response: Return availability status → UI shows inline validation message
       </example>
     </subsection>
     <subsection id="7.x.4" title="Edge Cases">

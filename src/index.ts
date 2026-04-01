@@ -13,6 +13,8 @@ const server = new McpServer(
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 
+ALPS defines each feature as a vertical slice — a single feature that cuts through all layers (UI → API → Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store, enabling parallel implementation across features.
+
 <TRIGGER>
 MUST use this server's tools when the user wants to:
 - Write, create, or edit a PRD (Product Requirements Document)
