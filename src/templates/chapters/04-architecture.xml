@@ -22,7 +22,17 @@ Rel(user, system, "Uses", "HTTPS")
     </example>
   </subsection>
   <subsection id="4.2" title="Technology Stack">
-    <description>List the key technologies and frameworks to be used in the MVP.</description>
+    <description>
+- List the key technologies and frameworks to be used in the MVP.
+- If the user is non-technical, follow the tech_stack_wizard in the section guide to help them choose.
+- Cover these categories as applicable:
+  - Frontend: How users interact with the product (e.g., web framework, mobile framework)
+  - Backend: Server-side logic and APIs (e.g., language, framework)
+  - Database: Where data is stored (e.g., relational, document-based)
+  - Infrastructure: Where the product runs and how it is deployed (e.g., cloud provider, CI/CD)
+  - External Services: Third-party APIs or services (e.g., payment, email, AI/ML)
+- Not all categories are required — include only what is relevant to the MVP.
+    </description>
     <example>
 - Frontend: React (Tailwind CSS)
 - Backend: Node.js (Express)
