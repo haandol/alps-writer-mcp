@@ -76,13 +76,12 @@ The goal is for ADRs to evolve alongside the code each cycle. Adding a new ADR w
 
 ### Hook behavior
 
-Three hooks support the main Claude Code session — **with no external LLM calls**; the main model classifies text and makes decisions itself.
+Two hooks support the main Claude Code session — **with no external LLM calls**; the main model classifies text and makes decisions itself.
 
-| Hook               | When it fires         | Role                                                                                              |
-| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------- |
-| `SessionStart`     | Once at session start | Inject ADR-first cycle rules into the model context                                               |
-| `UserPromptSubmit` | Every user message    | Inject the `docs/adr/.mapping.json` snapshot into the model context (the model classifies intent) |
-| `PreToolUse`       | Edit/Write/MultiEdit  | Detect missing mappings, stale ADRs, and uncovered source areas → warn (or block)                 |
+| Hook               | When it fires        | Role                                                                                                                                                  |
+| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UserPromptSubmit` | Every user message   | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn (survives session compaction, unlike a one-shot SessionStart injection) |
+| `PreToolUse`       | Edit/Write/MultiEdit | Detect missing mappings, stale ADRs, and uncovered source areas → warn (or block)                                                                     |
 
 Default mode is `warn`. To enforce more strictly, export `ALPS_ADR_ENFORCE=block` in your shell — the hook will then block edits to stale or unmapped sources with exit 2 (passing the reason through the model context so it can self-correct).
 
@@ -117,9 +116,11 @@ To use the MCP server without the plugin:
 
 ### Environment variables
 
-| Variable          | Description                                                   | Default      |
-| ----------------- | ------------------------------------------------------------- | ------------ |
-| `ALPS_OUTPUT_DIR` | Directory for document files (`.alps.xml`, exported markdown) | `<cwd>/prd/` |
+| Variable           | Scope        | Description                                                                                                | Default                  |
+| ------------------ | ------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `ALPS_OUTPUT_DIR`  | MCP server   | Directory for document files (`.alps.xml`, exported markdown). `PRD_OUTPUT_DIR` also accepted (legacy).    | `<cwd>/prd/`             |
+| `ALPS_ADR_ENFORCE` | Plugin hooks | `warn` (default) surfaces drift to stderr; `block` makes `PreToolUse` deny edits to stale/unmapped source. | `warn`                   |
+| `ALPS_ADR_MAPPING` | Plugin hooks | Path (relative to project root) to the ADR mapping file consumed by hooks.                                 | `docs/adr/.mapping.json` |
 
 Config example with `ALPS_OUTPUT_DIR`:
 

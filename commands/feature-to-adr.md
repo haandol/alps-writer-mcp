@@ -75,9 +75,18 @@ ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으�
 
 `docs/adr/README.md`의 "카테고리별 ADR 목록"에 한 줄 요약을 추가한다.
 
-### 7. 사용자 확인
+### 7. 자동 검토 (adr-reviewer 위임)
 
-작성된 ADR과 매핑을 보여주고 다음 형식으로 승인 요청:
+저장 직전, `adr-reviewer` subagent 를 호출하여 격리된 컨텍스트에서 룰 검증을 받는다.
+
+- 입력: 작성된 ADR 파일 경로, 매핑 entry 변경 전/후, ALPS Section 7 발췌
+- 출력: `PASS` / `FIX_REQUIRED` / `BLOCK` punch list
+
+`PASS` 가 아니면 결과를 사용자에게 요약해 보여주고, `FIX_REQUIRED` 항목은 본 세션에서 직접 패치한다. `BLOCK` 이면 ADR 분리 또는 보조 문서 동시 작업이 필요하므로 8단계로 가지 말고 3단계로 돌아간다.
+
+### 8. 사용자 확인
+
+검토를 통과한 ADR과 매핑을 보여주고 다음 형식으로 승인 요청:
 
 ```
 ## ADR <NNNN>: <제목>
@@ -91,7 +100,7 @@ ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으�
 
 승인 전까지 코드 수정을 시작하지 않는다. 사용자가 수정을 요청하면 ADR을 갱신한 뒤 다시 확인.
 
-### 8. opt-out 처리
+### 9. opt-out 처리
 
 사용자가 "ADR 없이 바로 구현해줘", "임시로 빨리", "hotfix" 등을 명시하면:
 

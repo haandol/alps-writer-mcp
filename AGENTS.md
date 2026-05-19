@@ -35,6 +35,7 @@ src/
 
 commands/                 # Slash commands (/alps-init, /feature-to-adr, /adr-sync, /adr-impl, /adr-rollup)
 skills/                   # Skills (adr-manage, adr-sync, adr-rollup)
+agents/                   # Subagents (adr-reviewer)
 hooks/
 ├── hooks.json            # PreToolUse + UserPromptSubmit registration
 ├── check-adr-sync.mjs    # PreToolUse(Edit|Write|MultiEdit) — warn/block on stale ADR
@@ -78,13 +79,14 @@ Hook scripts are Node ESM (`.mjs`) and read NDJSON events from stdin per the Cla
 
 ### Cycle hooks layout
 
-| File                            | Event              | Purpose                                                                                  |
-| ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------- |
-| `hooks/cycle-rules.mjs`         | `SessionStart`     | Inject the ADR-first cycle rules once per session.                                       |
-| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject the current `docs/adr/.mapping.json` snapshot every turn so the model can decide. |
-| `hooks/check-adr-sync.mjs`      | `PreToolUse`       | Warn (or block) on missing ADR / stale ADR / unmapped source edits.                      |
+| File                            | Event              | Purpose                                                                                        |
+| ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
+| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject the ADR-first directive + current `docs/adr/.mapping.json` snapshot on every user turn. |
+| `hooks/check-adr-sync.mjs`      | `PreToolUse`       | Warn (or block) on missing ADR / stale ADR / unmapped source edits.                            |
 
 The cycle relies on the **main session model** for text understanding — none of the hooks call an auxiliary LLM and none use intent regex. Hooks supply structured context; classification stays with the main model.
+
+The directive is re-injected every turn (UserPromptSubmit) instead of once at SessionStart so it survives Claude Code's session compaction — a one-shot SessionStart injection vanishes after the first compaction, while per-turn injection stays present for the whole session.
 
 ## Conventions
 

@@ -1,7 +1,7 @@
 {
   "name": "alps-writer",
   "description": "Spec-driven development cycle for Claude Code: ALPS (PRD) authoring → ADR conversion → code → test loop with hook-enforced ADR sync.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": {
     "name": "haandol"
   },
@@ -26,5 +26,6 @@
   },
   "commands": "./commands",
   "skills": "./skills",
+  "agents": "./agents",
   "hooks": "./hooks/hooks.json"
 }
