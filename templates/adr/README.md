@@ -2,76 +2,122 @@
 
 이 디렉토리는 프로젝트의 주요 아키텍처 결정을 문서화합니다. ALPS (PRD) Section 7의 각 feature는 한 개 이상의 ADR로 변환되어 코드 구현의 근거가 됩니다.
 
+## ADR이란?
+
+Architecture Decision Record (ADR)는 소프트웨어 개발 과정에서 내린 중요한 아키텍처 결정을 기록하는 문서입니다. 각 ADR은 다음을 포함합니다:
+
+- **Context**: 결정이 필요했던 배경과 문제
+- **Decision**: 내린 결정과 그 이유
+- **Consequences**: 결정의 긍정적/부정적 영향
+
+## ADR이 다루는 결정의 종류
+
+다음 중 하나에 해당하면 ADR을 작성한다.
+
+| 종류             | 예                                                                                     |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| **도메인 결정**  | 인증 방식, 결제 모델, 권한 체계, 핵심 도메인 엔티티의 관계와 상태 머신                 |
+| **인프라 결정**  | 배포 토폴로지, 캐시 전략, 모니터링·알람 구조, CDN/이미지 처리 정책                     |
+| **데이터 결정**  | DB 키 디자인(PK/SK/GSI), 단일 테이블 vs 다중 테이블, 마이그레이션 전략                 |
+| **외부 연동**    | LLM/결제/메일/푸시 등 외부 서비스 선정과 graceful degradation 정책                     |
+| **보안·운영**    | 비밀 관리 전략, 토큰 회전, 감사 로그 범위, 백업/복구 RPO·RTO                           |
+| **UX 아키텍처**  | 라우팅 구조, 상태 관리 라이브러리 선택, 디자인 시스템 채택 — 토큰 자체는 디자인 문서로 |
+| **마이그레이션** | API 버전 전환 전략, 백필 절차의 안전성, downtime 허용 범위                             |
+
+카테고리 폴더(`docs/adr/<category>/`)는 위 종류 중 하나로 묶어 만든다 — 보통은 ALPS feature 단위와 일치하지만, `infra/`·`data/`처럼 cross-cutting 카테고리도 같이 둔다.
+
+## ADR이 아닌 것 (anti-patterns)
+
+다음은 ADR로 만들지 않는다. 만들면 ADR 신뢰도가 떨어지고 검토 부담만 커진다.
+
+- **버그 수정 결정** — "이 함수의 null 체크를 추가했다"는 ADR 사유가 아니다. 코드와 커밋 메시지로 충분
+- **스타일/포매팅 변경** — Prettier·ESLint 규칙 변경은 PR 설명·CONTRIBUTING.md 영역
+- **의존성 패치 업그레이드** — `lodash 4.17.20 → 4.17.21`. 메이저 업그레이드(`React 17 → 18`)는 ADR 후보
+- **단순 리팩토링** — 함수 분리, 변수 이름 변경. 인터페이스가 바뀌고 호출자 영향이 크면 ADR 후보
+- **임시 실험·POC** — "다음 주에 결정" 단계는 결정이 확정된 뒤 ADR로 적는다
+- **개인 작업 가이드** — "이 모듈은 항상 internal/ 하위에 둔다" 같은 컨벤션은 AGENTS.md/README
+
+판단이 애매하면 [리트머스 테스트](#리트머스-테스트)를 적용한다.
+
+## ADR vs ALPS vs 디자인 문서
+
+세 문서는 같은 결정을 **다른 추상화 레벨에서** 다룬다. 같은 정보를 중복으로 적지 않는다.
+
+| 문서                      | 답하는 질문              | 예                                                           |
+| ------------------------- | ------------------------ | ------------------------------------------------------------ |
+| **ALPS PRD**              | WHAT / WHY (사용자 관점) | "이메일 가입 feature를 추가한다. 신규 가입 전환율 +10% 목표" |
+| **ADR**                   | HOW (아키텍처 관점)      | "JWT는 단기 access + 7일 refresh로 회전한다"                 |
+| **디자인 문서/토큰**      | HOW (시각·인터랙션 관점) | "primary 컬러, 입력 필드 높이 48px, 에러 토스트 패턴"        |
+| **코드/AGENTS.md/README** | HOW (상세 구현)          | "파일 구조, 함수 시그니처, 셋업 명령어"                      |
+
+규칙:
+
+- ALPS의 user story·acceptance criteria를 ADR에 복사하지 않는다 — Related 링크만 남긴다.
+- 디자인 토큰 값(`#0070F3`, `padding: 16px`)은 ADR이 아니라 디자인 문서로 간다.
+- 함수 시그니처·파일 경로는 ADR이 아니라 코드와 docstring으로 간다.
+
 ## 디렉토리 구조
+
+기본은 카테고리별 서브디렉토리. 워크숍·소규모 프로젝트는 플랫 구조도 허용합니다.
 
 ```
 docs/adr/
 ├── README.md         # 인덱스 + 작성 규칙 (source of truth)
-├── .mapping.json     # ALPS feature ↔ ADR ↔ code paths 매핑 (hook이 참조)
-└── <category>/       # ALPS feature 또는 도메인 단위 카테고리
+├── .mapping.json     # ALPS feature ↔ ADR ↔ code paths 매핑 (alps-writer plugin hook이 참조)
+└── <category>/       # ALPS feature 또는 도메인 단위 카테고리 (auth/, billing/, ...)
     └── NNNN-kebab-title.md
 ```
 
 - 카테고리는 ALPS Section 7의 feature 단위로 만든다 (예: `auth/`, `billing/`, `chat/`)
 - 파일명: `NNNN-kebab-case-title.md`. 번호는 카테고리 내에서 순차 증가
-- `Updated:` 날짜는 의미 있는 변경이 있을 때만 갱신
+- 새 카테고리를 추가하면 이 README의 디렉토리 구조와 카테고리별 ADR 목록을 함께 갱신한다
+
+새 ADR을 추가할 때는 이 README의 인덱스도 함께 갱신하세요.
+
+## 구현 레퍼런스
+
+- ALPS PRD: `prd/<doc>.alps.xml` (Section 7이 feature spec의 source of truth)
+- 매핑: `docs/adr/.mapping.json` (feature ↔ 코드 경로 ↔ ADR)
+
+> **권장**: 이 섹션 아래에 프로젝트별 구현 진입점을 명시한다. 예: "API/웹 인프라: `packages/api-infra/`, `packages/web-infra/`", "웹 기능 흐름: `apps/web/src/pages/`". ADR 본문에서는 폴더 단위까지만 참조하므로, 진입점 매핑이 README에 있어야 검토자가 빠르게 코드를 찾을 수 있다.
+
+## 흔한 카테고리 예시
+
+ALPS feature 단위 + cross-cutting 도메인을 함께 쓰는 것이 일반적이다.
+
+| 카테고리       | 다루는 결정                                                   |
+| -------------- | ------------------------------------------------------------- |
+| `auth/`        | 가입/로그인/세션/SSO/권한 체계                                |
+| `billing/`     | 요금제, 결제 게이트웨이, 환불, 크레딧                         |
+| `<feature>/`   | ALPS Section 7의 각 feature (예: `chat/`, `search/`, `feed/`) |
+| `data/`        | DB 스키마, 키 디자인, 단일/다중 테이블, 마이그레이션          |
+| `infra/`       | 배포, 모니터링/알람, CDN, 비용 최적화                         |
+| `integration/` | LLM·결제·메일·푸시 등 외부 서비스 연동                        |
+| `frontend/`    | 라우팅, 상태 관리, 디자인 시스템 채택                         |
+| `refactoring/` | cross-cutting 리팩토링 결정 (예: 서비스 레이어 테스트 가능성) |
 
 ## 상태
 
-| Status     | 의미                                                  |
-| ---------- | ----------------------------------------------------- |
-| Proposed   | 검토 중. 아직 합의되지 않은 결정                      |
-| Accepted   | 합의 완료. 구현 여부와 무관하게 결정이 확정           |
-| Deprecated | 더 이상 유효하지 않음. 대체 ADR 없이 폐기             |
-| Superseded | `Superseded by [ADR XXXX](link)` 형태로 후속 ADR 명시 |
+```
+Proposed → Accepted → Deprecated
+                   → Superseded by [ADR XXXX]
+```
 
-`Accepted`는 "구현 완료"가 아니라 "결정 확정"을 의미한다. 구현 상태는 코드와 커밋 히스토리로 추적한다.
+| 상태       | 의미                                                                         |
+| ---------- | ---------------------------------------------------------------------------- |
+| Proposed   | 검토 중. 아직 합의되지 않은 결정                                             |
+| Accepted   | 합의 완료. 구현 여부와 무관하게 결정이 확정된 상태                           |
+| Deprecated | 더 이상 유효하지 않음. 대체 ADR 없이 폐기                                    |
+| Superseded | 새로운 ADR로 대체됨. `Superseded by [ADR XXXX](link)` 형태로 후속 ADR을 명시 |
 
-## 작성 규칙
+- `Accepted`는 "구현 완료"가 아니라 "결정 확정"을 의미한다. 구현 상태는 ADR이 아닌 코드와 커밋 히스토리로 추적한다.
+- 상태 변경 시 날짜를 함께 기록한다: `Accepted (YYYY-MM-DD)`.
+- `Implemented`, `Done`, `Completed` 같은 비공식 상태는 사용하지 않는다. 진행 단계를 알려야 하면 괄호로 부연한다: `Accepted (Phase 1 완료)`.
 
-ADR은 **아키텍처 결정**(Context, Decision, Consequences)을 기록하는 문서다. 코드를 변경할 때마다 ADR을 같이 고쳐야 하는 부담을 줄이기 위해, **구현 세부사항은 ADR에 포함하지 않는다.**
+## ADR 템플릿
 
-### 리트머스 테스트
-
-> "이 값/세부사항이 코드에서 바뀌면, 아키텍처 결정 자체가 바뀌는가?"
-> **NO** → ADR에 넣지 않는다. **YES** → ADR에 유지한다.
-
-### 코드 참조 깊이 — 폴더 단위까지만
-
-ADR 안에서 코드를 가리킬 때는 **폴더(디렉토리) 단위**까지만 허용한다.
-
-- 허용: `packages/api/handlers/`, `apps/web/src/components/`
-- 금지: `apps/web/src/components/Login.tsx`, `services/auth/auth_service.go`
-- 금지: 파일명·줄 번호 인용
-
-본문, 표, Mermaid 다이어그램 모두에 동일하게 적용된다.
-
-### 포함하지 않는 것
-
-| 금지                     | 예                                | 대안                          |
-| ------------------------ | --------------------------------- | ----------------------------- |
-| 파일 경로 또는 그 이하   | `apps/web/src/Login.tsx`          | 폴더 단위까지만               |
-| 코드 스니펫              | 함수 시그니처, 인터페이스, 구조체 | 코드가 source of truth        |
-| 엔티티 상세 필드 표      | `phraseHash \| S \| ...`          | `docs/tables/`로 위임         |
-| 구현 상수/튜닝값         | `MAX_RETRY = 3`                   | "재시도는 제한된다" 식 개념만 |
-| 마이그레이션/운영 명령어 | `pnpm migrate ...`                | 스크립트 자체에 문서화        |
-| 전체 API JSON 응답 예시  | 20줄짜리 응답                     | 목적·핵심 파라미터만 1-2문장  |
-
-### 유지하는 것
-
-- 문제 배경과 동기 (WHY)
-- 결정 요약과 대안 비교
-- 엔티티 관계 (개념 수준)
-- 행동 규칙과 상태 전이
-- 시스템 간 연동 방식
-- Mermaid 다이어그램 (sequenceDiagram / stateDiagram / flowchart)
-- Consequences (긍정/부정/리스크)
-- DB 키 디자인과 액세스 패턴 (해당 시)
-
-## 템플릿
-
-````markdown
-# ADR NNNN: 제목
+```markdown
+# ADR XXXX: 제목
 
 Date: YYYY-MM-DD
 
@@ -81,45 +127,172 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 
 ## Context
 
-결정이 필요한 배경과 문제.
+결정이 필요한 배경과 문제. ALPS feature ID가 있으면 첫 줄에 명시.
 
 ## Decision
 
 내린 결정과 그 이유.
 
-### 시퀀스 다이어그램 (선택)
+### 시퀀스 다이어그램
 
-```mermaid
+비동기 처리·서비스 간 연동·이벤트 흐름이 포함된 결정이라면 Mermaid 다이어그램을 추가한다.
+상태 전이가 핵심이면 stateDiagram-v2, 분기 흐름이면 flowchart를 사용한다.
+
+\`\`\`mermaid
 sequenceDiagram
-  participant A
-  participant B
-  A->>B: 요청
-  B-->>A: 응답
-```
-````
+participant A as 서비스 A
+participant B as 서비스 B
+A->>B: 요청
+B-->>A: 응답
+\`\`\`
+
+### 대안 검토
+
+채택하지 않은 접근과 그 이유.
 
 ## Consequences
 
 ### Positive
 
+긍정적 영향.
+
 ### Negative
 
+부정적 영향.
+
 ### Risks
+
+잠재적 위험.
 
 ## Implementation Notes
 
 아키텍처 수준의 구현 고려사항만. 코드 스니펫·파일 경로·필드별 스키마·구현 상수는 포함하지 않는다.
+DB 스키마는 `docs/tables/` 또는 동등 문서 참조.
 
 ## Related
 
 - ALPS feature: `prd/<doc>.alps.xml` Section 7 #<feature-id>
 - 관련 ADR: [...]
+- 스키마/테이블 문서: [...] (DB 변경이 있는 경우)
+```
 
-````
+## 작성 규칙
+
+ADR은 아키텍처 결정(Context, Decision, Consequences)을 기록하는 문서다. 코드를 변경할 때마다 ADR을 함께 수정해야 하는 부담을 줄이기 위해, **구현 세부사항은 ADR에 포함하지 않는다.**
+
+### 리트머스 테스트
+
+> "이 값/세부사항이 코드에서 바뀌면, 아키텍처 결정 자체가 바뀌는가?"
+>
+> **NO** → ADR에 넣지 않는다. **YES** → ADR에 유지한다.
+
+### 코드 참조 깊이 — 폴더 단위까지만
+
+ADR 안에서 코드를 가리킬 때는 **폴더(디렉토리) 단위**까지만 허용한다. 파일 단위 이하로 내려가지 않는다.
+
+- 허용: `packages/api/handlers/`, `apps/web/src/components/`, `services/<domain>/`
+- 금지: `apps/web/src/components/Login.tsx`, `services/auth/auth_service.go`
+- 금지: 파일명·줄 번호 인용 (예: `prompt_template.md:42`)
+
+본문, 표, Mermaid 다이어그램 모두에 동일하게 적용된다. 함수명·클래스명·파일명을 본문에서 직접 인용해야 한다면 그 결정은 ADR이 아니라 docstring·README·인라인 주석에 적합한지 다시 판단한다.
+
+### 다이어그램 내 코드 참조
+
+Mermaid 다이어그램 안에서도 함수명·메서드 호출 대신 동작을 서술한다.
+
+- Bad: `stats.IncrementSourceCount("chat")`
+- Good: `sourceCounts.<source> 증가`
+
+이 규칙은 sequenceDiagram, stateDiagram, flowchart 모두에 동일하게 적용된다.
+
+### ADR에 포함하지 않는 것
+
+| 금지 항목                | 예                                 | 대안                                |
+| ------------------------ | ---------------------------------- | ----------------------------------- |
+| 파일 경로 또는 그 이하   | `apps/web/src/Login.tsx`           | 폴더 단위까지만 (`apps/web/src/`)   |
+| 코드 스니펫              | 함수 시그니처, 인터페이스, 구조체  | 코드 자체가 source of truth         |
+| 엔티티 상세 필드 표      | `phraseHash \| S \| ...`           | `docs/tables/`로 위임               |
+| 구현 상수/튜닝값         | `MAX_RETRY = 3`, `TIMER = {1: 60}` | "재시도는 제한된다" 같은 개념만     |
+| 마이그레이션/운영 명령어 | `uv run python migrate_...`        | 스크립트 자체에 문서화              |
+| 전체 API JSON 응답 예시  | 20줄짜리 요청/응답                 | 목적·핵심 파라미터를 1-2문장으로    |
+| CSS 클래스·Tailwind 유틸 | `bg-primary`, `flex-col`           | 디자인 토큰 단위 (DESIGN.md 등)으로 |
+
+### ADR에 유지하는 것
+
+- **문제 배경과 동기** (WHY) — 왜 이 결정이 필요했는가
+- **결정 요약** — 무엇을 결정했고, 대안 대비 왜 이것을 선택했는가
+- **엔티티 관계** (개념 수준) — "Flashcard는 Vocabulary와 별도 엔티티로 phrase hash로 연결" (필드 목록 아님)
+- **DB 키 디자인** — PK/SK/GSI 패턴, sparse 인덱스 여부 — 키 구조가 바뀌면 결정이 흔들리므로 ADR에 유지 (필드별 타입 정의는 `docs/tables/`)
+- **액세스 패턴** — 용도·쿼리(Table/GSI/GetItem/BatchGet)·호출 빈도 — 키 디자인의 검증 근거
+- **행동 규칙과 상태 전이** — Grade 체계, 상태 머신, 비즈니스 로직 규칙
+- **시스템 간 연동 방식** — "퀴즈 완료 시 SRS 리뷰를 트리거한다" (함수 호출 체인 아님)
+- **Mermaid 다이어그램** — 비동기 흐름, 서비스 간 연동, 이벤트 기반 처리에 적극 사용. 텍스트 설명보다 다이어그램이 명확하면 다이어그램을 우선
+- **대안 비교표** — 검토한 대안들과 선택 근거
+- **Consequences** — 긍정적·부정적 영향, 리스크
+- **API 엔드포인트 표** — Method / Path / 설명 (전체 JSON payload 없이)
+
+### API 섹션
+
+API 엔드포인트 목록(Method, Path, 설명)은 아키텍처 결정의 일부이므로 유지한다. 전체 요청/응답 JSON 예시·헤더 상세·에러 응답 페이로드는 포함하지 않는다 (1-2문장 요약으로 대체).
+
+### DB 스키마와 액세스 패턴 — 동시 작업 규칙
+
+키 디자인(PK/SK/GSI)은 아키텍처 결정의 핵심이므로 ADR에 유지한다. ADR이 새 엔티티를 추가하거나 기존 키 패턴을 바꾸는 경우, 다음을 **하나의 변경 단위로** 처리한다:
+
+1. ADR 본문에 키 디자인·액세스 패턴 표 작성
+2. `docs/tables/{테이블}.md` 에 해당 엔티티 추가/갱신 (필드 정의·SK prefix 가능 패턴·예시 포함)
+3. `docs/tables/{테이블}.md` 의 **Related ADRs** 섹션에 새 ADR 역참조 링크 추가
+4. ADR의 Related 섹션에서 해당 테이블 문서 링크 추가
+
+세 곳(ADR, 테이블 문서, 양방향 링크)이 모두 갱신돼야 한 작업이 완료된 것으로 본다. 한쪽만 업데이트하면 검토 시 불일치가 누적된다.
+
+`docs/tables/`를 사용하지 않는 프로젝트라면 동등한 스키마 문서(예: `prisma/schema.prisma`, `db/schema.sql`, OpenAPI 스펙)와의 양방향 링크로 대체한다 — source-of-truth 문서와 ADR이 항상 함께 움직이게 하는 것이 핵심이다.
+
+### 한 ADR = 한 결정
+
+하나의 ADR은 하나의 결정만 다룬다. 여러 결정이 한 파일에 섞이면 검토·롤업·suspersede가 모두 어려워진다.
+
+분리 신호:
+
+- 본문이 5페이지(약 250-300줄)를 넘는다
+- 서로 다른 엔티티/시스템에 대한 결정이 한 파일에 들어가 있다
+- "그리고 추가로…"로 시작하는 절이 두 개 이상 있다
+- Status가 부분적으로만 적용된다 ("핵심은 Accepted지만 일부는 아직 Proposed")
+
+이 신호 중 둘 이상이면 ADR을 분리한다 (예: `0003-payment.md` → `0003-payment-checkout.md` + `0004-payment-refund.md`).
+
+### 길이 가이드
+
+표준은 1-3페이지(50-150줄). Mermaid 다이어그램과 대안 비교표를 제외한 본문이 너무 짧으면(< 30줄) 결정의 동기·대안이 부족한 것이고, 너무 길면(> 300줄) 분리 신호다.
+
+### 다이어그램 선택
+
+| 다이어그램        | 사용 시점                                                        |
+| ----------------- | ---------------------------------------------------------------- |
+| `sequenceDiagram` | 비동기 흐름·서비스 간 호출·이벤트 기반 처리                      |
+| `stateDiagram-v2` | 상태 전이가 결정의 핵심 (주문 상태 머신, 챌린지 라이프사이클 등) |
+| `flowchart`       | 조건 분기·결정 트리·라우팅 규칙                                  |
+| `erDiagram`       | 새 엔티티 관계가 핵심이고 `docs/tables/`로 위임할 수 없을 때만   |
+
+텍스트 설명보다 다이어그램이 명확하면 다이어그램을 우선한다.
+
+### 점진적 정리
+
+기존 ADR 중 위 규칙에 맞지 않는 내용이 포함된 것은, 해당 ADR이 업데이트될 때 점진적으로 제거한다. 한 번에 모든 ADR을 정리할 필요는 없다.
+
+### 한국어 작성
+
+ADR 본문은 한국어로 작성한다. 기술 용어, 코드 식별자, 영문 고유명사는 원어 그대로 쓴다.
+
+## 명명 규칙
+
+- 파일명: `XXXX-kebab-case-title.md` (워크숍 등에서 PRD Feature ID를 추적하고 싶으면 `XXXX-fN-kebab-case-title.md` 형태)
+- 번호는 카테고리 내에서 순차적으로 증가. split으로 빠진 번호는 결번으로 둔다 (renumber 금지)
+- 제목은 명확하고 간결하게
 
 ## ALPS ↔ ADR 매핑
 
-이 플러그인은 `docs/adr/.mapping.json`에 ALPS feature와 ADR, 영향 받는 코드 경로의 관계를 저장한다. PreToolUse hook이 이 파일을 읽어, 코드 수정이 매핑된 ADR보다 새로우면 ADR 동기화를 환기한다.
+`docs/adr/.mapping.json`이 ALPS feature와 ADR, 영향 받는 코드 경로의 관계를 저장한다. `alps-writer` plugin의 PreToolUse hook이 이 파일을 읽어, 코드 수정이 매핑된 ADR보다 새로우면 ADR 동기화를 환기한다.
 
 ```json
 {
@@ -135,15 +308,41 @@ sequenceDiagram
     }
   }
 }
-````
+```
 
-매핑 파일은 `/feature-to-adr` 명령으로 생성·갱신된다.
+매핑 파일은 `/feature-to-adr` 명령으로 생성·갱신된다. 플랫 구조 프로젝트는 카테고리 키로 Feature ID(`f1`, `f2`)를 그대로 써도 된다.
+
+## ADR 리뷰 체크리스트
+
+PR 리뷰어 또는 작성자 본인이 머지 전에 확인한다.
+
+- [ ] **Status가 유효한 값**인가 (`Proposed`/`Accepted`/`Deprecated`/`Superseded by [...]`)
+- [ ] **결정 한 줄 요약**이 README의 카테고리별 목록에 갱신되었는가
+- [ ] **폴더 단위 이하 코드 참조**가 본문/표/다이어그램 어디에도 남아 있지 않은가
+- [ ] **금지 항목**(코드 스니펫, 구현 상수, 전체 JSON, 마이그레이션 명령어)이 들어가지 않았는가
+- [ ] **대안 검토** 절이 있고, 채택하지 않은 이유가 적혀 있는가
+- [ ] **Mermaid 다이어그램**이 필요한 결정인데 누락되지 않았는가
+- [ ] **DB 키 패턴**을 바꿨다면 `docs/tables/{name}.md`(또는 동등 문서)와 양방향 링크가 있는가
+- [ ] **Related**에 ALPS feature ID와 의존 ADR 링크가 모두 있는가
+- [ ] **한 ADR = 한 결정** 원칙이 지켜졌는가 (분리 신호 없음)
+- [ ] **`.mapping.json`**의 해당 카테고리 entry가 새 ADR을 포함하고 `lastSyncedAt`이 갱신되었는가
 
 ## 카테고리별 ADR 목록
 
-새 ADR을 추가하면 이 섹션에 한 줄 요약을 직접 추가한다. 자동 생성하지 않는다.
+새 ADR을 추가하면 이 섹션에 한 줄 요약을 직접 추가한다. 자동 생성하지 않는다. 한 줄 요약은 다음 quick-mode 동기화 점검의 진입점이 되므로 본문이 바뀔 때 함께 갱신한다.
 
 <!-- 예시:
 ### Auth
-- [0001: JWT Rotation](./auth/0001-jwt-rotation.md) — Accepted. Refresh token rotation, 7일 만료
+- [0001: JWT Rotation](./auth/0001-jwt-rotation.md) — Accepted. Refresh token rotation, 7일 만료, sliding session.
+- [0002: SSO Integration](./auth/0002-sso-integration.md) — Proposed. SAML 기반 사내 SSO, IdP는 추후 결정.
+
+### Billing
+- [0001: Subscription Tiers](./billing/0001-subscription-tiers.md) — Accepted. Free/Pro/Enterprise 3티어, 월/연 토글.
 -->
+
+## 참고
+
+- [ADR GitHub](https://adr.github.io/) — ADR 일반 자료 모음
+- [Joel Parker Henderson — ADR templates](https://github.com/joelparkerhenderson/architecture-decision-record) — 다양한 템플릿 비교
+- [Michael Nygard — Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) — 원조 ADR 글
+- [alps-writer plugin](https://github.com/haandol/alps-writer-mcp) — 이 plugin 자체
