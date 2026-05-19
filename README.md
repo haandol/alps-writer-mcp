@@ -1,11 +1,35 @@
 # ALPS Writer
 
 [![npm version](https://img.shields.io/npm/v/alps-writer.svg)](https://www.npmjs.com/package/alps-writer)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-ALPS Writer는 두 가지 형태로 제공됩니다.
+ALPS Writer is available in two forms:
 
-1. **MCP server** (`alps-writer` on npm) — Claude Desktop, Cursor, Kiro 등 MCP 호환 클라이언트에서 ALPS (PRD)를 대화형으로 작성.
-2. **Claude Code plugin** (이 저장소) — MCP server에 더해 ADR 변환·동기화 명령, ADR drift를 잡는 hook까지 묶어 ALPS → ADR → 코드 → 테스트 사이클을 강제.
+1. **MCP server** (`alps-writer` on npm) — write ALPS (PRD) documents conversationally in Claude Desktop, Cursor, Kiro, or any MCP-compatible client.
+2. **Claude Code plugin** (this repository) — bundles the MCP server with ADR conversion/sync commands and ADR-drift hooks to enforce the ALPS → ADR → code → test cycle.
+
+## Table of contents
+
+- [What is ALPS?](#what-is-alps)
+- [Features](#features)
+- [Quick Start (Claude Code Plugin)](#quick-start-claude-code-plugin)
+- [Quick Start (MCP only)](#quick-start-mcp-only)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
+## What is ALPS?
+
+**ALPS** (Agentic Lean Product Spec) is a PRD format built for agentic development. A traditional PRD assumes a human reader who fills in gaps from intuition; ALPS assumes an AI agent that needs an unambiguous specification to write reliable code.
+
+It addresses two recurring failure modes:
+
+- **No standard format** — every team invents a different PRD shape, so agents waste tokens guessing what the document asserts.
+- **Quality bound to the author's skill** — a less experienced writer produces a PRD the agent over-interprets, and code quality follows.
+
+ALPS fixes the format (9 sections, explicit dependencies, vertical-slice features) and inverts the authoring loop: the **agent asks focused questions, the human answers**, with no section saved without confirmation. Out of Scope is a first-class section so the agent knows what _not_ to build.
+
+See [`templates/alps/about-alps.md`](./templates/alps/about-alps.md) for the full design rationale, the role of each section, and how ALPS feeds into the ADR-driven cycle.
 
 ## Features
 
@@ -13,62 +37,62 @@ ALPS Writer는 두 가지 형태로 제공됩니다.
 - Interactive Q&A workflow — AI asks focused questions, never auto-generates
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
-- **ALPS → ADR conversion** — Section 7 feature를 `docs/adr/<category>/NNNN-*.md`로 자동 변환
-- **PreToolUse hook** — 코드가 매핑된 ADR보다 새로우면 경고하거나 차단 (`ALPS_ADR_ENFORCE=block`)
+- **ALPS → ADR conversion** _(plugin)_ — automatically converts Section 7 features into `docs/adr/<category>/NNNN-*.md`
+- **ADR-drift hooks** _(plugin)_ — warn or block (`ALPS_ADR_ENFORCE=block`) when code is newer than its mapped ADR
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client
 
 ## Quick Start (Claude Code Plugin)
 
-이 저장소를 Claude Code marketplace로 등록하면 MCP server + commands + hooks가 한 번에 설치됩니다.
+Register this repository as a Claude Code marketplace and the MCP server, slash commands, and hooks are installed together.
 
 ```
 /plugin marketplace add haandol/alps-writer-mcp
 /plugin install alps-writer@alps-writer
 ```
 
-### 개발 사이클
+### Development cycle
 
 ```mermaid
 flowchart LR
-    A["ADR 확인<br/>(mapping snapshot)"] --> B["ADR 작성/수정<br/>(/feature-to-adr<br/>또는 ADR 직접 편집)"]
-    B --> C["코드 작성<br/>(/adr-impl)"]
-    C --> D["테스트<br/>(project commands)"]
-    D --> E["/adr-sync<br/>(반영된 학습으로<br/>ADR 보강)"]
-    E -->|다음 사이클| A
+    A["Check ADRs<br/>(mapping snapshot)"] --> B["Author/edit ADR<br/>(/feature-to-adr<br/>or edit ADR directly)"]
+    B --> C["Write code<br/>(/adr-impl)"]
+    C --> D["Test<br/>(project commands)"]
+    D --> E["/adr-sync<br/>(reinforce ADR<br/>with what was learned)"]
+    E -->|next cycle| A
 ```
 
-매 사이클마다 ADR이 코드를 따라 같이 진화하는 것이 목표입니다. 결정이 바뀌면 새 ADR을 추가하는 게 정상이고, 같은 카테고리 안에 ADR이 여럿 있는 것도 정상입니다. **같은 logical decision의 진화 history**가 여러 ADR로 분산되었을 때만 `/adr-rollup`으로 그 묶음을 단일 "현재 상태" ADR로 통합합니다.
+The goal is for ADRs to evolve alongside the code each cycle. Adding a new ADR when a decision changes is normal, and having multiple ADRs in the same category is normal too. Only when **the evolution history of a single logical decision** is scattered across several ADRs do you use `/adr-rollup` to consolidate that group into a single "current state" ADR.
 
-### 명령어
+### Slash commands
 
-| 명령                       | 역할                                                               |
-| -------------------------- | ------------------------------------------------------------------ |
-| `/alps-init`               | 신규 ALPS 문서 작성 (또는 기존 문서 이어쓰기)                      |
-| `/adr-cycle [id]`          | 사이클 단일 진입점. 현재 상태 보고 다음 단계 선택                  |
-| `/feature-to-adr [id]`     | ALPS Section 7 feature를 ADR 초안으로 변환 + 매핑 시드             |
-| `/adr-impl <id>`           | ADR을 코드로 구현 (테스트 포함)                                    |
-| `/adr-sync [id] [--quick]` | 코드와 ADR drift 검증·수정, 학습 반영                              |
-| `/adr-rollup <id>`         | 같은 logical decision의 evolution history가 분산된 ADR 묶음만 통합 |
+| Command                    | Role                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `/alps-init`               | Author a new ALPS document (or resume an existing one)                               |
+| `/adr-cycle [id]`          | Single entry point for the cycle — reports current state and picks the next step     |
+| `/feature-to-adr [id]`     | Convert an ALPS Section 7 feature into an ADR draft and seed the mapping             |
+| `/adr-impl <id>`           | Implement an ADR in code (including tests)                                           |
+| `/adr-sync [id] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                   |
+| `/adr-rollup <id>`         | Consolidate only ADR groups whose evolution history of one logical decision is split |
 
-### Hook 동작
+### Hook behavior
 
-세 hook이 메인 Claude Code 세션을 지원합니다 — **외부 LLM 호출 없이**, 메인 모델이 텍스트를 직접 분류하고 의사결정합니다.
+Three hooks support the main Claude Code session — **with no external LLM calls**; the main model classifies text and makes decisions itself.
 
-| Hook               | 시점                 | 역할                                                                        |
-| ------------------ | -------------------- | --------------------------------------------------------------------------- |
-| `SessionStart`     | 세션 시작 시 한 번   | ADR-first 사이클 규칙을 모델 컨텍스트에 주입                                |
-| `UserPromptSubmit` | 매 사용자 발화       | `docs/adr/.mapping.json` 스냅샷을 모델 컨텍스트에 주입 (의도 분류는 모델이) |
-| `PreToolUse`       | Edit/Write/MultiEdit | 매핑 누락·stale ADR·미커버 source 영역 감지 → warn (또는 block)             |
+| Hook               | When it fires         | Role                                                                                              |
+| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------- |
+| `SessionStart`     | Once at session start | Inject ADR-first cycle rules into the model context                                               |
+| `UserPromptSubmit` | Every user message    | Inject the `docs/adr/.mapping.json` snapshot into the model context (the model classifies intent) |
+| `PreToolUse`       | Edit/Write/MultiEdit  | Detect missing mappings, stale ADRs, and uncovered source areas → warn (or block)                 |
 
-기본 모드는 `warn`. 강제력을 높이려면 셸에서 `ALPS_ADR_ENFORCE=block`을 export하면 hook이 stale/미매핑 source 수정 시 exit 2로 차단합니다 (모델 컨텍스트로 사유 전달 → self-correct).
+Default mode is `warn`. To enforce more strictly, export `ALPS_ADR_ENFORCE=block` in your shell — the hook will then block edits to stale or unmapped sources with exit 2 (passing the reason through the model context so it can self-correct).
 
-### 매핑 파일
+### Mapping file
 
-`docs/adr/.mapping.json`이 ALPS feature ↔ ADR ↔ 코드 경로의 single source of truth입니다. 스키마는 [`templates/adr/mapping.schema.json`](./templates/adr/mapping.schema.json) 참조. `/feature-to-adr`이 자동 갱신합니다.
+`docs/adr/.mapping.json` is the single source of truth for ALPS feature ↔ ADR ↔ code path relationships. See the schema at [`templates/adr/mapping.schema.json`](./templates/adr/mapping.schema.json). `/feature-to-adr` updates it automatically.
 
 ## Quick Start (MCP only)
 
-플러그인 없이 MCP server만 사용하려면:
+To use the MCP server without the plugin:
 
 ```json
 {
@@ -81,7 +105,7 @@ flowchart LR
 }
 ```
 
-### Client Setup
+### Client setup
 
 | Client             | Config location                                                                                     |
 | ------------------ | --------------------------------------------------------------------------------------------------- |
@@ -91,7 +115,7 @@ flowchart LR
 | **Kiro**           | `Cmd+Shift+P` > "Kiro: Open user MCP config (JSON)" (`~/.kiro/settings/mcp.json`)                   |
 | **Kiro CLI**       | `kiro-cli mcp add --name alps-writer --command npx --args "-y" --args "alps-writer" --scope global` |
 
-### Environment Variables
+### Environment variables
 
 | Variable          | Description                                                   | Default      |
 | ----------------- | ------------------------------------------------------------- | ------------ |
@@ -113,59 +137,32 @@ Config example with `ALPS_OUTPUT_DIR`:
 }
 ```
 
-## Available Tools
+### MCP tools
 
-### Template Tools
+**Template tools**
 
 | Tool                     | Description                                            |
 | ------------------------ | ------------------------------------------------------ |
 | `get_alps_overview`      | Get the ALPS template overview with conversation guide |
 | `list_alps_sections`     | List all available template sections                   |
-| `get_alps_section`       | Get a specific template section by number (1-9)        |
+| `get_alps_section`       | Get a specific template section by number (1–9)        |
 | `get_alps_full_template` | Get the complete template with all sections            |
-| `get_alps_section_guide` | Get conversation guide for writing a section           |
+| `get_alps_section_guide` | Get the conversation guide for writing a section       |
 
-### Document Management Tools
+**Document management tools**
 
 | Tool                       | Description                                 |
 | -------------------------- | ------------------------------------------- |
 | `init_alps_document`       | Create a new ALPS document (`.alps.xml`)    |
 | `load_alps_document`       | Load an existing document to resume editing |
 | `save_alps_section`        | Save content to a specific subsection       |
-| `read_alps_section`        | Read current content of a section           |
-| `get_alps_document_status` | Get status of all sections                  |
+| `read_alps_section`        | Read the current content of a section       |
+| `get_alps_document_status` | Get the status of all sections              |
 | `export_alps_markdown`     | Export as clean Markdown                    |
-
-## Workflow
-
-The server guides AI through a structured workflow:
-
-1. **Initialize** — `init_alps_document()` or `load_alps_document()`
-2. **Overview** — `get_alps_overview()` to get the conversation guide
-3. **For each section (1-9):**
-   - `get_alps_section_guide(N)` — get questions and criteria
-   - `get_alps_section(N)` — get the template structure
-   - Ask focused questions (1-2 at a time)
-   - `save_alps_section(N, ...)` — save after user confirmation
-4. **Export** — `export_alps_markdown()` for the final document
-
-## ALPS Sections
-
-| #   | Section                     | Dependencies |
-| --- | --------------------------- | ------------ |
-| 1   | Overview                    | —            |
-| 2   | MVP Goals and Key Metrics   | —            |
-| 3   | Demo Scenario               | Section 2    |
-| 4   | High-Level Architecture     | —            |
-| 5   | Design Specification        | Section 6    |
-| 6   | Requirements Summary        | —            |
-| 7   | Feature-Level Specification | Section 6    |
-| 8   | MVP Metrics                 | Section 2, 6 |
-| 9   | Out of Scope                | —            |
 
 ## Development
 
-### Running from Source
+### Running from source
 
 ```bash
 git clone https://github.com/haandol/alps-writer-mcp.git
@@ -174,7 +171,7 @@ pnpm install
 pnpm build
 ```
 
-Then configure your MCP client:
+Then configure your MCP client to point at the local build:
 
 ```json
 {
@@ -187,15 +184,28 @@ Then configure your MCP client:
 }
 ```
 
-### Commands
+### Build scripts
 
 ```bash
-pnpm install    # Install dependencies
-pnpm dev        # Run with tsx (watch mode)
-pnpm build      # Build for production
-pnpm start      # Run built version
+pnpm install        # Install dependencies
+pnpm dev            # Run with tsx (watch mode)
+pnpm build          # Build for production
+pnpm start          # Run the built version
+pnpm lint           # ESLint
+pnpm format         # Prettier
 ```
+
+## Contributing
+
+Contributions are welcome. Before opening a PR:
+
+1. Read [`CONTRIBUTING.md`](./CONTRIBUTING.md) for commit message convention (Conventional Commits), branch naming, and code style.
+2. Open an issue first for substantial changes so we can align on direction.
+3. Make sure `pnpm lint` and `pnpm format:check` pass.
+4. Keep commits atomic — one logical change per commit.
+
+Bug reports and feature requests: [GitHub Issues](https://github.com/haandol/alps-writer-mcp/issues).
 
 ## License
 
-MIT
+[MIT](./LICENSE)

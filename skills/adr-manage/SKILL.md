@@ -20,6 +20,8 @@ ADR 생성 및 수정 시 `docs/adr/README.md`의 작성 규칙을 자동으로 
 
 작업 전 반드시 `docs/adr/README.md`의 **작성 규칙** 섹션을 읽는다. 없으면 plugin 템플릿(`${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md`)을 프로젝트로 복사한 뒤 시작한다.
 
+ALPS feature를 ADR로 변환하는 작업이거나, ALPS의 9개 섹션 구조·vertical slice 의도가 기억나지 않으면 `${CLAUDE_PLUGIN_ROOT}/templates/alps/about-alps.md` 를 먼저 읽는다. ALPS의 section 의도와 vertical-slice 원칙이 ADR 분할 결정의 근거가 된다.
+
 ### 2. 새 ADR 생성
 
 1. 카테고리(=ALPS feature 또는 도메인) 결정 — kebab-case
