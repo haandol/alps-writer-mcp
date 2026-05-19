@@ -28,6 +28,20 @@ src/
 │   └── documents/        # Document tools (controller + service)
 ├── guides/               # Section conversation guides (01-09.md)
 └── templates/            # ALPS templates (overview.md + chapters/*.xml)
+
+.claude-plugin/
+├── plugin.json           # Plugin manifest (mcp + commands + skills + hooks)
+└── marketplace.json      # Marketplace manifest (single-repo distribution)
+
+commands/                 # Slash commands (/alps-init, /feature-to-adr, /adr-sync, /adr-impl, /adr-rollup)
+skills/                   # Skills (adr-manage, adr-sync, adr-rollup)
+hooks/
+├── hooks.json            # PreToolUse + UserPromptSubmit registration
+├── check-adr-sync.mjs    # PreToolUse(Edit|Write|MultiEdit) — warn/block on stale ADR
+└── surface-adr-context.mjs  # UserPromptSubmit — inject related ADR paths
+templates/adr/
+├── README.md             # ADR writing rules (copied into docs/adr/ on /feature-to-adr)
+└── mapping.schema.json   # Schema for docs/adr/.mapping.json
 ```
 
 ## Architecture
@@ -50,6 +64,17 @@ src/
 **Document format** — Stored as `.alps.xml` files with `<alps-document>`, `<section>`, `<subsection>` tags. Parsed via regex (no XML parser library). Output directory controlled by `ALPS_OUTPUT_DIR` env var (`PRD_OUTPUT_DIR` also supported for backward compatibility).
 
 **DocumentService state** — `workingDoc` holds the current document path in memory. Read/write operations require `initDocument()` or `loadDocument()` to be called first.
+
+## Plugin distribution
+
+The repo doubles as a Claude Code plugin and a single-plugin marketplace. `.claude-plugin/plugin.json` references the npm-published MCP server (`npx -y alps-writer`) plus local `commands/`, `skills/`, and `hooks/` directories. `.claude-plugin/marketplace.json` points back at `.` so users can install with:
+
+```
+/plugin marketplace add haandol/alps-writer-mcp
+/plugin install alps-writer@alps-writer
+```
+
+Hook scripts are Node ESM (`.mjs`) and read NDJSON events from stdin per the Claude Code hooks spec. They use only Node built-ins (no extra deps) so the plugin requires nothing beyond a Node.js >= 20 runtime.
 
 ## Conventions
 

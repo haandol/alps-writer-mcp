@@ -2,7 +2,10 @@
 
 [![npm version](https://img.shields.io/npm/v/alps-writer.svg)](https://www.npmjs.com/package/alps-writer)
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that helps you write ALPS (PRD) interactively with AI. Guides you through 9 structured sections with templates, conversation guides, and document management.
+ALPS Writer는 두 가지 형태로 제공됩니다.
+
+1. **MCP server** (`alps-writer` on npm) — Claude Desktop, Cursor, Kiro 등 MCP 호환 클라이언트에서 ALPS (PRD)를 대화형으로 작성.
+2. **Claude Code plugin** (이 저장소) — MCP server에 더해 ADR 변환·동기화 명령, ADR drift를 잡는 hook까지 묶어 ALPS → ADR → 코드 → 테스트 사이클을 강제.
 
 ## Features
 
@@ -10,11 +13,46 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that he
 - Interactive Q&A workflow — AI asks focused questions, never auto-generates
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
+- **ALPS → ADR conversion** — Section 7 feature를 `docs/adr/<category>/NNNN-*.md`로 자동 변환
+- **PreToolUse hook** — 코드가 매핑된 ADR보다 새로우면 경고하거나 차단 (`ALPS_ADR_ENFORCE=block`)
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client
 
-## Quick Start
+## Quick Start (Claude Code Plugin)
 
-No installation required — just add the MCP config to your client:
+이 저장소를 Claude Code marketplace로 등록하면 MCP server + commands + hooks가 한 번에 설치됩니다.
+
+```
+/plugin marketplace add haandol/alps-writer-mcp
+/plugin install alps-writer@alps-writer
+```
+
+설치 후 사용 가능한 명령어:
+
+| 명령                             | 역할                                          |
+| -------------------------------- | --------------------------------------------- |
+| `/alps-init`                     | 신규 ALPS 문서 작성 (또는 기존 문서 이어쓰기) |
+| `/feature-to-adr [category]`     | ALPS Section 7 feature를 ADR 초안으로 변환    |
+| `/adr-impl <adr or category>`    | ADR을 코드로 구현 (테스트 포함)               |
+| `/adr-sync [category] [--quick]` | 코드와 ADR drift 검증 및 수정                 |
+| `/adr-rollup <category>`         | 진화 체인 ADR을 단일 "현재 상태" ADR로 통합   |
+
+### Hook 동작
+
+`Edit`/`Write`/`MultiEdit` 호출 시 `hooks/check-adr-sync.mjs`가 실행되어:
+
+- 수정 대상 파일이 `docs/adr/.mapping.json`의 어떤 카테고리에 속하는지 확인
+- 매핑된 ADR이 코드보다 24h 이상 오래되면 경고 (또는 `ALPS_ADR_ENFORCE=block` 시 차단)
+- ADR이 없는 카테고리에 대한 수정도 동일하게 처리
+
+`UserPromptSubmit` hook은 사용자가 feature 이름이나 카테고리를 언급하면 관련 ADR 경로를 자동으로 컨텍스트에 주입합니다.
+
+### 매핑 파일
+
+`docs/adr/.mapping.json`이 ALPS feature ↔ ADR ↔ 코드 경로의 single source of truth입니다. 스키마는 [`templates/adr/mapping.schema.json`](./templates/adr/mapping.schema.json) 참조. `/feature-to-adr`이 자동 갱신합니다.
+
+## Quick Start (MCP only)
+
+플러그인 없이 MCP server만 사용하려면:
 
 ```json
 {
@@ -29,18 +67,18 @@ No installation required — just add the MCP config to your client:
 
 ### Client Setup
 
-| Client             | Config location                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| **Claude Desktop** | Settings > Developer > Edit Config (`claude_desktop_config.json`)                                      |
-| **Claude Code**    | `claude mcp add alps-writer -- npx -y alps-writer`                                                     |
-| **Cursor**         | Settings > Features > MCP Servers > + Add new global MCP server                                        |
-| **Kiro**           | `Cmd+Shift+P` > "Kiro: Open user MCP config (JSON)" (`~/.kiro/settings/mcp.json`)                     |
-| **Kiro CLI**       | `kiro-cli mcp add --name alps-writer --command npx --args "-y" --args "alps-writer" --scope global`    |
+| Client             | Config location                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| **Claude Desktop** | Settings > Developer > Edit Config (`claude_desktop_config.json`)                                   |
+| **Claude Code**    | `claude mcp add alps-writer -- npx -y alps-writer`                                                  |
+| **Cursor**         | Settings > Features > MCP Servers > + Add new global MCP server                                     |
+| **Kiro**           | `Cmd+Shift+P` > "Kiro: Open user MCP config (JSON)" (`~/.kiro/settings/mcp.json`)                   |
+| **Kiro CLI**       | `kiro-cli mcp add --name alps-writer --command npx --args "-y" --args "alps-writer" --scope global` |
 
 ### Environment Variables
 
-| Variable          | Description                                                   | Default                   |
-| ----------------- | ------------------------------------------------------------- | ------------------------- |
+| Variable          | Description                                                   | Default      |
+| ----------------- | ------------------------------------------------------------- | ------------ |
 | `ALPS_OUTPUT_DIR` | Directory for document files (`.alps.xml`, exported markdown) | `<cwd>/prd/` |
 
 Config example with `ALPS_OUTPUT_DIR`:

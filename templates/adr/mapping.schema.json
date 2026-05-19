@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ALPS-ADR Mapping",
+  "description": "Maps ALPS Section 7 features to ADRs and the code paths they govern. Read by alps-writer plugin hooks to detect ADR drift.",
+  "type": "object",
+  "required": ["categories"],
+  "properties": {
+    "alpsDocument": {
+      "type": "string",
+      "description": "Path to the ALPS .alps.xml file relative to the repo root."
+    },
+    "categories": {
+      "type": "object",
+      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR subdirectory name under docs/adr/.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["codePaths", "adrs"],
+        "properties": {
+          "feature": {
+            "type": "string",
+            "description": "Human-readable feature name from ALPS Section 7."
+          },
+          "alpsFeatureId": {
+            "type": "string",
+            "description": "Stable id of the feature in the ALPS document (e.g., F-AUTH-01)."
+          },
+          "codePaths": {
+            "type": "array",
+            "description": "Glob patterns identifying source files governed by this category's ADRs.",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "adrs": {
+            "type": "array",
+            "description": "Paths to ADR markdown files (relative to repo root).",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "tableDocs": {
+            "type": "array",
+            "description": "Paths to schema/table documents (e.g., docs/tables/*.md, prisma/schema.prisma) that must stay bidirectionally linked with ADRs in this category. Used by adr-manage's DB schema co-change rule and by adr-sync auxiliary doc check.",
+            "items": { "type": "string" }
+          },
+          "lastSyncedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO timestamp of the last verified ADR ↔ code sync. Hook compares against file mtimes."
+          }
+        }
+      }
+    }
+  }
+}

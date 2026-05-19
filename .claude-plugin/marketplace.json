@@ -1,0 +1,27 @@
+{
+  "name": "alps-writer",
+  "owner": {
+    "name": "haandol",
+    "url": "https://github.com/haandol"
+  },
+  "metadata": {
+    "description": "ALPS (PRD) writer + ADR-driven development cycle for Claude Code.",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "alps-writer",
+      "source": ".",
+      "description": "Spec-driven development plugin: write ALPS docs via MCP, convert features to ADRs, and enforce ADR ↔ code sync with PreToolUse hooks.",
+      "version": "0.2.0",
+      "author": {
+        "name": "haandol"
+      },
+      "homepage": "https://github.com/haandol/alps-writer-mcp",
+      "license": "Apache-2.0",
+      "category": "development",
+      "tags": ["alps", "prd", "adr", "spec-driven", "mcp"],
+      "strict": false
+    }
+  ]
+}

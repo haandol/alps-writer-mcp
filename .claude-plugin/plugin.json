@@ -1,12 +1,30 @@
 {
   "name": "alps-writer",
-  "description": "MCP server for interactive ALPS (PRD) writing with AI. Guides you through 9 structured sections with templates, conversation guides, and document management.",
-  "version": "0.1.2",
+  "description": "Spec-driven development cycle for Claude Code: ALPS (PRD) authoring → ADR conversion → code → test loop with hook-enforced ADR sync.",
+  "version": "0.2.0",
   "author": {
     "name": "haandol"
   },
   "homepage": "https://github.com/haandol/alps-writer-mcp",
   "repository": "https://github.com/haandol/alps-writer-mcp",
   "license": "Apache-2.0",
-  "keywords": ["mcp", "alps", "prd", "product-requirements", "specification", "ai"]
+  "keywords": [
+    "mcp",
+    "alps",
+    "prd",
+    "adr",
+    "spec-driven",
+    "product-requirements",
+    "specification",
+    "ai"
+  ],
+  "mcpServers": {
+    "alps-writer": {
+      "command": "npx",
+      "args": ["-y", "alps-writer"]
+    }
+  },
+  "commands": "./commands",
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json"
 }
