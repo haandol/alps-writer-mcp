@@ -66,7 +66,9 @@ export class DocumentService {
   }
 
   private get outputDir(): string {
-    return process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path.join(process.cwd(), "prd");
+    return (
+      process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path.join(process.cwd(), "prd")
+    );
   }
 
   private expandPath(p: string): string {
