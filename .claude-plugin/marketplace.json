@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "alps-writer",
-      "source": ".",
+      "source": "./",
       "description": "Spec-driven development plugin: write ALPS docs via MCP, convert features to ADRs, and enforce ADR ↔ code sync with PreToolUse hooks.",
       "version": "0.2.2",
       "author": {
