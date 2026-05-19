@@ -250,7 +250,7 @@ API 엔드포인트 목록(Method, Path, 설명)은 아키텍처 결정의 일�
 
 ### 한 ADR = 한 결정
 
-하나의 ADR은 하나의 결정만 다룬다. 여러 결정이 한 파일에 섞이면 검토·롤업·suspersede가 모두 어려워진다.
+하나의 ADR은 하나의 logical decision만 다룬다. 여러 결정이 한 파일에 섞이면 검토·supersede·roll-up이 모두 어려워진다.
 
 분리 신호:
 
@@ -260,6 +260,12 @@ API 엔드포인트 목록(Method, Path, 설명)은 아키텍처 결정의 일�
 - Status가 부분적으로만 적용된다 ("핵심은 Accepted지만 일부는 아직 Proposed")
 
 이 신호 중 둘 이상이면 ADR을 분리한다 (예: `0003-payment.md` → `0003-payment-checkout.md` + `0004-payment-refund.md`).
+
+### 같은 결정이 진화하면 새 ADR을 만든다
+
+같은 logical decision이 시간이 지나며 바뀌면 기존 ADR을 덮어쓰지 않고 **새 ADR을 만들어 history를 남긴다** — 옛 ADR은 `Status: Superseded by [ADR XXXX](link)`로 표시한다. 한 카테고리 안에 ADR이 여럿 있는 것은 정상이며, 통합 대상이 아니다.
+
+같은 결정의 진화 history가 너무 분산되어 현재 상태를 한눈에 보기 어려워졌을 때만 `/adr-rollup`으로 그 묶음을 통합한다 (전체 카테고리가 아니라 묶음 단위). roll-up 절차와 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/skills/adr-rollup/SKILL.md` 참조.
 
 ### 길이 가이드
 

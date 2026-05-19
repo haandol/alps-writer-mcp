@@ -26,25 +26,41 @@ ALPS Writer는 두 가지 형태로 제공됩니다.
 /plugin install alps-writer@alps-writer
 ```
 
-설치 후 사용 가능한 명령어:
+### 개발 사이클
 
-| 명령                             | 역할                                          |
-| -------------------------------- | --------------------------------------------- |
-| `/alps-init`                     | 신규 ALPS 문서 작성 (또는 기존 문서 이어쓰기) |
-| `/feature-to-adr [category]`     | ALPS Section 7 feature를 ADR 초안으로 변환    |
-| `/adr-impl <adr or category>`    | ADR을 코드로 구현 (테스트 포함)               |
-| `/adr-sync [category] [--quick]` | 코드와 ADR drift 검증 및 수정                 |
-| `/adr-rollup <category>`         | 진화 체인 ADR을 단일 "현재 상태" ADR로 통합   |
+```mermaid
+flowchart LR
+    A["ADR 확인<br/>(mapping snapshot)"] --> B["ADR 작성/수정<br/>(/feature-to-adr<br/>또는 ADR 직접 편집)"]
+    B --> C["코드 작성<br/>(/adr-impl)"]
+    C --> D["테스트<br/>(project commands)"]
+    D --> E["/adr-sync<br/>(반영된 학습으로<br/>ADR 보강)"]
+    E -->|다음 사이클| A
+```
+
+매 사이클마다 ADR이 코드를 따라 같이 진화하는 것이 목표입니다. 결정이 바뀌면 새 ADR을 추가하는 게 정상이고, 같은 카테고리 안에 ADR이 여럿 있는 것도 정상입니다. **같은 logical decision의 진화 history**가 여러 ADR로 분산되었을 때만 `/adr-rollup`으로 그 묶음을 단일 "현재 상태" ADR로 통합합니다.
+
+### 명령어
+
+| 명령                       | 역할                                                               |
+| -------------------------- | ------------------------------------------------------------------ |
+| `/alps-init`               | 신규 ALPS 문서 작성 (또는 기존 문서 이어쓰기)                      |
+| `/adr-cycle [id]`          | 사이클 단일 진입점. 현재 상태 보고 다음 단계 선택                  |
+| `/feature-to-adr [id]`     | ALPS Section 7 feature를 ADR 초안으로 변환 + 매핑 시드             |
+| `/adr-impl <id>`           | ADR을 코드로 구현 (테스트 포함)                                    |
+| `/adr-sync [id] [--quick]` | 코드와 ADR drift 검증·수정, 학습 반영                              |
+| `/adr-rollup <id>`         | 같은 logical decision의 evolution history가 분산된 ADR 묶음만 통합 |
 
 ### Hook 동작
 
-`Edit`/`Write`/`MultiEdit` 호출 시 `hooks/check-adr-sync.mjs`가 실행되어:
+세 hook이 메인 Claude Code 세션을 지원합니다 — **외부 LLM 호출 없이**, 메인 모델이 텍스트를 직접 분류하고 의사결정합니다.
 
-- 수정 대상 파일이 `docs/adr/.mapping.json`의 어떤 카테고리에 속하는지 확인
-- 매핑된 ADR이 코드보다 24h 이상 오래되면 경고 (또는 `ALPS_ADR_ENFORCE=block` 시 차단)
-- ADR이 없는 카테고리에 대한 수정도 동일하게 처리
+| Hook               | 시점                 | 역할                                                                        |
+| ------------------ | -------------------- | --------------------------------------------------------------------------- |
+| `SessionStart`     | 세션 시작 시 한 번   | ADR-first 사이클 규칙을 모델 컨텍스트에 주입                                |
+| `UserPromptSubmit` | 매 사용자 발화       | `docs/adr/.mapping.json` 스냅샷을 모델 컨텍스트에 주입 (의도 분류는 모델이) |
+| `PreToolUse`       | Edit/Write/MultiEdit | 매핑 누락·stale ADR·미커버 source 영역 감지 → warn (또는 block)             |
 
-`UserPromptSubmit` hook은 사용자가 feature 이름이나 카테고리를 언급하면 관련 ADR 경로를 자동으로 컨텍스트에 주입합니다.
+기본 모드는 `warn`. 강제력을 높이려면 셸에서 `ALPS_ADR_ENFORCE=block`을 export하면 hook이 stale/미매핑 source 수정 시 exit 2로 차단합니다 (모델 컨텍스트로 사유 전달 → self-correct).
 
 ### 매핑 파일
 

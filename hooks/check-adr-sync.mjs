@@ -11,6 +11,46 @@ import { readFileSync, statSync, existsSync } from "node:fs";
 const MODE = (process.env.ALPS_ADR_ENFORCE || "warn").toLowerCase();
 const MAPPING_PATH = process.env.ALPS_ADR_MAPPING || "docs/adr/.mapping.json";
 
+// Top-level directories that almost always hold source code we want under
+// ADR coverage. Used to detect "user is editing real code but no ADR is
+// mapped yet" — the most common gap in the early days of a project.
+const SOURCE_DIR_HINTS = [
+  "src/",
+  "lib/",
+  "app/",
+  "apps/",
+  "packages/",
+  "services/",
+  "pages/",
+  "components/",
+  "server/",
+  "client/",
+  "internal/",
+  "cmd/",
+];
+
+// Files we never want to bother with — config, lockfiles, generated output.
+// Even when they live under packages/ we don't ask for an ADR.
+const EXCLUDE_FILE_PATTERNS = [
+  /(^|\/)package\.json$/,
+  /(^|\/)pnpm-lock\.yaml$/,
+  /(^|\/)yarn\.lock$/,
+  /(^|\/)package-lock\.json$/,
+  /(^|\/)tsconfig.*\.json$/,
+  /(^|\/)\.eslintrc/,
+  /(^|\/)\.prettierrc/,
+  /(^|\/)nx\.json$/,
+  /(^|\/)project\.json$/,
+  /(^|\/)README(\.|$)/i,
+  /(^|\/)AGENTS\.md$/i,
+  /(^|\/)CLAUDE\.md$/i,
+  /(^|\/)CONTRIBUTING\.md$/i,
+  /(^|\/)LICENSE/i,
+  /\.lock$/,
+  /\.min\.(js|css)$/,
+  /\.d\.ts$/,
+];
+
 function readStdinSync() {
   try {
     return readFileSync(0, "utf8");
@@ -75,10 +115,27 @@ function newest(paths) {
 }
 
 function emit({ block, message }) {
-  // Per Claude Code docs: exit 2 = block (PreToolUse), stderr → assistant context.
-  // exit 0 = allow, stderr is shown to user but not the model.
-  process.stderr.write(message + "\n");
-  process.exit(block ? 2 : 0);
+  // PreToolUse JSON schema (per Claude Code docs):
+  //   - block:  permissionDecision="deny" + permissionDecisionReason → reason
+  //             reaches the model so it can self-correct.
+  //   - warn:   PreToolUse does not support additionalContext, so we just
+  //             allow the call and surface the message via stderr for the
+  //             user. The same drift will be caught on the next turn by
+  //             surface-adr-context.mjs's mapping snapshot, so the model
+  //             still has visibility — without false-blocking every edit.
+  if (block) {
+    const out = {
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
+        permissionDecisionReason: message,
+      },
+    };
+    process.stdout.write(JSON.stringify(out) + "\n");
+  } else {
+    process.stderr.write(message + "\n");
+  }
+  process.exit(0);
 }
 
 function main() {
@@ -105,13 +162,49 @@ function main() {
   // Skip the ADR docs themselves and the mapping file.
   if (rel.startsWith("docs/adr/")) process.exit(0);
   if (rel.endsWith(".alps.xml")) process.exit(0);
+  // Skip pure docs/configuration that don't carry architectural decisions.
+  if (EXCLUDE_FILE_PATTERNS.some((re) => re.test(rel))) process.exit(0);
+  if (rel.startsWith("docs/") && !rel.startsWith("docs/adr/")) process.exit(0);
 
   const mappingPath = path.join(cwd, MAPPING_PATH);
   const mapping = loadJSON(mappingPath);
-  if (!mapping) process.exit(0); // No mapping yet — pre-bootstrap, stay quiet.
+  const looksLikeSource = SOURCE_DIR_HINTS.some(
+    (h) => rel === h.replace(/\/$/, "") || rel.startsWith(h),
+  );
+
+  if (!mapping) {
+    // No mapping file at all. If this looks like real source, prompt the user
+    // to bootstrap it; otherwise stay quiet.
+    if (!looksLikeSource) process.exit(0);
+    return emit({
+      block: MODE === "block",
+      message:
+        `[alps-writer] No \`docs/adr/.mapping.json\` found, but you're editing source: ${rel}\n` +
+        `  Run \`/feature-to-adr <id>\` (or \`/adr-cycle\`) to seed the mapping and draft an ADR first.\n` +
+        (MODE === "block"
+          ? `  (ALPS_ADR_ENFORCE=block — write blocked until the cycle starts.)`
+          : `  (warn mode — proceeding. Set ALPS_ADR_ENFORCE=block to enforce.)`),
+    });
+  }
 
   const cat = findMappedCategory(rel, mapping);
-  if (!cat) process.exit(0); // File not under any tracked category.
+  if (!cat) {
+    // Mapping exists but no category claims this file. For source dirs that
+    // is a gap the cycle should fill; for everything else we stay quiet.
+    if (!looksLikeSource) process.exit(0);
+    return emit({
+      block: MODE === "block",
+      message:
+        `[alps-writer] No ADR category covers ${rel}.\n` +
+        `  This file lives under a source directory but isn't claimed by any \`codePaths\` in \`docs/adr/.mapping.json\`.\n` +
+        `  Either:\n` +
+        `    • Run \`/feature-to-adr <id>\` to create a new category and ADR for this area, or\n` +
+        `    • Extend an existing category's \`codePaths\` if this file belongs there.\n` +
+        (MODE === "block"
+          ? `  (ALPS_ADR_ENFORCE=block — write blocked.)`
+          : `  (warn mode — proceeding.)`),
+    });
+  }
 
   const adrPaths = (cat.adrs || []).map((p) => path.join(cwd, p));
   const presentAdrs = adrPaths.filter(existsSync);

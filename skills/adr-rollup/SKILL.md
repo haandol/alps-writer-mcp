@@ -1,54 +1,52 @@
 ---
 name: adr-rollup
-description: 카테고리별 진화 체인을 통합하여 단일 "현재 상태" ADR로 머지한다. 가장 낮은 번호의 ADR을 유지하고 나머지는 삭제. 결과물에 rollup 흔적을 남기지 않는다. 키워드 - "adr rollup", "adr 통합", "adr 머지".
+description: Merge ADRs that capture the **evolution history of the same logical decision** into one current-state ADR. Trigger only when two or more ADRs progressively change/replace the same decision (refine, supersede, replace) — not when a category simply has many ADRs covering different decisions. Multiple ADRs per category is normal and stays untouched. Keywords - "adr rollup", "같은 결정 합치기", "evolution chain merge", "Superseded chain 정리".
 disable-model-invocation: true
 ---
 
 # adr-rollup
 
-같은 카테고리에서 여러 ADR이 누적 진화(0001→0002→0003→...)한 경우, 이들을 하나의 "현재 상태" ADR로 통합한다.
+여러 ADR이 **같은 logical decision의 evolution history**를 분산해서 들고 있을 때, 이를 하나의 "현재 상태" ADR로 통합합니다.
 
-## 목적
+## 역할 한정 — 잘못 발동되지 않도록
 
-- 기능의 **현재 아키텍처 결정**을 한 파일에서 파악할 수 있게 한다
-- 가장 오래된(번호가 낮은) ADR을 통합 문서로 사용하고, 나머지는 **삭제**한다
-- 중요한 아키텍처 결정은 반드시 유지한다
-- **결과물은 "롤업된 문서"가 아닌 "원래부터 하나의 ADR이었던 문서"처럼 읽혀야 한다**
-  - 파일명·제목·내용 어디에도 "rollup", "roll-up", "현재 아키텍처", "통합" 같은 흔적을 남기지 않는다
-  - Evolution History 섹션을 작성하지 않는다 (Git 히스토리가 source of truth)
+- **roll-up 대상은 "같은 결정의 진화 체인"**: A 결정의 v1 → v1을 개선한 v2 → v2를 다시 대체한 v3 처럼 동일 logical decision에 대해 시간순으로 누적된 ADR들.
+- **roll-up 대상이 아닌 것**:
+  - 한 카테고리 안에 ADR이 많은 것 (예: `auth/`에 0001 가입, 0002 SSO, 0003 비밀번호 리셋) — **이건 정상**. 서로 다른 결정이므로 통합하지 않는다.
+  - 같은 feature를 서로 다른 측면에서 다루는 ADR들 (예: 같은 결제 시스템의 "결제 흐름" + "환불 정책") — 결정 주제가 다르면 통합하지 않는다.
+  - 단일 ADR이 작성된 뒤 Status만 `Proposed` → `Accepted`로 바뀐 경우 — history가 분산된 게 아니다.
+- 카테고리 ADR 개수만 보고 호출하지 않는다. 개수는 신호가 아니다. **체인의 존재가 신호다.**
+
+## 진화 체인을 식별하는 기준
+
+다음 중 둘 이상이 동시에 성립할 때만 체인으로 본다:
+
+1. ADR이 다른 ADR의 결정을 명시적으로 supersede / replace / extend한다 (Status가 `Superseded by [...]`이거나 본문에 "0002의 결정을 대체한다" 같은 서술).
+2. 같은 엔티티/도메인 모델/시스템 컴포넌트의 **같은 측면**(예: 키 디자인, 라이프사이클, API 표면)을 다룬다.
+3. 시간이 지나면서 같은 질문(WHAT/HOW)에 대한 답이 변경되었다.
+
+판단이 모호하면 통합하지 않는다 — 정보 손실 위험이 더 크다.
 
 ## Workflow
 
-### 1. 대상 선정
+### 1. 후보 식별
 
-사용자가 카테고리를 지정하면 그 카테고리만, 아니면 전체 카테고리를 본다. `docs/adr/README.md`로 ADR 목록을 파악한다.
+대상 카테고리(또는 사용자가 지정한 ADR 묶음)에서 위 기준을 만족하는 체인을 찾는다.
 
-### 2. 진화 체인 분석
+- `docs/adr/<category>/`의 ADR 본문과 README의 한 줄 요약, `Status`, `Related`, `Superseded by` 링크를 모두 읽는다.
+- 같은 logical decision인 ADR들을 묶는다. 한 카테고리에 여러 묶음이 있을 수 있고, 묶음이 하나도 없을 수도 있다.
+- 묶음이 없으면 **"통합할 것이 없다"**고 사용자에게 보고하고 종료. 카테고리에 ADR이 많다는 이유로 억지로 묶지 않는다.
 
-**Roll-up 대상**: 동일 기능/주제를 순차적으로 개선·확장·대체한 ADR 체인
+### 2. 체인 전체 읽기
 
-- 같은 기능의 초기 → 개선 → 고도화
-- 명시적 Superseded 관계
-- 같은 엔티티/도메인 모델을 다루는 ADR들
+각 묶음의 모든 ADR 본문을 읽는다. 중요한 결정·대안·다이어그램을 놓치지 않기 위해.
 
-**Roll-up 제외**: 같은 카테고리지만 별개 기능, 이미 단독으로 완결된 ADR
+### 3. 통합 ADR 작성
 
-판단 기준:
-
-1. Related 섹션에서 같은 카테고리의 다른 ADR을 참조하는가?
-2. 내용이 이전 ADR의 결정을 확장/수정/대체하는가?
-3. 같은 엔티티/도메인 모델을 다루는가?
-
-### 3. 체인 전체 읽기
-
-대상 체인의 **모든 ADR을 읽는다**. 중요한 결정·대안·다이어그램을 놓치지 않기 위해.
-
-### 4. 통합 ADR 작성
-
-체인의 **가장 오래된(번호가 낮은) ADR**을 통합 문서로 사용한다. 그 파일의 내용을 통합본으로 덮어쓴다.
+체인의 **가장 낮은 번호 ADR을 유지 대상**으로 삼고, 그 파일에 통합본을 덮어쓴다. 다른 카테고리·다른 묶음의 ADR은 건드리지 않는다.
 
 ```markdown
-# ADR NNNN: 기능 이름
+# ADR NNNN: 결정 이름
 
 Date: <오늘>
 
@@ -70,16 +68,20 @@ Accepted
 
 ## Consequences
 
-{현재 시스템 기준. 이미 해결된 과거 리스크는 제거}
+### Positive
+
+### Negative
+
+### Risks
 
 ## Related
 
-{현재 유효한 ADR/문서 링크만}
+{현재 유효한 ADR/문서 링크만 — 같은 카테고리의 다른 logical decision ADR은 그대로 링크 유지}
 ```
 
 **규칙**:
 
-1. **Seamless merge**: 결과물에 rollup 흔적 금지 (파일명·제목·README 링크에 `(Roll-up)` 등 금지). Evolution History 섹션 작성 금지.
+1. **Seamless merge**: 결과물에 rollup 흔적을 남기지 않는다. 파일명·제목·README 링크에 `(Roll-up)` 같은 표기 금지. Evolution History 섹션도 만들지 않는다 — Git 히스토리가 source of truth.
 2. **현재 상태만 서술**: "~를 추가했다" 대신 "~로 구성된다".
 3. **중요 결정 유지**: 상태 전이, 행동 규칙, 엔티티 관계, 연동 방식, 비즈니스 로직.
 4. **Mermaid 다이어그램 보존**: 현재 유효한 것을 통합/수정해 유지.
@@ -87,18 +89,20 @@ Accepted
 6. **구현 세부 배제**: 파일 경로, 코드 스니펫, 상수, 엔티티 필드별 스키마는 포함하지 않는다.
 7. **Error Handling 전략 유지**: graceful degradation, 폴백 패턴 등 아키텍처 수준의 처리는 유지.
 
-### 5. 기존 ADR 삭제
+### 4. 체인의 나머지 ADR 삭제
 
-체인 내 나머지 ADR 파일을 삭제한다 (Deprecated로 남기지 않음). Git 히스토리에 원본이 보존된다.
+체인 안의 더 높은 번호 ADR 파일을 삭제한다 (Deprecated로 남기지 않음). Git 히스토리에 원본이 보존된다.
 
-### 6. README + 매핑 갱신
+같은 카테고리에 있더라도 **다른 logical decision을 다루는 ADR은 절대 삭제하지 않는다**. 통합은 항상 묶음 단위.
 
-- `docs/adr/README.md`에서 삭제된 항목 제거, 통합 항목의 한 줄 요약 갱신
-- `docs/adr/.mapping.json`의 `adrs` 배열에서 삭제된 경로 제거
+### 5. README + 매핑 갱신
 
-### 6-1. Cross-reference 갱신
+- `docs/adr/README.md`의 카테고리 목록에서 삭제된 ADR 항목 제거, 통합 ADR의 한 줄 요약 갱신
+- `docs/adr/.mapping.json`의 해당 카테고리 `adrs` 배열에서 삭제된 경로 제거
 
-다른 ADR이 삭제된 ADR을 참조하는 Related 링크를 통합 문서로 변경한다.
+### 6. Cross-reference 갱신
+
+다른 ADR이 삭제된 ADR을 참조하는 Related 링크를 통합 ADR로 변경한다.
 
 ### 7. 사용자 확인
 
@@ -108,13 +112,16 @@ Accepted
 ## ADR Roll-up 결과
 
 ### <카테고리>
-- 통합 ADR: NNNN-<이름>.md (← 0001, 0002, 0003 통합)
+
+- 통합 ADR: NNNN-<이름>.md (← <같은 logical decision> 체인: 0001, 0002, 0003 통합)
 - 핵심 결정: <1-2문장>
 - 유지된 결정: <목록>
 - 제거된 내용: <이미 해결된 리스크, 폐기된 접근 등>
 
-### 변경되지 않은 독립 ADR
-- ...
+### 통합되지 않은 같은 카테고리 ADR
+
+- 0004-<독립 결정 A>.md, 0005-<독립 결정 B>.md, ...
+  (다른 logical decision이라 그대로 둠)
 ```
 
 ### 8. 코드 동기화 검증
@@ -132,7 +139,7 @@ Accepted
 
 ## Notes
 
-- Roll-up은 정보 손실이 아니라 **정보 압축**이다. 중요한 결정 누락 금지.
-- 의심스러우면 포함한다. 나중에 제거가 더 쉽다.
-- 카테고리 전체가 아니라 체인 단위로 roll-up. 같은 카테고리 내 독립 ADR은 건드리지 않는다.
+- Roll-up은 **정보 손실이 아니라 정보 압축**이다. 중요한 결정 누락 금지.
+- 의심스러우면 통합하지 않는다 (혹은 사용자에게 묻는다). 분리 상태가 안전.
+- 카테고리 안의 ADR 개수는 통합 사유가 아니다. **결정 진화 체인의 존재**만이 사유다.
 - Roll-up 후 `/adr-sync <category>` 권장.

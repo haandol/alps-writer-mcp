@@ -76,6 +76,16 @@ The repo doubles as a Claude Code plugin and a single-plugin marketplace. `.clau
 
 Hook scripts are Node ESM (`.mjs`) and read NDJSON events from stdin per the Claude Code hooks spec. They use only Node built-ins (no extra deps) so the plugin requires nothing beyond a Node.js >= 20 runtime.
 
+### Cycle hooks layout
+
+| File                            | Event              | Purpose                                                                                  |
+| ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------- |
+| `hooks/cycle-rules.mjs`         | `SessionStart`     | Inject the ADR-first cycle rules once per session.                                       |
+| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject the current `docs/adr/.mapping.json` snapshot every turn so the model can decide. |
+| `hooks/check-adr-sync.mjs`      | `PreToolUse`       | Warn (or block) on missing ADR / stale ADR / unmapped source edits.                      |
+
+The cycle relies on the **main session model** for text understanding — none of the hooks call an auxiliary LLM and none use intent regex. Hooks supply structured context; classification stays with the main model.
+
 ## Conventions
 
 - TypeScript strict mode, ES modules (`"type": "module"`)
@@ -84,6 +94,7 @@ Hook scripts are Node ESM (`.mjs`) and read NDJSON events from stdin per the Cla
 - Conventional Commits (details: CONTRIBUTING.md)
 - Scopes: `server`, `templates`, `documents`, `guides`, `deps`
 - Branch naming: `<type>/<short-description>` (e.g., `feat/section-validation`)
+- **Diagrams**: always Mermaid (`flowchart`, `sequenceDiagram`, `stateDiagram-v2`, `erDiagram`). Do not author ASCII/box-drawing diagrams unless the user explicitly asks for one. Applies to README, AGENTS, ADR templates, command/skill prose, and anything this plugin generates inside user projects. Directory trees (`tree`-style with `├── └──`) are exempt — they are listings, not diagrams.
 
 ## Definition of Done
 

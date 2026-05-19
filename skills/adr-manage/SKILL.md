@@ -1,6 +1,6 @@
 ---
 name: adr-manage
-description: ADR 생성·수정 시 작성 규칙(코드 참조 폴더 단위, 구현 세부 배제, Status 값 제한)을 자동 적용한다. ALPS feature를 ADR로 변환하거나 기존 ADR을 편집할 때 사용. 키워드 - "ADR 만들어줘", "ADR 작성", "ADR 추가", "adr create", "새 ADR", "feature-to-adr", "ADR 수정", "ADR 업데이트", "ADR 검토", "ADR 리뷰".
+description: Use this skill whenever you are about to create or edit an ADR — directly, via /feature-to-adr, /adr-impl, /adr-sync, or /adr-cycle. Triggers on any user request that adds, changes, refactors, or removes feature behavior, or that explicitly mentions ADRs. Examples in any language - "F1 구현해줘", "이 부분 좀 바꿔줘", "결제 흐름 수정", "ADR 만들어줘", "새 기능 추가", "implement signup", "refactor the cart", "rework auth flow", "draft an ADR for ...". Loads the writing rules (folder-depth references, implementation-detail exclusion, Status values, DB schema co-change) so the resulting ADR passes review.
 ---
 
 # adr-manage
