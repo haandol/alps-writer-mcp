@@ -1,17 +1,26 @@
 ---
-description: Convert an ALPS Section 7 feature into a Proposed ADR draft and seed docs/adr/.mapping.json. Used as the entry step of /adr-cycle.
+description: Convert ALPS Section 7 feature(s) into Proposed ADR drafts and seed docs/adr/.mapping.json. Used as the entry step of /adr-cycle.
 argument-hint: "[category-or-feature-id?]"
 ---
 
-ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으면 해당 feature만, 없으면 ALPS Section 7 전체에서 다음에 다룰 후보를 사용자에게 한 번 확인한 뒤 진행합니다.
+ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으면 **해당 feature 한 개만** 처리하고, 인자가 없으면 **Section 7 전체 feature를 순차적으로 모두** ADR로 변환합니다.
 
 ## 절차
 
-### 1. ALPS 로드
+### 1. ALPS 로드 및 처리 대상 결정
 
 - `mcp__alps-writer__load_alps_document`로 현재 문서를 로드.
 - `mcp__alps-writer__read_alps_section(7)`로 feature 목록 추출.
 - ALPS 문서가 없으면 사용자에게 알리고 `mcp__alps-writer__init_alps_document` 또는 `/alps-init`을 권유한 뒤 중단.
+
+처리 대상 결정:
+
+- **인자가 있는 경우**: 해당 카테고리/피쳐 ID에 매칭되는 feature 1개만 큐에 넣는다.
+- **인자가 없는 경우**: Section 7 의 **모든 feature** 를 ALPS 에 등장한 순서대로 큐에 넣는다. 단 `docs/adr/.mapping.json` 에 이미 ADR 이 매핑된 feature 는 큐에서 제외한다 (재실행 시 중복 방지).
+- 큐가 비어 있으면 "변환할 신규 feature 가 없습니다" 메시지를 띄우고 종료.
+- 큐에 2개 이상이 들어 있으면 사용자에게 처리 순서를 한 번 보여주고 "이 순서로 모든 피쳐를 ADR 로 변환하겠습니다. 진행할까요?" 한 번만 확인. 이후 각 피쳐는 8단계 승인 시점에서만 멈춘다.
+
+> 아래 2~8단계는 큐의 각 feature 에 대해 **순차적으로 한 번씩 반복**한다. 한 피쳐의 8단계 승인이 완료된 뒤에야 다음 피쳐의 2단계로 넘어간다.
 
 ### 2. 카테고리 결정
 
@@ -99,6 +108,8 @@ ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으�
 ```
 
 승인 전까지 코드 수정을 시작하지 않는다. 사용자가 수정을 요청하면 ADR을 갱신한 뒤 다시 확인.
+
+큐에 다음 feature 가 남아 있으면, 승인 직후 "다음 피쳐(`<이름>`)로 계속 진행합니다" 한 줄을 출력하고 2단계로 돌아간다. 큐가 비면 전체 변환 결과 요약(생성된 ADR 목록)을 보여주고 종료.
 
 ### 9. opt-out 처리
 
