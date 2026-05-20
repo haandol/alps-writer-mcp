@@ -65,14 +65,13 @@ The goal is for ADRs to evolve alongside the code each cycle. Adding a new ADR w
 
 ### Slash commands
 
-| Command                    | Role                                                                                 |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| `/alps-init`               | Author a new ALPS document (or resume an existing one)                               |
-| `/adr-cycle [id]`          | Single entry point for the cycle — reports current state and picks the next step     |
-| `/feature-to-adr [id]`     | Convert an ALPS Section 7 feature into an ADR draft and seed the mapping             |
-| `/adr-impl <id>`           | Implement an ADR in code (including tests)                                           |
-| `/adr-sync [id] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                   |
-| `/adr-rollup <id>`         | Consolidate only ADR groups whose evolution history of one logical decision is split |
+| Command                    | Role                                                                                                  |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `/alps-init`               | Author a new ALPS document (or resume an existing one)                                                |
+| `/feature-to-adr [id]`     | Convert an ALPS Section 7 feature into an ADR draft and seed the mapping                              |
+| `/adr-impl [id]`           | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build |
+| `/adr-sync [id] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                    |
+| `/adr-rollup <id>`         | Consolidate only ADR groups whose evolution history of one logical decision is split                  |
 
 ### Hook behavior
 

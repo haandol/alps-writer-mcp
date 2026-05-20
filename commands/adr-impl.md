@@ -1,18 +1,41 @@
 ---
 description: Implement an ADR — read the ADR, write code, run tests, then auto-promote ADR Status from Proposed to Accepted. Enforces ADR-first development cycle.
-argument-hint: "<adr-path-or-category>"
+argument-hint: "[adr-path-or-category]"
 ---
 
-지정한 ADR을 코드로 구현하고, 구현·테스트가 통과하면 ADR Status를 자동으로 `Accepted`로 갱신합니다. **ADR이 없거나 stale이면 먼저 `/feature-to-adr` 또는 `/adr-sync`를 수행한 뒤 진행한다.**
+지정한 ADR을 코드로 구현하고, 구현·테스트가 통과하면 ADR Status를 자동으로 `Accepted`로 갱신합니다. **ADR이 없으면 먼저 `/feature-to-adr` 를 수행한 뒤 진행한다.**
 
 > Status 의미: `Proposed`는 "ADR이 제안되었으나 미구현", `Accepted`는 "구현 완료". 이 명령은 마지막에 Status 전환까지 책임진다.
 
 ## 절차
 
 1. **대상 ADR 식별**
-   - 인자가 파일 경로면 그 ADR을, 카테고리면 `docs/adr/.mapping.json`에서 해당 카테고리의 ADR 목록을 모두 읽는다.
-   - 인자가 ALPS Feature ID 형태(예: `f1`, `F1`, `f-auth-01`)면 매핑의 카테고리 키 또는 entry 의 `alpsFeatureId` 와 대조해 매칭. `/feature-to-adr` 가 ALPS Feature ID 를 카테고리 키로 그대로 사용하므로 워크숍처럼 번호 기반 PRD 라면 1:1 로 맞다. 매칭이 모호하면 매핑 항목을 한 번 보여주고 사용자에게 확인.
-   - 현재 Status가 `Proposed`인지 확인한다 (이 명령은 `Proposed → Accepted` 전환을 자동 처리한다). 이미 `Accepted`인 ADR은 부분 변경/보강 의도인지 확인하고 진행.
+
+   인자별 분기:
+   - **인자가 파일 경로** → 그 ADR 파일 한 개를 대상으로 한다.
+   - **인자가 카테고리 또는 ALPS Feature ID** (예: `f1`, `F1`, `auth`, `f-auth-01`) → `docs/adr/.mapping.json` 의 카테고리 키 또는 entry 의 `alpsFeatureId` 와 대조해 매칭. `/feature-to-adr` 가 ALPS Feature ID 를 카테고리 키로 그대로 사용하므로 워크숍처럼 번호 기반 PRD 라면 1:1 로 맞다.
+   - **인자가 비어 있거나 매칭이 모호하거나 매핑/매핑 파일이 없을 때** — `Proposed` 상태(미구현)인 ADR 목록을 한 번에 보여주고 사용자에게 어떤 ADR 을 구현할지 묻는다 (아래 "Proposed 목록 출력" 절차).
+
+   **Proposed 목록 출력 절차**:
+   1. `docs/adr/.mapping.json` 이 있으면 모든 카테고리를 순회. 없으면 `docs/adr/*/*.md` 를 직접 grep 해서 ADR 파일 목록을 만든다.
+   2. 각 ADR 파일의 `## Status` 섹션을 읽어 `Proposed` 만 추린다 (`Accepted`, `Deprecated`, `Superseded` 는 제외).
+   3. 사용자에게 다음 형식으로 한 번 보여주고 선택을 받는다:
+
+      ```
+      아직 구현되지 않은 ADR 이 N개 있습니다. 어떤 ADR 을 구현할까요?
+
+      1. f1 — 이메일 가입 (docs/adr/f1/0001-email-signup.md)
+      2. f2 — 비밀번호 재설정 (docs/adr/f2/0001-password-reset.md)
+      3. cart — 장바구니 합산 (docs/adr/cart/0003-cart-totals.md)
+
+      번호 또는 카테고리/Feature ID 로 답해주세요. 한 번에 여러 개를 구현하려면 "1,2" 또는 "f1, f2" 처럼 답하세요.
+      ```
+
+   4. 사용자가 답하면 그 선택을 카테고리 인자로 받아 다시 1단계 시작 부분으로 돌아간다.
+   5. **Proposed ADR 이 0 개** 면 _"모든 ADR 이 이미 구현되어 있습니다. 새 기능을 추가하려면 `/feature-to-adr` 를 먼저 실행해주세요."_ 라고 안내하고 종료한다.
+   6. **ADR 자체가 디스크에 한 개도 없으면** _"ADR 이 아직 없습니다. 먼저 `/feature-to-adr` 로 ADR 을 작성한 뒤 다시 호출해주세요."_ 라고 안내하고 종료한다.
+
+   대상 ADR 이 식별되면 현재 Status 를 확인한다 — 이 명령은 `Proposed → Accepted` 전환을 자동 처리한다. 이미 `Accepted` 인 ADR 을 다시 구현 대상으로 받은 경우 부분 변경/보강 의도인지 사용자에게 한 번 확인하고 진행.
 
 2. **계획 수립**
    - ADR의 Decision/Mermaid 다이어그램에서 vertical slice를 추출한다 (UI → API → 데이터).

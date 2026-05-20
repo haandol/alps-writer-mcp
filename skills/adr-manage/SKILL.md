@@ -1,6 +1,6 @@
 ---
 name: adr-manage
-description: Use this skill whenever you are about to create or edit an ADR — directly, via /feature-to-adr, /adr-impl, /adr-sync, or /adr-cycle. Triggers on any user request that adds, changes, refactors, or removes feature behavior, or that explicitly mentions ADRs. Examples in any language - "F1 구현해줘", "이 부분 좀 바꿔줘", "결제 흐름 수정", "ADR 만들어줘", "새 기능 추가", "implement signup", "refactor the cart", "rework auth flow", "draft an ADR for ...". Loads the writing rules (folder-depth references, implementation-detail exclusion, Status values, DB schema co-change) so the resulting ADR passes review.
+description: Use this skill whenever you are about to create or edit an ADR — directly, via /feature-to-adr, /adr-impl, or /adr-sync. Triggers on any user request that adds, changes, refactors, or removes feature behavior, or that explicitly mentions ADRs. Examples in any language - "F1 구현해줘", "이 부분 좀 바꿔줘", "결제 흐름 수정", "ADR 만들어줘", "새 기능 추가", "implement signup", "refactor the cart", "rework auth flow", "draft an ADR for ...". Loads the writing rules (folder-depth references, implementation-detail exclusion, Status values, DB schema co-change) so the resulting ADR passes review.
 ---
 
 # adr-manage

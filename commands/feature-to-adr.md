@@ -1,5 +1,5 @@
 ---
-description: Convert ALPS Section 7 feature(s) into Proposed ADR drafts and seed docs/adr/.mapping.json. Used as the entry step of /adr-cycle.
+description: Convert ALPS Section 7 feature(s) into Proposed ADR drafts and seed docs/adr/.mapping.json.
 argument-hint: "[category-or-feature-id?]"
 ---
 

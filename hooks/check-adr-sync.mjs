@@ -180,7 +180,7 @@ function main() {
       block: MODE === "block",
       message:
         `[alps-writer] No \`docs/adr/.mapping.json\` found, but you're editing source: ${rel}\n` +
-        `  Run \`/feature-to-adr <id>\` (or \`/adr-cycle\`) to seed the mapping and draft an ADR first.\n` +
+        `  Run \`/feature-to-adr <id>\` to seed the mapping and draft an ADR first.\n` +
         (MODE === "block"
           ? `  (ALPS_ADR_ENFORCE=block — write blocked until the cycle starts.)`
           : `  (warn mode — proceeding. Set ALPS_ADR_ENFORCE=block to enforce.)`),
