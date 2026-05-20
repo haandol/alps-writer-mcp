@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "ALPS (PRD) writer + ADR-driven development cycle for Claude Code.",
-    "version": "0.2.5"
+    "version": "0.2.6"
   },
   "plugins": [
     {
       "name": "alps-writer",
       "source": "./",
       "description": "Spec-driven development plugin: write ALPS docs via MCP, convert features to ADRs, and enforce ADR ↔ code sync with PreToolUse hooks.",
-      "version": "0.2.5",
+      "version": "0.2.6",
       "author": {
         "name": "haandol"
       },
