@@ -1,9 +1,13 @@
 ---
-description: Convert ALPS Section 7 feature(s) into Proposed ADR drafts and seed docs/adr/.mapping.json.
+name: feature-to-adr
+description: Helper — convert ALPS Section 7 feature(s) into Proposed ADR drafts and seed docs/adr/.mapping.json. Use only when an ALPS PRD already exists; for direct ADR authoring use /adr-new instead. Keywords - "/feature-to-adr", "ALPS feature ADR 변환", "Section 7 일괄 ADR".
 argument-hint: "[category-or-feature-id?]"
+disable-model-invocation: true
 ---
 
-ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으면 **해당 feature 한 개만** 처리하고, 인자가 없으면 **Section 7 전체 feature를 순차적으로 모두** ADR로 변환합니다.
+# feature-to-adr
+
+ALPS Section 7 의 feature 를 ADR 초안으로 일괄 변환하는 helper 입니다 — ALPS PRD 가 이미 있을 때 편하게 쓰기 위한 경로이고, ADR 자체의 일급 작성 경로는 `/adr-new <category>` 입니다. 인자가 있으면 **해당 feature 한 개만** 처리하고, 인자가 없으면 **Section 7 전체 feature 를 순차적으로 모두** ADR 로 변환합니다.
 
 ## 절차
 

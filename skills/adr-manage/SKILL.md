@@ -1,17 +1,19 @@
 ---
 name: adr-manage
-description: Use this skill whenever you are about to create or edit an ADR — directly, via /feature-to-adr, /adr-impl, or /adr-sync. Triggers on any user request that adds, changes, refactors, or removes feature behavior, or that explicitly mentions ADRs. Examples in any language - "F1 구현해줘", "이 부분 좀 바꿔줘", "결제 흐름 수정", "ADR 만들어줘", "새 기능 추가", "implement signup", "refactor the cart", "rework auth flow", "draft an ADR for ...". Loads the writing rules (folder-depth references, implementation-detail exclusion, Status values, DB schema co-change) so the resulting ADR passes review.
+description: Use this skill whenever you are about to create or edit an ADR — directly, via /adr-new, /feature-to-adr, /adr-impl, or /adr-sync. Triggers on any user request that adds, changes, refactors, or removes feature behavior, or that explicitly mentions ADRs. Examples in any language - "ADR 만들어줘", "F1 구현해줘", "이 부분 좀 바꿔줘", "결제 흐름 수정", "새 기능 추가", "draft an ADR for ...", "implement signup", "refactor the cart", "rework auth flow". Loads the writing rules (folder-depth references, implementation-detail exclusion, Status values, DB schema co-change) so the resulting ADR passes review.
 ---
 
 # adr-manage
 
 ADR 생성 및 수정 시 `docs/adr/README.md`의 작성 규칙을 자동으로 적용한다. 본 plugin의 source of truth는 `${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md` 이며, 프로젝트에 복사된 `docs/adr/README.md`가 있으면 그쪽이 우선한다.
 
+ADR은 이 plugin의 일급 산출물이다 — ALPS PRD 가 있든 없든 ADR 자체로 작성·관리하고, 코드는 ADR을 근거로 구현한다. ALPS Section 7 → ADR 자동 변환 (`/feature-to-adr`) 은 그 위에 얹는 helper 일 뿐이다.
+
 ## 트리거
 
-- ALPS Section 7 feature → ADR 변환 (`/feature-to-adr`)
-- 새 ADR 생성 요청
+- 새 ADR 생성 요청 — 기본 경로는 `/adr-new <category>` 로 직접 작성 (ALPS PRD 유무와 무관)
 - 기존 ADR 수정/업데이트
+- ALPS Section 7 feature → ADR 일괄 변환 (`/feature-to-adr` — ALPS PRD 가 이미 있을 때 helper)
 - ADR 내용에 대한 논의 중 직접 편집이 필요할 때
 
 ## Workflow
@@ -20,7 +22,7 @@ ADR 생성 및 수정 시 `docs/adr/README.md`의 작성 규칙을 자동으로 
 
 작업 전 반드시 `docs/adr/README.md`의 **작성 규칙** 섹션을 읽는다. 없으면 plugin 템플릿(`${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md`)을 프로젝트로 복사한 뒤 시작한다.
 
-ALPS feature를 ADR로 변환하는 작업이거나, ALPS의 9개 섹션 구조·vertical slice 의도가 기억나지 않으면 `${CLAUDE_PLUGIN_ROOT}/templates/alps/about-alps.md` 를 먼저 읽는다. ALPS의 section 의도와 vertical-slice 원칙이 ADR 분할 결정의 근거가 된다.
+ALPS Section 7 feature 를 ADR 로 변환하는 작업(`/feature-to-adr`) 이거나 ALPS 의 9 개 섹션 구조·vertical slice 의도가 기억나지 않으면 `${CLAUDE_PLUGIN_ROOT}/templates/alps/about-alps.md` 를 먼저 읽는다 — ALPS 의 section 의도와 vertical-slice 원칙이 ADR 분할 결정의 근거가 된다. ALPS PRD 가 없는 일반 ADR 작성에서는 이 단계를 건너뛴다.
 
 ### 2. 새 ADR 생성
 

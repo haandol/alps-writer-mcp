@@ -39,7 +39,7 @@ function loadJSON(p) {
 function summarizeMapping(mapping, cwd) {
   const cats = Object.entries(mapping?.categories || {});
   if (cats.length === 0) {
-    return "(empty — no ADRs registered yet; new categories must be created via /feature-to-adr)";
+    return "(empty — no ADRs registered yet. Create one with /adr-new <category>, or with /feature-to-adr if you already have an ALPS Section 7 feature to convert.)";
   }
   const lines = [];
   for (const [cat, entry] of cats) {
@@ -75,7 +75,7 @@ function main() {
     "[ADR-first directive] 이번 사용자 요청이 신규 기능 추가나 기존 기능의 동작/구조 변경에 해당하는지 직접 판단하라. 단순 버그픽스, 리팩터링, lint/포맷, 문서 수정, 운영/배포 명령, 정보 조회는 면제다.",
     "",
     "해당한다면 다음 사이클을 따른다 — 사용자에게 한 줄로 'ADR을 먼저 점검/작성하겠다'고 알리고 진행:",
-    "1. 아래 매핑 스냅샷에서 영향 받는 카테고리를 찾아 docs/adr/<category>/ 의 ADR을 먼저 읽는다. 신규 영역이면 /feature-to-adr 로 새 카테고리/번호를 정한다.",
+    "1. 아래 매핑 스냅샷에서 영향 받는 카테고리를 찾아 docs/adr/<category>/ 의 ADR을 먼저 읽는다. 신규 영역이면 /adr-new <category> 로 ADR을 직접 작성한다 (ALPS Section 7 feature가 이미 있다면 /feature-to-adr 로 일괄 변환해도 된다 — helper 경로).",
     "2. ADR을 짧게 작성/수정한다 — WHY, 대안 비교, Consequences, DB 키 디자인만. 구현 세부(파일 경로 이하·코드 스니펫·상수)는 넣지 않는다. 규칙은 adr-manage 스킬을 따른다.",
     "3. ADR이 정한 결정대로 코드를 작성한다. 구현 중 결정이 바뀌면 ADR을 즉시 갱신해 같은 커밋에 함께 담는다.",
     "4. 테스트/검증 결과로 ADR의 Consequences·엣지케이스를 보강한다. 끝나면 /adr-sync 로 매핑/README 까지 정렬한다.",

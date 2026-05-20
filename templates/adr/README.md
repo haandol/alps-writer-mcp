@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADR)
 
-이 디렉토리는 프로젝트의 주요 아키텍처 결정을 문서화합니다. ALPS (PRD) Section 7의 각 feature는 한 개 이상의 ADR로 변환되어 코드 구현의 근거가 됩니다.
+이 디렉토리는 프로젝트의 주요 아키텍처 결정을 문서화합니다. ADR 은 코드 구현의 근거이며, 새 결정은 `/adr-new <category>` 로 직접 작성합니다. ALPS (PRD) 가 함께 있는 프로젝트라면 Section 7 의 각 feature 를 `/feature-to-adr` helper 로 한 번에 ADR 로 변환할 수도 있습니다.
 
 ## ADR이란?
 

@@ -37,7 +37,8 @@ See [`templates/alps/about-alps.md`](./templates/alps/about-alps.md) for the ful
 - Interactive Q&A workflow — AI asks focused questions, never auto-generates
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
-- **ALPS → ADR conversion** _(plugin)_ — automatically converts Section 7 features into `docs/adr/<category>/NNNN-*.md`
+- **ADR-driven development cycle** _(plugin)_ — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
+- **ALPS → ADR conversion helper** _(plugin)_ — `/feature-to-adr` converts Section 7 features into `docs/adr/<category>/NNNN-*.md` when an ALPS PRD already exists
 - **ADR-drift hooks** _(plugin)_ — warn or block (`ALPS_ADR_ENFORCE=block`) when code is newer than its mapped ADR
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client
 
@@ -54,12 +55,14 @@ Register this repository as a Claude Code marketplace and the MCP server, slash 
 
 ```mermaid
 flowchart LR
-    A["Check ADRs<br/>(mapping snapshot)"] --> B["Author/edit ADR<br/>(/feature-to-adr<br/>or edit ADR directly)"]
+    A["Check ADRs<br/>(mapping snapshot)"] --> B["Author/edit ADR<br/>(/adr-new — default)<br/>or /feature-to-adr<br/>(ALPS helper)"]
     B --> C["Write code<br/>(/adr-impl)"]
     C --> D["Test<br/>(project commands)"]
     D --> E["/adr-sync<br/>(reinforce ADR<br/>with what was learned)"]
     E -->|next cycle| A
 ```
+
+ADRs are the primary artifact this plugin manages. The default authoring path is `/adr-new <category>` — write the decision directly, with or without an ALPS PRD. `/feature-to-adr` is a helper layered on top: when you already have an ALPS Section 7 feature, it converts each feature into a Proposed ADR in one pass.
 
 The goal is for ADRs to evolve alongside the code each cycle. Adding a new ADR when a decision changes is normal, and having multiple ADRs in the same category is normal too. Only when **the evolution history of a single logical decision** is scattered across several ADRs do you use `/adr-rollup` to consolidate that group into a single "current state" ADR.
 
@@ -67,8 +70,9 @@ The goal is for ADRs to evolve alongside the code each cycle. Adding a new ADR w
 
 | Command                    | Role                                                                                                  |
 | -------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `/alps-init`               | Author a new ALPS document (or resume an existing one)                                                |
-| `/feature-to-adr [id]`     | Convert an ALPS Section 7 feature into an ADR draft and seed the mapping                              |
+| `/alps-init`               | Author a new ALPS document (or resume an existing one) — optional, only if you want a PRD             |
+| `/adr-new <category>`      | Author a new ADR directly — the default path, no ALPS PRD required                                    |
+| `/feature-to-adr [id]`     | _Helper_: convert an ALPS Section 7 feature into a Proposed ADR draft and seed the mapping            |
 | `/adr-impl [id]`           | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build |
 | `/adr-sync [id] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                    |
 | `/adr-rollup <id>`         | Consolidate only ADR groups whose evolution history of one logical decision is split                  |
@@ -86,7 +90,7 @@ Default mode is `warn`. To enforce more strictly, export `ALPS_ADR_ENFORCE=block
 
 ### Mapping file
 
-`docs/adr/.mapping.json` is the single source of truth for ALPS feature ↔ ADR ↔ code path relationships. See the schema at [`templates/adr/mapping.schema.json`](./templates/adr/mapping.schema.json). `/feature-to-adr` updates it automatically.
+`docs/adr/.mapping.json` is the single source of truth for the ADR ↔ code path (and optional ALPS feature) relationships. See the schema at [`templates/adr/mapping.schema.json`](./templates/adr/mapping.schema.json). Both `/adr-new` and `/feature-to-adr` update it automatically.
 
 ## Quick Start (MCP only)
 

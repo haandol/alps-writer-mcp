@@ -180,7 +180,9 @@ function main() {
       block: MODE === "block",
       message:
         `[alps-writer] No \`docs/adr/.mapping.json\` found, but you're editing source: ${rel}\n` +
-        `  Run \`/feature-to-adr <id>\` to seed the mapping and draft an ADR first.\n` +
+        `  Draft an ADR first:\n` +
+        `    • \`/adr-new <category>\` — write an ADR directly (default path).\n` +
+        `    • \`/feature-to-adr [id]\` — convert an ALPS Section 7 feature into an ADR (only if you already have an ALPS PRD).\n` +
         (MODE === "block"
           ? `  (ALPS_ADR_ENFORCE=block — write blocked until the cycle starts.)`
           : `  (warn mode — proceeding. Set ALPS_ADR_ENFORCE=block to enforce.)`),
@@ -198,7 +200,7 @@ function main() {
         `[alps-writer] No ADR category covers ${rel}.\n` +
         `  This file lives under a source directory but isn't claimed by any \`codePaths\` in \`docs/adr/.mapping.json\`.\n` +
         `  Either:\n` +
-        `    • Run \`/feature-to-adr <id>\` to create a new category and ADR for this area, or\n` +
+        `    • Run \`/adr-new <category>\` to create a new ADR + category for this area (or \`/feature-to-adr\` if it maps to an ALPS Section 7 feature), or\n` +
         `    • Extend an existing category's \`codePaths\` if this file belongs there.\n` +
         (MODE === "block"
           ? `  (ALPS_ADR_ENFORCE=block — write blocked.)`
@@ -213,7 +215,7 @@ function main() {
       block: MODE === "block",
       message:
         `[alps-writer] Category "${cat.id}" maps to ${rel} but has no ADR file on disk.\n` +
-        `  Run: /feature-to-adr ${cat.id}\n` +
+        `  Run: /adr-new ${cat.id}   (or /feature-to-adr ${cat.id} if backed by an ALPS Section 7 feature)\n` +
         (MODE === "block"
           ? `  (ALPS_ADR_ENFORCE=block — write blocked.)`
           : `  (warn mode — proceeding. Set ALPS_ADR_ENFORCE=block to enforce.)`),

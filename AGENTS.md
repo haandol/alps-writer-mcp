@@ -33,8 +33,7 @@ src/
 ├── plugin.json           # Plugin manifest (mcp + commands + skills + hooks)
 └── marketplace.json      # Marketplace manifest (single-repo distribution)
 
-commands/                 # Slash commands (/alps-init, /feature-to-adr, /adr-sync, /adr-impl, /adr-rollup)
-skills/                   # Skills (adr-manage, adr-sync, adr-rollup)
+skills/                   # Skills + slash commands (alps-init, adr-new, feature-to-adr, adr-impl, adr-sync, adr-rollup, adr-manage)
 agents/                   # Subagents (adr-reviewer)
 hooks/
 ├── hooks.json            # PreToolUse + UserPromptSubmit registration
@@ -68,7 +67,7 @@ templates/adr/
 
 ## Plugin distribution
 
-The repo doubles as a Claude Code plugin and a single-plugin marketplace. `.claude-plugin/plugin.json` references the npm-published MCP server (`npx -y alps-writer`) plus local `commands/`, `skills/`, and `hooks/` directories. `.claude-plugin/marketplace.json` points back at `.` so users can install with:
+The repo doubles as a Claude Code plugin and a single-plugin marketplace. `.claude-plugin/plugin.json` references the npm-published MCP server (`npx -y alps-writer`) plus local `skills/` and `hooks/` directories (slash commands are now packaged as skills — `commands/*.md` and `skills/<name>/SKILL.md` produce the same `/<name>` invocation per the Claude Code spec). `.claude-plugin/marketplace.json` points back at `.` so users can install with:
 
 ```
 /plugin marketplace add haandol/alps-writer-mcp
