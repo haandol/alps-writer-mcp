@@ -24,8 +24,13 @@ ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으�
 
 ### 2. 카테고리 결정
 
-- 각 feature를 kebab-case 카테고리 id로 매핑 (예: "User Authentication" → `auth`, "Email Sign Up" → `email-signup` 또는 워크숍 컨벤션이면 `f1`).
-- 워크숍 등 플랫 구조 프로젝트는 `f1`, `f2` 같은 Feature ID 자체를 카테고리 키로 써도 된다.
+카테고리 키 결정 규칙은 **ALPS Section 7 의 feature 에 명시적 ID 가 있는지** 로 갈린다.
+
+- **명시적 Feature ID 가 있는 경우 (워크숍·번호 기반 PRD 등 — 예: `F1`, `F-AUTH-01`)** — 그 ID 를 소문자 kebab-case 로 변환한 값을 카테고리 키로 **고정 사용** 한다 (`F1` → `f1`, `F-AUTH-01` → `f-auth-01`). 사용자가 `/adr-impl f1` 처럼 ALPS feature ID 그대로 호출할 수 있어야 하므로 의미 기반 이름(`auth` 등)으로 대체하지 않는다.
+- **명시적 ID 가 없는 일반 PRD** — feature 이름을 kebab-case 로 변환해 의미 있는 카테고리 id 를 만든다 (예: "User Authentication" → `auth`, "Email Sign Up" → `email-signup`).
+
+이어서:
+
 - `docs/adr/<category>/` 디렉토리를 생성한다 (플랫 구조면 `docs/adr/`만 사용).
 - `docs/adr/README.md`가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md`를 복사한다.
 

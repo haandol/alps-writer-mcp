@@ -11,6 +11,7 @@ argument-hint: "<adr-path-or-category>"
 
 1. **대상 ADR 식별**
    - 인자가 파일 경로면 그 ADR을, 카테고리면 `docs/adr/.mapping.json`에서 해당 카테고리의 ADR 목록을 모두 읽는다.
+   - 인자가 ALPS Feature ID 형태(예: `f1`, `F1`, `f-auth-01`)면 매핑의 카테고리 키 또는 entry 의 `alpsFeatureId` 와 대조해 매칭. `/feature-to-adr` 가 ALPS Feature ID 를 카테고리 키로 그대로 사용하므로 워크숍처럼 번호 기반 PRD 라면 1:1 로 맞다. 매칭이 모호하면 매핑 항목을 한 번 보여주고 사용자에게 확인.
    - 현재 Status가 `Proposed`인지 확인한다 (이 명령은 `Proposed → Accepted` 전환을 자동 처리한다). 이미 `Accepted`인 ADR은 부분 변경/보강 의도인지 확인하고 진행.
 
 2. **계획 수립**
