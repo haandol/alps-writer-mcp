@@ -34,7 +34,7 @@ ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으�
 `${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 작성 규칙을 엄격히 따른다.
 
 - 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍은 `NNNN-fN-kebab-title.md`).
-- Status는 기본 `Proposed`. 사용자 합의 후 `Accepted`로 전환.
+- Status는 항상 `Proposed`로 저장한다 — `Proposed`는 "ADR이 제안되었으나 미구현"을 의미한다. 구현이 끝나면 `/adr-impl`이 `Accepted`로 자동 전환하므로 이 단계에서는 사용자에게 승격 여부를 묻지 않는다.
 - Context: ALPS의 비즈니스 동기·user story·acceptance criteria의 핵심을 1-3문단.
 - Decision: vertical slice (UI → API → 데이터 흐름)를 한 단락 또는 mermaid sequenceDiagram으로.
 - 대안 검토: 검토했으나 채택하지 않은 접근과 그 이유.
@@ -104,7 +104,7 @@ ALPS Section 7의 feature를 ADR 초안으로 변환합니다. 인자가 있으�
 **영향 범위 (codePaths)**: <글롭 목록>
 **선행 조건**: <의존 ADR 또는 없음>
 
-이대로 `Proposed`로 저장하고 구현(/adr-impl)으로 넘어갈까요?
+이대로 `Proposed`(미구현)로 저장하고 구현(/adr-impl)으로 넘어갈까요? 구현·테스트가 끝나면 `/adr-impl`이 자동으로 `Accepted`로 전환합니다.
 ```
 
 승인 전까지 코드 수정을 시작하지 않는다. 사용자가 수정을 요청하면 ADR을 갱신한 뒤 다시 확인.

@@ -42,7 +42,7 @@ ADR-first 사이클(ADR 확인 → ADR 작성/수정 → 코드 → 테스트 �
 
 - 이번 사이클에서 배운 점을 ADR에 반영한다 — Decision 보강, 새 대안 검토, Risk 추가, 한 줄 요약 갱신.
 - `lastSyncedAt`을 ISO 타임스탬프로 갱신.
-- Status가 `Proposed`였다면 사용자 합의 후 `Accepted`로 전환.
+- Status는 `/adr-impl`이 4단계 테스트 통과 직후 `Proposed → Accepted`로 자동 전환했어야 한다. 5단계에서 따로 사용자에게 승격 여부를 묻지 않는다 — 코드와 Status가 어긋나 있으면 `/adr-sync`가 정정한다.
 
 ### 6. 다음 사이클 권장
 

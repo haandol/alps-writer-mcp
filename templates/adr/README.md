@@ -103,16 +103,22 @@ Proposed → Accepted → Deprecated
                    → Superseded by [ADR XXXX]
 ```
 
-| 상태       | 의미                                                                         |
-| ---------- | ---------------------------------------------------------------------------- |
-| Proposed   | 검토 중. 아직 합의되지 않은 결정                                             |
-| Accepted   | 합의 완료. 구현 여부와 무관하게 결정이 확정된 상태                           |
-| Deprecated | 더 이상 유효하지 않음. 대체 ADR 없이 폐기                                    |
-| Superseded | 새로운 ADR로 대체됨. `Superseded by [ADR XXXX](link)` 형태로 후속 ADR을 명시 |
+| 상태       | 의미                                                                                            |
+| ---------- | ----------------------------------------------------------------------------------------------- |
+| Proposed   | ADR이 시스템에 제안된 상태. 결정 자체는 합의되었더라도 **아직 코드 구현이 끝나지 않음**         |
+| Accepted   | **코드 구현이 완료된 상태**. ADR이 묘사하는 동작이 실제로 코드베이스에 존재하고 테스트를 통과함 |
+| Deprecated | 더 이상 유효하지 않음. 대체 ADR 없이 폐기                                                       |
+| Superseded | 새로운 ADR로 대체됨. `Superseded by [ADR XXXX](link)` 형태로 후속 ADR을 명시                    |
 
-- `Accepted`는 "구현 완료"가 아니라 "결정 확정"을 의미한다. 구현 상태는 ADR이 아닌 코드와 커밋 히스토리로 추적한다.
+### 자동 전환 규칙
+
+상태는 **사람이 손으로 묻고 바꾸는 값이 아니라 사이클이 자동으로 갱신하는 값**이다.
+
+- `/feature-to-adr`로 새 ADR이 만들어지면 항상 `Proposed`로 저장된다.
+- `/adr-impl`이 ADR을 구현하고 테스트가 통과하면 그 명령이 ADR Status를 `Accepted`로 자동 갱신한다 — 사용자에게 승격 여부를 따로 묻지 않는다.
+- `/adr-sync`는 코드와 ADR을 대조해 Status drift를 잡는다: ADR이 `Accepted`인데 묘사한 동작이 코드에 없으면 `Proposed`로 되돌리고, ADR이 `Proposed`인데 코드에 이미 존재하면 `Accepted`로 올린다.
 - 상태 변경 시 날짜를 함께 기록한다: `Accepted (YYYY-MM-DD)`.
-- `Implemented`, `Done`, `Completed` 같은 비공식 상태는 사용하지 않는다. 진행 단계를 알려야 하면 괄호로 부연한다: `Accepted (Phase 1 완료)`.
+- `Implemented`, `Done`, `Completed` 같은 비공식 상태는 사용하지 않는다 — 구현 완료는 `Accepted`로 표현한다. 진행 단계 부연이 필요하면 괄호로: `Accepted (Phase 1 완료)`.
 
 ## ADR 템플릿
 
@@ -257,7 +263,7 @@ API 엔드포인트 목록(Method, Path, 설명)은 아키텍처 결정의 일�
 - 본문이 5페이지(약 250-300줄)를 넘는다
 - 서로 다른 엔티티/시스템에 대한 결정이 한 파일에 들어가 있다
 - "그리고 추가로…"로 시작하는 절이 두 개 이상 있다
-- Status가 부분적으로만 적용된다 ("핵심은 Accepted지만 일부는 아직 Proposed")
+- Status가 부분적으로만 적용된다 (핵심 흐름은 구현돼서 Accepted여야 하지만 일부 흐름은 아직 미구현이라 Proposed로 남아 있는 상태)
 
 이 신호 중 둘 이상이면 ADR을 분리한다 (예: `0003-payment.md` → `0003-payment-checkout.md` + `0004-payment-refund.md`).
 
@@ -339,11 +345,11 @@ PR 리뷰어 또는 작성자 본인이 머지 전에 확인한다.
 
 <!-- 예시:
 ### Auth
-- [0001: JWT Rotation](./auth/0001-jwt-rotation.md) — Accepted. Refresh token rotation, 7일 만료, sliding session.
-- [0002: SSO Integration](./auth/0002-sso-integration.md) — Proposed. SAML 기반 사내 SSO, IdP는 추후 결정.
+- [0001: JWT Rotation](./auth/0001-jwt-rotation.md) — Accepted. 구현됨. Refresh token rotation, 7일 만료, sliding session.
+- [0002: SSO Integration](./auth/0002-sso-integration.md) — Proposed. 미구현. SAML 기반 사내 SSO, IdP는 추후 결정.
 
 ### Billing
-- [0001: Subscription Tiers](./billing/0001-subscription-tiers.md) — Accepted. Free/Pro/Enterprise 3티어, 월/연 토글.
+- [0001: Subscription Tiers](./billing/0001-subscription-tiers.md) — Accepted. 구현됨. Free/Pro/Enterprise 3티어, 월/연 토글.
 -->
 
 ## 참고

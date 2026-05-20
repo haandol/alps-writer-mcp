@@ -48,7 +48,10 @@ Quick mode는 이 단계만 수행한다.
 
 1. ADR 본문을 전부 읽는다.
 2. 검증 가능한 주장 추출:
-   - **Status** — Accepted/Proposed/Deprecated/Superseded. 묘사된 시스템이 실제로 코드에 존재하는가?
+   - **Status** — `Proposed`=미구현, `Accepted`=구현 완료. 묘사된 시스템이 실제로 코드에 존재하는지 codePaths grep으로 확인하고 Status를 자동 정정한다:
+     - ADR이 `Accepted`인데 핵심 동작(API endpoint·상태 전이·entity 등)이 코드에 보이지 않으면 `Proposed`로 되돌린다.
+     - ADR이 `Proposed`인데 코드에 이미 구현돼 있고 테스트가 존재하면 `Accepted (YYYY-MM-DD)`로 올린다.
+     - 정정 시 변경 내역을 7단계 보고의 **Fixed** 섹션에 기재한다.
    - **API endpoints** — method + path 표. 라우터/핸들러 grep.
    - **Error codes** — 상수 grep.
    - **Enum / 타입 값** — `oneof=...`, validate 태그, TS union grep.
@@ -67,7 +70,7 @@ Quick mode는 이 단계만 수행한다.
 각 수정된 ADR의 Related 링크를 따라 다른 ADR을 점검한다:
 
 - 같은 동작을 다르게 묘사하는지 (임계값, 에러 코드, 흐름 단계)
-- Status 충돌: Accepted ADR이 Proposed ADR의 기능에만 의존
+- Status 충돌: `Accepted`(구현 완료) ADR이 `Proposed`(미구현) ADR의 기능에만 의존하고 있는지 — 의존 ADR이 미구현이면 의존하는 ADR도 실제로는 동작하지 않을 수 있으므로 Status 검증
 - Superseded ADR이 옛 ADR의 모든 결정을 커버하지 못함
 - 카테고리 이관 후 stale한 cross-reference
 

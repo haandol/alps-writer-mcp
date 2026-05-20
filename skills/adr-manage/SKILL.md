@@ -45,7 +45,18 @@ ALPS feature를 ADR로 변환하는 작업이거나, ALPS의 9개 섹션 구조�
 #### Status 값
 
 유효: `Proposed`, `Accepted`, `Deprecated`, `Superseded by [ADR XXXX](link)`.
-`Implemented`, `Done`, `Completed` 등은 무효. 구현 진행 상태는 괄호로 부연: `Accepted (Phase 1 완료)`.
+`Implemented`, `Done`, `Completed` 등은 무효 — **구현 완료는 `Accepted`로 표현한다**. 구현 진행 단계 부연은 괄호로: `Accepted (Phase 1 완료)`.
+
+의미:
+
+- `Proposed` — ADR이 시스템에 제안되었으나 **아직 구현되지 않음**. 결정 내용 자체에 대한 합의는 이 단계에서도 이미 끝났다고 본다.
+- `Accepted` — **코드 구현이 완료**되어 ADR이 묘사하는 동작이 코드베이스에 실제로 존재하는 상태. 테스트가 통과한 시점에 부여한다.
+
+자동 전환:
+
+- 신규 ADR(`/feature-to-adr`)은 항상 `Proposed`로 저장한다 — 사용자에게 "Accepted로 할까요?"라고 묻지 않는다.
+- `/adr-impl`이 구현·테스트를 마치면 ADR 본문의 Status를 `Accepted (YYYY-MM-DD)`로 직접 수정해 같은 사이클에 함께 저장한다. 사용자에게 승격 여부를 따로 확인하지 않는다.
+- `/adr-sync`는 코드와 ADR을 대조해 Status를 자동 정정한다. ADR이 `Accepted`라고 주장하는데 묘사한 동작이 코드에 없으면 `Proposed`로 되돌리고, `Proposed`인데 코드에 이미 존재하면 `Accepted`로 올린다.
 
 #### 리트머스 테스트
 
