@@ -15,7 +15,7 @@ ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 �
 
 ### 1. 인자 해석
 
-- **`<category>`** (필수) — kebab-case 카테고리 키 (예: `auth`, `billing`, `cart`). 워크숍/번호 기반이라면 `f1`, `f-auth-01` 등 ALPS Feature ID 도 그대로 카테고리 키로 사용 가능.
+- **`<category>`** (필수) — **피쳐(vertical slice) 단위**의 kebab-case 카테고리 키. 카테고리 결정 규칙(피쳐 단위, 금지 카테고리, cross-cutting 사용 조건)은 README "디렉토리 구조" / "흔한 카테고리 예시 — 안티패턴 카테고리" 참조. 사용자가 안티패턴 카테고리(`frontend`, `backend`, `api`, `db` 등)를 입력하면 한 번 되묻는다 — "이 결정이 한 피쳐(예: `auth`, `orders`)에 속하나요? 두 개 이상이 공유하면 cross-cutting 카테고리(`infra`, `data`, `integration`, `security`, `platform`)를 권합니다." 워크숍/번호 기반이라면 `f1`, `f-auth-01` 등 ALPS Feature ID 도 그대로 사용 가능.
 - **`[title]`** (선택) — 명령 인자로 제목을 받으면 그 제목으로 시작. 없으면 사용자에게 한 번 물어본다 ("어떤 결정을 ADR 로 남길까요? 제목 한 줄").
 
 매핑 상태 점검:
@@ -37,33 +37,18 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 
 ### 3. ADR 초안 작성
 
-`${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 작성 규칙을 엄격히 따른다.
+`${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 절차와 README "작성 규칙" 을 엄격히 따른다.
 
-- 카테고리 디렉토리: `docs/adr/<category>/` (없으면 생성, 플랫 구조 프로젝트면 `docs/adr/` 만 사용).
-- 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍 등에서 ALPS Feature ID 추적이 필요하면 `NNNN-fN-kebab-title.md`).
-- Status 는 항상 `Proposed` (= "결정은 합의됐지만 아직 미구현"). `/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환하므로 이 단계에서 사용자에게 승격 여부를 묻지 않는다.
-- 본문 구조: Status / Context / Decision / 대안 검토 / Consequences / Related.
-- Decision 은 한 단락 또는 Mermaid 다이어그램 (sequenceDiagram / stateDiagram-v2 / flowchart) 으로 표현 — 비동기·상태 전이가 핵심이면 다이어그램 우선.
-- **금지**: 파일 경로 (폴더 단위까지만), 코드 스니펫, 구현 상수, 전체 JSON 응답 예시, 마이그레이션 명령어. 다이어그램 안에서도 동일.
+- 카테고리 디렉토리: `docs/adr/<category>/` (없으면 생성, 플랫 구조 프로젝트면 `docs/adr/` 만 사용)
+- 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍 등에서 ALPS Feature ID 추적이 필요하면 `NNNN-fN-kebab-title.md`)
+- **Status 는 항상 `Proposed` 로 시작** (`/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환). 사용자에게 승격 여부를 묻지 않는다 — 자동 전환 정책은 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조
+- 본문 구조: Status / Context / Decision / 대안 검토 / Consequences / Related
+- **Decision은 vertical slice로 묘사** — 한 단락 또는 sequenceDiagram으로 사용자 동작 → API → 데이터 변형까지 끊김 없이 잇는다. 한 피쳐 카테고리에서 UI/API/Data 결정을 모두 다루는 것이 정상이며, 레이어별 ADR로 쪼개지 않는다. 비동기·상태 전이가 핵심이면 stateDiagram-v2 / flowchart 사용
+- 금지/유지 항목 상세는 README "작성 규칙" 참조 (다이어그램 내부도 동일하게 적용)
 
 ### 4. codePaths 추천 + 확인
 
-`docs/adr/.mapping.json` 의 `codePaths` 는 PreToolUse hook 이 신뢰하는 값이라 정확해야 한다. 비어 있는 채로 저장하지 말고 **추천 후 확인** 으로 진행한다.
-
-추천 절차:
-
-1. 사용자가 2 단계 4 번에서 답한 영역 + ADR Decision 의 키워드(페이지·컴포넌트·서비스명) 를 추출.
-2. `Glob`/`Bash ls` 로 프로젝트 디렉토리 구조를 한 번 본다 — `packages/`, `apps/`, `services/`, `src/` 등 source 진입점 확인.
-3. 두 정보를 결합해 글롭 후보 2-4 개를 만든다. 예:
-   - "결제 흐름" + Express 프로젝트 → `services/payment/**`, `apps/api/src/routes/payment*`
-   - "장바구니 합산" + Nuxt 프로젝트 → `packages/web/app/composables/useCart*`, `packages/web/app/pages/cart/**`
-4. 후보를 보여주고 "이대로 사용/추가/제거하시겠어요?" 한 번 확인.
-5. 사용자가 자연어로 답하면 글롭으로 변환해 저장.
-
-추측 금지:
-
-- 한 번도 코드 베이스를 보지 않은 채 글롭을 만들지 않는다.
-- 사용자가 "잘 모르겠다" 면 가장 보수적인 글롭(상위 디렉토리 `**`) 을 두고, 이후 `/adr-sync` 에서 좁히자고 안내.
+[adr-manage SKILL.md §4 "codePaths 추천 절차"](../adr-manage/SKILL.md) 를 그대로 따른다 — 2단계 4번에서 받은 영역과 ADR Decision 키워드를 입력으로 전달.
 
 ### 5. 매핑 갱신
 

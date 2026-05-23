@@ -24,7 +24,11 @@ Architecture Decision Record (ADR)는 소프트웨어 개발 과정에서 내린
 | **UX 아키텍처**  | 라우팅 구조, 상태 관리 라이브러리 선택, 디자인 시스템 채택 — 토큰 자체는 디자인 문서로 |
 | **마이그레이션** | API 버전 전환 전략, 백필 절차의 안전성, downtime 허용 범위                             |
 
-카테고리 폴더(`docs/adr/<category>/`)는 위 종류 중 하나로 묶어 만든다 — 보통은 ALPS feature 단위와 일치하지만, `infra/`·`data/`처럼 cross-cutting 카테고리도 같이 둔다.
+카테고리 폴더(`docs/adr/<category>/`)는 **피쳐(vertical slice) 단위**로 묶는다. ALPS Section 7 의 feature 와 그대로 1:1 매핑되는 것이 기본이다 — `marketplace/`, `auth/`, `orders/`, `chat/` 처럼 사용자가 인지하는 기능 단위로 만든다.
+
+**기술 레이어로 카테고리를 만들지 않는다** — `frontend/`, `backend/`, `api/`, `db/`, `ui/` 같은 폴더는 ADR 카테고리로 쓰지 않는다. ALPS 가 각 feature 를 UI → API → 데이터의 vertical slice 로 정의하듯이, ADR 카테고리도 같은 슬라이스를 따라야 한 결정이 한 카테고리 안에서 끝까지 추적된다.
+
+`infra/`, `data/`, `integration/`, `security/` 같은 **cross-cutting 카테고리**는 진짜로 여러 피쳐가 동시에 의존하는 결정에만 사용한다 (예: 공통 배포 토폴로지, 공유 단일 테이블 디자인). 한 피쳐만의 DB/인프라 결정은 그 피쳐 카테고리 안에 둔다.
 
 ## ADR이 아닌 것 (anti-patterns)
 
@@ -58,19 +62,30 @@ Architecture Decision Record (ADR)는 소프트웨어 개발 과정에서 내린
 
 ## 디렉토리 구조
 
-기본은 카테고리별 서브디렉토리. 워크숍·소규모 프로젝트는 플랫 구조도 허용합니다.
+기본은 **피쳐(vertical slice) 단위**의 서브디렉토리. 워크숍·소규모 프로젝트는 플랫 구조도 허용합니다.
 
 ```
 docs/adr/
 ├── README.md         # 인덱스 + 작성 규칙 (source of truth)
 ├── .mapping.json     # ALPS feature ↔ ADR ↔ code paths 매핑 (alps-writer plugin hook이 참조)
-└── <category>/       # ALPS feature 또는 도메인 단위 카테고리 (auth/, billing/, ...)
+├── marketplace/      # 피쳐 카테고리 (vertical slice — UI/API/Data 모두 포함)
+│   └── NNNN-kebab-title.md
+├── auth/             # 피쳐 카테고리
+│   └── NNNN-kebab-title.md
+├── orders/           # 피쳐 카테고리
+│   └── NNNN-kebab-title.md
+└── infra/            # cross-cutting 카테고리 (여러 피쳐가 공유하는 결정만)
     └── NNNN-kebab-title.md
 ```
 
-- 카테고리는 ALPS Section 7의 feature 단위로 만든다 (예: `auth/`, `billing/`, `chat/`)
-- 파일명: `NNNN-kebab-case-title.md`. 번호는 카테고리 내에서 순차 증가
-- 새 카테고리를 추가하면 이 README의 디렉토리 구조와 카테고리별 ADR 목록을 함께 갱신한다
+규칙:
+
+- 카테고리는 **사용자가 인지하는 피쳐 단위**로 만든다 (`marketplace/`, `auth/`, `orders/`, `chat/`, `search/`, `feed/`).
+- **금지**: `frontend/`, `backend/`, `api/`, `ui/`, `db/`, `controllers/`, `services/` 같은 기술 레이어 카테고리. 한 피쳐의 결정이 레이어별로 흩어지면 vertical slice 추적이 깨진다.
+- 한 피쳐 안에서 UI / API / 데이터 결정이 모두 같은 카테고리에 모인다 — 다이어그램 하나로 user action → API → store 흐름이 끝까지 보여야 한다.
+- cross-cutting 카테고리(`infra/`, `data/`, `integration/`, `security/`)는 두 개 이상의 피쳐가 명시적으로 의존할 때만 만든다.
+- 파일명: `NNNN-kebab-case-title.md`. 번호는 카테고리 내에서 순차 증가.
+- 새 카테고리를 추가하면 이 README의 디렉토리 구조와 카테고리별 ADR 목록을 함께 갱신한다.
 
 새 ADR을 추가할 때는 이 README의 인덱스도 함께 갱신하세요.
 
@@ -79,22 +94,55 @@ docs/adr/
 - ALPS PRD: `prd/<doc>.alps.xml` (Section 7이 feature spec의 source of truth)
 - 매핑: `docs/adr/.mapping.json` (feature ↔ 코드 경로 ↔ ADR)
 
-> **권장**: 이 섹션 아래에 프로젝트별 구현 진입점을 명시한다. 예: "API/웹 인프라: `packages/api-infra/`, `packages/web-infra/`", "웹 기능 흐름: `apps/web/src/pages/`". ADR 본문에서는 폴더 단위까지만 참조하므로, 진입점 매핑이 README에 있어야 검토자가 빠르게 코드를 찾을 수 있다.
+> **권장**: 이 섹션 아래에 프로젝트별 **피쳐 진입점**을 명시한다. vertical slice 구조에서는 한 피쳐의 UI/API/Data 코드가 같은 폴더 트리에 모이므로, 카테고리 → 진입점 매핑이 자연스럽게 1:1 이 된다.
+>
+> 예:
+>
+> - `auth/` ADR → `src/features/auth/` (UI 컴포넌트, 핸들러, 토큰 정책 모두 포함)
+> - `marketplace/` ADR → `src/features/marketplace/`
+> - `orders/` ADR → `src/features/orders/`
+> - `infra/` ADR (cross-cutting) → `src/shared/infra/`, `infra/`
+>
+> ADR 본문에서는 폴더 단위까지만 참조하므로, 진입점 매핑이 README 에 있어야 검토자가 빠르게 코드를 찾을 수 있다. 한 피쳐의 결정이 여러 진입점에 흩어진다면 그 자체가 vertical slice 위반 신호다.
 
 ## 흔한 카테고리 예시
 
-ALPS feature 단위 + cross-cutting 도메인을 함께 쓰는 것이 일반적이다.
+피쳐(vertical slice) 카테고리가 기본이고, 정말로 여러 피쳐가 공유하는 결정만 cross-cutting 카테고리에 둔다.
 
-| 카테고리       | 다루는 결정                                                   |
-| -------------- | ------------------------------------------------------------- |
-| `auth/`        | 가입/로그인/세션/SSO/권한 체계                                |
-| `billing/`     | 요금제, 결제 게이트웨이, 환불, 크레딧                         |
-| `<feature>/`   | ALPS Section 7의 각 feature (예: `chat/`, `search/`, `feed/`) |
-| `data/`        | DB 스키마, 키 디자인, 단일/다중 테이블, 마이그레이션          |
-| `infra/`       | 배포, 모니터링/알람, CDN, 비용 최적화                         |
-| `integration/` | LLM·결제·메일·푸시 등 외부 서비스 연동                        |
-| `frontend/`    | 라우팅, 상태 관리, 디자인 시스템 채택                         |
-| `refactoring/` | cross-cutting 리팩토링 결정 (예: 서비스 레이어 테스트 가능성) |
+### 피쳐(vertical slice) 카테고리 — 기본
+
+각 카테고리는 UI → API → 데이터까지의 한 슬라이스를 모두 다룬다.
+
+| 카테고리       | 다루는 결정 (한 피쳐 안의 UI/API/Data 결정 모두 포함)              |
+| -------------- | ------------------------------------------------------------------ |
+| `auth/`        | 가입/로그인/세션/SSO/권한 — 폼 UX, 토큰 정책, users 테이블 키 패턴 |
+| `marketplace/` | 상품 리스팅/검색/필터 — 리스트 UI, 검색 API, 인덱스 구조           |
+| `orders/`      | 주문 생성/상태 머신/취소 — 체크아웃 UI, 주문 API, 주문 테이블      |
+| `billing/`     | 요금제/결제/환불/크레딧 — 결제 UI, 결제 게이트웨이, 트랜잭션 기록  |
+| `chat/`        | 메시지 송수신/스레드/알림 — 채팅 UI, WebSocket 연결, 메시지 저장   |
+| `search/`      | 검색 입력/추천/결과 정렬 — 검색 박스, 검색 API, 인덱싱 정책        |
+| `feed/`        | 피드 노출/페이지네이션/랭킹 — 피드 UI, 피드 API, 캐시 전략         |
+
+### cross-cutting 카테고리 — 정말 공유하는 결정만
+
+두 개 이상의 피쳐가 같은 결정에 의존할 때만 만든다. 한 피쳐만의 DB/인프라 결정은 해당 피쳐 카테고리에 둔다.
+
+| 카테고리       | 다루는 결정                                                                  |
+| -------------- | ---------------------------------------------------------------------------- |
+| `data/`        | 여러 피쳐가 공유하는 단일 테이블 디자인, 글로벌 키 컨벤션, 마이그레이션 전략 |
+| `infra/`       | 배포 토폴로지, 모니터링/알람, CDN, 비용 최적화 — 전 시스템에 영향            |
+| `integration/` | LLM·결제·메일·푸시 등 여러 피쳐가 함께 의존하는 외부 서비스 연동 정책        |
+| `security/`    | 비밀 관리, 토큰 회전 정책, 감사 로그 — 시스템 전체 정책                      |
+| `platform/`    | 라우팅 컨벤션, 디자인 시스템, 공통 상태 관리 — 모든 피쳐 UI 가 따르는 규약   |
+
+### 안티패턴 카테고리
+
+이런 카테고리는 만들지 않는다 — 한 피쳐의 결정이 흩어져 vertical slice 가 깨진다.
+
+- `frontend/`, `backend/`, `mobile/`, `web/` — 기술 레이어/플랫폼 단위
+- `api/`, `ui/`, `db/`, `cache/` — 시스템 레이어 단위
+- `controllers/`, `services/`, `repositories/` — 코드 구조 단위
+- `bugfix/`, `refactor/` — 작업 종류 단위 (애초에 ADR 대상 아님)
 
 ## 상태
 
@@ -314,9 +362,16 @@ ADR 본문은 한국어로 작성한다. 기술 용어, 코드 식별자, 영문
     "auth": {
       "feature": "User Authentication",
       "alpsFeatureId": "F-AUTH-01",
-      "codePaths": ["packages/api/auth/**", "apps/web/src/auth/**"],
+      "codePaths": ["src/features/auth/**", "src/shared/middleware/auth*"],
       "adrs": ["docs/adr/auth/0001-jwt-rotation.md"],
       "tableDocs": ["docs/tables/users.md"]
+    },
+    "marketplace": {
+      "feature": "Marketplace Listings",
+      "alpsFeatureId": "F-MKT-01",
+      "codePaths": ["src/features/marketplace/**"],
+      "adrs": ["docs/adr/marketplace/0001-listing-search.md"],
+      "tableDocs": ["docs/tables/listings.md"]
     }
   }
 }

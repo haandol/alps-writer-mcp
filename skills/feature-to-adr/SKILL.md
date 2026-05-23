@@ -28,10 +28,14 @@ ALPS Section 7 의 feature 를 ADR 초안으로 일괄 변환하는 helper 입�
 
 ### 2. 카테고리 결정
 
+ALPS feature 는 그 자체가 vertical slice (UI → API → Data) 단위이므로, **카테고리는 feature 와 1:1 로 매핑** 한다. 한 feature 에서 파생되는 UI/API/Data 결정은 **같은 카테고리** 안에 모두 들어가야 한다 — vertical slice 원칙 상세는 README "디렉토리 구조" 참조.
+
 카테고리 키 결정 규칙은 **ALPS Section 7 의 feature 에 명시적 ID 가 있는지** 로 갈린다.
 
-- **명시적 Feature ID 가 있는 경우 (워크숍·번호 기반 PRD 등 — 예: `F1`, `F-AUTH-01`)** — 그 ID 를 소문자 kebab-case 로 변환한 값을 카테고리 키로 **고정 사용** 한다 (`F1` → `f1`, `F-AUTH-01` → `f-auth-01`). 사용자가 `/adr-impl f1` 처럼 ALPS feature ID 그대로 호출할 수 있어야 하므로 의미 기반 이름(`auth` 등)으로 대체하지 않는다.
-- **명시적 ID 가 없는 일반 PRD** — feature 이름을 kebab-case 로 변환해 의미 있는 카테고리 id 를 만든다 (예: "User Authentication" → `auth`, "Email Sign Up" → `email-signup`).
+- **명시적 Feature ID 가 있는 경우 (워크숍·번호 기반 PRD — 예: `F1`, `F-AUTH-01`)** — 그 ID 를 소문자 kebab-case 로 변환한 값을 카테고리 키로 **고정 사용** (`F1` → `f1`, `F-AUTH-01` → `f-auth-01`). 사용자가 `/adr-impl f1` 처럼 ALPS feature ID 그대로 호출할 수 있어야 하므로 의미 기반 이름으로 대체하지 않는다.
+- **명시적 ID 가 없는 일반 PRD** — feature 이름을 kebab-case 로 변환해 의미 있는 카테고리 id 를 만든다 (예: "User Authentication" → `auth`, "Marketplace Listings" → `marketplace`).
+
+ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고리는 사용자가 인지하는 기능 단위 이름으로 다듬는다 — 안티패턴 카테고리 목록은 README "흔한 카테고리 예시 — 안티패턴 카테고리" 참조.
 
 이어서:
 
@@ -40,34 +44,18 @@ ALPS Section 7 의 feature 를 ADR 초안으로 일괄 변환하는 helper 입�
 
 ### 3. ADR 초안 작성
 
-`${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 작성 규칙을 엄격히 따른다.
+`${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 절차와 README "작성 규칙" 을 엄격히 따른다.
 
-- 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍은 `NNNN-fN-kebab-title.md`).
-- Status는 항상 `Proposed`로 저장한다 — `Proposed`는 "ADR이 제안되었으나 미구현"을 의미한다. 구현이 끝나면 `/adr-impl`이 `Accepted`로 자동 전환하므로 이 단계에서는 사용자에게 승격 여부를 묻지 않는다.
-- Context: ALPS의 비즈니스 동기·user story·acceptance criteria의 핵심을 1-3문단.
-- Decision: vertical slice (UI → API → 데이터 흐름)를 한 단락 또는 mermaid sequenceDiagram으로.
-- 대안 검토: 검토했으나 채택하지 않은 접근과 그 이유.
-- Consequences: 긍정/부정/Risk.
-- **금지**: 파일 경로(폴더 단위까지만), 코드 스니펫, 구현 상수, 전체 JSON 응답 예시, 마이그레이션 명령어.
+- 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍은 `NNNN-fN-kebab-title.md`)
+- **Status는 항상 `Proposed` 로 저장** — `/adr-impl` 이 구현·테스트 후 자동으로 `Accepted` 로 전환한다. 사용자에게 승격 여부를 묻지 않는다 ([adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조)
+- Context: ALPS의 비즈니스 동기·user story·acceptance criteria의 핵심을 1-3문단
+- Decision: **한 ADR 안에서 vertical slice 를 끝까지 묘사** — 사용자 동작 → API → 데이터 흐름을 한 단락 또는 mermaid sequenceDiagram 으로. 같은 feature의 UI/API/Data 결정을 별도 ADR로 쪼개지 않는다
+- 대안 검토 / Consequences (긍정·부정·Risk)
+- 금지/유지 항목 상세는 README "작성 규칙" 참조 (다이어그램 내부도 동일)
 
 ### 4. codePaths 추천 + 확인
 
-`docs/adr/.mapping.json`의 `codePaths`는 PreToolUse hook이 신뢰하는 값이라 정확해야 한다. 비기술 사용자에게 빈 입력을 받지 말고 **추천 후 확인** 패턴으로 진행한다.
-
-추천 절차:
-
-1. ALPS Section 7의 user flow / technical description에서 등장하는 페이지·컴포넌트 단어를 추출 (예: "로그인", "이메일 입력", "프로필").
-2. 프로젝트의 디렉토리 구조를 살핀다 — `packages/web/app/pages/`, `apps/web/src/components/`, `services/<domain>/` 등 source 진입점을 파악.
-3. 두 정보를 결합해 글롭 후보 2-4개를 만든다. 예:
-   - "이메일 가입" + Nuxt 프로젝트 → `packages/web/app/pages/sign*/**`, `packages/web/app/composables/useAuth*`
-   - "결제 API" + Express 프로젝트 → `services/payment/**`, `apps/api/src/routes/payment*`
-4. 후보를 사용자에게 보여주고 "이대로 사용/추가/제거하시겠어요?" 한 번 확인.
-5. 사용자가 자연어로 답하면 글롭으로 변환해 매핑에 저장.
-
-추측 금지 항목:
-
-- 코드 베이스를 한 번도 보지 않은 채 글롭을 만들지 않는다 (`Glob`/`Bash ls`로 실제 디렉토리를 확인).
-- 사용자가 "잘 모르겠다"고 하면 가장 보수적인 글롭(상위 디렉토리 `**`)을 두고, 첫 사이클 끝에 `/adr-sync`에서 좁히도록 안내.
+[adr-manage SKILL.md §4 "codePaths 추천 절차"](../adr-manage/SKILL.md) 를 그대로 따른다 — ALPS Section 7 의 user flow / technical description 에서 추출한 페이지·컴포넌트 키워드를 입력으로 전달.
 
 ### 5. 매핑 갱신
 

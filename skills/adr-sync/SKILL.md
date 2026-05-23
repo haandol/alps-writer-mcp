@@ -48,10 +48,7 @@ Quick mode는 이 단계만 수행한다.
 
 1. ADR 본문을 전부 읽는다.
 2. 검증 가능한 주장 추출:
-   - **Status** — `Proposed`=미구현, `Accepted`=구현 완료. 묘사된 시스템이 실제로 코드에 존재하는지 codePaths grep으로 확인하고 Status를 자동 정정한다:
-     - ADR이 `Accepted`인데 핵심 동작(API endpoint·상태 전이·entity 등)이 코드에 보이지 않으면 `Proposed`로 되돌린다.
-     - ADR이 `Proposed`인데 코드에 이미 구현돼 있고 테스트가 존재하면 `Accepted (YYYY-MM-DD)`로 올린다.
-     - 정정 시 변경 내역을 7단계 보고의 **Fixed** 섹션에 기재한다.
+   - **Status** — codePaths grep으로 코드 실재 여부를 확인하고 Status drift를 자동 정정한다 (`Accepted`인데 코드에 없으면 `Proposed`로, `Proposed`인데 코드+테스트가 있으면 `Accepted (YYYY-MM-DD)`로). 상태 값 의미·자동 전환 정책 상세는 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조. 정정 내역은 7단계 보고 **Fixed** 섹션에 기재.
    - **API endpoints** — method + path 표. 라우터/핸들러 grep.
    - **Error codes** — 상수 grep.
    - **Enum / 타입 값** — `oneof=...`, validate 태그, TS union grep.
@@ -64,6 +61,14 @@ Quick mode는 이 단계만 수행한다.
 4. ADR을 코드에 맞게 수정. `docs/adr/README.md`의 한 줄 요약도 함께 갱신.
 
 **주의**: 새 구현 세부사항을 ADR에 추가하지 않는다. ADR은 결정/아키텍처 레이어에 머문다.
+
+### 3.5. 카테고리 슬라이스 무결성 점검
+
+`.mapping.json` 의 카테고리 키와 `codePaths` 가 vertical slice 원칙(피쳐 단위)을 따르는지 함께 본다 — 안티패턴 카테고리 목록과 cross-cutting 사용 조건은 README "흔한 카테고리 예시" 참조.
+
+- **카테고리 키 검사** — README 안티패턴 카테고리(기술 레이어/구조 단위)가 있으면 drift로 표시. 사용자에게 피쳐 단위로 재정렬하자고 제안
+- **codePaths 슬라이스 검사** — 같은 피쳐의 UI/API/Data 코드가 서로 다른 카테고리의 codePaths에 흩어져 있으면 drift. 한 피쳐의 모든 레이어 글롭은 한 카테고리에 모아야 한다
+- 위반은 `Suggestions` 가 아니라 `Fixed` 또는 `Contradictions Resolved` 에 기록한다 — 카테고리 분류는 ADR 사이클의 신뢰 기반이라 미루지 않는다.
 
 ### 4. Cross-ADR 모순 점검
 

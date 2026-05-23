@@ -24,26 +24,26 @@ ADR 초안과 매핑 변경을 격리된 컨텍스트에서 점검하고 검토 
 ### 1. 컨텍스트 로드
 
 - 대상 ADR 파일 전부 읽기
-- `docs/adr/README.md` (있으면 — 인덱스 정합성 점검용)
+- `docs/adr/README.md` — **작성 규칙 source of truth** (없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md`). 인덱스 정합성 점검도 여기서
 - `docs/adr/.mapping.json` 의 해당 카테고리 entry
-- `${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 의 검증 규칙
 
-### 2. 룰 체크 (adr-manage 와 동일 기준)
+### 2. 룰 체크
 
-다음 각 항목을 통과/실패로 표시한다.
+다음 각 항목을 통과/실패로 표시한다. 각 룰의 상세 기준은 `docs/adr/README.md` 의 해당 섹션을 source of truth로 삼는다.
 
-| #   | 검사                         | Pass 기준                                                                                                                                                                                                                      |
-| --- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| R1  | Status                       | `Proposed` / `Accepted` / `Deprecated` / `Superseded by [...]` 중 하나. `Implemented`, `Done` 등은 fail. 의미: `Proposed`=미구현, `Accepted`=구현 완료. 본문이 묘사한 동작이 실제로 코드에 존재하는지와 Status가 정합해야 한다 |
-| R2  | 코드 참조 깊이               | 본문·표·Mermaid 모두 폴더 단위까지만. 파일명/줄번호/함수 시그니처는 fail                                                                                                                                                       |
-| R3  | 구현 세부 침투               | 코드 스니펫·튜닝값·마이그레이션 명령어·전체 JSON 응답 예시 없음                                                                                                                                                                |
-| R4  | 리트머스 테스트              | 본문 각 주장이 "이 값이 바뀌면 아키텍처 결정이 바뀌는가?" 에서 YES                                                                                                                                                             |
-| R5  | Vertical slice (ALPS 변환건) | UI → API → 데이터 단일 슬라이스 묘사 또는 sequenceDiagram 존재                                                                                                                                                                 |
-| R6  | DB 스키마 변경 동시 작업     | 키 디자인 변경/엔티티 추가 시 ① 키 디자인·액세스 패턴 표 ② `docs/tables/...` (또는 동등 문서) 갱신 ③ 양방향 Related 링크 — 세 곳 모두 충족                                                                                     |
-| R7  | 다이어그램 내부 코드 참조    | sequenceDiagram/stateDiagram/flowchart 안에서도 함수명·메서드 호출 대신 동작 서술                                                                                                                                              |
-| R8  | 인덱스/매핑 정합성           | `docs/adr/README.md` 의 한 줄 요약 + `.mapping.json` 의 `adrs` 배열에 신규/수정 ADR 반영                                                                                                                                       |
-| R9  | API 섹션                     | 엔드포인트 표는 OK, 전체 요청/응답 JSON·헤더 상세는 fail                                                                                                                                                                       |
-| R10 | Related 링크                 | 가리키는 ADR/문서가 실제로 존재                                                                                                                                                                                                |
+| #   | 검사                      | 기준 (README 섹션)                                                                                                                                                           |
+| --- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | Status                    | "상태" + "자동 전환 규칙" — `Proposed`/`Accepted`/`Deprecated`/`Superseded by [...]` 중 하나. 본문이 묘사한 동작과 코드 실재 여부 정합                                       |
+| R2  | 코드 참조 깊이            | "코드 참조 깊이 — 폴더 단위까지만" — 본문·표·Mermaid 모두 폴더 단위까지만                                                                                                    |
+| R3  | 구현 세부 침투            | "ADR에 포함하지 않는 것" 표 — 코드 스니펫·튜닝값·마이그레이션 명령어·전체 JSON·CSS 클래스 없음                                                                               |
+| R4  | 리트머스 테스트           | "리트머스 테스트" — 각 주장이 "이 값이 바뀌면 아키텍처 결정이 바뀌는가?"에서 YES                                                                                             |
+| R5  | Vertical slice            | "디렉토리 구조" + "흔한 카테고리 예시 — 안티패턴 카테고리". (a) 카테고리가 피쳐 단위 (b) Decision 본문이 UI → API → Data 단일 슬라이스 (c) `codePaths` 가 한 카테고리에 모임 |
+| R6  | DB 스키마 변경 동시 작업  | "DB 스키마와 액세스 패턴 — 동시 작업 규칙" — 키 디자인 표 + `docs/tables/...` 갱신 + 양방향 Related 링크 세 곳                                                               |
+| R7  | 다이어그램 내부 코드 참조 | "다이어그램 내 코드 참조" — sequenceDiagram/stateDiagram/flowchart 안에서도 함수명 대신 동작 서술                                                                            |
+| R8  | 인덱스/매핑 정합성        | README 한 줄 요약 + `.mapping.json` 의 `adrs` 배열에 신규/수정 ADR 반영                                                                                                      |
+| R9  | API 섹션                  | "API 섹션" — 엔드포인트 표 OK, 전체 요청/응답 JSON·헤더 상세 fail                                                                                                            |
+| R10 | Related 링크              | 가리키는 ADR/문서가 실제로 존재                                                                                                                                              |
+| R11 | 한 ADR = 한 결정          | "한 ADR = 한 결정" — 분리 신호 둘 이상이면 fail                                                                                                                              |
 
 ### 3. Diagram convention
 
@@ -74,9 +74,9 @@ PASS | FIX_REQUIRED | BLOCK
 
 Verdict 기준:
 
-- `PASS`: 모든 R1–R10 통과, diagram convention 준수, 인덱스/매핑 정합
+- `PASS`: 모든 R1–R11 통과, diagram convention 준수, 인덱스/매핑 정합
 - `FIX_REQUIRED`: 위반이 있지만 ADR 본문 또는 인덱스만 손보면 해결됨
-- `BLOCK`: vertical slice 가 잡히지 않거나, DB 스키마 변경이 양방향 링크 없이 단편화된 경우 — 메인 세션에 "이 ADR 은 분리하거나 보조 문서를 함께 갱신해야 한다" 고 알림
+- `BLOCK`: vertical slice 가 잡히지 않거나(카테고리가 안티패턴 단위, 또는 한 피쳐의 결정이 여러 카테고리에 흩어짐), DB 스키마 변경이 양방향 링크 없이 단편화되거나, 한 ADR에 여러 결정이 섞여 있어 분리가 필요한 경우 — 메인 세션에 "이 ADR 은 분리·재카테고리화하거나 보조 문서를 함께 갱신해야 한다" 고 알림
 
 ## 금지 사항
 

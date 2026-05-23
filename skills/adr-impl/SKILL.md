@@ -42,8 +42,9 @@ disable-model-invocation: true
    대상 ADR 이 식별되면 현재 Status 를 확인한다 — 이 명령은 `Proposed → Accepted` 전환을 자동 처리한다. 이미 `Accepted` 인 ADR 을 다시 구현 대상으로 받은 경우 부분 변경/보강 의도인지 사용자에게 한 번 확인하고 진행.
 
 2. **계획 수립**
-   - ADR의 Decision/Mermaid 다이어그램에서 vertical slice를 추출한다 (UI → API → 데이터).
-   - `codePaths`에 해당하는 기존 코드를 읽고 차이를 식별한다.
+   - ADR의 Decision/Mermaid 다이어그램에서 vertical slice 를 추출한다 (UI → API → 데이터). 한 ADR 은 한 피쳐의 슬라이스 전체를 다루므로, 구현 계획도 같은 피쳐 안에서 UI/API/Data 모든 레이어를 **함께** 변경하는 단위로 잡는다.
+   - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/` 등 — README "흔한 카테고리 예시 — 안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
+   - `codePaths`에 해당하는 기존 코드를 읽고 차이를 식별한다 — 같은 피쳐의 UI/API/Data 코드가 카테고리에 모두 포함돼 있는지 확인.
    - 변경 계획을 사용자에게 제시하고 승인받는다.
 
 3. **구현**
@@ -56,17 +57,12 @@ disable-model-invocation: true
    - 테스트가 실패하면 5단계로 넘어가지 않는다 — 구현 버그면 3단계로, ADR이 잘못된 결정이면 ADR을 먼저 수정하고 다시 3단계로.
 
 5. **Status 자동 전환 (`Proposed → Accepted`)**
-   - 4단계 테스트가 통과한 직후, **사용자 확인 없이** 대상 ADR 본문의 Status 줄을 다음 형식으로 수정한다:
 
-     ```
-     ## Status
-
-     Accepted (YYYY-MM-DD)
-     ```
-
-   - 동시에 `docs/adr/README.md`의 카테고리별 ADR 목록 한 줄 요약에서 `Proposed` → `Accepted`로 갱신한다.
-   - 한 카테고리 안에 여러 ADR이 함께 구현된 경우 각 ADR을 모두 갱신한다.
-   - 이 단계는 자동이지만 변경 사항을 사용자에게 한 줄로 알린다 ("ADR auth/0003 Status를 Accepted로 갱신했습니다").
+   상세 정책은 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조. 본 단계가 트리거하는 동작:
+   - 4단계 테스트 통과 직후, **사용자 확인 없이** 대상 ADR 본문의 Status 줄을 `Accepted (YYYY-MM-DD)` 로 수정
+   - `docs/adr/README.md` 카테고리별 ADR 목록의 한 줄 요약 라벨도 동시 갱신
+   - 한 카테고리에 여러 ADR이 함께 구현되었으면 모두 갱신
+   - 변경 사항을 사용자에게 한 줄로 알린다 ("ADR auth/0003 Status를 Accepted로 갱신했습니다")
 
 6. **마무리**
    - 변경된 코드와 ADR이 정합한지 한 번 더 확인 (`/adr-sync <category>`).
