@@ -50,6 +50,7 @@ ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고�
 - **Status는 항상 `Proposed` 로 저장** — `/adr-impl` 이 구현·테스트 후 자동으로 `Accepted` 로 전환한다. 사용자에게 승격 여부를 묻지 않는다 ([adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조)
 - Context: ALPS의 비즈니스 동기·user story·acceptance criteria의 핵심을 1-3문단
 - Decision: **한 ADR 안에서 vertical slice 를 끝까지 묘사** — 사용자 동작 → API → 데이터 흐름을 한 단락 또는 mermaid sequenceDiagram 으로. 같은 feature의 UI/API/Data 결정을 별도 ADR로 쪼개지 않는다
+- **회색지대만 적는다** — 코드 직독으로 알 수 있는 것(함수 책임, 필드 타입, 에러 메시지, 환경 변수 이름, 의사코드)은 본문에 넣지 않는다. ALPS 의 비즈니스 규칙이 어떤 트리거·상태값·이벤트로 번역되는지, 대안 대비 왜 이것을 골랐는지, 외부 의존이 실패하면 어떻게 graceful 하게 다루는지가 본문의 중심이다 — 상세는 README "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
 - 대안 검토 / Consequences (긍정·부정·Risk)
 - 금지/유지 항목 상세는 README "작성 규칙" 참조 (다이어그램 내부도 동일)
 

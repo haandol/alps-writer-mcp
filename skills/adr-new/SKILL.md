@@ -43,6 +43,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 - 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍 등에서 ALPS Feature ID 추적이 필요하면 `NNNN-fN-kebab-title.md`)
 - **Status 는 항상 `Proposed` 로 시작** (`/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환). 사용자에게 승격 여부를 묻지 않는다 — 자동 전환 정책은 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조
 - 본문 구조: Status / Context / Decision / 대안 검토 / Consequences / Related
+- **회색지대만 적는다** — 코드 직독으로 알 수 있는 것(함수 책임, 모듈 의존, 필드 타입, 에러 메시지·로그·환경 변수 이름, 의사코드)은 본문에 넣지 않는다. 채택 근거, 비즈니스 규칙의 시스템 번역, 도메인 규칙·상태 전이, 외부 의존 fallback 같은 "코드만 봐서는 안 보이는 결정의 동기" 가 본문의 중심이 되어야 한다 — 상세는 README "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
 - **Decision은 vertical slice로 묘사** — 한 단락 또는 sequenceDiagram으로 사용자 동작 → API → 데이터 변형까지 끊김 없이 잇는다. 한 피쳐 카테고리에서 UI/API/Data 결정을 모두 다루는 것이 정상이며, 레이어별 ADR로 쪼개지 않는다. 비동기·상태 전이가 핵심이면 stateDiagram-v2 / flowchart 사용
 - 금지/유지 항목 상세는 README "작성 규칙" 참조 (다이어그램 내부도 동일하게 적용)
 
