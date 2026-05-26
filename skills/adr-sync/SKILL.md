@@ -1,6 +1,6 @@
 ---
 name: adr-sync
-description: ADR이 현재 코드베이스를 정확히 기술하는지 검증하고 drift를 수정한다. 카테고리별 코드 경로 매핑(docs/adr/.mapping.json)을 사용한다. 키워드 - "/adr-sync", "ADR 동기화", "ADR drift 검사".
+description: Verify that ADRs in docs/adr/ accurately describe the current codebase and fix any drift. Uses the category-to-code-path mapping at docs/adr/.mapping.json. Use when the user invokes /adr-sync or asks to audit ADRs against shipping code. Keywords - "/adr-sync", "ADR sync", "ADR drift check", "ADR 동기화", "ADR drift 검사".
 ---
 
 # adr-sync
@@ -72,6 +72,14 @@ Quick mode는 이 단계만 수행한다.
 - **카테고리 키 검사** — README 안티패턴 카테고리(기술 레이어/구조 단위)가 있으면 drift로 표시. 사용자에게 피쳐 단위로 재정렬하자고 제안
 - **codePaths 슬라이스 검사** — 같은 피쳐의 UI/API/Data 코드가 서로 다른 카테고리의 codePaths에 흩어져 있으면 drift. 한 피쳐의 모든 레이어 글롭은 한 카테고리에 모아야 한다
 - 위반은 `Suggestions` 가 아니라 `Fixed` 또는 `Contradictions Resolved` 에 기록한다 — 카테고리 분류는 ADR 사이클의 신뢰 기반이라 미루지 않는다.
+
+### 3.6. 카테고리 비대화 점검 (분할 권고)
+
+각 카테고리(또는 sub-folder)의 ADR 파일 수가 README "카테고리가 비대해질 때 — sub-vertical-slice 분할" 에서 정한 임계값(15) 이상인지 본다. 이상이면 [adr-manage SKILL.md §5 "카테고리 비대화 점검"](../adr-manage/SKILL.md) 의 sub-feature 후보 도출을 그대로 적용한다.
+
+- sync 사이클에서는 **분할을 자동 수행하지 않는다** — 폴더 이동은 cross-reference·hook lookup 키·README 인덱스에 동시 영향을 주므로 사용자 합의가 필요하다.
+- 결과는 `Suggestions` 섹션에 `[Sub-folder split recommended] <category> 안에 ADR <n>개 — 후보 sub-feature: ...` 형태로 한 줄 권고로 남긴다. 다음 사이클에서 사용자가 합의하면 `/adr-manage` §5 절차로 분할.
+- evolution chain 신호(여러 ADR 의 Status 가 `Superseded by` 로 묶여 있음)가 함께 보이면 분할 대신 **rollup 우선** 을 권고에 명시한다 — chain 을 sub-folder 로 흩으면 추적이 어려워진다.
 
 ### 4. Cross-ADR 모순 점검
 

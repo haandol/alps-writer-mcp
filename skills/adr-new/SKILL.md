@@ -24,6 +24,8 @@ ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 �
 - `docs/adr/README.md` 가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md` 를 복사한다.
 - `docs/adr/.mapping.json` 이 없으면 빈 골격(`{ "categories": {} }`) 으로 만든다 — `alpsDocument` 필드는 ALPS PRD 가 있을 때만 채운다.
 
+카테고리 비대화 점검 — 카테고리가 정해지면 [adr-manage SKILL.md §5 "카테고리 비대화 점검"](../adr-manage/SKILL.md) 을 호출한다. 대상 카테고리(또는 sub-folder)의 ADR 이 15 개 이상이면 sub-vertical-slice 분할을 한 번 제안하고, 사용자가 받아들이면 이번 ADR 부터 sub-folder(`docs/adr/<category>/<sub-feature>/`) 안에 작성한다. 거절하거나 15 미만이면 평면 구조 그대로 진행 — 다시 묻지 않는다.
+
 ### 2. 결정의 동기 청취
 
 ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다. 한 번에 하나씩 짧게 물어본다:

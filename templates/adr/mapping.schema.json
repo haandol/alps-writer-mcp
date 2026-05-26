@@ -11,7 +11,7 @@
     },
     "categories": {
       "type": "object",
-      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR subdirectory name under docs/adr/.",
+      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/ — a single segment for top-level categories (e.g., 'auth') or a slash-separated path of at most two segments for sub-vertical-slice folders (e.g., 'auth/login'). See README 'Category id format'.",
       "additionalProperties": {
         "type": "object",
         "required": ["codePaths", "adrs"],

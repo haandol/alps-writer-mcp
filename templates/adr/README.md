@@ -132,6 +132,43 @@ docs/adr/
 
 새 ADR을 추가할 때는 이 README의 인덱스도 함께 갱신하세요.
 
+### 카테고리가 비대해질 때 — sub-vertical-slice 분할
+
+ADR이 누적되면 한 카테고리에 결정이 쌓여 번호만 보고는 무엇을 다루는 ADR인지 찾기 어려워진다. 카테고리는 vertical slice 단위라는 원칙을 유지하면서, **한 단계 더 작은 vertical slice (sub-feature) 로 나눠 한 단계의 sub-folder** 만 둘 수 있게 한다.
+
+**분할 임계값**: 한 카테고리(또는 sub-folder) 안의 ADR이 **15개 이상**이면 분할을 제안한다. 그 미만은 평면 구조 유지가 기본 — 너무 이른 분할은 카테고리 자체를 작게 쪼개 vertical slice 추적을 약화시킨다.
+
+**분할 규칙**:
+
+- **최대 1단계 깊이**: `docs/adr/<feature>/<sub-feature>/NNNN-...md` 까지만. 2단계 이상은 만들지 않는다 (`auth/login/social/...` 금지).
+- **sub-feature 도 vertical slice**: ALPS Section 7 의 sub-feature 와 1:1 로 매핑되는 사용자가 인지하는 단위로 자른다 — `auth/login/`, `auth/signup/`, `auth/password-reset/`, `orders/checkout/`, `orders/refund/` 처럼 한 사용자 동작에 해당하는 묶음. UI/API/Data 결정이 sub-folder 안에서 모두 끝나야 한다.
+- **금지되는 sub-folder**: `auth/api/`, `auth/db/`, `auth/components/`, `auth/services/` 같은 **기술 레이어 분할** — 카테고리 분할 규칙(안티패턴)과 동일하게 vertical slice 가 깨진다. 분할 후에도 한 sub-folder 안에 UI → API → Data 가 모여야 한다.
+- **번호 정책**: sub-folder 안에서 `NNNN` 을 새로 시작한다. 분할 시 기존 ADR 의 번호를 재배치하지 않는다 — 결번을 유지하고 git 이력으로 추적. 분할 시점은 [Roll-up](#디렉토리-구조)이 아니므로 본문은 그대로 옮기기만 한다.
+- **분할 vs 형제 카테고리 (`auth-login/`)**: vertical slice 가 진짜로 독립이고 cross-cutting 결정도 거의 공유하지 않으면 형제 카테고리(`auth-login/`, `auth-sso/`)가 더 깔끔하다. 한 도메인 안에서 공통 결정(예: `auth/0001-token-rotation.md`)을 부모 폴더에 남겨야 하는 경우에만 sub-folder 를 쓴다.
+- **README 인덱스**: sub-folder 가 생기면 README 의 카테고리 목록을 `auth/login/`, `auth/signup/` 처럼 sub-folder 별로 한 줄씩 풀어 적는다. 부모 카테고리 직속에 남은 cross-cutting ADR(예: `auth/0001-token-rotation.md`)은 부모 라인에 그대로 둔다.
+- **`.mapping.json` 정책**: sub-folder 도 별도 카테고리 entry 로 등록한다 — 키는 `auth/login` 처럼 슬래시를 유지. `codePaths` 는 그 sub-feature 의 vertical slice 만 가리키게 좁힌다 (예: `src/features/auth/login/**`). hook 이 카테고리 키로 lookup 하므로 키 형식의 일관성이 중요하다.
+
+```
+docs/adr/
+├── README.md
+├── .mapping.json
+├── auth/                        # 부모 vertical slice
+│   ├── 0001-token-rotation.md   # auth 전반에 걸친 cross-cutting 결정 (부모에 그대로)
+│   ├── login/                   # sub-vertical-slice
+│   │   ├── 0001-password-policy.md
+│   │   └── 0002-rate-limit.md
+│   └── signup/
+│       └── 0001-email-verification.md
+└── orders/
+    └── 0001-...md               # 임계값(15) 미만이면 분할하지 않는다
+```
+
+**언제 sub-folder 를 만들지 않는가**:
+
+- ADR 개수가 15 미만 — 평면 구조 유지.
+- ADR이 많아도 모두 같은 sub-feature 라면 — 그건 [`/adr-rollup`](#) 이 다룰 evolution chain 일 가능성이 높다. 먼저 rollup 으로 압축한 뒤 그래도 비대하면 분할.
+- vertical slice 경계가 모호하면 분할하지 않는다 — 잘못 자르면 한 결정이 두 폴더에 흩어진다.
+
 ## 구현 레퍼런스
 
 - ALPS PRD: `prd/<doc>.alps.xml` (Section 7이 feature spec의 source of truth)
