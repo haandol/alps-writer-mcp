@@ -22,7 +22,7 @@ description: Verify that ADRs in docs/adr/ accurately describe the current codeb
 
 ### 1. 인덱스와 매핑 로드
 
-- `docs/adr/README.md` 읽기 (인덱스 + 작성 규칙)
+- `docs/adr/README.md` (인덱스 + 회색지대/의존성 모델), `docs/adr/authoring-rules.md` (작성 규칙·리뷰 체크리스트), `docs/adr/structure.md` (디렉토리·매핑 정책) 읽기
 - `docs/adr/.mapping.json` 읽기 (카테고리 → 코드 경로 매핑). hook이 사용하는 같은 파일.
 - 디스크의 ADR 파일 전수 조회: `docs/adr/<category>/*.md`. README에 없는 파일이 있거나, README는 가리키는데 파일이 없으면 그 자체가 drift.
 
@@ -48,7 +48,7 @@ Quick mode는 이 단계만 수행한다.
 
 1. ADR 본문을 전부 읽는다.
 2. 검증 가능한 주장 추출:
-   - **Status** — codePaths grep으로 코드 실재 여부를 확인하고 Status drift를 자동 정정한다 (`Accepted`인데 코드에 없으면 `Proposed`로, `Proposed`인데 코드+테스트가 있으면 `Accepted (YYYY-MM-DD)`로). 상태 값 의미·자동 전환 정책 상세는 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조. 정정 내역은 7단계 보고 **Fixed** 섹션에 기재.
+   - **Status** — codePaths grep으로 코드 실재 여부를 확인하고 Status drift를 자동 정정한다 (`Accepted`인데 코드에 없으면 `Proposed`로, `Proposed`인데 코드+테스트가 있으면 `Accepted (YYYY-MM-DD)`로). 상태 값 의미·자동 전환 정책 상세는 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 `README.md` "자동 전환 규칙" 참조. 정정 내역은 7단계 보고 **Fixed** 섹션에 기재.
    - **API endpoints** — method + path 표. 라우터/핸들러 grep.
    - **Error codes** — 상수 grep.
    - **Enum / 타입 값** — `oneof=...`, validate 태그, TS union grep.
@@ -58,8 +58,8 @@ Quick mode는 이 단계만 수행한다.
    - **Source-of-truth 포인터** — "스키마는 `docs/tables/auth.md` 참조" 같은 외부 문서 경로가 아직 존재하고 그 파일 자체와도 일치하는지.
    - **Related ADR 링크** — 존재 여부와 Status 정합성.
 3. 구현 세부사항 bloat 식별 — 다음 두 기준으로 본문을 훑고 점진적으로 제거한다:
-   - **코드 직독 테스트** (README "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대"): 본문 단락이 codePaths 의 코드를 읽으면 자명한가? 자명하면 ADR 에서 뺀다 (함수 책임 분담, 모듈 의존 그래프, 필드 타입표, 에러 메시지·UI 라벨, 환경 변수 이름, 의사코드 등).
-   - **금지 항목 표** (README "ADR에 포함하지 않는 것"): 파일 경로(폴더 이하), 코드 스니펫, 구현 상수·튜닝값, 엔티티 필드 상세 표, 마이그레이션 명령어, 전체 JSON.
+   - **코드 직독 테스트** (`README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대"): 본문 단락이 codePaths 의 코드를 읽으면 자명한가? 자명하면 ADR 에서 뺀다 (함수 책임 분담, 모듈 의존 그래프, 필드 타입표, 에러 메시지·UI 라벨, 환경 변수 이름, 의사코드 등).
+   - **금지 항목 표** (`authoring-rules.md` "ADR에 포함하지 않는 것"): 파일 경로(폴더 이하), 코드 스니펫, 구현 상수·튜닝값, 엔티티 필드 상세 표, 마이그레이션 명령어, 전체 JSON.
 4. 회색지대 충실도 점검 — 본문에 (a) 대안 비교/채택 근거 (b) 비즈니스 규칙의 시스템 번역 (c) 도메인 규칙·상태 전이 (d) 외부 의존 fallback 중 하나도 없으면 ADR 가치가 약하다는 신호 → `Suggestions` 에 "회색지대 보강 또는 ADR 폐기 검토" 로 기록.
 5. ADR을 코드에 맞게 수정. `docs/adr/README.md`의 한 줄 요약도 함께 갱신.
 
@@ -67,15 +67,15 @@ Quick mode는 이 단계만 수행한다.
 
 ### 3.5. 카테고리 슬라이스 무결성 점검
 
-`.mapping.json` 의 카테고리 키와 `codePaths` 가 vertical slice 원칙(피쳐 단위)을 따르는지 함께 본다 — 안티패턴 카테고리 목록과 cross-cutting 사용 조건은 README "흔한 카테고리 예시" 참조.
+`.mapping.json` 의 카테고리 키와 `codePaths` 가 vertical slice 원칙(피쳐 단위)을 따르는지 함께 본다 — 안티패턴 카테고리 목록과 cross-cutting 사용 조건은 `structure.md` "흔한 카테고리 예시" 참조.
 
-- **카테고리 키 검사** — README 안티패턴 카테고리(기술 레이어/구조 단위)가 있으면 drift로 표시. 사용자에게 피쳐 단위로 재정렬하자고 제안
+- **카테고리 키 검사** — `structure.md` "안티패턴 카테고리"(기술 레이어/구조 단위)가 있으면 drift로 표시. 사용자에게 피쳐 단위로 재정렬하자고 제안
 - **codePaths 슬라이스 검사** — 같은 피쳐의 UI/API/Data 코드가 서로 다른 카테고리의 codePaths에 흩어져 있으면 drift. 한 피쳐의 모든 레이어 글롭은 한 카테고리에 모아야 한다
 - 위반은 `Suggestions` 가 아니라 `Fixed` 또는 `Contradictions Resolved` 에 기록한다 — 카테고리 분류는 ADR 사이클의 신뢰 기반이라 미루지 않는다.
 
 ### 3.6. 카테고리 비대화 점검 (분할 권고)
 
-각 카테고리(또는 sub-folder)의 ADR 파일 수가 README "카테고리가 비대해질 때 — sub-vertical-slice 분할" 에서 정한 임계값(15) 이상인지 본다. 이상이면 [adr-manage SKILL.md §5 "카테고리 비대화 점검"](../adr-manage/SKILL.md) 의 sub-feature 후보 도출을 그대로 적용한다.
+각 카테고리(또는 sub-folder)의 ADR 파일 수가 `structure.md` "카테고리가 비대해질 때 — sub-vertical-slice 분할" 에서 정한 임계값(15) 이상인지 본다. 이상이면 [adr-manage SKILL.md §5 "카테고리 비대화 점검"](../adr-manage/SKILL.md) 의 sub-feature 후보 도출을 그대로 적용한다.
 
 - sync 사이클에서는 **분할을 자동 수행하지 않는다** — 폴더 이동은 cross-reference·hook lookup 키·README 인덱스에 동시 영향을 주므로 사용자 합의가 필요하다.
 - 결과는 `Suggestions` 섹션에 `[Sub-folder split recommended] <category> 안에 ADR <n>개 — 후보 sub-feature: ...` 형태로 한 줄 권고로 남긴다. 다음 사이클에서 사용자가 합의하면 `/adr-manage` §5 절차로 분할.

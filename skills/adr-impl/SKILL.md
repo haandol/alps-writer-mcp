@@ -43,7 +43,7 @@ disable-model-invocation: true
 
 2. **계획 수립**
    - ADR의 Decision/Mermaid 다이어그램에서 vertical slice 를 추출한다 (UI → API → 데이터). 한 ADR 은 한 피쳐의 슬라이스 전체를 다루므로, 구현 계획도 같은 피쳐 안에서 UI/API/Data 모든 레이어를 **함께** 변경하는 단위로 잡는다.
-   - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/` 등 — README "흔한 카테고리 예시 — 안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
+   - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/` 등 — `structure.md` "흔한 카테고리 예시 — 안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
    - `codePaths`에 해당하는 기존 코드를 읽고 차이를 식별한다 — 같은 피쳐의 UI/API/Data 코드가 카테고리에 모두 포함돼 있는지 확인.
    - 변경 계획을 사용자에게 제시하고 승인받는다.
 
@@ -58,7 +58,7 @@ disable-model-invocation: true
 
 5. **Status 자동 전환 (`Proposed → Accepted`)**
 
-   상세 정책은 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조. 본 단계가 트리거하는 동작:
+   상세 정책은 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 `README.md` "자동 전환 규칙" 참조. 본 단계가 트리거하는 동작:
    - 4단계 테스트 통과 직후, **사용자 확인 없이** 대상 ADR 본문의 Status 줄을 `Accepted (YYYY-MM-DD)` 로 수정
    - `docs/adr/README.md` 카테고리별 ADR 목록의 한 줄 요약 라벨도 동시 갱신
    - 한 카테고리에 여러 ADR이 함께 구현되었으면 모두 갱신

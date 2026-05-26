@@ -11,6 +11,7 @@ ALPS Writer is available in two forms:
 ## Table of contents
 
 - [What is ALPS?](#what-is-alps)
+- [Dependency model — PRD → ADR → code](#dependency-model--prd--adr--code)
 - [Features](#features)
 - [Quick Start (Claude Code Plugin)](#quick-start-claude-code-plugin)
 - [Quick Start (MCP only)](#quick-start-mcp-only)
@@ -30,6 +31,35 @@ It addresses two recurring failure modes:
 ALPS fixes the format (9 sections, explicit dependencies, vertical-slice features) and inverts the authoring loop: the **agent asks focused questions, the human answers**, with no section saved without confirmation. Out of Scope is a first-class section so the agent knows what _not_ to build.
 
 See [`templates/alps/about-alps.md`](./templates/alps/about-alps.md) for the full design rationale, the role of each section, and how ALPS feeds into the ADR-driven cycle.
+
+## Dependency model — PRD → ADR → code
+
+ALPS (PRD), ADRs, and code form a one-way dependency chain. Each layer depends on the layer above it **logically**, but **never references it physically**.
+
+```mermaid
+flowchart RL
+    PRD["ALPS / PRD<br/>business requirements<br/>(most stable)"]
+    ADR["ADR<br/>architecture decisions<br/>(the gray zone)"]
+    Code["Code<br/>implementation details<br/>(most volatile)"]
+    Mapping[("docs/adr/.mapping.json<br/>external mapping layer")]
+
+    Code -. logical dependency .-> ADR
+    ADR -. logical dependency .-> PRD
+
+    Mapping -- adrs --> ADR
+    Mapping -- codePaths --> Code
+```
+
+The dotted arrows are **logical** — only `.mapping.json` (the solid arrows) holds physical references. Renames and ADR restructures (split / rollup / supersede) are absorbed by the mapping file, so neither code nor ADR bodies need to change in lockstep with the other.
+
+- **Logical dependency (dotted arrows)**: code is written to satisfy ADRs; ADRs are written to satisfy the PRD. When an inner layer changes, outer layers may need to change. The reverse never happens — if a code refactor forces an ADR rewrite, the ADR was carrying implementation detail it shouldn't have.
+- **No physical references in either direction**:
+  - **ADR → code**: ADRs reference folders, never files / functions / line numbers (see [Code reference depth — folders only](./templates/adr/README.md#코드-참조-깊이--폴더-단위까지만)). Otherwise every rename or refactor forces ADR edits.
+  - **Code → ADR**: code does not embed ADR IDs or paths in comments, constants, or imports. ADR numbers move (split, rollup, supersede); if those IDs are baked into code, restructuring ADRs forces matching code edits even when the decision is unchanged. When the **decision itself** changes, code changes — that's the entire point of the dependency.
+  - **ADR → PRD**: ADRs link to PRD features, but never copy user stories or acceptance criteria. Linking only.
+- **Linking lives in an external mapping layer**: `docs/adr/.mapping.json` is the single place that records ADR ↔ code-path ↔ ALPS-feature relationships. Both sides stay clean; renames and restructures are absorbed by the mapping file. The `PreToolUse` hook reads this mapping (not the code itself) to find the relevant ADR for an edit.
+
+**Stability gradient as the litmus test**: change frequency must slope one way — `Code >> ADR >> PRD`. If a change in the volatile layer drags the stable layer with it, an arrow is drawn the wrong way and something needs to be pushed back to its proper layer.
 
 ## Features
 

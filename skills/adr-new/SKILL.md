@@ -15,13 +15,13 @@ ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 �
 
 ### 1. 인자 해석
 
-- **`<category>`** (필수) — **피쳐(vertical slice) 단위**의 kebab-case 카테고리 키. 카테고리 결정 규칙(피쳐 단위, 금지 카테고리, cross-cutting 사용 조건)은 README "디렉토리 구조" / "흔한 카테고리 예시 — 안티패턴 카테고리" 참조. 사용자가 안티패턴 카테고리(`frontend`, `backend`, `api`, `db` 등)를 입력하면 한 번 되묻는다 — "이 결정이 한 피쳐(예: `auth`, `orders`)에 속하나요? 두 개 이상이 공유하면 cross-cutting 카테고리(`infra`, `data`, `integration`, `security`, `platform`)를 권합니다." 워크숍/번호 기반이라면 `f1`, `f-auth-01` 등 ALPS Feature ID 도 그대로 사용 가능.
+- **`<category>`** (필수) — **피쳐(vertical slice) 단위**의 kebab-case 카테고리 키. 카테고리 결정 규칙(피쳐 단위, 금지 카테고리, cross-cutting 사용 조건)은 `structure.md` "디렉토리 구조" / "흔한 카테고리 예시 — 안티패턴 카테고리" 참조. 사용자가 안티패턴 카테고리(`frontend`, `backend`, `api`, `db` 등)를 입력하면 한 번 되묻는다 — "이 결정이 한 피쳐(예: `auth`, `orders`)에 속하나요? 두 개 이상이 공유하면 cross-cutting 카테고리(`infra`, `data`, `integration`, `security`, `platform`)를 권합니다." 워크숍/번호 기반이라면 `f1`, `f-auth-01` 등 ALPS Feature ID 도 그대로 사용 가능.
 - **`[title]`** (선택) — 명령 인자로 제목을 받으면 그 제목으로 시작. 없으면 사용자에게 한 번 물어본다 ("어떤 결정을 ADR 로 남길까요? 제목 한 줄").
 
 매핑 상태 점검:
 
 - `docs/adr/` 가 없으면 디렉토리를 만든다.
-- `docs/adr/README.md` 가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md` 를 복사한다.
+- `docs/adr/README.md` (와 `authoring-rules.md`, `structure.md`) 가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/` 의 동일 파일 3종을 함께 복사한다.
 - `docs/adr/.mapping.json` 이 없으면 빈 골격(`{ "categories": {} }`) 으로 만든다 — `alpsDocument` 필드는 ALPS PRD 가 있을 때만 채운다.
 
 카테고리 비대화 점검 — 카테고리가 정해지면 [adr-manage SKILL.md §5 "카테고리 비대화 점검"](../adr-manage/SKILL.md) 을 호출한다. 대상 카테고리(또는 sub-folder)의 ADR 이 15 개 이상이면 sub-vertical-slice 분할을 한 번 제안하고, 사용자가 받아들이면 이번 ADR 부터 sub-folder(`docs/adr/<category>/<sub-feature>/`) 안에 작성한다. 거절하거나 15 미만이면 평면 구조 그대로 진행 — 다시 묻지 않는다.
@@ -39,15 +39,15 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 
 ### 3. ADR 초안 작성
 
-`${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 절차와 README "작성 규칙" 을 엄격히 따른다.
+`${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 절차와 `authoring-rules.md` 를 엄격히 따른다.
 
 - 카테고리 디렉토리: `docs/adr/<category>/` (없으면 생성, 플랫 구조 프로젝트면 `docs/adr/` 만 사용)
 - 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍 등에서 ALPS Feature ID 추적이 필요하면 `NNNN-fN-kebab-title.md`)
-- **Status 는 항상 `Proposed` 로 시작** (`/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환). 사용자에게 승격 여부를 묻지 않는다 — 자동 전환 정책은 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조
+- **Status 는 항상 `Proposed` 로 시작** (`/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환). 사용자에게 승격 여부를 묻지 않는다 — 자동 전환 정책은 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 `README.md` "자동 전환 규칙" 참조
 - 본문 구조: Status / Context / Decision / 대안 검토 / Consequences / Related
-- **회색지대만 적는다** — 코드 직독으로 알 수 있는 것(함수 책임, 모듈 의존, 필드 타입, 에러 메시지·로그·환경 변수 이름, 의사코드)은 본문에 넣지 않는다. 채택 근거, 비즈니스 규칙의 시스템 번역, 도메인 규칙·상태 전이, 외부 의존 fallback 같은 "코드만 봐서는 안 보이는 결정의 동기" 가 본문의 중심이 되어야 한다 — 상세는 README "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
+- **회색지대만 적는다** — 코드 직독으로 알 수 있는 것(함수 책임, 모듈 의존, 필드 타입, 에러 메시지·로그·환경 변수 이름, 의사코드)은 본문에 넣지 않는다. 채택 근거, 비즈니스 규칙의 시스템 번역, 도메인 규칙·상태 전이, 외부 의존 fallback 같은 "코드만 봐서는 안 보이는 결정의 동기" 가 본문의 중심이 되어야 한다 — 상세는 `README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
 - **Decision은 vertical slice로 묘사** — 한 단락 또는 sequenceDiagram으로 사용자 동작 → API → 데이터 변형까지 끊김 없이 잇는다. 한 피쳐 카테고리에서 UI/API/Data 결정을 모두 다루는 것이 정상이며, 레이어별 ADR로 쪼개지 않는다. 비동기·상태 전이가 핵심이면 stateDiagram-v2 / flowchart 사용
-- 금지/유지 항목 상세는 README "작성 규칙" 참조 (다이어그램 내부도 동일하게 적용)
+- 금지/유지 항목 상세는 `authoring-rules.md` 참조 (다이어그램 내부도 동일하게 적용)
 
 ### 4. codePaths 추천 + 확인
 

@@ -28,31 +28,31 @@ ALPS Section 7 의 feature 를 ADR 초안으로 일괄 변환하는 helper 입�
 
 ### 2. 카테고리 결정
 
-ALPS feature 는 그 자체가 vertical slice (UI → API → Data) 단위이므로, **카테고리는 feature 와 1:1 로 매핑** 한다. 한 feature 에서 파생되는 UI/API/Data 결정은 **같은 카테고리** 안에 모두 들어가야 한다 — vertical slice 원칙 상세는 README "디렉토리 구조" 참조.
+ALPS feature 는 그 자체가 vertical slice (UI → API → Data) 단위이므로, **카테고리는 feature 와 1:1 로 매핑** 한다. 한 feature 에서 파생되는 UI/API/Data 결정은 **같은 카테고리** 안에 모두 들어가야 한다 — vertical slice 원칙 상세는 `structure.md` "디렉토리 구조" 참조.
 
 카테고리 키 결정 규칙은 **ALPS Section 7 의 feature 에 명시적 ID 가 있는지** 로 갈린다.
 
 - **명시적 Feature ID 가 있는 경우 (워크숍·번호 기반 PRD — 예: `F1`, `F-AUTH-01`)** — 그 ID 를 소문자 kebab-case 로 변환한 값을 카테고리 키로 **고정 사용** (`F1` → `f1`, `F-AUTH-01` → `f-auth-01`). 사용자가 `/adr-impl f1` 처럼 ALPS feature ID 그대로 호출할 수 있어야 하므로 의미 기반 이름으로 대체하지 않는다.
 - **명시적 ID 가 없는 일반 PRD** — feature 이름을 kebab-case 로 변환해 의미 있는 카테고리 id 를 만든다 (예: "User Authentication" → `auth`, "Marketplace Listings" → `marketplace`).
 
-ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고리는 사용자가 인지하는 기능 단위 이름으로 다듬는다 — 안티패턴 카테고리 목록은 README "흔한 카테고리 예시 — 안티패턴 카테고리" 참조.
+ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고리는 사용자가 인지하는 기능 단위 이름으로 다듬는다 — 안티패턴 카테고리 목록은 `structure.md` "흔한 카테고리 예시 — 안티패턴 카테고리" 참조.
 
 이어서:
 
 - `docs/adr/<category>/` 디렉토리를 생성한다 (플랫 구조면 `docs/adr/`만 사용).
-- `docs/adr/README.md`가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md`를 복사한다.
+- `docs/adr/README.md` (와 `authoring-rules.md`, `structure.md`)가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/` 의 동일 파일 3종을 함께 복사한다.
 
 ### 3. ADR 초안 작성
 
-`${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 절차와 README "작성 규칙" 을 엄격히 따른다.
+`${CLAUDE_PLUGIN_ROOT}/skills/adr-manage/SKILL.md` 절차와 `authoring-rules.md` 를 엄격히 따른다.
 
 - 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍은 `NNNN-fN-kebab-title.md`)
-- **Status는 항상 `Proposed` 로 저장** — `/adr-impl` 이 구현·테스트 후 자동으로 `Accepted` 로 전환한다. 사용자에게 승격 여부를 묻지 않는다 ([adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 README "자동 전환 규칙" 참조)
+- **Status는 항상 `Proposed` 로 저장** — `/adr-impl` 이 구현·테스트 후 자동으로 `Accepted` 로 전환한다. 사용자에게 승격 여부를 묻지 않는다 ([adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 `README.md` "자동 전환 규칙" 참조)
 - Context: ALPS의 비즈니스 동기·user story·acceptance criteria의 핵심을 1-3문단
 - Decision: **한 ADR 안에서 vertical slice 를 끝까지 묘사** — 사용자 동작 → API → 데이터 흐름을 한 단락 또는 mermaid sequenceDiagram 으로. 같은 feature의 UI/API/Data 결정을 별도 ADR로 쪼개지 않는다
-- **회색지대만 적는다** — 코드 직독으로 알 수 있는 것(함수 책임, 필드 타입, 에러 메시지, 환경 변수 이름, 의사코드)은 본문에 넣지 않는다. ALPS 의 비즈니스 규칙이 어떤 트리거·상태값·이벤트로 번역되는지, 대안 대비 왜 이것을 골랐는지, 외부 의존이 실패하면 어떻게 graceful 하게 다루는지가 본문의 중심이다 — 상세는 README "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
+- **회색지대만 적는다** — 코드 직독으로 알 수 있는 것(함수 책임, 필드 타입, 에러 메시지, 환경 변수 이름, 의사코드)은 본문에 넣지 않는다. ALPS 의 비즈니스 규칙이 어떤 트리거·상태값·이벤트로 번역되는지, 대안 대비 왜 이것을 골랐는지, 외부 의존이 실패하면 어떻게 graceful 하게 다루는지가 본문의 중심이다 — 상세는 `README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
 - 대안 검토 / Consequences (긍정·부정·Risk)
-- 금지/유지 항목 상세는 README "작성 규칙" 참조 (다이어그램 내부도 동일)
+- 금지/유지 항목 상세는 `authoring-rules.md` 참조 (다이어그램 내부도 동일)
 
 ### 4. codePaths 추천 + 확인
 

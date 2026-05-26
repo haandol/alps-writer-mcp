@@ -5,7 +5,11 @@ description: Use this skill whenever you are about to create or edit an ADR — 
 
 # adr-manage
 
-ADR 생성·수정의 **절차**를 정의한다. 작성 규칙(금지 항목, 유지 항목, vertical slice 원칙, Status 의미, 다이어그램 가이드, DB 동시 작업, 리뷰 체크리스트 등) **자체**는 `docs/adr/README.md`(없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md`)가 source of truth이므로 본 스킬에서 다시 풀어쓰지 않는다.
+ADR 생성·수정의 **절차**를 정의한다. 작성 규칙(금지 항목, 유지 항목, vertical slice 원칙, Status 의미, 다이어그램 가이드, DB 동시 작업, 리뷰 체크리스트 등) **자체**는 프로젝트의 `docs/adr/` 문서가 source of truth 다 — 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/` 의 동일 문서를 참조한다. 본 스킬에서 다시 풀어쓰지 않는다.
+
+- `docs/adr/README.md` — 회색지대 개념, 의존성 모델, 결정 종류, anti-patterns, 상태/자동 전환, ADR 템플릿
+- `docs/adr/authoring-rules.md` — 두 단계 필터, 코드 참조 깊이, 금지/유지 항목, DB 동시 작업, 한 ADR=한 결정, 다이어그램 선택, 명명 규칙, **ADR 리뷰 체크리스트**
+- `docs/adr/structure.md` — 디렉토리 구조, sub-vertical-slice 분할, 흔한 카테고리 예시(안티패턴 포함), `.mapping.json` 정책
 
 ADR은 이 plugin의 일급 산출물이다 — ALPS PRD 가 있든 없든 ADR 자체로 작성·관리하고, 코드는 ADR을 근거로 구현한다. ALPS Section 7 → ADR 자동 변환(`/feature-to-adr`)은 그 위에 얹는 helper다.
 
@@ -20,33 +24,33 @@ ADR은 이 plugin의 일급 산출물이다 — ALPS PRD 가 있든 없든 ADR �
 
 ### 1. 작성 규칙 로드 (필수)
 
-작업 전 반드시 `docs/adr/README.md`의 다음 섹션을 읽는다 — 본 스킬에서 다시 풀어쓰지 않는다.
+작업 전 반드시 다음 섹션을 읽는다 — 본 스킬에서 다시 풀어쓰지 않는다.
 
-- "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" — **모든 작성/수정의 1차 필터**. 코드 직독 테스트로 코드가 source of truth 인 항목은 ADR 에서 빼고, 회색지대(채택 근거·비즈니스 규칙의 시스템 번역·도메인 규칙·외부 의존 fallback) 만 남긴다
-- "ADR이 다루는 결정의 종류" / "ADR이 아닌 것 (anti-patterns)" — 작성 여부 판단
-- "디렉토리 구조" / "카테고리가 비대해질 때 — sub-vertical-slice 분할" / "흔한 카테고리 예시" — vertical slice 원칙, 금지 카테고리(안티패턴), cross-cutting 카테고리 사용 조건, sub-folder 분할 임계값(15)·1단계 깊이 제한·sub-feature 정의
-- "상태" / "자동 전환 규칙" — Status 값 의미와 자동 전환 정책
-- "작성 규칙" — 두 단계 필터(코드 직독 + 리트머스), 코드 참조 깊이, 금지/유지 항목, 다이어그램 내 코드 참조, API 섹션, DB 스키마 동시 작업, 한 ADR=한 결정, 길이/다이어그램 가이드, 한국어 작성
-- "ADR 리뷰 체크리스트" — 머지 전 최종 확인 (코드 직독 테스트 / 회색지대 점검 항목 포함)
+- `README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" — **모든 작성/수정의 1차 필터**. 코드 직독 테스트로 코드가 source of truth 인 항목은 ADR 에서 빼고, 회색지대(채택 근거·비즈니스 규칙의 시스템 번역·도메인 규칙·외부 의존 fallback) 만 남긴다
+- `README.md` "ADR이 다루는 결정의 종류" / "ADR이 아닌 것 (anti-patterns)" — 작성 여부 판단
+- `structure.md` "디렉토리 구조" / "카테고리가 비대해질 때 — sub-vertical-slice 분할" / "흔한 카테고리 예시" — vertical slice 원칙, 금지 카테고리(안티패턴), cross-cutting 카테고리 사용 조건, sub-folder 분할 임계값(15)·1단계 깊이 제한·sub-feature 정의
+- `README.md` "상태" / "자동 전환 규칙" — Status 값 의미와 자동 전환 정책
+- `authoring-rules.md` 전체 — 두 단계 필터(코드 직독 + 리트머스), 코드 참조 깊이, 금지/유지 항목, 다이어그램 내 코드 참조, API 섹션, DB 스키마 동시 작업, 한 ADR=한 결정, 길이/다이어그램 가이드, 한국어 작성
+- `authoring-rules.md` "ADR 리뷰 체크리스트" — 머지 전 최종 확인 (코드 직독 테스트 / 회색지대 점검 항목 포함)
 
-`docs/adr/README.md`가 없으면 plugin 템플릿(`${CLAUDE_PLUGIN_ROOT}/templates/adr/README.md`)을 프로젝트로 복사한 뒤 시작한다. 프로젝트에 복사된 README가 있으면 그쪽이 우선한다.
+`docs/adr/` 의 위 문서들이 없으면 plugin 템플릿(`${CLAUDE_PLUGIN_ROOT}/templates/adr/`)의 동일 파일을 프로젝트로 복사한 뒤 시작한다. 프로젝트에 복사본이 있으면 그쪽이 우선한다.
 
 ALPS Section 7 → ADR 변환 작업(`/feature-to-adr`)이거나 ALPS의 9개 섹션 구조·vertical-slice 의도가 기억나지 않으면 `${CLAUDE_PLUGIN_ROOT}/templates/alps/about-alps.md`를 추가로 읽는다. ALPS PRD 가 없는 일반 ADR 작성에서는 이 단계를 건너뛴다.
 
 ### 2. 새 ADR 생성
 
-1. 카테고리 결정 — README "디렉토리 구조" / "흔한 카테고리 예시"에 따라 피쳐(vertical slice) 단위로. 안티패턴 카테고리(`frontend/`, `backend/`, `api/`, `db/` 등) 회피, cross-cutting은 두 개 이상의 피쳐가 의존할 때만
+1. 카테고리 결정 — `structure.md` "디렉토리 구조" / "흔한 카테고리 예시"에 따라 피쳐(vertical slice) 단위로. 안티패턴 카테고리(`frontend/`, `backend/`, `api/`, `db/` 등) 회피, cross-cutting은 두 개 이상의 피쳐가 의존할 때만
 2. `docs/adr/<category>/`의 기존 ADR 번호를 확인하여 다음 번호 부여 (split으로 빠진 번호는 결번으로 두고 renumber 금지). 파일명 `XXXX-kebab-title.md`
 3. README 템플릿 구조로 초안 작성: Status / Context / Decision / Consequences / Related — Decision은 UI → API → 데이터 single slice로 묘사 (시퀀스 다이어그램 권장)
 4. **새 ADR은 기본 `Proposed`로 시작**. 같은 작업에서 작성·구현·검증이 모두 끝난다면 처음부터 `Accepted (YYYY-MM-DD)`로 시작해도 된다
-5. `docs/adr/README.md`의 "카테고리별 ADR 목록"에 한 줄 요약 추가. 새 카테고리면 디렉토리 구조에도 추가
+5. `docs/adr/README.md`의 "카테고리별 ADR 목록"에 한 줄 요약 추가. 새 카테고리면 `structure.md` 디렉토리 트리 예시도 함께 갱신
 6. `docs/adr/.mapping.json`의 해당 카테고리 entry 갱신 (codePaths도 피쳐 단위로 묶여 있는지 확인)
 7. **사용자 승인 전까지 저장하지 않는다**
 
 ### 3. 기존 ADR 수정
 
 1. 수정 대상 ADR을 읽는다
-2. 변경 사항을 적용하면서 README의 "작성 규칙"을 함께 적용. 기존에 규칙을 위반하는 내용이 있으면 점진적으로 정리한다
+2. 변경 사항을 적용하면서 `authoring-rules.md` 를 함께 적용. 기존에 규칙을 위반하는 내용이 있으면 점진적으로 정리한다
 3. `Updated:` 날짜를 오늘로 갱신
 4. 본문 변경이 있다면 README 카테고리 목록의 한 줄 요약도 갱신
 
@@ -72,7 +76,7 @@ ALPS Section 7 → ADR 변환 작업(`/feature-to-adr`)이거나 ALPS의 9개 �
 
 ### 5. 카테고리 비대화 점검 (분할 제안)
 
-`/adr-new`, `/adr-sync` 가 카테고리에 손을 댈 때마다 공통으로 호출하는 점검이다 — 임계값·깊이·sub-feature 정의 등 규칙 자체는 README "카테고리가 비대해질 때 — sub-vertical-slice 분할" 이 source of truth. `/adr-rollup` 은 evolution chain 압축에만 집중하고 분할 제안은 하지 않는다 — 두 작업이 섞이면 사용자가 한 사이클에서 너무 많은 결정을 떠맡게 된다.
+`/adr-new`, `/adr-sync` 가 카테고리에 손을 댈 때마다 공통으로 호출하는 점검이다 — 임계값·깊이·sub-feature 정의 등 규칙 자체는 `structure.md` "카테고리가 비대해질 때 — sub-vertical-slice 분할" 이 source of truth. `/adr-rollup` 은 evolution chain 압축에만 집중하고 분할 제안은 하지 않는다 — 두 작업이 섞이면 사용자가 한 사이클에서 너무 많은 결정을 떠맡게 된다.
 
 점검 절차:
 
@@ -93,7 +97,7 @@ ALPS Section 7 → ADR 변환 작업(`/feature-to-adr`)이거나 ALPS의 9개 �
 
 ### 6. Status 자동 전환 (의무)
 
-상태는 사람이 묻고 바꾸는 값이 아니라 사이클이 자동으로 갱신하는 값이다. 각 명령이 트리거하는 전환만 짧게 정리한다 — 상태 값 의미와 괄호 표기 규칙 등 상세는 README "상태" 섹션 참조.
+상태는 사람이 묻고 바꾸는 값이 아니라 사이클이 자동으로 갱신하는 값이다. 각 명령이 트리거하는 전환만 짧게 정리한다 — 상태 값 의미와 괄호 표기 규칙 등 상세는 `README.md` "상태" 섹션 참조.
 
 - **`/adr-new`, `/feature-to-adr`** — 신규 ADR을 항상 `Proposed`로 저장. 사용자에게 "Accepted로 할까요?" 묻지 않는다
 - **`/adr-impl`** — 구현·테스트가 끝난 ADR의 Status를 같은 사이클에 `Accepted (YYYY-MM-DD)`로 자동 전환. 사용자에게 승격 여부를 따로 확인하지 않는다
@@ -103,5 +107,5 @@ ALPS Section 7 → ADR 변환 작업(`/feature-to-adr`)이거나 ALPS의 9개 �
 
 ### 7. 한국어 작성 / 최종 확인
 
-- 본문은 한국어 작성, 기술 용어·코드 식별자·영문 고유명사는 원어 그대로 — README "한국어 작성" 참조
-- 머지 전 README의 **"ADR 리뷰 체크리스트"** 항목을 모두 점검한다. 본 스킬에서 별도 체크리스트를 두지 않는다
+- 본문은 한국어 작성, 기술 용어·코드 식별자·영문 고유명사는 원어 그대로 — `authoring-rules.md` "한국어 작성" 참조
+- 머지 전 `authoring-rules.md` "ADR 리뷰 체크리스트" 항목을 모두 점검한다. 본 스킬에서 별도 체크리스트를 두지 않는다
