@@ -39,7 +39,7 @@
     "url": "https://github.com/haandol/alps-writer-mcp"
   },
   "author": "haandol",
-  "packageManager": "pnpm@11.1.1",
+  "packageManager": "pnpm@11.4.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
@@ -63,14 +63,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.8.0",
+    "@types/node": "^25.9.1",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
     "prettier": "^3.8.3",
-    "tsx": "^4.22.1",
+    "tsx": "^4.22.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.3"
+    "typescript-eslint": "^8.60.0"
   }
 }
