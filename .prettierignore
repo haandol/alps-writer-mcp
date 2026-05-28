@@ -1,3 +1,7 @@
 dist
 node_modules
 pnpm-lock.yaml
+.codex
+.devcontainer
+.claude/settings.local.json
+.DS_Store

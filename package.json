@@ -54,11 +54,11 @@
   },
   "lint-staged": {
     "*.{ts,js}": [
-      "prettier --check",
-      "eslint"
+      "prettier --write",
+      "eslint --fix"
     ],
     "*.{json,md,yaml}": [
-      "prettier --check"
+      "prettier --write"
     ]
   },
   "devDependencies": {
