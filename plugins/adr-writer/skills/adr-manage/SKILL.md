@@ -1,6 +1,6 @@
 ---
 name: adr-manage
-description: Use this skill whenever you are about to create or edit an ADR — directly, via /adr-new, /feature-to-adr, /adr-impl, or /adr-sync. Triggers on any user request that adds, changes, refactors, or removes feature behavior, or that explicitly mentions ADRs. Examples in any language - "ADR 만들어줘", "F1 구현해줘", "이 부분 좀 바꿔줘", "결제 흐름 수정", "새 기능 추가", "draft an ADR for ...", "implement signup", "refactor the cart", "rework auth flow". Loads the writing rules (folder-depth references, implementation-detail exclusion, Status values, DB schema co-change) so the resulting ADR passes review.
+description: Use this skill whenever you are about to create or edit an ADR — directly, via /adr-new, /adr-impl, or /adr-sync. Triggers on any user request that adds, changes, refactors, or removes feature behavior, or that explicitly mentions ADRs. Examples in any language - "ADR 만들어줘", "F1 구현해줘", "이 부분 좀 바꿔줘", "결제 흐름 수정", "새 기능 추가", "draft an ADR for ...", "implement signup", "refactor the cart", "rework auth flow". Loads the writing rules (folder-depth references, implementation-detail exclusion, Status values, DB schema co-change) so the resulting ADR passes review.
 ---
 
 # adr-manage
@@ -11,13 +11,13 @@ ADR 생성·수정의 **절차**를 정의한다. 작성 규칙(금지 항목, �
 - `docs/adr/authoring-rules.md` — 두 단계 필터, 코드 참조 깊이, 금지/유지 항목, DB 동시 작업, 한 ADR=한 결정, 다이어그램 선택, 명명 규칙, **ADR 리뷰 체크리스트**
 - `docs/adr/structure.md` — 디렉토리 구조, sub-vertical-slice 분할, 흔한 카테고리 예시(안티패턴 포함), `.mapping.json` 정책
 
-ADR은 이 plugin의 일급 산출물이다 — ALPS PRD 가 있든 없든 ADR 자체로 작성·관리하고, 코드는 ADR을 근거로 구현한다. ALPS Section 7 → ADR 자동 변환(`/feature-to-adr`)은 그 위에 얹는 helper다.
+ADR은 이 plugin(adr-writer)의 일급 산출물이다 — ALPS PRD 가 있든 없든 ADR 자체로 작성·관리하고, 코드는 ADR을 근거로 구현한다. ALPS Section 7 → ADR 자동 변환(`/feature-to-adr`)은 별도 플러그인 alps-writer 가 제공하는 helper 로, 결국 이 스킬의 절차를 그대로 거친다.
 
 ## 트리거
 
 - 새 ADR 생성 요청 — 기본 경로는 `/adr-new <category>` (ALPS PRD 유무와 무관)
 - 기존 ADR 수정/업데이트
-- ALPS Section 7 feature → ADR 일괄 변환 (`/feature-to-adr`)
+- ALPS Section 7 feature → ADR 일괄 변환 (alps-writer 플러그인의 `/feature-to-adr` 가 이 절차를 호출)
 - ADR 내용에 대한 논의 중 직접 편집이 필요할 때
 
 ## Workflow
@@ -34,8 +34,6 @@ ADR은 이 plugin의 일급 산출물이다 — ALPS PRD 가 있든 없든 ADR �
 - `authoring-rules.md` "ADR 리뷰 체크리스트" — 머지 전 최종 확인 (코드 직독 테스트 / 회색지대 점검 항목 포함)
 
 `docs/adr/` 의 위 문서들이 없으면 plugin 템플릿(`${CLAUDE_PLUGIN_ROOT}/templates/adr/`)의 동일 파일을 프로젝트로 복사한 뒤 시작한다. 프로젝트에 복사본이 있으면 그쪽이 우선한다.
-
-ALPS Section 7 → ADR 변환 작업(`/feature-to-adr`)이거나 ALPS의 9개 섹션 구조·vertical-slice 의도가 기억나지 않으면 `${CLAUDE_PLUGIN_ROOT}/templates/alps/about-alps.md`를 추가로 읽는다. ALPS PRD 가 없는 일반 ADR 작성에서는 이 단계를 건너뛴다.
 
 ### 2. 새 ADR 생성
 

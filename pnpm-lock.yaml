@@ -7,6 +7,18 @@ settings:
 importers:
 
   .:
+    devDependencies:
+      husky:
+        specifier: ^9.1.7
+        version: 9.1.7
+      lint-staged:
+        specifier: ^17.0.5
+        version: 17.0.5
+      prettier:
+        specifier: ^3.8.3
+        version: 3.8.3
+
+  plugins/alps-writer:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
@@ -27,15 +39,6 @@ importers:
       eslint-config-prettier:
         specifier: ^10.1.8
         version: 10.1.8(eslint@10.4.0)
-      husky:
-        specifier: ^9.1.7
-        version: 9.1.7
-      lint-staged:
-        specifier: ^17.0.5
-        version: 17.0.5
-      prettier:
-        specifier: ^3.8.3
-        version: 3.8.3
       tsx:
         specifier: ^4.22.3
         version: 4.22.3

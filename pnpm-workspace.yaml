@@ -1,2 +1,5 @@
+packages:
+  - "plugins/alps-writer"
+
 allowBuilds:
   esbuild: true

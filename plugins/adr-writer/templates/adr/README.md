@@ -193,4 +193,4 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 - [ADR GitHub](https://adr.github.io/) — ADR 일반 자료 모음
 - [Joel Parker Henderson — ADR templates](https://github.com/joelparkerhenderson/architecture-decision-record) — 다양한 템플릿 비교
 - [Michael Nygard — Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) — 원조 ADR 글
-- [alps-writer plugin](https://github.com/haandol/alps-writer-mcp) — 이 plugin 자체
+- [adr-writer plugin](https://github.com/haandol/alps-writer-plugins) — 이 plugin 자체

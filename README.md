@@ -1,19 +1,26 @@
-# ALPS Writer
+# ALPS Writer Plugins
 
 [![npm version](https://img.shields.io/npm/v/alps-writer.svg)](https://www.npmjs.com/package/alps-writer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-ALPS Writer is available in two forms:
+This repository is a Claude Code **marketplace** that ships two independent plugins:
 
-1. **MCP server** (`alps-writer` on npm) — write ALPS (PRD) documents conversationally in Claude Desktop, Cursor, Kiro, or any MCP-compatible client.
-2. **Claude Code plugin** (this repository) — bundles the MCP server with ADR conversion/sync commands and ADR-drift hooks to enforce the ALPS → ADR → code → test cycle.
+| Plugin                  | Scope                                                                                                                     | Depends on                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via an MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
+| **`adr-writer`** (ADR)  | ADR-driven development: author with `/adr-new`, implement with `/adr-impl`, sync with `/adr-sync`, drift hooks.           | nothing — fully standalone       |
+
+The two are split so that **adr-writer never references ALPS** — once a feature is imported, the ADR lifecycle is entirely independent of any PRD. The only coupling is one-way (`alps-writer → adr-writer`), via the `/feature-to-adr` bridge.
+
+The PRD plugin's MCP server is also published standalone on npm as [`alps-writer`](https://www.npmjs.com/package/alps-writer) — usable in Claude Desktop, Cursor, Kiro, or any MCP client without the plugin.
 
 ## Table of contents
 
 - [What is ALPS?](#what-is-alps)
 - [Dependency model — PRD → ADR → code](#dependency-model--prd--adr--code)
+- [Repository layout](#repository-layout)
 - [Features](#features)
-- [Quick Start (Claude Code Plugin)](#quick-start-claude-code-plugin)
+- [Quick Start (Claude Code plugins)](#quick-start-claude-code-plugins)
 - [Quick Start (MCP only)](#quick-start-mcp-only)
 - [Development](#development)
 - [Contributing](#contributing)
@@ -30,7 +37,7 @@ It addresses two recurring failure modes:
 
 ALPS fixes the format (9 sections, explicit dependencies, vertical-slice features) and inverts the authoring loop: the **agent asks focused questions, the human answers**, with no section saved without confirmation. Out of Scope is a first-class section so the agent knows what _not_ to build.
 
-See [`templates/alps/about-alps.md`](./templates/alps/about-alps.md) for the full design rationale, the role of each section, and how ALPS feeds into the ADR-driven cycle.
+See [`plugins/alps-writer/templates/alps/about-alps.md`](./plugins/alps-writer/templates/alps/about-alps.md) for the full design rationale, the role of each section, and how ALPS feeds into the ADR-driven cycle.
 
 ## Dependency model — PRD → ADR → code
 
@@ -54,32 +61,63 @@ The dotted arrows are **logical** — only `.mapping.json` (the solid arrows) ho
 
 - **Logical dependency (dotted arrows)**: code is written to satisfy ADRs; ADRs are written to satisfy the PRD. When an inner layer changes, outer layers may need to change. The reverse never happens — if a code refactor forces an ADR rewrite, the ADR was carrying implementation detail it shouldn't have.
 - **No physical references in either direction**:
-  - **ADR → code**: ADRs reference folders, never files / functions / line numbers (see [Code reference depth — folders only](./templates/adr/README.md#코드-참조-깊이--폴더-단위까지만)). Otherwise every rename or refactor forces ADR edits.
+  - **ADR → code**: ADRs reference folders, never files / functions / line numbers (see [Code reference depth — folders only](./plugins/adr-writer/templates/adr/README.md#코드-참조-깊이--폴더-단위까지만)). Otherwise every rename or refactor forces ADR edits.
   - **Code → ADR**: code does not embed ADR IDs or paths in comments, constants, or imports. ADR numbers move (split, rollup, supersede); if those IDs are baked into code, restructuring ADRs forces matching code edits even when the decision is unchanged. When the **decision itself** changes, code changes — that's the entire point of the dependency.
   - **ADR → PRD**: ADRs link to PRD features, but never copy user stories or acceptance criteria. Linking only.
 - **Linking lives in an external mapping layer**: `docs/adr/.mapping.json` is the single place that records ADR ↔ code-path ↔ ALPS-feature relationships. Both sides stay clean; renames and restructures are absorbed by the mapping file. The `PreToolUse` hook reads this mapping (not the code itself) to find the relevant ADR for an edit.
 
 **Stability gradient as the litmus test**: change frequency must slope one way — `Code >> ADR >> PRD`. If a change in the volatile layer drags the stable layer with it, an arrow is drawn the wrong way and something needs to be pushed back to its proper layer.
 
+This split is mirrored in the packaging: **alps-writer** owns the PRD layer, **adr-writer** owns the ADR layer, and the `.mapping.json` that links them lives in the user's own `docs/adr/` — never inside either plugin.
+
+## Repository layout
+
+```
+alps-writer-plugins/                 # marketplace root (this repo)
+├── .claude-plugin/marketplace.json  # registers both plugins
+└── plugins/
+    ├── alps-writer/                 # PRD plugin + the published npm MCP server
+    │   ├── .claude-plugin/plugin.json
+    │   ├── package.json             # → published to npm as `alps-writer`
+    │   ├── src/                     # MCP server (TypeScript)
+    │   ├── skills/                  # /alps-init, /feature-to-adr
+    │   └── templates/alps/
+    └── adr-writer/                  # ADR plugin (standalone, ALPS-agnostic)
+        ├── .claude-plugin/plugin.json
+        ├── skills/                  # /adr-new, /adr-impl, /adr-sync, /adr-rollup, /adr-manage
+        ├── agents/                  # adr-reviewer subagent
+        ├── hooks/                   # ADR-drift hooks
+        └── templates/adr/
+```
+
 ## Features
+
+**alps-writer (PRD)**
 
 - 9-section ALPS (PRD) template with structured XML templates and conversation guides
 - Interactive Q&A workflow — AI asks focused questions, never auto-generates
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
-- **ADR-driven development cycle** _(plugin)_ — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
-- **ALPS → ADR conversion helper** _(plugin)_ — `/feature-to-adr` converts Section 7 features into `docs/adr/<category>/NNNN-*.md` when an ALPS PRD already exists
-- **ADR-drift hooks** _(plugin)_ — warn or block (`ALPS_ADR_ENFORCE=block`) when code is newer than its mapped ADR
-- Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client
+- **ALPS → ADR bridge** — `/feature-to-adr` imports Section 7 features into ADRs by delegating to adr-writer's `/adr-new`
+- Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client (MCP server only)
 
-## Quick Start (Claude Code Plugin)
+**adr-writer (ADR)**
 
-Register this repository as a Claude Code marketplace and the MCP server, slash commands, and hooks are installed together.
+- **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
+- **ADR-drift hooks** — warn or block (`ALPS_ADR_ENFORCE=block`) when code is newer than its mapped ADR
+- Fully standalone — no ALPS PRD required
+
+## Quick Start (Claude Code plugins)
+
+Register this repository as a Claude Code marketplace, then install whichever plugins you want. They are independent — install one or both.
 
 ```
-/plugin marketplace add haandol/alps-writer-mcp
-/plugin install alps-writer@alps-writer
+/plugin marketplace add haandol/alps-writer-plugins
+/plugin install alps-writer@alps-writer   # PRD authoring (MCP server + /alps-init, /feature-to-adr)
+/plugin install adr-writer@alps-writer    # ADR cycle (/adr-new, /adr-impl, /adr-sync, hooks)
 ```
+
+> `/feature-to-adr` (in alps-writer) delegates ADR authoring to `/adr-new` (in adr-writer), so install **both** if you want the ALPS → ADR bridge. adr-writer on its own works without any ALPS PRD.
 
 ### Development cycle
 
@@ -98,11 +136,18 @@ The goal is for ADRs to evolve alongside the code each cycle. Adding a new ADR w
 
 ### Slash commands
 
+**alps-writer**
+
+| Command                | Role                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `/alps-init`           | Author a new ALPS document (or resume an existing one)                                                           |
+| `/feature-to-adr [id]` | _Bridge_: import an ALPS Section 7 feature into a Proposed ADR by delegating to `/adr-new` (requires adr-writer) |
+
+**adr-writer**
+
 | Command                    | Role                                                                                                  |
 | -------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `/alps-init`               | Author a new ALPS document (or resume an existing one) — optional, only if you want a PRD             |
 | `/adr-new <category>`      | Author a new ADR directly — the default path, no ALPS PRD required                                    |
-| `/feature-to-adr [id]`     | _Helper_: convert an ALPS Section 7 feature into a Proposed ADR draft and seed the mapping            |
 | `/adr-impl [id]`           | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build |
 | `/adr-sync [id] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                    |
 | `/adr-rollup <id>`         | Consolidate only ADR groups whose evolution history of one logical decision is split                  |
@@ -120,7 +165,7 @@ Default mode is `warn`. To enforce more strictly, export `ALPS_ADR_ENFORCE=block
 
 ### Mapping file
 
-`docs/adr/.mapping.json` is the single source of truth for the ADR ↔ code path (and optional ALPS feature) relationships. See the schema at [`templates/adr/mapping.schema.json`](./templates/adr/mapping.schema.json). Both `/adr-new` and `/feature-to-adr` update it automatically.
+`docs/adr/.mapping.json` is the single source of truth for the ADR ↔ code path (and optional ALPS feature) relationships. See the schema at [`plugins/adr-writer/templates/adr/mapping.schema.json`](./plugins/adr-writer/templates/adr/mapping.schema.json). `/adr-new` fills the ADR ↔ code-path fields; `/feature-to-adr` additionally backfills the ALPS link fields (`alpsDocument`, `alpsFeatureId`).
 
 ## Quick Start (MCP only)
 
@@ -149,11 +194,11 @@ To use the MCP server without the plugin:
 
 ### Environment variables
 
-| Variable           | Scope        | Description                                                                                                | Default                  |
-| ------------------ | ------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `ALPS_OUTPUT_DIR`  | MCP server   | Directory for document files (`.alps.xml`, exported markdown). `PRD_OUTPUT_DIR` also accepted (legacy).    | `<cwd>/prd/`             |
-| `ALPS_ADR_ENFORCE` | Plugin hooks | `warn` (default) surfaces drift to stderr; `block` makes `PreToolUse` deny edits to stale/unmapped source. | `warn`                   |
-| `ALPS_ADR_MAPPING` | Plugin hooks | Path (relative to project root) to the ADR mapping file consumed by hooks.                                 | `docs/adr/.mapping.json` |
+| Variable           | Scope            | Description                                                                                                | Default                  |
+| ------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `ALPS_OUTPUT_DIR`  | alps-writer MCP  | Directory for document files (`.alps.xml`, exported markdown). `PRD_OUTPUT_DIR` also accepted (legacy).    | `<cwd>/prd/`             |
+| `ALPS_ADR_ENFORCE` | adr-writer hooks | `warn` (default) surfaces drift to stderr; `block` makes `PreToolUse` deny edits to stale/unmapped source. | `warn`                   |
+| `ALPS_ADR_MAPPING` | adr-writer hooks | Path (relative to project root) to the ADR mapping file consumed by hooks.                                 | `docs/adr/.mapping.json` |
 
 Config example with `ALPS_OUTPUT_DIR`:
 
@@ -199,10 +244,10 @@ Config example with `ALPS_OUTPUT_DIR`:
 ### Running from source
 
 ```bash
-git clone https://github.com/haandol/alps-writer-mcp.git
-cd alps-writer-mcp
+git clone https://github.com/haandol/alps-writer-plugins.git
+cd alps-writer-plugins
 pnpm install
-pnpm build
+pnpm build           # builds the alps-writer MCP server
 ```
 
 Then configure your MCP client to point at the local build:
@@ -212,7 +257,7 @@ Then configure your MCP client to point at the local build:
   "mcpServers": {
     "alps-writer": {
       "command": "node",
-      "args": ["/path/to/alps-writer-mcp/dist/index.js"]
+      "args": ["/path/to/alps-writer-plugins/plugins/alps-writer/dist/index.js"]
     }
   }
 }
@@ -220,13 +265,17 @@ Then configure your MCP client to point at the local build:
 
 ### Build scripts
 
+This is a pnpm workspace. The MCP server lives in `plugins/alps-writer/`; root scripts proxy to it.
+
 ```bash
-pnpm install        # Install dependencies
-pnpm dev            # Run with tsx (watch mode)
-pnpm build          # Build for production
-pnpm start          # Run the built version
-pnpm lint           # ESLint
-pnpm format         # Prettier
+pnpm install        # Install dependencies (whole workspace)
+pnpm build          # Build the alps-writer MCP server (--filter alps-writer)
+pnpm lint           # ESLint the MCP server
+pnpm format         # Prettier across the repo
+
+# Or work inside the package directly:
+pnpm --filter alps-writer dev     # Run with tsx (watch mode)
+pnpm --filter alps-writer start   # Run the built version
 ```
 
 ## Contributing
@@ -238,7 +287,7 @@ Contributions are welcome. Before opening a PR:
 3. Make sure `pnpm lint` and `pnpm format:check` pass.
 4. Keep commits atomic — one logical change per commit.
 
-Bug reports and feature requests: [GitHub Issues](https://github.com/haandol/alps-writer-mcp/issues).
+Bug reports and feature requests: [GitHub Issues](https://github.com/haandol/alps-writer-plugins/issues).
 
 ## License
 

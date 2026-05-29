@@ -42,13 +42,15 @@ We follow the [Conventional Commits v1.0.0](https://www.conventionalcommits.org/
 
 ### Scope (optional)
 
-| Scope       | Target                                  |
-| ----------- | --------------------------------------- |
-| `server`    | MCP server entry point (`src/index.ts`) |
-| `templates` | Template tools (`src/tools/templates/`) |
-| `documents` | Document tools (`src/tools/documents/`) |
-| `guides`    | Section guides (`src/guides/`)          |
-| `deps`      | Dependencies (`package.json`)           |
+| Scope       | Target                                                      |
+| ----------- | ----------------------------------------------------------- |
+| `server`    | MCP server entry point (`plugins/alps-writer/src/index.ts`) |
+| `templates` | Template tools (`plugins/alps-writer/src/tools/templates/`) |
+| `documents` | Document tools (`plugins/alps-writer/src/tools/documents/`) |
+| `guides`    | Section guides (`plugins/alps-writer/src/guides/`)          |
+| `adr`       | adr-writer plugin (skills, hooks, agents, templates)        |
+| `plugin`    | Plugin manifests / marketplace / distribution               |
+| `deps`      | Dependencies (`package.json`)                               |
 
 ### Subject (required)
 
@@ -154,15 +156,15 @@ git push -u origin feat/my-feature
 This project uses **ESLint** for linting and **Prettier** for code formatting.
 
 ```bash
-pnpm lint            # Run ESLint on src/
-pnpm lint:fix        # Run ESLint with auto-fix
-pnpm format          # Format all files with Prettier
-pnpm format:check    # Check formatting without writing
+pnpm lint                          # Run ESLint on the MCP server (--filter alps-writer)
+pnpm --filter alps-writer lint:fix # Run ESLint with auto-fix
+pnpm format                        # Format all files with Prettier (repo-wide)
+pnpm format:check                  # Check formatting without writing
 ```
 
 - Run `pnpm lint` and `pnpm format:check` before committing to ensure code quality
-- ESLint config: `eslint.config.mjs` (flat config with typescript-eslint)
-- Prettier config: `.prettierrc`
+- ESLint config: `plugins/alps-writer/eslint.config.mjs` (flat config with typescript-eslint)
+- Prettier config: `.prettierrc` (repo root)
 
 ### Prettier Rules
 
@@ -182,8 +184,10 @@ pnpm format:check    # Check formatting without writing
 
 ### Project Structure
 
+pnpm workspace. The MCP server (npm package `alps-writer`) lives in `plugins/alps-writer/`; the adr-writer plugin in `plugins/adr-writer/`. See [AGENTS.md](./AGENTS.md#repository-structure) for the full tree.
+
 ```
-src/
+plugins/alps-writer/src/
 ├── index.ts              # MCP server entry point + tool registration
 ├── constants.ts          # Section titles, references, paths
 ├── tools/

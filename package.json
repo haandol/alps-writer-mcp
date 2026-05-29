@@ -1,71 +1,42 @@
 {
-  "name": "alps-writer",
-  "version": "0.2.11",
-  "description": "MCP server for interactive ALPS (PRD) writing with AI",
+  "name": "alps-writer-plugins",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Claude Code marketplace: ALPS (PRD) authoring + ADR-driven development, as two independent plugins.",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "alps-writer": "dist/index.js"
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsc && cp -r src/templates dist/ && cp -r src/guides dist/",
-    "start": "node dist/index.js",
-    "dev": "tsx src/index.ts",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
+    "build": "pnpm --filter alps-writer build",
+    "lint": "pnpm --filter alps-writer lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepublishOnly": "pnpm build",
     "prepare": "husky"
   },
   "keywords": [
-    "mcp",
+    "claude-code",
+    "plugin",
+    "marketplace",
     "alps",
     "prd",
-    "product-requirements",
-    "agentic-lean-product-spec",
-    "specification",
-    "ai",
-    "llm",
-    "model-context-protocol"
+    "adr"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/haandol/alps-writer-mcp"
+    "url": "https://github.com/haandol/alps-writer-plugins"
   },
   "author": "haandol",
   "packageManager": "pnpm@11.4.0",
   "engines": {
     "node": ">=20"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^4.4.3"
-  },
   "lint-staged": {
-    "*.{ts,js}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "*.{json,md,yaml}": [
+    "*.{ts,js,json,md,yaml}": [
       "prettier --write"
     ]
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^25.9.1",
-    "eslint": "^10.4.0",
-    "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
-    "prettier": "^3.8.3",
-    "tsx": "^4.22.3",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.60.0"
+    "prettier": "^3.8.3"
   }
 }

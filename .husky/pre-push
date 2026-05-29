@@ -1,1 +1,1 @@
-pnpm tsc --noEmit
+pnpm --filter alps-writer exec tsc --noEmit

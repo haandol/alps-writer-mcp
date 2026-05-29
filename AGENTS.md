@@ -1,48 +1,66 @@
 # AGENTS.md
 
-ALPS Writer — Interactive ALPS (PRD) writing tool based on MCP server. Published as `alps-writer` on npm.
+`alps-writer-plugins` — a Claude Code marketplace shipping two independent plugins: **alps-writer** (ALPS/PRD authoring via an MCP server) and **adr-writer** (ADR-driven development cycle). The alps-writer MCP server is also published standalone as `alps-writer` on npm.
 
-**Tech Stack**: TypeScript 5.9+, Node.js >= 20, pnpm, MCP SDK (`@modelcontextprotocol/sdk`), Zod
+**Tech Stack**: TypeScript 5.9+, Node.js >= 20, pnpm workspace, MCP SDK (`@modelcontextprotocol/sdk`), Zod
 
 ## Commands
 
+Root is a private pnpm workspace; the npm package lives in `plugins/alps-writer/`. Root scripts proxy to it.
+
 ```bash
-pnpm install          # Install dependencies
-pnpm build            # Compile TypeScript + copy templates & guides to dist/
-pnpm dev              # Run with tsx in watch mode (development)
-pnpm start            # Run built version (node dist/index.js)
+pnpm install          # Install dependencies (whole workspace)
+pnpm build            # Build the alps-writer MCP server (pnpm --filter alps-writer build)
+pnpm lint             # ESLint the MCP server
+pnpm format           # Prettier across the repo
+
+pnpm --filter alps-writer dev     # Run MCP server with tsx in watch mode
+pnpm --filter alps-writer start   # Run built version (node dist/index.js)
 ```
 
-Build runs `tsc && cp -r src/templates dist/ && cp -r src/guides dist/` to copy static assets (XML templates, MD guides) into `dist/`. Required because the server reads them at runtime via `fs.readFileSync`.
+Build runs `tsc && cp -r src/templates dist/ && cp -r src/guides dist/` (inside `plugins/alps-writer/`) to copy static assets (XML templates, MD guides) into `dist/`. Required because the server reads them at runtime via `fs.readFileSync`.
 
 No test framework configured.
 
 ## Repository Structure
 
 ```
-src/
-├── index.ts              # MCP server entry point + tool registration
-├── constants.ts          # Section titles, dependencies, file paths
-├── tools/
-│   ├── templates/        # Template tools (controller + service)
-│   └── documents/        # Document tools (controller + service)
-├── guides/               # Section conversation guides (01-09.md)
-└── templates/            # ALPS templates (overview.md + chapters/*.xml)
-
 .claude-plugin/
-├── plugin.json           # Plugin manifest (mcp + commands + skills + hooks)
-└── marketplace.json      # Marketplace manifest (single-repo distribution)
+└── marketplace.json      # Marketplace manifest — registers both plugins
+package.json              # Private workspace root (prettier/husky/lint-staged)
+pnpm-workspace.yaml       # packages: plugins/alps-writer
 
-skills/                   # Skills + slash commands (alps-init, adr-new, feature-to-adr, adr-impl, adr-sync, adr-rollup, adr-manage)
-agents/                   # Subagents (adr-reviewer)
-hooks/
-├── hooks.json            # PreToolUse + UserPromptSubmit registration
-├── check-adr-sync.mjs    # PreToolUse(Edit|Write|MultiEdit) — warn/block on stale ADR
-└── surface-adr-context.mjs  # UserPromptSubmit — inject related ADR paths
-templates/adr/
-├── README.md             # ADR writing rules (copied into docs/adr/ on /feature-to-adr)
-└── mapping.schema.json   # Schema for docs/adr/.mapping.json
+plugins/alps-writer/      # PRD plugin + published npm package `alps-writer`
+├── .claude-plugin/plugin.json   # mcpServers + alps-init, feature-to-adr skills
+├── package.json          # npm-published MCP server
+├── tsconfig.json, eslint.config.mjs
+├── src/
+│   ├── index.ts          # MCP server entry point + tool registration
+│   ├── constants.ts      # Section titles, dependencies, file paths
+│   ├── tools/
+│   │   ├── templates/    # Template tools (controller + service)
+│   │   └── documents/    # Document tools (controller + service)
+│   ├── guides/           # Section conversation guides (01-09.md)
+│   └── templates/        # ALPS templates (overview.md + chapters/*.xml)
+├── skills/               # alps-init, feature-to-adr
+└── templates/alps/       # about-alps.md
+
+plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
+├── .claude-plugin/plugin.json   # hooks registration (no MCP)
+├── README.md
+├── skills/               # adr-new, adr-impl, adr-sync, adr-rollup, adr-manage
+├── agents/               # adr-reviewer subagent
+├── hooks/
+│   ├── hooks.json        # PreToolUse + UserPromptSubmit registration
+│   ├── check-adr-sync.mjs    # PreToolUse(Edit|Write|MultiEdit) — warn/block on stale ADR
+│   └── surface-adr-context.mjs  # UserPromptSubmit — inject related ADR paths
+└── templates/adr/
+    ├── README.md         # ADR writing rules (copied into docs/adr/ on /adr-new)
+    ├── authoring-rules.md, structure.md
+    └── mapping.schema.json   # Schema for docs/adr/.mapping.json
 ```
+
+The two plugins are split so adr-writer never references ALPS. The only coupling is one-way: alps-writer's `/feature-to-adr` delegates per-feature ADR authoring to adr-writer's `/adr-new`.
 
 ## Architecture
 
@@ -67,16 +85,20 @@ templates/adr/
 
 ## Plugin distribution
 
-The repo doubles as a Claude Code plugin and a single-plugin marketplace. `.claude-plugin/plugin.json` references the npm-published MCP server (`npx -y alps-writer`) plus local `skills/` and `hooks/` directories (slash commands are now packaged as skills — `commands/*.md` and `skills/<name>/SKILL.md` produce the same `/<name>` invocation per the Claude Code spec). `.claude-plugin/marketplace.json` points back at `.` so users can install with:
+The repo root is a Claude Code **marketplace** (`.claude-plugin/marketplace.json`) registering two plugins by `source`: `./plugins/alps-writer` and `./plugins/adr-writer`. Each plugin has its own `.claude-plugin/plugin.json`. Slash commands are packaged as skills — `commands/*.md` and `skills/<name>/SKILL.md` produce the same `/<name>` invocation per the Claude Code spec. Within each plugin, `${CLAUDE_PLUGIN_ROOT}` resolves to that plugin's directory, so intra-plugin path references stay valid after the split.
 
 ```
-/plugin marketplace add haandol/alps-writer-mcp
-/plugin install alps-writer@alps-writer
+/plugin marketplace add haandol/alps-writer-plugins
+/plugin install alps-writer@alps-writer   # PRD plugin (MCP server + skills)
+/plugin install adr-writer@alps-writer    # ADR plugin (skills + hooks)
 ```
 
-Hook scripts are Node ESM (`.mjs`) and read NDJSON events from stdin per the Claude Code hooks spec. They use only Node built-ins (no extra deps) so the plugin requires nothing beyond a Node.js >= 20 runtime.
+- **alps-writer** references the npm-published MCP server (`npx -y alps-writer`) plus its local `skills/`. No hooks.
+- **adr-writer** ships local `skills/`, `agents/`, `hooks/`, and `templates/adr/`. No MCP.
 
-### Cycle hooks layout
+Hook scripts (in adr-writer) are Node ESM (`.mjs`) and read NDJSON events from stdin per the Claude Code hooks spec. They use only Node built-ins (no extra deps), so the plugin requires nothing beyond a Node.js >= 20 runtime.
+
+### Cycle hooks layout (adr-writer)
 
 | File                            | Event              | Purpose                                                                                        |
 | ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
@@ -93,7 +115,7 @@ The directive is re-injected every turn (UserPromptSubmit) instead of once at Se
 - Node.js >= 20
 - pnpm as package manager
 - Conventional Commits (details: CONTRIBUTING.md)
-- Scopes: `server`, `templates`, `documents`, `guides`, `deps`
+- Scopes: `server`, `templates`, `documents`, `guides`, `adr`, `plugin`, `deps`
 - Branch naming: `<type>/<short-description>` (e.g., `feat/section-validation`)
 - **Diagrams**: always Mermaid (`flowchart`, `sequenceDiagram`, `stateDiagram-v2`, `erDiagram`). Do not author ASCII/box-drawing diagrams unless the user explicitly asks for one. Applies to README, AGENTS, ADR templates, command/skill prose, and anything this plugin generates inside user projects. Directory trees (`tree`-style with `├── └──`) are exempt — they are listings, not diagrams.
 

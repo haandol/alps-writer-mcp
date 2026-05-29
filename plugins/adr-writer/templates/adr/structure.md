@@ -123,11 +123,11 @@ docs/adr/
 
 ## ALPS ↔ ADR 매핑
 
-`docs/adr/.mapping.json`이 ALPS feature와 ADR, 영향 받는 코드 경로의 관계를 저장한다. `alps-writer` plugin의 PreToolUse hook이 이 파일을 읽어, 코드 수정이 매핑된 ADR보다 새로우면 ADR 동기화를 환기한다.
+`docs/adr/.mapping.json`이 ADR과 영향 받는 코드 경로(그리고 선택적으로 ALPS feature)의 관계를 저장한다. `adr-writer` plugin의 PreToolUse hook이 이 파일을 읽어, 코드 수정이 매핑된 ADR보다 새로우면 ADR 동기화를 환기한다.
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/haandol/alps-writer-mcp/main/templates/adr/mapping.schema.json",
+  "$schema": "https://raw.githubusercontent.com/haandol/alps-writer-plugins/main/plugins/adr-writer/templates/adr/mapping.schema.json",
   "alpsDocument": "prd/example.alps.xml",
   "categories": {
     "auth": {
