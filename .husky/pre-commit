@@ -1,1 +1,12 @@
-pnpm --filter alps-writer exec tsc --noEmit && pnpm lint-staged
+# If the alps-writer MCP server source is staged, the committed bundle must be
+# regenerated and staged alongside it — the plugin ships dist/ directly, so a
+# stale bundle would mean the marketplace install runs old code.
+if git diff --cached --name-only | grep -q '^plugins/alps-writer/src/'; then
+  echo "[pre-commit] alps-writer/src changed → rebuilding bundle (dist/)"
+  pnpm --filter alps-writer build || exit 1
+  git add plugins/alps-writer/dist
+else
+  pnpm --filter alps-writer exec tsc --noEmit || exit 1
+fi
+
+pnpm lint-staged
