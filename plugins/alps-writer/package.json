@@ -1,23 +1,18 @@
 {
   "name": "alps-writer",
   "version": "0.3.0",
-  "description": "MCP server for interactive ALPS (PRD) writing with AI",
+  "private": true,
+  "description": "MCP server for interactive ALPS (PRD) writing with AI — bundled and shipped inside the alps-writer Claude Code plugin (dist/index.js).",
   "type": "module",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "alps-writer": "dist/index.js"
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsc && cp -r src/templates dist/ && cp -r src/guides dist/",
+    "typecheck": "tsc --noEmit",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js",
+    "build": "pnpm typecheck && pnpm bundle && cp -r src/templates dist/ && cp -r src/guides dist/",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "prepublishOnly": "pnpm build"
+    "lint:fix": "eslint src/ --fix"
   },
   "keywords": [
     "mcp",
@@ -27,7 +22,6 @@
     "agentic-lean-product-spec",
     "specification",
     "ai",
-    "llm",
     "model-context-protocol"
   ],
   "license": "MIT",
@@ -47,6 +41,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.1",
+    "esbuild": "^0.28.0",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "tsx": "^4.22.3",

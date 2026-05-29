@@ -11,8 +11,8 @@
   "keywords": ["mcp", "alps", "prd", "product-requirements", "specification", "ai"],
   "mcpServers": {
     "alps-writer": {
-      "command": "npx",
-      "args": ["-y", "alps-writer"]
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"]
     }
   }
 }

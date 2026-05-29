@@ -1,24 +1,24 @@
 # AGENTS.md
 
-`alps-writer-plugins` — a Claude Code marketplace shipping two independent plugins: **alps-writer** (ALPS/PRD authoring via an MCP server) and **adr-writer** (ADR-driven development cycle). The alps-writer MCP server is also published standalone as `alps-writer` on npm.
+`alps-writer-plugins` — a Claude Code marketplace shipping two independent plugins: **alps-writer** (ALPS/PRD authoring via an MCP server) and **adr-writer** (ADR-driven development cycle). Both install from the marketplace alone — no npm. The alps-writer MCP server is bundled with esbuild (dependencies inlined) and the bundle is committed at `plugins/alps-writer/dist/`, so the plugin runs straight from a marketplace install.
 
 **Tech Stack**: TypeScript 5.9+, Node.js >= 20, pnpm workspace, MCP SDK (`@modelcontextprotocol/sdk`), Zod
 
 ## Commands
 
-Root is a private pnpm workspace; the npm package lives in `plugins/alps-writer/`. Root scripts proxy to it.
+Root is a private pnpm workspace; the MCP server package lives in `plugins/alps-writer/`. Root scripts proxy to it.
 
 ```bash
 pnpm install          # Install dependencies (whole workspace)
-pnpm build            # Build the alps-writer MCP server (pnpm --filter alps-writer build)
+pnpm build            # Bundle the alps-writer MCP server (pnpm --filter alps-writer build)
 pnpm lint             # ESLint the MCP server
 pnpm format           # Prettier across the repo
 
 pnpm --filter alps-writer dev     # Run MCP server with tsx in watch mode
-pnpm --filter alps-writer start   # Run built version (node dist/index.js)
+pnpm --filter alps-writer start   # Run built bundle (node dist/index.js)
 ```
 
-Build runs `tsc && cp -r src/templates dist/ && cp -r src/guides dist/` (inside `plugins/alps-writer/`) to copy static assets (XML templates, MD guides) into `dist/`. Required because the server reads them at runtime via `fs.readFileSync`.
+Build (inside `plugins/alps-writer/`) runs `tsc --noEmit` (typecheck), then esbuild bundles `src/index.ts` → `dist/index.js` with deps inlined (ESM, node20 target), then copies static assets `cp -r src/templates dist/ && cp -r src/guides dist/`. The asset copy is required because the server reads XML templates / MD guides at runtime via `fs.readFileSync` (`import.meta.url`-relative). **`dist/` is committed** — regenerate and commit it whenever `src/` changes.
 
 No test framework configured.
 
@@ -30,9 +30,9 @@ No test framework configured.
 package.json              # Private workspace root (prettier/husky/lint-staged)
 pnpm-workspace.yaml       # packages: plugins/alps-writer
 
-plugins/alps-writer/      # PRD plugin + published npm package `alps-writer`
-├── .claude-plugin/plugin.json   # mcpServers + alps-init, feature-to-adr skills
-├── package.json          # npm-published MCP server
+plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
+├── .claude-plugin/plugin.json   # mcpServers (node dist/index.js) + alps-init, feature-to-adr skills
+├── package.json          # private; build tooling for the bundle
 ├── tsconfig.json, eslint.config.mjs
 ├── src/
 │   ├── index.ts          # MCP server entry point + tool registration
@@ -42,6 +42,7 @@ plugins/alps-writer/      # PRD plugin + published npm package `alps-writer`
 │   │   └── documents/    # Document tools (controller + service)
 │   ├── guides/           # Section conversation guides (01-09.md)
 │   └── templates/        # ALPS templates (overview.md + chapters/*.xml)
+├── dist/                 # committed esbuild bundle (index.js + copied assets)
 ├── skills/               # alps-init, feature-to-adr
 └── templates/alps/       # about-alps.md
 
@@ -93,7 +94,7 @@ The repo root is a Claude Code **marketplace** (`.claude-plugin/marketplace.json
 /plugin install adr-writer@alps-writer    # ADR plugin (skills + hooks)
 ```
 
-- **alps-writer** references the npm-published MCP server (`npx -y alps-writer`) plus its local `skills/`. No hooks.
+- **alps-writer** runs its MCP server from the committed bundle (`command: node`, `args: ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"]`) plus its local `skills/`. No hooks, no npm/npx.
 - **adr-writer** ships local `skills/`, `agents/`, `hooks/`, and `templates/adr/`. No MCP.
 
 Hook scripts (in adr-writer) are Node ESM (`.mjs`) and read NDJSON events from stdin per the Claude Code hooks spec. They use only Node built-ins (no extra deps), so the plugin requires nothing beyond a Node.js >= 20 runtime.
@@ -126,7 +127,8 @@ Verify before completing any task:
 1. `pnpm build` succeeds
 2. `pnpm lint` passes
 3. `pnpm format:check` passes
-4. Related docs (README, AGENTS.md, CONTRIBUTING.md) are up to date
+4. If `src/` changed: the regenerated `plugins/alps-writer/dist/` is committed alongside it
+5. Related docs (README, AGENTS.md, CONTRIBUTING.md) are up to date
 
 ## Do-Not Rules
 

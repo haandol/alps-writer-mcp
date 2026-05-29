@@ -1,18 +1,15 @@
 # ALPS Writer Plugins
 
-[![npm version](https://img.shields.io/npm/v/alps-writer.svg)](https://www.npmjs.com/package/alps-writer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-This repository is a Claude Code **marketplace** that ships two independent plugins:
+This repository is a Claude Code **marketplace** that ships two independent plugins. Both install from the marketplace alone — **no npm, no npx, no separate build step** for end users. The alps-writer MCP server is bundled (dependencies inlined) and committed at `plugins/alps-writer/dist/`, so installing the plugin is everything you need.
 
-| Plugin                  | Scope                                                                                                                     | Depends on                       |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via an MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
-| **`adr-writer`** (ADR)  | ADR-driven development: author with `/adr-new`, implement with `/adr-impl`, sync with `/adr-sync`, drift hooks.           | nothing — fully standalone       |
+| Plugin                  | Scope                                                                                                                            | Depends on                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
+| **`adr-writer`** (ADR)  | ADR-driven development: author with `/adr-new`, implement with `/adr-impl`, sync with `/adr-sync`, drift hooks.                  | nothing — fully standalone       |
 
 The two are split so that **adr-writer never references ALPS** — once a feature is imported, the ADR lifecycle is entirely independent of any PRD. The only coupling is one-way (`alps-writer → adr-writer`), via the `/feature-to-adr` bridge.
-
-The PRD plugin's MCP server is also published standalone on npm as [`alps-writer`](https://www.npmjs.com/package/alps-writer) — usable in Claude Desktop, Cursor, Kiro, or any MCP client without the plugin.
 
 ## Table of contents
 
@@ -21,7 +18,7 @@ The PRD plugin's MCP server is also published standalone on npm as [`alps-writer
 - [Repository layout](#repository-layout)
 - [Features](#features)
 - [Quick Start (Claude Code plugins)](#quick-start-claude-code-plugins)
-- [Quick Start (MCP only)](#quick-start-mcp-only)
+- [Using the MCP server in other clients](#using-the-mcp-server-in-other-clients)
 - [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
@@ -76,10 +73,11 @@ This split is mirrored in the packaging: **alps-writer** owns the PRD layer, **a
 alps-writer-plugins/                 # marketplace root (this repo)
 ├── .claude-plugin/marketplace.json  # registers both plugins
 └── plugins/
-    ├── alps-writer/                 # PRD plugin + the published npm MCP server
-    │   ├── .claude-plugin/plugin.json
-    │   ├── package.json             # → published to npm as `alps-writer`
-    │   ├── src/                     # MCP server (TypeScript)
+    ├── alps-writer/                 # PRD plugin (bundles its own MCP server)
+    │   ├── .claude-plugin/plugin.json   # mcpServers → node dist/index.js
+    │   ├── package.json             # private; build tooling for the bundle
+    │   ├── src/                     # MCP server source (TypeScript)
+    │   ├── dist/                    # committed bundle (index.js + assets) — runs as-is
     │   ├── skills/                  # /alps-init, /feature-to-adr
     │   └── templates/alps/
     └── adr-writer/                  # ADR plugin (standalone, ALPS-agnostic)
@@ -184,30 +182,30 @@ Default mode is `warn`. To enforce more strictly, export `ALPS_ADR_ENFORCE=block
 
 `docs/adr/.mapping.json` is the single source of truth for the ADR ↔ code path (and optional ALPS feature) relationships. See the schema at [`plugins/adr-writer/templates/adr/mapping.schema.json`](./plugins/adr-writer/templates/adr/mapping.schema.json). `/adr-new` fills the ADR ↔ code-path fields; `/feature-to-adr` additionally backfills the ALPS link fields (`alpsDocument`, `alpsFeatureId`).
 
-## Quick Start (MCP only)
+## Using the MCP server in other clients
 
-To use the MCP server without the plugin:
+Inside Claude Code, installing the alps-writer plugin wires up the MCP server automatically — nothing to configure. To use the same server in another MCP client (Claude Desktop, Cursor, Kiro, …), point it at the bundled `dist/index.js`. Build it once from source:
+
+```bash
+git clone https://github.com/haandol/alps-writer-plugins.git
+cd alps-writer-plugins
+pnpm install && pnpm build      # produces plugins/alps-writer/dist/index.js
+```
+
+Then register the absolute path:
 
 ```json
 {
   "mcpServers": {
     "alps-writer": {
-      "command": "npx",
-      "args": ["-y", "alps-writer"]
+      "command": "node",
+      "args": ["/path/to/alps-writer-plugins/plugins/alps-writer/dist/index.js"]
     }
   }
 }
 ```
 
-### Client setup
-
-| Client             | Config location                                                                                     |
-| ------------------ | --------------------------------------------------------------------------------------------------- |
-| **Claude Desktop** | Settings > Developer > Edit Config (`claude_desktop_config.json`)                                   |
-| **Claude Code**    | `claude mcp add alps-writer -- npx -y alps-writer`                                                  |
-| **Cursor**         | Settings > Features > MCP Servers > + Add new global MCP server                                     |
-| **Kiro**           | `Cmd+Shift+P` > "Kiro: Open user MCP config (JSON)" (`~/.kiro/settings/mcp.json`)                   |
-| **Kiro CLI**       | `kiro-cli mcp add --name alps-writer --command npx --args "-y" --args "alps-writer" --scope global` |
+The bundle inlines its dependencies, so it runs with a plain Node.js >= 20 — no `npm install` in the target location.
 
 ### Environment variables
 
@@ -223,8 +221,8 @@ Config example with `ALPS_OUTPUT_DIR`:
 {
   "mcpServers": {
     "alps-writer": {
-      "command": "npx",
-      "args": ["-y", "alps-writer"],
+      "command": "node",
+      "args": ["/path/to/alps-writer-plugins/plugins/alps-writer/dist/index.js"],
       "env": {
         "ALPS_OUTPUT_DIR": "~/Documents/alps"
       }
@@ -258,42 +256,20 @@ Config example with `ALPS_OUTPUT_DIR`:
 
 ## Development
 
-### Running from source
-
-```bash
-git clone https://github.com/haandol/alps-writer-plugins.git
-cd alps-writer-plugins
-pnpm install
-pnpm build           # builds the alps-writer MCP server
-```
-
-Then configure your MCP client to point at the local build:
-
-```json
-{
-  "mcpServers": {
-    "alps-writer": {
-      "command": "node",
-      "args": ["/path/to/alps-writer-plugins/plugins/alps-writer/dist/index.js"]
-    }
-  }
-}
-```
-
-### Build scripts
-
 This is a pnpm workspace. The MCP server lives in `plugins/alps-writer/`; root scripts proxy to it.
 
 ```bash
 pnpm install        # Install dependencies (whole workspace)
-pnpm build          # Build the alps-writer MCP server (--filter alps-writer)
+pnpm build          # Bundle the alps-writer MCP server into plugins/alps-writer/dist/
 pnpm lint           # ESLint the MCP server
 pnpm format         # Prettier across the repo
 
 # Or work inside the package directly:
 pnpm --filter alps-writer dev     # Run with tsx (watch mode)
-pnpm --filter alps-writer start   # Run the built version
+pnpm --filter alps-writer start   # Run the built bundle
 ```
+
+> **The bundle is committed.** `plugins/alps-writer/dist/` is checked into git (esbuild output with dependencies inlined) so the plugin runs from a marketplace install with no build step. **Whenever you change `src/`, run `pnpm build` and commit the regenerated `dist/`.**
 
 ## Contributing
 
