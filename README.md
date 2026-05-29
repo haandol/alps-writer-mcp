@@ -130,9 +130,26 @@ flowchart LR
     E -->|next cycle| A
 ```
 
-ADRs are the primary artifact this plugin manages. The default authoring path is `/adr-new <category>` — write the decision directly, with or without an ALPS PRD. `/feature-to-adr` is a helper layered on top: when you already have an ALPS Section 7 feature, it converts each feature into a Proposed ADR in one pass.
+ADRs are the primary artifact the adr-writer plugin manages. The default authoring path is `/adr-new <category>` — write the decision directly, with or without an ALPS PRD. `/feature-to-adr` (alps-writer) is a bridge layered on top: when you already have an ALPS Section 7 feature, it imports each feature into a Proposed ADR by delegating to `/adr-new`.
 
 The goal is for ADRs to evolve alongside the code each cycle. Adding a new ADR when a decision changes is normal, and having multiple ADRs in the same category is normal too. Only when **the evolution history of a single logical decision** is scattered across several ADRs do you use `/adr-rollup` to consolidate that group into a single "current state" ADR.
+
+### Usage walkthroughs
+
+**A. PRD-first — start from an ALPS spec (both plugins)**
+
+1. `/alps-init` → answer the focused questions section by section; the agent saves each only after you confirm.
+2. After Section 7 (feature specs), run `/feature-to-adr` → it walks each feature and hands it to `/adr-new`, producing a `Proposed` ADR per feature under `docs/adr/<category>/` and seeding `docs/adr/.mapping.json`.
+3. `/adr-impl <id>` → implement an accepted-in-spirit ADR in code + tests. On success it flips the ADR to `Accepted`.
+4. `/adr-sync` at the end of a cycle → fold what you learned back into the ADRs and repair any drift.
+
+**B. ADR-only — no PRD (adr-writer standalone)**
+
+1. `/adr-new <category>` → describe the decision directly (refactor, infra choice, new feature direction). No ALPS document required.
+2. `/adr-impl <id>` → build it in code.
+3. As you keep editing code, the `PreToolUse` hook warns when an edit touches a path whose ADR is stale or missing. Run `/adr-sync` to reconcile.
+
+In both flows the drift hooks run automatically once adr-writer is installed — every user turn re-injects the ADR map, and every `Edit`/`Write` is checked against it.
 
 ### Slash commands
 
