@@ -39,7 +39,7 @@ ADR은 이 plugin(adr-writer)의 일급 산출물이다 — ALPS PRD 가 있든 
 
 1. 카테고리 결정 — `structure.md` "디렉토리 구조" / "흔한 카테고리 예시"에 따라 피쳐(vertical slice) 단위로. 안티패턴 카테고리(`frontend/`, `backend/`, `api/`, `db/` 등) 회피, cross-cutting은 두 개 이상의 피쳐가 의존할 때만
 2. `docs/adr/<category>/`의 기존 ADR 번호를 확인하여 다음 번호 부여 (split으로 빠진 번호는 결번으로 두고 renumber 금지). 파일명 `XXXX-kebab-title.md`
-3. README 템플릿 구조로 초안 작성: Status / Context / Decision / Consequences / Related — Decision은 UI → API → 데이터 single slice로 묘사 (시퀀스 다이어그램 권장)
+3. README 템플릿 구조로 초안 작성: Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / Related — Decision Drivers 는 옵션을 변별하는 사실/제약 3-5개, 대안 검토는 **최소 2개 이상**(strawman 금지). Decision은 UI → API → 데이터 single slice로 묘사 (시퀀스 다이어그램 권장). 자세한 작성 규칙은 `authoring-rules.md` "Decision Drivers" / "대안 검토 — 최소 2개 이상"
 4. **새 ADR은 기본 `Proposed`로 시작**. 같은 작업에서 작성·구현·검증이 모두 끝난다면 처음부터 `Accepted (YYYY-MM-DD)`로 시작해도 된다
 5. `docs/adr/README.md`의 "카테고리별 ADR 목록"에 한 줄 요약 추가. 새 카테고리면 `structure.md` 디렉토리 트리 예시도 함께 갱신
 6. `docs/adr/.mapping.json`의 해당 카테고리 entry 갱신 (codePaths도 피쳐 단위로 묶여 있는지 확인)

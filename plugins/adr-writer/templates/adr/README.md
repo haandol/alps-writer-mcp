@@ -12,7 +12,9 @@
 Architecture Decision Record (ADR)는 소프트웨어 개발 과정에서 내린 중요한 아키텍처 결정을 기록하는 문서다. 각 ADR은 다음을 포함한다:
 
 - **Context**: 결정이 필요했던 배경과 문제
+- **Decision Drivers**: 옵션을 평가하는 데 사용된 압력·제약·요구사항 (선택지를 실제로 변별하는 것만)
 - **Decision**: 내린 결정과 그 이유
+- **대안 검토**: **최소 2개 이상**의 현실적 대안과 채택하지 않은 이유
 - **Consequences**: 결정의 긍정적/부정적 영향
 
 ## ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대
@@ -148,6 +150,11 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 
 결정이 필요한 배경과 문제. ALPS feature ID가 있으면 첫 줄에 명시.
 
+## Decision Drivers
+
+- 이 결정을 변별하는 압력·제약·요구사항 3-5개. 일반적인 품질 속성("유지보수성") 이 아니라 옵션 사이의 선택을 실제로 가르는 것만.
+- 예: "동시 사용자 10k 처리", "PII 가 외부로 나가면 안 됨", "팀이 Go 경험만 있음".
+
 ## Decision
 
 내린 결정과 그 이유.
@@ -158,7 +165,7 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 
 ### 대안 검토
 
-채택하지 않은 접근과 그 이유.
+**최소 2개 이상**의 현실적 대안을 비교한다. 진짜 대안만 — strawman(누가 봐도 안 될 옵션) 은 넣지 않는다. 각 대안의 pros/cons 는 위 Decision Drivers 에 비추어 적는다. 진짜로 외길이라 대안이 없다면, 그 결정에 ADR 자체가 필요한지 다시 판단한다.
 
 ## Consequences
 

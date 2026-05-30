@@ -45,6 +45,8 @@ ADR 초안과 매핑 변경을 격리된 컨텍스트에서 점검하고 검토 
 | R10 | Related 링크              | 가리키는 ADR/문서가 실제로 존재                                                                                                                                                                                                                              |
 | R11 | 한 ADR = 한 결정          | `authoring-rules.md` "한 ADR = 한 결정" — 분리 신호 둘 이상이면 fail                                                                                                                                                                                         |
 | R12 | 회색지대 충실도           | `README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" — 본문에 (a) 대안 비교/채택 근거 (b) 비즈니스 규칙의 시스템 번역 (c) 도메인 규칙·상태 전이 (d) 외부 의존 fallback 중 하나 이상이 실제로 적혀 있는가. 모두 빠져 있으면 fail (ADR 가치 부족) |
+| R13 | Decision Drivers          | `authoring-rules.md` "Decision Drivers" — 3-5개 적혀 있는가, 옵션을 변별하는 사실/제약인가 (의견·일반 품질 속성·모든 옵션이 동등 만족하는 항목은 fail). 누락이면 FIX_REQUIRED                                                                                |
+| R14 | 대안 ≥2                   | `authoring-rules.md` "대안 검토 — 최소 2개 이상" — 최소 2개의 현실적 대안이 적혀 있고, 각 대안의 pros/cons 가 Decision Drivers 에 비추어 적혀 있는가. strawman(누가 봐도 안 될 옵션)으로 숫자만 채운 경우, 또는 1개뿐인 경우 fail                            |
 
 ### 3. Diagram convention
 
@@ -75,9 +77,9 @@ PASS | FIX_REQUIRED | BLOCK
 
 Verdict 기준:
 
-- `PASS`: 모든 R1–R12 통과, diagram convention 준수, 인덱스/매핑 정합
-- `FIX_REQUIRED`: 위반이 있지만 ADR 본문 또는 인덱스만 손보면 해결됨 — 코드 직독 가능한 항목 제거(R3/R4) 나 회색지대 보강(R12) 도 여기에 해당
-- `BLOCK`: vertical slice 가 잡히지 않거나(카테고리가 안티패턴 단위, 또는 한 피쳐의 결정이 여러 카테고리에 흩어짐), DB 스키마 변경이 양방향 링크 없이 단편화되거나, 한 ADR에 여러 결정이 섞여 있어 분리가 필요한 경우 — 메인 세션에 "이 ADR 은 분리·재카테고리화하거나 보조 문서를 함께 갱신해야 한다" 고 알림
+- `PASS`: 모든 R1–R14 통과, diagram convention 준수, 인덱스/매핑 정합
+- `FIX_REQUIRED`: 위반이 있지만 ADR 본문 또는 인덱스만 손보면 해결됨 — 코드 직독 가능한 항목 제거(R3/R4), 회색지대 보강(R12), Decision Drivers 보강(R13), 대안 추가(R14) 도 여기에 해당
+- `BLOCK`: vertical slice 가 잡히지 않거나(카테고리가 안티패턴 단위, 또는 한 피쳐의 결정이 여러 카테고리에 흩어짐), DB 스키마 변경이 양방향 링크 없이 단편화되거나, 한 ADR에 여러 결정이 섞여 있어 분리가 필요한 경우, 또는 R14 가 1개뿐이고 사용자가 추가 대안을 제시할 수 없어 ADR 가치 자체가 의심되는 경우 — 메인 세션에 분리·재카테고리화·ADR 폐기 검토를 알림
 
 ## 금지 사항
 
