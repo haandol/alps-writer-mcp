@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "alps-writer",
-      "source": "./",
+      "source": "./plugins/alps-writer",
       "description": "Author ALPS (PRD) documents via an MCP server — guided, section-by-section product specs. Hand Section 7 features to the adr-writer plugin with /feature-to-adr.",
       "version": "0.3.0",
       "author": {
