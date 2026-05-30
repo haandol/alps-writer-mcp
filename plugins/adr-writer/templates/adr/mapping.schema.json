@@ -38,7 +38,7 @@
           },
           "tableDocs": {
             "type": "array",
-            "description": "Paths to schema/table documents (e.g., docs/tables/*.md, prisma/schema.prisma) that must stay bidirectionally linked with ADRs in this category. Used by adr-manage's DB schema co-change rule and by adr-sync auxiliary doc check.",
+            "description": "Paths to schema/table documents (e.g., docs/tables/*.md, prisma/schema.prisma) that must stay bidirectionally linked with ADRs in this category. Used by the authoring-rules DB schema co-change rule and by adr-sync auxiliary doc check.",
             "items": { "type": "string" }
           },
           "lastSyncedAt": {

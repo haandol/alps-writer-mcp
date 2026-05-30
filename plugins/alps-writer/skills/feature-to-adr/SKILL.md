@@ -2,7 +2,6 @@
 name: feature-to-adr
 description: Helper — convert ALPS Section 7 feature(s) into Proposed ADR drafts by delegating each feature to the adr-writer plugin's /adr-new. Use only when an ALPS PRD already exists and the adr-writer plugin is installed. Keywords - "/feature-to-adr", "ALPS feature ADR 변환", "Section 7 일괄 ADR".
 argument-hint: "[category-or-feature-id?]"
-disable-model-invocation: true
 ---
 
 # feature-to-adr

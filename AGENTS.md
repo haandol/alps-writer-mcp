@@ -49,7 +49,7 @@ plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 ├── .claude-plugin/plugin.json   # hooks registration (no MCP)
 ├── README.md
-├── skills/               # adr-new, adr-impl, adr-sync, adr-rollup, adr-manage
+├── skills/               # adr-new, adr-impl, adr-sync, adr-rollup
 ├── agents/               # adr-reviewer subagent
 ├── hooks/
 │   ├── hooks.json        # PreToolUse + UserPromptSubmit registration

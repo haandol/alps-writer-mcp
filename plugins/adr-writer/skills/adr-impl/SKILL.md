@@ -58,7 +58,7 @@ disable-model-invocation: true
 
 5. **Status 자동 전환 (`Proposed → Accepted`)**
 
-   상세 정책은 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 `README.md` "자동 전환 규칙" 참조. 본 단계가 트리거하는 동작:
+   상세 정책은 `README.md` "자동 전환 규칙" 참조. 본 단계가 트리거하는 동작:
    - 4단계 테스트 통과 직후, **사용자 확인 없이** 대상 ADR 본문의 Status 줄을 `Accepted (YYYY-MM-DD)` 로 수정
    - `docs/adr/README.md` 카테고리별 ADR 목록의 한 줄 요약 라벨도 동시 갱신
    - 한 카테고리에 여러 ADR이 함께 구현되었으면 모두 갱신

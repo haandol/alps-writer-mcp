@@ -82,7 +82,7 @@ alps-writer-plugins/                 # marketplace root (this repo)
     │   └── templates/alps/
     └── adr-writer/                  # ADR plugin (standalone, ALPS-agnostic)
         ├── .claude-plugin/plugin.json
-        ├── skills/                  # /adr-new, /adr-impl, /adr-sync, /adr-rollup, /adr-manage
+        ├── skills/                  # /adr-new, /adr-impl, /adr-sync, /adr-rollup
         ├── agents/                  # adr-reviewer subagent
         ├── hooks/                   # ADR-drift hooks
         └── templates/adr/

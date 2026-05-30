@@ -20,7 +20,7 @@ ADR-driven development cycle for Claude Code. Author Architecture Decision Recor
 | `/adr-sync [id] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                    |
 | `/adr-rollup <id>`         | Consolidate ADR groups whose evolution history of one logical decision is split                       |
 
-`/adr-manage` is the shared procedure skill the others delegate to; it triggers automatically when you create or edit an ADR.
+The shared authoring rules and procedures (codePaths recommendation, category-split, Status transitions) live in `docs/adr/` (`README.md`, `authoring-rules.md`, `structure.md`) — seeded from this plugin's `templates/adr/` on first run. Every command reads them as the single source of truth.
 
 ## Hooks
 

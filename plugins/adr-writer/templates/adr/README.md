@@ -129,8 +129,8 @@ Proposed → Accepted → Deprecated
 
 상태는 **사람이 손으로 묻고 바꾸는 값이 아니라 사이클이 자동으로 갱신하는 값**이다.
 
-- `/feature-to-adr`로 새 ADR이 만들어지면 항상 `Proposed`로 저장된다.
-- `/adr-impl`이 ADR을 구현하고 테스트가 통과하면 그 명령이 ADR Status를 `Accepted`로 자동 갱신한다.
+- `/adr-new`(또는 그것에 위임하는 `/feature-to-adr`)로 새 ADR이 만들어지면 항상 `Proposed`로 저장된다. 사용자에게 "Accepted로 할까요?"를 묻지 않는다.
+- `/adr-impl`이 ADR을 구현하고 테스트가 통과하면 그 명령이 ADR Status를 `Accepted`로 자동 갱신한다. 승격 여부를 따로 확인하지 않는다.
 - `/adr-sync`는 코드와 ADR을 대조해 Status drift를 잡는다: ADR이 `Accepted`인데 묘사한 동작이 코드에 없으면 `Proposed`로 되돌리고, ADR이 `Proposed`인데 코드에 이미 존재하면 `Accepted`로 올린다.
 - 상태 변경 시 날짜를 함께 기록한다: `Accepted (YYYY-MM-DD)`.
 - `Implemented`, `Done`, `Completed` 같은 비공식 상태는 사용하지 않는다.

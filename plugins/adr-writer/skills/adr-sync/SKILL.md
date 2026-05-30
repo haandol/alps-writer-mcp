@@ -48,7 +48,7 @@ Quick mode는 이 단계만 수행한다.
 
 1. ADR 본문을 전부 읽는다.
 2. 검증 가능한 주장 추출:
-   - **Status** — codePaths grep으로 코드 실재 여부를 확인하고 Status drift를 자동 정정한다 (`Accepted`인데 코드에 없으면 `Proposed`로, `Proposed`인데 코드+테스트가 있으면 `Accepted (YYYY-MM-DD)`로). 상태 값 의미·자동 전환 정책 상세는 [adr-manage SKILL.md §4](../adr-manage/SKILL.md) 및 `README.md` "자동 전환 규칙" 참조. 정정 내역은 7단계 보고 **Fixed** 섹션에 기재.
+   - **Status** — codePaths grep으로 코드 실재 여부를 확인하고 Status drift를 자동 정정한다 (`Accepted`인데 코드에 없으면 `Proposed`로, `Proposed`인데 코드+테스트가 있으면 `Accepted (YYYY-MM-DD)`로). 상태 값 의미·자동 전환 정책 상세는 `README.md` "자동 전환 규칙" 참조. 정정 내역은 7단계 보고 **Fixed** 섹션에 기재.
    - **API endpoints** — method + path 표. 라우터/핸들러 grep.
    - **Error codes** — 상수 grep.
    - **Enum / 타입 값** — `oneof=...`, validate 태그, TS union grep.
@@ -78,10 +78,10 @@ Quick mode는 이 단계만 수행한다.
 
 ### 3.6. 카테고리 비대화 점검 (분할 권고)
 
-각 카테고리(또는 sub-folder)의 ADR 파일 수가 `structure.md` "카테고리가 비대해질 때 — sub-vertical-slice 분할" 에서 정한 임계값(15) 이상인지 본다. 이상이면 [adr-manage SKILL.md §5 "카테고리 비대화 점검"](../adr-manage/SKILL.md) 의 sub-feature 후보 도출을 그대로 적용한다.
+각 카테고리(또는 sub-folder)의 ADR 파일 수가 `structure.md` "카테고리가 비대해질 때 — sub-vertical-slice 분할" 에서 정한 임계값(15) 이상인지 본다. 이상이면 같은 섹션의 "점검·제안 절차" 의 sub-feature 후보 도출을 그대로 적용한다.
 
 - sync 사이클에서는 **분할을 자동 수행하지 않는다** — 폴더 이동은 cross-reference·hook lookup 키·README 인덱스에 동시 영향을 주므로 사용자 합의가 필요하다.
-- 결과는 `Suggestions` 섹션에 `[Sub-folder split recommended] <category> 안에 ADR <n>개 — 후보 sub-feature: ...` 형태로 한 줄 권고로 남긴다. 다음 사이클에서 사용자가 합의하면 `/adr-manage` §5 절차로 분할.
+- 결과는 `Suggestions` 섹션에 `[Sub-folder split recommended] <category> 안에 ADR <n>개 — 후보 sub-feature: ...` 형태로 한 줄 권고로 남긴다. 다음 사이클에서 사용자가 합의하면 `structure.md` 의 분할 절차로 분할.
 - evolution chain 신호(여러 ADR 의 Status 가 `Superseded by` 로 묶여 있음)가 함께 보이면 분할 대신 **rollup 우선** 을 권고에 명시한다 — chain 을 sub-folder 로 흩으면 추적이 어려워진다.
 
 ### 4. Cross-ADR 모순 점검

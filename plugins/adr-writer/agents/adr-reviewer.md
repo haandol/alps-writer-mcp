@@ -1,6 +1,6 @@
 ---
 name: adr-reviewer
-description: Review an ADR draft (or ADR + mapping change) against the adr-manage rules in an isolated context. Use this before finalizing a new ADR via /feature-to-adr, or whenever you want a second pass that doesn't pollute the main session. Returns a punch list — pass / fix / block — without rewriting the ADR itself.
+description: Review an ADR draft (or ADR + mapping change) against the docs/adr authoring rules in an isolated context. Use this before finalizing a new ADR via /feature-to-adr, or whenever you want a second pass that doesn't pollute the main session. Returns a punch list — pass / fix / block — without rewriting the ADR itself.
 tools: Read, Grep, Glob, Bash
 ---
 

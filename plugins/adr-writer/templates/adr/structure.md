@@ -66,6 +66,17 @@ docs/adr/
 - ADR이 많아도 모두 같은 sub-feature 라면 — 그건 `/adr-rollup` 이 다룰 evolution chain 일 가능성이 높다. 먼저 rollup 으로 압축한 뒤 그래도 비대하면 분할.
 - vertical slice 경계가 모호하면 분할하지 않는다 — 잘못 자르면 한 결정이 두 폴더에 흩어진다.
 
+**점검·제안 절차** (`/adr-new`, `/adr-sync` 가 카테고리에 손댈 때 공통 호출):
+
+1. 작업 대상 카테고리(또는 sub-folder)의 `*.md` 개수를 센다 — README 인덱스가 아니라 실제 파일 기준.
+2. **15개 미만이면 그대로 진행**. 분할은 제안조차 하지 않는다.
+3. **15개 이상이면 한 번 제안한다**. 사용자가 거절하면 같은 세션에서 다시 묻지 않고 계속 진행한다 — 분할은 강제가 아니다.
+4. 제안할 때 sub-feature 후보를 함께 보여준다. 기존 ADR 제목·Decision 한 줄 요약을 훑어 사용자가 인지하는 단위(로그인, 가입, 비밀번호 재설정 같은 한 동작)로 묶고, ALPS Section 7 sub-feature 가 있으면 그대로 매핑한다. 카테고리 전체에 걸친 cross-cutting ADR 은 부모 폴더 직속에 남기고, `auth/api/`·`auth/db/` 같은 기술 레이어 분할은 후보로 만들지 않는다.
+5. 분할이 합의되면 위 분할 규칙(1단계 깊이, README 인덱스, `.mapping.json` 키)에 따라 폴더 이동을 수행한다.
+6. 같은 logical decision 의 evolution chain 이 보이면 분할 전에 `/adr-rollup` 부터 권한다 — 분할로 흩으면 chain 추적이 어려워진다.
+
+> `/adr-rollup` 은 evolution chain 압축에만 집중하고 분할 제안은 하지 않는다 — 두 작업이 섞이면 사용자가 한 사이클에서 너무 많은 결정을 떠맡게 된다.
+
 ## 구현 레퍼런스
 
 - ALPS PRD: `prd/<doc>.alps.xml` (Section 7이 feature spec의 source of truth)
@@ -149,3 +160,18 @@ docs/adr/
 ```
 
 매핑 파일은 `/feature-to-adr` 명령으로 생성·갱신된다. 플랫 구조 프로젝트는 카테고리 키로 Feature ID(`f1`, `f2`)를 그대로 써도 된다.
+
+### codePaths 추천 절차
+
+`/adr-new`, `/feature-to-adr` 등이 `.mapping.json` 의 `codePaths` 를 채울 때 공통으로 쓰는 절차다 — PreToolUse hook 이 신뢰하는 값이라 정확해야 한다. 비어 있는 채로 저장하지 말고 **추천 후 확인** 으로 진행한다.
+
+1. 사용자가 답한 영역 + ADR Decision 의 키워드(페이지·컴포넌트·서비스명) 추출.
+2. `Glob`/`Bash ls` 로 프로젝트 디렉토리 구조를 한 번 본다 — `src/features/`, `packages/`, `apps/`, `services/` 등 source 진입점 확인.
+3. **codePaths 도 vertical slice 로 묶는다** — 한 피쳐의 UI/API/Data 코드를 모두 같은 카테고리의 codePaths에 넣는다. 다른 카테고리에 흩어 두지 않는다.
+4. 글롭 후보 2-4개를 만든다. 프로젝트 구조에 따라 두 패턴:
+   - **Feature-sliced 단일 트리** (권장) — `src/features/<feature>/**` 가 UI/API/Data 를 모두 포함.
+   - **레이어 단위 모노레포** — 같은 피쳐의 코드가 여러 레이어 폴더에 흩어졌으면 한 카테고리의 codePaths에 모두 합쳐 적는다 (예 `orders` 카테고리: `["packages/web/src/orders/**", "services/orders/**", "packages/db/orders/**"]`). `frontend-orders/`, `backend-orders/` 처럼 쪼개지 않는다.
+5. 후보를 보여주고 "이대로 사용/추가/제거하시겠어요?" 한 번 확인.
+6. 사용자가 자연어로 답하면 글롭으로 변환해 저장.
+
+**추측 금지**: 코드 베이스를 한 번도 보지 않은 채 글롭을 만들지 않는다. 사용자가 "잘 모르겠다" 면 가장 보수적인 글롭(상위 디렉토리 `**`)을 두고 이후 `/adr-sync` 에서 좁히자고 안내한다.
