@@ -36,6 +36,11 @@
             "items": { "type": "string" },
             "minItems": 1
           },
+          "dependsOn": {
+            "type": "array",
+            "description": "Category ids this category depends on (prerequisites). Sourced from the ALPS Section 6.3 Feature Dependency Diagram by feature-to-adr, edge 'this --depends on--> X' becomes X in this list. Read by adr-impl to implement prerequisite ADRs first. Must reference existing category keys; keep acyclic.",
+            "items": { "type": "string" }
+          },
           "tableDocs": {
             "type": "array",
             "description": "Paths to schema/table documents (e.g., docs/tables/*.md, prisma/schema.prisma) that must stay bidirectionally linked with ADRs in this category. Used by the authoring-rules DB schema co-change rule and by adr-sync auxiliary doc check.",

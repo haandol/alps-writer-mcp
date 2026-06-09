@@ -25,12 +25,13 @@ adr-writer 를 먼저 설치해 주세요:  /plugin install adr-writer@alps-writ
 
 - `mcp__alps-writer__load_alps_document`로 현재 문서를 로드.
 - `mcp__alps-writer__read_alps_section(7)`로 feature 목록 추출.
+- `mcp__alps-writer__read_alps_section(6)`로 **Section 6.3 Feature Dependency Diagram 을 항상 확인**한다. ALPS 는 feature 사이 의존성을 6.3 의 Mermaid `graph TD`(`F2 -->|depends on| F1` 형태)로 들고 있다 — 이 그래프가 곧 "어떤 feature 가 어떤 feature 보다 먼저 구현돼야 하는가"의 source of truth 다. 그래프가 있으면 의존 엣지를 모두 파싱해 둔다(4단계에서 매핑에 옮긴다). 그래프가 비어 있거나 6.3 자체가 없으면 feature 간 의존이 없는 것으로 본다 — 억지로 만들어내지 않는다.
 - ALPS 문서가 없으면 사용자에게 알리고 `mcp__alps-writer__init_alps_document` 또는 `/alps-init`을 권유한 뒤 중단.
 
 처리 대상 결정:
 
 - **인자가 있는 경우**: 해당 카테고리/피쳐 ID에 매칭되는 feature 1개만 큐에 넣는다.
-- **인자가 없는 경우**: Section 7 의 **모든 feature** 를 ALPS 에 등장한 순서대로 큐에 넣는다. 단 `docs/adr/.mapping.json` 에 이미 ADR 이 매핑된 feature 는 큐에서 제외한다 (재실행 시 중복 방지).
+- **인자가 없는 경우**: Section 7 의 **모든 feature** 를 큐에 넣는다. 6.3 의존성 그래프가 있으면 **의존성 위상 순서**(의존 대상이 의존하는 쪽보다 먼저)로 큐를 정렬한다 — 그래야 카테고리를 만들 때 `dependsOn` 이 가리킬 선행 카테고리가 이미 존재한다. 그래프가 없으면 ALPS 등장 순서를 따른다. 단 `docs/adr/.mapping.json` 에 이미 ADR 이 매핑된 feature 는 큐에서 제외한다 (재실행 시 중복 방지).
 - 큐가 비어 있으면 "변환할 신규 feature 가 없습니다" 메시지를 띄우고 종료.
 - 큐에 2개 이상이 들어 있으면 사용자에게 처리 순서를 한 번 보여주고 "이 순서로 모든 피쳐를 ADR 로 변환하겠습니다. 진행할까요?" 한 번만 확인. 이후 각 피쳐는 `/adr-new` 의 승인 시점에서만 멈춘다.
 
@@ -66,13 +67,15 @@ ALPS feature 가 워크숍식 ID 를 가진 경우, `/adr-new` 가 부여하는 
 
 - `alpsDocument` — 현재 `.alps.xml` 경로.
 - 해당 카테고리 entry 의 `alpsFeatureId` — 명시적 Feature ID 가 있으면 기록.
+- 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 예: 6.3 에 `F3 -->|depends on| F1` 이 있으면 `f3` 카테고리의 `dependsOn` 에 `f1` 을 넣는다 (카테고리 키 변환 규칙은 2단계와 동일). 의존이 없는 feature 는 `dependsOn` 을 생략하거나 `[]` 로 둔다. 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다.
 
 ```json
 {
   "alpsDocument": "<현재 .alps.xml 경로>",
   "categories": {
     "<category>": {
-      "alpsFeatureId": "<있으면>"
+      "alpsFeatureId": "<있으면>",
+      "dependsOn": ["<선행 카테고리 키>"]
     }
   }
 }
