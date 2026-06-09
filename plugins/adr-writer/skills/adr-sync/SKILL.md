@@ -99,16 +99,16 @@ ADR이 의존하는 비-ADR 문서도 함께 본다:
 
 - `docs/tables/**` 또는 동등한 스키마 문서 — 엔티티 관계가 ADR에서 바뀌었으면 같은 변경이 테이블 문서에도 반영되어야 한다. 양방향 Related 링크가 살아 있는지 확인.
 - `docs/adr/<category>/*-data-flow.md` 같은 보조 문서 — API 표·예시 레코드·키 명세가 코드와 정렬돼 있는지.
-- 코드 주석에 박힌 ADR 인용 (`// See ADR auth/0002 §1`) — 카테고리 이관·split·번호 변경 후 stale 인용이 없는지.
+- 코드 주석·상수·import 에 박힌 ADR 인용 (`// See ADR auth/0002 §1`, `ADR_REF = "auth/0002"`) — **코드 → ADR 역참조는 원칙상 금지**다 (`README.md` "의존성은 단방향, 참조는 어느 방향으로도 박지 않는다"). 정정이 아니라 **제거**하고, 그 코드↔ADR 연결이 아직 매핑에 없으면 `.mapping.json` 의 해당 카테고리 `codePaths`/`adrs` 로 옮긴다. ADR 번호는 split/rollup/supersede 로 이동하므로 코드에 박혀 있으면 결정이 안 바뀌었는데도 구조 변경이 코드 수정을 줄줄이 강제한다.
 
-수정 후 stale ADR 인용 sanity grep을 돌린다 (예시):
+수정 후 코드 측 ADR 역참조 sanity grep을 돌린다 (예시):
 
 ```bash
-# 카테고리 이관·split 후 흔히 발견되는 stale 패턴
-grep -rn "ADR <옛-카테고리>/<옛-번호>\|<제거된-경로>" -- packages/ apps/ src/ docs/ .claude/
+# 코드·문서 본문에 박힌 ADR ID/경로 (원칙상 0건이어야 한다)
+grep -rn "ADR <카테고리>/<번호>\|docs/adr/<카테고리>" -- packages/ apps/ src/ .claude/
 ```
 
-찾은 stale 인용은 같은 PR에서 정정한다.
+찾은 역참조는 같은 PR에서 제거하고 매핑으로 이전한다 — `docs/adr/` 내부의 ADR ↔ ADR Related 링크는 정상이므로 grep 대상에서 코드/소스 디렉토리만 둔다.
 
 ### 6. 매핑·인덱스 hygiene
 
