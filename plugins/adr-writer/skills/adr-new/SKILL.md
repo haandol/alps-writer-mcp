@@ -64,8 +64,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
       "feature": "<ADR 제목 또는 카테고리를 대표하는 한 줄>",
       "codePaths": ["<4단계에서 확인된 글롭들>"],
       "adrs": ["docs/adr/<category>/NNNN-...md"],
-      "tableDocs": ["<DB 변경이 있고 docs/tables/ 또는 schema.prisma 등을 갱신했다면>"],
-      "lastSyncedAt": "<ISO timestamp>"
+      "tableDocs": ["<DB 변경이 있고 docs/tables/ 또는 schema.prisma 등을 갱신했다면>"]
     }
   }
 }

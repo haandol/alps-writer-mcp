@@ -113,7 +113,6 @@ grep -rn "ADR <카테고리>/<번호>\|docs/adr/<카테고리>" -- packages/ app
 ### 6. 매핑·인덱스 hygiene
 
 - `docs/adr/.mapping.json`의 `adrs` 배열이 디스크의 실제 파일과 일치
-- `lastSyncedAt`을 ISO 타임스탬프로 갱신
 - README의 모든 항목이 존재하는 파일을 가리킴
 - 디스크의 모든 ADR 파일이 정확히 한 번 인덱싱됨
 

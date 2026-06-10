@@ -190,4 +190,4 @@ PR 리뷰어 또는 작성자 본인이 머지 전에 확인한다.
 - [ ] **DB 키 패턴**을 바꿨다면 `docs/tables/{name}.md`(또는 동등 문서)와 양방향 링크가 있는가
 - [ ] **Related**에 ALPS feature ID와 의존 ADR 링크가 모두 있는가
 - [ ] **한 ADR = 한 결정** 원칙이 지켜졌는가 (분리 신호 없음)
-- [ ] **`.mapping.json`**의 해당 카테고리 entry가 새 ADR을 포함하고 `lastSyncedAt`이 갱신되었는가
+- [ ] **`.mapping.json`**의 해당 카테고리 entry가 새 ADR을 포함하는가

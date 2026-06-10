@@ -86,7 +86,6 @@ disable-model-invocation: true
 
 7. **마무리**
    - 변경된 코드와 ADR이 정합한지 한 번 더 확인 (`/adr-sync <category>`).
-   - 매핑 파일의 `lastSyncedAt` 갱신.
 
 **금지**:
 
