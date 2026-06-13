@@ -26,6 +26,7 @@ adr-writer 를 먼저 설치해 주세요:  /plugin install adr-writer@alps-writ
 - `mcp__alps-writer__load_alps_document`로 현재 문서를 로드.
 - `mcp__alps-writer__read_alps_section(7)`로 feature 목록 추출.
 - `mcp__alps-writer__read_alps_section(6)`로 **Section 6.3 Feature Dependency Diagram 을 항상 확인**한다. ALPS 는 feature 사이 의존성을 6.3 의 Mermaid `graph TD`(`F2 -->|depends on| F1` 형태)로 들고 있다 — 이 그래프가 곧 "어떤 feature 가 어떤 feature 보다 먼저 구현돼야 하는가"의 source of truth 다. 그래프가 있으면 의존 엣지를 모두 파싱해 둔다(4단계에서 매핑에 옮긴다). 그래프가 비어 있거나 6.3 자체가 없으면 feature 간 의존이 없는 것으로 본다 — 억지로 만들어내지 않는다.
+- Section 6.2(Non-Functional Requirements)와 Section 4.2(Technology Stack / 제약)도 함께 읽어둔다. 이들은 ADR 의 **Decision Drivers** 후보다 — 측정 가능한 NFR(예: "p95 3초 이내")과 전역 제약(예: "AWS 만 사용", "팀이 Node 경험만")이 옵션을 변별하는 압력이 된다. 각 NFR 의 Scope(`Global` 또는 Feature ID)를 보고 어느 feature 의 Driver 로 넘길지 분류해 둔다(3단계에서 `/adr-new` 에 전달).
 - ALPS 문서가 없으면 사용자에게 알리고 `mcp__alps-writer__init_alps_document` 또는 `/alps-init`을 권유한 뒤 중단.
 
 처리 대상 결정:
@@ -59,6 +60,7 @@ ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고�
 - **카테고리 키** — 2단계에서 결정한 값.
 - **Context 재료** — ALPS 의 비즈니스 동기·user story·acceptance criteria 핵심.
 - **Decision 재료** — Section 7 의 user flow / technical description (vertical slice: 사용자 동작 → API → 데이터 흐름).
+- **Decision Drivers 후보** — 1단계에서 분류한, 이 feature 에 걸리는 NFR(6.2 에서 Scope 가 `Global` 이거나 이 Feature ID 인 것)과 전역 아키텍처 제약(4.2). 측정 가능한 제약 형태로 그대로 넘긴다(예: "p95 3초 이내", "AWS 만 사용"). `/adr-new` 는 이를 Decision Drivers 의 출발점으로 삼아 대안을 변별한다 — PRD 의 비기능 요구가 ADR 의 의사결정 근거로 이어지는 통로다.
 - **영향 영역 힌트** — user flow / technical description 에서 추출한 페이지·컴포넌트 키워드. ADR Decision 의 vertical slice 서술에 쓰인다 (매핑에 코드 경로로 저장되지는 않는다).
 
 ALPS feature 가 워크숍식 ID 를 가진 경우, `/adr-new` 가 부여하는 파일명이 `NNNN-fN-kebab-title.md` 형태가 되도록 카테고리/제목에 그 ID 를 반영해 전달한다.

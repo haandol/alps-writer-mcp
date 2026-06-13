@@ -21,14 +21,16 @@
     <description>
 - Define non-functional requirements such as security, performance, and scalability.
 - Set the minimum standards for the MVP phase.
-- Non-functional requirements are validated through Section 8 (MVP Metrics) or release testing.
+- Every NFR MUST be REPRODUCIBLE — a measurable threshold plus how it is checked. Reject vague qualifiers ("minimum security", "fast", "scalable"): two readers must not be able to interpret it differently. If you can't state a number or a yes/no condition, it isn't an NFR yet.
+- Each NFR's threshold maps 1:1 to a Success Threshold in Section 8 (or to a release test) — that is where it is validated. Keep the two consistent.
+- Mark each NFR's Scope: `Global` (applies to the whole system) or a Feature ID (`F3`) it constrains. This scope is what carries the NFR into the ADR cycle as a Decision Driver for that feature.
     </description>
     <example>
-| ID | Requirement | Priority |
-|----|-------------|----------|
-| NF1 | Minimum security (no email verification) | Must-Have |
-| NF2 | Performance (up to 1,000 daily users) | Should-Have |
-| NF3 | Latency (under 3 seconds) | Must-Have |
+| ID | Requirement (measurable) | Scope | Priority |
+|----|--------------------------|-------|----------|
+| NF1 | Authentication required; passwords stored hashed (no plaintext). Email verification out of MVP scope. | F1, F2 | Must-Have |
+| NF2 | Sustain 1,000 daily active users without degradation | Global | Should-Have |
+| NF3 | API responses return in under 3 seconds (p95) | Global | Must-Have |
     </example>
   </subsection>
   <subsection id="6.3" title="Feature Dependency Diagram">

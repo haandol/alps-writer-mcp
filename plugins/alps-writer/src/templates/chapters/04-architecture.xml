@@ -1,4 +1,9 @@
 <section id="4" title="High-Level Architecture">
+  <description>
+- Section 4 answers "what is the system MADE OF" — the cross-cutting picture: overall topology, the technology stack, and external integrations. State each of these ONCE here.
+- It does NOT describe how an individual feature uses that stack — that is Section 7.3 (the vertical slice of each feature through UI → API → Data). Section 7.3 *uses* what Section 4 declares; it must not re-declare or fork the stack.
+- Keep system-wide technical facts here so there is a single source: if the same fact (e.g., the auth mechanism, the database choice) also appears per-feature in Section 7.3, readers can't tell which is authoritative and the two drift apart.
+  </description>
   <subsection id="4.1" title="System Diagram">
     <description>
 - Provide Context and Container diagrams (C4 model) illustrating the overall system architecture of the project.
