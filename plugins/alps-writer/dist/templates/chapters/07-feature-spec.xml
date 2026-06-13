@@ -3,6 +3,12 @@
 - For every feature listed in Section 6.1, provide a detailed design using the same Fx ID and feature name.
 - Each subsection must match the feature ID, name, and priority defined in Section 6.1.
 - No additional features beyond those in Section 6.1 may be specified here.
+
+- SCOPE — this section captures REPRODUCIBLE REQUIREMENTS, not implementation decisions:
+  - WRITE here (the WHAT, reproducibly): what each user action must do, which layers it crosses (UI → API → data), what must be true for it to be correct (acceptance criteria, edge cases, error responses the user sees).
+  - DO NOT write here (the WHY/HOW — these belong to an ADR or to the code): why a particular library / algorithm / key design was chosen, alternatives considered, trade-offs, tuning constants, exact column lists, or framework-specific snippets.
+  - Rule of thumb: if a sentence would still be true after the team swaps the database or the hashing library, it belongs here. If it justifies *that choice*, it belongs in an ADR.
+  - Each feature here becomes one ADR category via `/feature-to-adr`. The PRD states the requirement once; the ADR then owns the architectural decision and the code owns the implementation. Keep this section free of decisions so the ADR is not a duplicate.
   </description>
   <template id="7.x" title="Feature Template">
     <header>Feature ID: Fx | Priority: Must-Have / Should-Have / Nice-to-Have</header>
@@ -34,19 +40,24 @@
     <subsection id="7.x.3" title="Technical Description">
       <description>
 - Describe the implementation as a vertical slice: trace each user action end-to-end from UI through API to data store, so this feature can be developed and tested independently.
-- For each key action in the user flow, describe what happens at each layer it touches (e.g., UI component, API endpoint, database operation).
+- For each key action in the user flow, describe WHAT happens at each layer it touches (UI / API / data) — at the level of behavior and responsibility, not implementation.
+- Stay reproducible, stay decision-free:
+  - DO state: the action, the layers it crosses, the data it reads/writes (conceptually), what is returned to the user, and any shared interface this feature relies on (e.g., "uses the shared auth session", "writes to the user record").
+  - DO NOT state: chosen libraries/algorithms (e.g., bcrypt, JWT), exact column lists, tuning constants, or why one approach was picked over another — those are architectural decisions (→ ADR) or implementation details (→ code), and pinning them here makes the PRD churn whenever the code does.
+  - Keep API references at the endpoint level (method + path + purpose); leave request/response schemas to the code.
 - If this feature shares resources with other features (e.g., a common table or auth middleware), note the shared interface rather than redefining it.
       </description>
       <example>
 1. Submit Sign-up Form
-   - UI: Sign-up form component sends POST /api/auth/signup with email and password
-   - API: /api/auth/signup endpoint validates email format, checks for duplicates, hashes password with bcrypt
-   - Data: Insert new row into `users` table (id, email, password_hash, created_at)
-   - Response: Return JWT token → UI stores token and redirects to main screen
+   - UI: Sign-up form sends the email and password to the sign-up endpoint (POST /api/auth/signup)
+   - API: validates the input, rejects duplicates, and creates the user with the password stored in non-recoverable (hashed) form
+   - Data: a new user record is persisted
+   - Response: the user is authenticated and lands on the main screen
 2. Validate Email (real-time)
-   - UI: On blur, send GET /api/auth/check-email?email={email}
-   - API: Query `users` table for existing email
-   - Response: Return availability status → UI shows inline validation message
+   - UI: as the user leaves the email field, checks availability (GET /api/auth/check-email)
+   - API: looks up whether the email is already taken
+   - Response: an inline message tells the user if the email is available
+> (How the password is hashed, the auth token format, and the user table's columns are architectural/implementation choices — leave them to the ADR and the code, not this section.)
       </example>
     </subsection>
     <subsection id="7.x.4" title="Edge Cases">
