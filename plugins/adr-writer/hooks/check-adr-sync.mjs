@@ -1,8 +1,14 @@
 #!/usr/bin/env node
-// PreToolUse(Edit|Write|MultiEdit) — verify the file being modified has an ADR
-// in sync with its mapped category. Default behavior is "warn" (exit 0 with
-// stderr message). Set ALPS_ADR_ENFORCE=block to make the hook block writes
-// (exit 2) when a mapped ADR is older than the code it governs.
+// PreToolUse(Edit|Write|MultiEdit) — keep the PRD → ADR → code dependency in
+// sync, in both propagation directions:
+//
+//   • Editing CODE — verify the file has an ADR in sync with its mapped
+//     category. Default "warn" (exit 0 + stderr); ALPS_ADR_ENFORCE=block makes
+//     it block the write when a mapped ADR is older than the code it governs.
+//   • Editing the PRD (*.alps.xml) — the most-upstream source. The edit is
+//     ALWAYS allowed (never blocked, even in block mode — blocking it would
+//     invert PRD → ADR → code), but if downstream ADRs now predate the PRD we
+//     surface a warn-only notice so the change propagates forward.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -10,6 +16,10 @@ import { readFileSync, statSync, existsSync } from "node:fs";
 
 const MODE = (process.env.ALPS_ADR_ENFORCE || "warn").toLowerCase();
 const MAPPING_PATH = process.env.ALPS_ADR_MAPPING || "docs/adr/.mapping.json";
+
+// Grace window: code/PRD must be newer than the ADR by more than this before
+// we treat the ADR as stale. Absorbs same-session co-edits.
+const GRACE_MS = 24 * 60 * 60 * 1000; // 1 day
 
 // Top-level directories that almost always hold source code we want under
 // ADR coverage. Used to detect "user is editing real code but no ADR is
@@ -138,6 +148,47 @@ function emit({ block, message }) {
   process.exit(0);
 }
 
+// PRD (*.alps.xml) was edited. PRD is the most-upstream source, so the edit is
+// always allowed — we NEVER block it (blocking would let ADR/code drag the PRD,
+// inverting the dependency). We only emit a warn-only notice listing categories
+// whose ADRs now predate the PRD, so the change propagates forward to ADR+code.
+function checkPrdEdit(rel, cwd, mapping) {
+  if (!mapping?.categories) process.exit(0); // Cycle not adopted — stay quiet.
+
+  const prdPath = path.join(cwd, rel);
+  const prdMtime = existsSync(prdPath) ? statSync(prdPath).mtimeMs : Date.now();
+
+  // Categories whose newest ADR is older than the PRD by > grace period, and
+  // whose entry is tied to this PRD (alpsDocument unset, or pointing at it).
+  const stale = [];
+  for (const [cat, entry] of Object.entries(mapping.categories)) {
+    const tiedToThisPrd =
+      !mapping.alpsDocument || mapping.alpsDocument === rel;
+    if (!tiedToThisPrd) continue;
+    const adrPaths = (entry.adrs || []).map((p) => path.join(cwd, p));
+    const present = adrPaths.filter(existsSync);
+    if (present.length === 0) continue;
+    if (prdMtime - newest(present) > GRACE_MS) {
+      stale.push({ id: cat, adrs: entry.adrs || [] });
+    }
+  }
+
+  if (stale.length === 0) process.exit(0);
+
+  const list = stale
+    .map((c) => `  • ${c.id}\n${c.adrs.map((p) => `      - ${p}`).join("\n")}`)
+    .join("\n");
+  // Always warn-only (block:false) regardless of MODE — see function comment.
+  return emit({
+    block: false,
+    message:
+      `[alps-writer] PRD(${rel})를 수정했습니다. 변경은 그대로 진행됩니다.\n` +
+      `  PRD 가 다음 카테고리의 ADR 보다 최신입니다 — 변경이 ADR·코드로 전파됐는지 점검하세요:\n${list}\n` +
+      `  영향 받는 feature 를 ADR 로 반영하려면: /feature-to-adr (갱신 모드), 이어서 /adr-sync.\n` +
+      `  (PRD → ADR → code 단방향 — 이 알림은 차단이 아니라 전파 환기입니다.)`,
+  });
+}
+
 function main() {
   const raw = readStdinSync();
   if (!raw) process.exit(0);
@@ -161,13 +212,17 @@ function main() {
 
   // Skip the ADR docs themselves and the mapping file.
   if (rel.startsWith("docs/adr/")) process.exit(0);
-  if (rel.endsWith(".alps.xml")) process.exit(0);
-  // Skip pure docs/configuration that don't carry architectural decisions.
-  if (EXCLUDE_FILE_PATTERNS.some((re) => re.test(rel))) process.exit(0);
-  if (rel.startsWith("docs/") && !rel.startsWith("docs/adr/")) process.exit(0);
 
   const mappingPath = path.join(cwd, MAPPING_PATH);
   const mapping = loadJSON(mappingPath);
+
+  // PRD edits propagate DOWNSTREAM (PRD → ADR → code). The edit is always
+  // allowed; we only surface a warn-only notice when ADRs now lag the PRD.
+  if (rel.endsWith(".alps.xml")) return checkPrdEdit(rel, cwd, mapping);
+
+  // Skip pure docs/configuration that don't carry architectural decisions.
+  if (EXCLUDE_FILE_PATTERNS.some((re) => re.test(rel))) process.exit(0);
+  if (rel.startsWith("docs/") && !rel.startsWith("docs/adr/")) process.exit(0);
   const looksLikeSource = SOURCE_DIR_HINTS.some(
     (h) => rel === h.replace(/\/$/, "") || rel.startsWith(h),
   );
@@ -226,7 +281,6 @@ function main() {
   // If code is newer than every ADR by > grace period, surface it.
   const codeNewest = existsSync(filePath) ? statSync(filePath).mtimeMs : Date.now();
   const adrNewest = newest(presentAdrs);
-  const GRACE_MS = 24 * 60 * 60 * 1000; // 1 day
 
   if (codeNewest - adrNewest > GRACE_MS) {
     const adrList = cat.adrs.map((p) => `  - ${p}`).join("\n");

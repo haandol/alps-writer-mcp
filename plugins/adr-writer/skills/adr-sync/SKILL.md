@@ -84,6 +84,19 @@ Quick mode는 이 단계만 수행한다.
 - 결과는 `Suggestions` 섹션에 `[Sub-folder split recommended] <category> 안에 ADR <n>개 — 후보 sub-feature: ...` 형태로 한 줄 권고로 남긴다. 다음 사이클에서 사용자가 합의하면 `structure.md` 의 분할 절차로 분할.
 - evolution chain 신호(여러 ADR 의 Status 가 `Superseded by` 로 묶여 있음)가 함께 보이면 분할 대신 **rollup 우선** 을 권고에 명시한다 — chain 을 sub-folder 로 흩으면 추적이 어려워진다.
 
+### 3.7. PRD → ADR 정합 점검 (upstream drift)
+
+지금까지의 점검은 `ADR vs 코드`(downstream) 방향이다. 이 패스는 **`PRD vs ADR`(upstream)** 방향 — PRD 가 ADR 보다 앞서갔는데 ADR 이 따라오지 못한 drift 를 잡는다.
+
+> **플러그인 경계**: adr-sync 는 adr-writer 플러그인 소속이라 **ALPS 문서를 직접 파싱하지 않는다** (adr-writer 는 ALPS 를 모른다 — AGENTS.md 의 플러그인 분리 원칙). 따라서 이 패스는 ALPS 본문을 읽는 대신, alps-writer 의 `/feature-to-adr` 가 매핑에 남긴 **신호 필드만** 읽는다.
+
+각 카테고리 entry 에 대해:
+
+- `syncStatus` 가 `pending-review` 면 → PRD 가 변경됐는데 ADR 재검토가 안 끝난 상태다. `Suggestions` 에 `[PRD ahead of ADR] <category> — alpsFeatureId <id> 의 PRD 가 변경됨(syncStatus=pending-review). alps-writer 의 /feature-to-adr 로 변경분을 ADR 에 반영한 뒤 재검토 필요` 로 기록한다.
+- `alpsDocument` 가 가리키는 `.alps.xml` 의 mtime 이 카테고리 ADR 보다 최신인데 `syncStatus` 가 `synced`(또는 없음) 면 → 신호가 갱신 안 된 채 PRD 만 바뀌었을 수 있다. `Suggestions` 에 `[PRD may be ahead] <category> — PRD 가 ADR 보다 최신이나 syncStatus 미표시. /feature-to-adr 로 변경 여부 확인 권장` 로 기록한다. (mtime 은 휴리스틱이므로 단정하지 않고 확인 권고에 그친다.)
+- **adr-sync 는 ALPS 를 읽지 못하므로 이 drift 를 직접 해소하지 않는다** — `alpsRevision` 갱신·`syncStatus` 를 `synced` 로 되돌리는 것은 ALPS 본문과 대조할 수 있는 `/feature-to-adr`(alps-writer) 의 책임이다. 본 패스는 **발견과 위임 안내**까지만.
+- `.mapping.json` 에 `alpsDocument` 가 없으면(ALPS 없이 `/adr-new` 로만 쓰는 프로젝트) 이 패스 전체를 건너뛴다.
+
 ### 4. Cross-ADR 모순 점검
 
 각 수정된 ADR의 Related 링크를 따라 다른 ADR을 점검한다:
@@ -144,6 +157,8 @@ grep -rnE "\.alps\.xml|ALPS Section|Section [0-9]" -- docs/adr/
 ### Suggestions
 - [New ADR needed?] — ADR 없는 결정 발견
 - [Supersede recommended?] — 패치 범위를 넘은 drift
+- [PRD ahead of ADR] — <category>: PRD 가 ADR 보다 앞섬. /feature-to-adr 로 변경분 반영 위임 (3.7 패스)
+- [Sub-folder split recommended] — <category>: ADR <n>개, 후보 sub-feature ...
 ```
 
 ## Notes
