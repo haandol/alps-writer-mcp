@@ -62,13 +62,13 @@ disable-model-invocation: true
 3. **계획 수립**
    - ADR의 Decision/Mermaid 다이어그램에서 vertical slice 를 추출한다 (UI → API → 데이터). 한 ADR 은 한 피쳐의 슬라이스 전체를 다루므로, 구현 계획도 같은 피쳐 안에서 UI/API/Data 모든 레이어를 **함께** 변경하는 단위로 잡는다.
    - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/` 등 — `structure.md` "흔한 카테고리 예시 — 안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
-   - `codePaths`에 해당하는 기존 코드를 읽고 차이를 식별한다 — 같은 피쳐의 UI/API/Data 코드가 카테고리에 모두 포함돼 있는지 확인.
+   - ADR Decision 의 키워드로 `Glob`/`Grep` 해 관련 기존 코드를 찾아 읽고 차이를 식별한다 (코드 위치는 매핑에 없으므로 ADR 을 읽고 직접 탐색 — `structure.md` "관련 코드 찾기"). 같은 피쳐의 UI/API/Data 코드가 한곳에 모여 있는지 확인.
    - 변경 계획을 사용자에게 제시하고 승인받는다.
 
    여러 ADR 을 순서대로 구현하기로 한 경우(2단계에서 선행을 더했을 때), 아래 4~6단계를 **의존 위상 순서의 가장 깊은 선행부터 한 ADR 씩** 반복한다 — 선행이 `Accepted` 가 된 뒤에야 다음 ADR 의 4단계로 넘어간다.
 
 4. **구현**
-   - 작은 단위로 Edit/Write. PreToolUse hook이 ADR 정합성을 자동 검증한다 (`ALPS_ADR_ENFORCE=block`이면 stale 시 차단).
+   - 작은 단위로 Edit/Write.
    - ADR에 명시된 행동 규칙·상태 전이·연동 방식을 그대로 따른다. ADR과 다르게 구현하려면 먼저 ADR을 수정한다.
 
 5. **테스트**

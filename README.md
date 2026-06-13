@@ -4,10 +4,10 @@
 
 This repository is a Claude Code **marketplace** that ships two independent plugins. Both install from the marketplace alone — **no npm, no npx, no separate build step** for end users. The alps-writer MCP server is bundled (dependencies inlined) and committed at `plugins/alps-writer/dist/`, so installing the plugin is everything you need.
 
-| Plugin                  | Scope                                                                                                                            | Depends on                       |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
-| **`adr-writer`** (ADR)  | ADR-driven development: author with `/adr-new`, implement with `/adr-impl`, sync with `/adr-sync`, drift hooks.                  | nothing — fully standalone       |
+| Plugin                  | Scope                                                                                                                               | Depends on                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`.    | adr-writer (only for the bridge) |
+| **`adr-writer`** (ADR)  | ADR-driven development: author with `/adr-new`, implement with `/adr-impl`, sync with `/adr-sync`; an ADR-first hook on every turn. | nothing — fully standalone       |
 
 The two are split so that **adr-writer never references ALPS** — once a feature is imported, the ADR lifecycle is entirely independent of any PRD. The only coupling is one-way (`alps-writer → adr-writer`), via the `/feature-to-adr` bridge.
 
@@ -52,18 +52,18 @@ flowchart RL
 
     Mapping -- alpsFeatureId --> PRD
     Mapping -- adrs --> ADR
-    Mapping -- codePaths --> Code
+    ADR == "agent searches repo<br/>(no stored path)" ==> Code
 ```
 
-The dotted arrows are **logical** — only `.mapping.json` (the solid arrows) holds physical references. Renames and ADR restructures (split / rollup / supersede) are absorbed by the mapping file, so neither code nor ADR bodies need to change in lockstep with the other.
+The dotted arrows are **logical**. `.mapping.json` (the solid arrows) records only the ALPS-feature ↔ ADR link. The ADR → code link is **not stored anywhere** — an agent finds the code an ADR governs by reading the ADR and searching the repo (the double arrow). This is deliberate: a large refactor would otherwise force you to chase stored code paths through every ADR, dragging the stable layer behind the volatile one.
 
 - **Logical dependency (dotted arrows)**: code is written to satisfy ADRs; ADRs are written to satisfy the PRD. When an inner layer changes, outer layers follow — a PRD change propagates to ADRs and code; an ADR decision change propagates to code. The reverse never happens — if a code refactor forces an ADR rewrite, the ADR was carrying implementation detail it shouldn't have; if an ADR edit forces a PRD rewrite, the ADR was holding a PRD reference it shouldn't have.
 - **No physical references in any direction** — not just ADR↔code, but ADR↔PRD too:
-  - **ADR → code**: ADRs reference folders, never files / functions / line numbers (see [Code reference depth — folders only](./plugins/adr-writer/templates/adr/README.md#코드-참조-깊이--폴더-단위까지만)). Otherwise every rename or refactor forces ADR edits.
+  - **ADR → code**: ADR bodies don't reference files / functions / line numbers — at most a folder when unavoidable (see [Code reference depth — folders only](./plugins/adr-writer/templates/adr/README.md#코드-참조-깊이--폴더-단위까지만)), and the mapping stores no code paths at all. The code an ADR governs is located by reading the ADR and searching the repo, so a rename or refactor never forces an ADR or mapping edit.
   - **Code → ADR**: code does not embed ADR IDs or paths in comments, constants, or imports. ADR numbers move (split, rollup, supersede); if those IDs are baked into code, restructuring ADRs forces matching code edits even when the decision is unchanged. When the **decision itself** changes, code changes — that's the entire point of the dependency.
   - **ADR → PRD**: ADR bodies (Context and Related included) do **not** embed ALPS paths, section numbers, or feature-ids, and never copy user stories or acceptance criteria. An ADR _absorbs_ the PRD's motivation but does not _point at_ it — when a PRD feature is split / renumbered / restructured, a physical reference would force ADR edits even though the decision is unchanged.
   - **PRD → ADR**: the ALPS document never names specific ADR IDs or paths. It is the most stable contract and is unaware of its downstream artifacts.
-- **Linking lives in an external mapping layer**: `docs/adr/.mapping.json` is the single place that records ALPS-feature ↔ ADR ↔ code-path relationships (`alpsDocument` / `alpsFeatureId` / `adrs` / `codePaths`). All three artifacts stay clean; renames and restructures are absorbed by the mapping file. The `PreToolUse` hook reads this mapping (not the artifacts themselves) to find the relevant ADR for an edit — and, when a PRD is edited, to surface which downstream ADRs now lag behind it.
+- **Linking lives in an external mapping layer**: `docs/adr/.mapping.json` is the single place that records the ALPS-feature ↔ ADR link (`alpsDocument` / `alpsFeatureId` / `adrs`). It deliberately does **not** store code paths — the ADR ↔ code link is resolved on demand by searching the repo. The PRD and ADR bodies stay clean; ADR restructures (split / rollup / supersede) are absorbed by the mapping file, and code refactors touch neither the mapping nor the ADRs.
 
 **Stability gradient as the litmus test**: change frequency must slope one way — `Code >> ADR >> PRD`. If a change in the volatile layer drags the stable layer with it, an arrow is drawn the wrong way and something needs to be pushed back to its proper layer. "Code is source of truth" therefore applies only to **implementation facts** (API shapes, field names, Status) — the **gray-zone decisions** (rationale, domain rules, state transitions, fallbacks) remain the ADR's authority, and code that contradicts them is a decision change to record in the ADR, not a fact to copy back from code.
 
@@ -86,7 +86,7 @@ alps-writer-plugins/                 # marketplace root (this repo)
         ├── .claude-plugin/plugin.json
         ├── skills/                  # /adr-new, /adr-impl, /adr-sync, /adr-rollup
         ├── agents/                  # adr-reviewer subagent
-        ├── hooks/                   # ADR-drift hooks
+        ├── hooks/                   # ADR-first directive hook (UserPromptSubmit)
         └── templates/adr/
 ```
 
@@ -104,7 +104,7 @@ alps-writer-plugins/                 # marketplace root (this repo)
 **adr-writer (ADR)**
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
-- **ADR-drift hooks** — warn or block (`ALPS_ADR_ENFORCE=block`) when code is newer than its mapped ADR; editing the PRD emits a warn-only notice for ADRs that now lag behind it (never blocked)
+- **ADR-first hook** — every user turn re-injects the ADR-first directive + current `docs/adr/.mapping.json` snapshot, so the agent checks ADRs before changing behavior
 - Fully standalone — no ALPS PRD required
 
 ## Quick Start (Claude Code plugins)
@@ -142,15 +142,16 @@ The goal is for ADRs to evolve alongside the code each cycle. Adding a new ADR w
 2. After Section 7 (feature specs), run `/feature-to-adr` → it walks each feature and hands it to `/adr-new`, producing a `Proposed` ADR per feature under `docs/adr/<category>/` and seeding `docs/adr/.mapping.json`.
 3. `/adr-impl <id>` → implement an accepted-in-spirit ADR in code + tests. On success it flips the ADR to `Accepted`.
 4. `/adr-sync` at the end of a cycle → fold what you learned back into the ADRs and repair any drift.
-5. **When the PRD later changes** → editing the `*.alps.xml` triggers a warn-only hook notice for ADRs that now lag it. Re-run `/feature-to-adr`: it classifies each Section 7 feature as new / changed / unchanged, marks changed features `pending-review`, and hands them back for ADR reconciliation — so a PRD edit propagates forward to ADRs and code.
+
+`/feature-to-adr` is a **one-time import**: it converts each Section 7 feature into an ADR once. After that the decision is managed at the ADR level — if the PRD later changes, edit the affected ADR directly (or supersede it with a new one) rather than re-importing.
 
 **B. ADR-only — no PRD (adr-writer standalone)**
 
 1. `/adr-new <category>` → describe the decision directly (refactor, infra choice, new feature direction). No ALPS document required.
 2. `/adr-impl <id>` → build it in code.
-3. As you keep editing code, the `PreToolUse` hook warns when an edit touches a path whose ADR is stale or missing. Run `/adr-sync` to reconcile.
+3. As you keep working, the ADR-first hook re-injects the ADR map every turn so the agent checks ADRs before changing behavior. Run `/adr-sync` to reconcile ADRs with shipping code.
 
-In both flows the drift hooks run automatically once adr-writer is installed — every user turn re-injects the ADR map, and every `Edit`/`Write` is checked against it.
+In both flows the hook runs automatically once adr-writer is installed — every user turn re-injects the ADR map and the ADR-first directive.
 
 ### Slash commands
 
@@ -172,18 +173,17 @@ In both flows the drift hooks run automatically once adr-writer is installed —
 
 ### Hook behavior
 
-Two hooks support the main Claude Code session — **with no external LLM calls**; the main model classifies text and makes decisions itself.
+One hook supports the main Claude Code session — **with no external LLM calls**; the main model classifies text and makes decisions itself.
 
-| Hook               | When it fires        | Role                                                                                                                                                                                                                                     |
-| ------------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UserPromptSubmit` | Every user message   | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn (survives session compaction, unlike a one-shot SessionStart injection)                                                                                    |
-| `PreToolUse`       | Edit/Write/MultiEdit | **Editing code**: detect missing mappings, stale ADRs, and uncovered source areas → warn (or block). **Editing the PRD (`*.alps.xml`)**: warn-only notice listing downstream ADRs that now lag the PRD, so the change propagates forward |
+| Hook               | When it fires      | Role                                                                                                                                                  |
+| ------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UserPromptSubmit` | Every user message | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn (survives session compaction, unlike a one-shot SessionStart injection) |
 
-Default mode is `warn`. To enforce more strictly, export `ALPS_ADR_ENFORCE=block` in your shell — the hook will then block edits to stale or unmapped **code** sources with exit 2 (passing the reason through the model context so it can self-correct). PRD edits are **never blocked**, even in `block` mode — the PRD is the most-upstream source, so a PRD edit only emits a warn-only propagation notice; blocking it would let ADR/code drag the PRD and invert the dependency.
+The directive tells the model: when a request adds or changes behavior, read the relevant ADRs (or author one with `/adr-new`) before touching code. Classification is left to the main model — the hook never blocks an edit; keeping the PRD → ADR → code flow intact is the model's job, prompted every turn.
 
 ### Mapping file
 
-`docs/adr/.mapping.json` is the single source of truth for the ALPS-feature ↔ ADR ↔ code-path relationships — no artifact references another in its own body. See the schema at [`plugins/adr-writer/templates/adr/mapping.schema.json`](./plugins/adr-writer/templates/adr/mapping.schema.json). `/adr-new` fills the ADR ↔ code-path fields; `/feature-to-adr` additionally backfills the ALPS link fields (`alpsDocument`, `alpsFeatureId`) plus `alpsRevision` (a digest of the Section 7 feature used to detect when the PRD has moved ahead of its ADRs) and `syncStatus` (`synced` / `pending-review`).
+`docs/adr/.mapping.json` records the ALPS-feature ↔ ADR link only — it stores no code paths, and no artifact references another in its own body. See the schema at [`plugins/adr-writer/templates/adr/mapping.schema.json`](./plugins/adr-writer/templates/adr/mapping.schema.json). `/adr-new` creates the category entry (`feature`, `adrs`); `/feature-to-adr` additionally backfills the ALPS link fields (`alpsDocument`, `alpsFeatureId`, `dependsOn`). The code an ADR governs is found by reading the ADR and searching the repo, not stored here.
 
 ## Using the MCP server in other clients
 
@@ -212,11 +212,10 @@ The bundle inlines its dependencies, so it runs with a plain Node.js >= 20 — n
 
 ### Environment variables
 
-| Variable           | Scope            | Description                                                                                                | Default                  |
-| ------------------ | ---------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `ALPS_OUTPUT_DIR`  | alps-writer MCP  | Directory for document files (`.alps.xml`, exported markdown). `PRD_OUTPUT_DIR` also accepted (legacy).    | `<cwd>/prd/`             |
-| `ALPS_ADR_ENFORCE` | adr-writer hooks | `warn` (default) surfaces drift to stderr; `block` makes `PreToolUse` deny edits to stale/unmapped source. | `warn`                   |
-| `ALPS_ADR_MAPPING` | adr-writer hooks | Path (relative to project root) to the ADR mapping file consumed by hooks.                                 | `docs/adr/.mapping.json` |
+| Variable           | Scope           | Description                                                                                             | Default                  |
+| ------------------ | --------------- | ------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `ALPS_OUTPUT_DIR`  | alps-writer MCP | Directory for document files (`.alps.xml`, exported markdown). `PRD_OUTPUT_DIR` also accepted (legacy). | `<cwd>/prd/`             |
+| `ALPS_ADR_MAPPING` | adr-writer hook | Path (relative to project root) to the ADR mapping file read by the ADR-first hook.                     | `docs/adr/.mapping.json` |
 
 Config example with `ALPS_OUTPUT_DIR`:
 

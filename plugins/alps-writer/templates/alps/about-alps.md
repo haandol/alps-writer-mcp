@@ -75,7 +75,7 @@ Learnings folded back into the ADR
 
 Each ALPS feature becomes one or more ADRs; each ADR drives implementation; drift between code and ADR is detected and repaired. ALPS sits at the top of this chain — the cleaner it is, the cleaner everything downstream.
 
-The chain is a one-way dependency (PRD → ADR → code): a change to ALPS propagates forward to ADRs and code, but the reverse never happens. None of the three artifacts references another in its own body — the link lives only in `docs/adr/.mapping.json`. When you later edit a saved ALPS, re-running `/feature-to-adr` detects which Section 7 features changed and marks their ADRs for reconciliation, so the edit flows downstream instead of silently drifting.
+The chain is a one-way dependency (PRD → ADR → code): a change to ALPS should propagate forward to ADRs and code, but the reverse never happens. None of the three artifacts references another in its own body — `docs/adr/.mapping.json` records only the ALPS-feature ↔ ADR link, and the code an ADR governs is found by searching the repo, not stored. `/feature-to-adr` imports each Section 7 feature into an ADR **once**; after that the decision is owned at the ADR level. If the PRD later changes, carry the change into the affected ADR directly (edit it, or supersede it with a new ADR) rather than re-importing — the ADR, not the PRD, is what code is built from.
 
 ## Further reading
 

@@ -9,7 +9,7 @@
 ```
 docs/adr/
 ├── README.md         # 인덱스 + 작성 규칙 (source of truth)
-├── .mapping.json     # ALPS feature ↔ ADR ↔ code paths 매핑 (alps-writer plugin hook이 참조)
+├── .mapping.json     # ALPS feature ↔ ADR 매핑 (코드 경로는 저장 안 함)
 ├── marketplace/      # 피쳐 카테고리 (vertical slice — UI/API/Data 모두 포함)
 │   └── NNNN-kebab-title.md
 ├── auth/             # 피쳐 카테고리
@@ -43,7 +43,7 @@ ADR이 누적되면 한 카테고리에 결정이 쌓여 번호만 보고는 무
 - **번호 정책**: sub-folder 안에서 `NNNN` 을 새로 시작한다. 분할 시 기존 ADR 의 번호를 재배치하지 않는다 — 결번을 유지하고 git 이력으로 추적. 분할 시점은 Roll-up 이 아니므로 본문은 그대로 옮기기만 한다.
 - **분할 vs 형제 카테고리 (`auth-login/`)**: vertical slice 가 진짜로 독립이고 cross-cutting 결정도 거의 공유하지 않으면 형제 카테고리(`auth-login/`, `auth-sso/`)가 더 깔끔하다. 한 도메인 안에서 공통 결정(예: `auth/0001-token-rotation.md`)을 부모 폴더에 남겨야 하는 경우에만 sub-folder 를 쓴다.
 - **README 인덱스**: sub-folder 가 생기면 README 의 카테고리 목록을 `auth/login/`, `auth/signup/` 처럼 sub-folder 별로 한 줄씩 풀어 적는다. 부모 카테고리 직속에 남은 cross-cutting ADR(예: `auth/0001-token-rotation.md`)은 부모 라인에 그대로 둔다.
-- **`.mapping.json` 정책**: sub-folder 도 별도 카테고리 entry 로 등록한다 — 키는 `auth/login` 처럼 슬래시를 유지. `codePaths` 는 그 sub-feature 의 vertical slice 만 가리키게 좁힌다 (예: `src/features/auth/login/**`). hook 이 카테고리 키로 lookup 하므로 키 형식의 일관성이 중요하다.
+- **`.mapping.json` 정책**: sub-folder 도 별도 카테고리 entry 로 등록한다 — 키는 `auth/login` 처럼 슬래시를 유지. 카테고리 키가 sub-feature 디렉토리명과 일치하면 "관련 코드 찾기" 의 첫 후보로 쓰기 좋으니 키 형식의 일관성을 지킨다.
 
 ```
 docs/adr/
@@ -134,7 +134,7 @@ docs/adr/
 
 ## ALPS ↔ ADR 매핑
 
-`docs/adr/.mapping.json`이 ADR과 영향 받는 코드 경로(그리고 선택적으로 ALPS feature)의 관계를 저장한다. `adr-writer` plugin의 PreToolUse hook이 이 파일을 읽어, 코드 수정이 매핑된 ADR보다 새로우면 ADR 동기화를 환기한다.
+`docs/adr/.mapping.json`이 ALPS feature 와 그 결정을 기록한 ADR 의 관계를 저장한다. **ADR ↔ 코드 경로는 매핑에 저장하지 않는다** — 한 ADR 이 다스리는 코드 위치는 ADR Decision 을 읽고 그때그때 repo 를 탐색해 찾는다 (아래 "관련 코드 찾기"). 코드 구조가 리팩토링으로 바뀌어도 매핑은 손댈 필요가 없다 — 결정이 안 바뀌었으면 ADR 도 매핑도 그대로다.
 
 ```json
 {
@@ -144,14 +144,12 @@ docs/adr/
     "auth": {
       "feature": "User Authentication",
       "alpsFeatureId": "F-AUTH-01",
-      "codePaths": ["src/features/auth/**", "src/shared/middleware/auth*"],
       "adrs": ["docs/adr/auth/0001-jwt-rotation.md"],
       "tableDocs": ["docs/tables/users.md"]
     },
     "marketplace": {
       "feature": "Marketplace Listings",
       "alpsFeatureId": "F-MKT-01",
-      "codePaths": ["src/features/marketplace/**"],
       "adrs": ["docs/adr/marketplace/0001-listing-search.md"],
       "tableDocs": ["docs/tables/listings.md"]
     }
@@ -161,17 +159,12 @@ docs/adr/
 
 매핑 파일은 `/feature-to-adr` 명령으로 생성·갱신된다. 플랫 구조 프로젝트는 카테고리 키로 Feature ID(`f1`, `f2`)를 그대로 써도 된다.
 
-### codePaths 추천 절차
+### 관련 코드 찾기
 
-`/adr-new`, `/feature-to-adr` 등이 `.mapping.json` 의 `codePaths` 를 채울 때 공통으로 쓰는 절차다 — PreToolUse hook 이 신뢰하는 값이라 정확해야 한다. 비어 있는 채로 저장하지 말고 **추천 후 확인** 으로 진행한다.
+`/adr-sync`, `/adr-impl`, `/adr-rollup` 등이 한 ADR 의 코드 정합을 검증할 때, 그 ADR 이 다스리는 코드를 매 실행마다 다음으로 좁힌다 (매핑에 경로를 박아두지 않는 이유: 코드 구조 변경이 안정 레이어인 매핑·ADR 을 끌고 다니지 않게 하려는 것):
 
-1. 사용자가 답한 영역 + ADR Decision 의 키워드(페이지·컴포넌트·서비스명) 추출.
-2. `Glob`/`Bash ls` 로 프로젝트 디렉토리 구조를 한 번 본다 — `src/features/`, `packages/`, `apps/`, `services/` 등 source 진입점 확인.
-3. **codePaths 도 vertical slice 로 묶는다** — 한 피쳐의 UI/API/Data 코드를 모두 같은 카테고리의 codePaths에 넣는다. 다른 카테고리에 흩어 두지 않는다.
-4. 글롭 후보 2-4개를 만든다. 프로젝트 구조에 따라 두 패턴:
-   - **Feature-sliced 단일 트리** (권장) — `src/features/<feature>/**` 가 UI/API/Data 를 모두 포함.
-   - **레이어 단위 모노레포** — 같은 피쳐의 코드가 여러 레이어 폴더에 흩어졌으면 한 카테고리의 codePaths에 모두 합쳐 적는다 (예 `orders` 카테고리: `["packages/web/src/orders/**", "services/orders/**", "packages/db/orders/**"]`). `frontend-orders/`, `backend-orders/` 처럼 쪼개지 않는다.
-5. 후보를 보여주고 "이대로 사용/추가/제거하시겠어요?" 한 번 확인.
-6. 사용자가 자연어로 답하면 글롭으로 변환해 저장.
+1. ADR 의 Decision / Mermaid / 제목에서 도메인 키워드(엔티티명·동작·API path·상태값) 추출.
+2. `Glob`/`Grep` 으로 그 키워드가 사는 코드를 찾는다 — vertical slice 프로젝트면 보통 `src/features/<feature>/`, 레이어 단위 모노레포면 여러 레이어 폴더(`packages/web/...`, `services/...`)에 흩어져 있다. 카테고리 키(`auth`, `orders`)가 디렉토리명과 일치하는 경우가 많으니 첫 후보로 삼는다.
+3. 찾은 범위가 ADR Decision 과 맞는지 대조한 뒤 그 범위에서 검증한다. 한 번 찾은 범위는 그 명령 실행 동안만 재사용하고 매핑에 영구 저장하지 않는다.
 
-**추측 금지**: 코드 베이스를 한 번도 보지 않은 채 글롭을 만들지 않는다. 사용자가 "잘 모르겠다" 면 가장 보수적인 글롭(상위 디렉토리 `**`)을 두고 이후 `/adr-sync` 에서 좁히자고 안내한다.
+**추측 금지**: 코드 베이스를 한 번도 보지 않은 채 범위를 단정하지 않는다 — 항상 `Glob`/`Grep` 으로 실제 구조를 확인한 뒤 검증한다.

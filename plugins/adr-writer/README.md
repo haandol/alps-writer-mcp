@@ -1,8 +1,8 @@
 # adr-writer
 
-ADR-driven development cycle for Claude Code. Author Architecture Decision Records, implement them in code, and keep the two in sync — with hooks that surface ADR ↔ code drift on every edit.
+ADR-driven development cycle for Claude Code. Author Architecture Decision Records, implement them in code, and keep the two in sync — with an ADR-first hook that re-injects the ADR map every turn.
 
-**Standalone**: adr-writer requires no ALPS PRD and never references the `alps-writer` plugin. ADRs are its first-class artifact; code is implemented from ADRs, and the link between them lives entirely in your project's `docs/adr/.mapping.json`.
+**Standalone**: adr-writer requires no ALPS PRD and never references the `alps-writer` plugin. ADRs are its first-class artifact; code is implemented from ADRs. The ADR ↔ code link is not stored anywhere — an agent finds the code an ADR governs by reading the ADR and searching the repo, so refactors never churn a stored mapping.
 
 ## Install
 
@@ -20,18 +20,17 @@ ADR-driven development cycle for Claude Code. Author Architecture Decision Recor
 | `/adr-sync [id] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                    |
 | `/adr-rollup <id>`         | Consolidate ADR groups whose evolution history of one logical decision is split                       |
 
-The shared authoring rules and procedures (codePaths recommendation, category-split, Status transitions) live in `docs/adr/` (`README.md`, `authoring-rules.md`, `structure.md`) — seeded from this plugin's `templates/adr/` on first run. Every command reads them as the single source of truth.
+The shared authoring rules and procedures (category-split, Status transitions, finding the code an ADR governs) live in `docs/adr/` (`README.md`, `authoring-rules.md`, `structure.md`) — seeded from this plugin's `templates/adr/` on first run. Every command reads them as the single source of truth.
 
-## Hooks
+## Hook
 
-Two hooks support the main session — **no external LLM calls**; the main model classifies text and decides.
+One hook supports the main session — **no external LLM calls**; the main model classifies text and decides.
 
-| Hook               | When it fires        | Role                                                                                                                                                                    |
-| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UserPromptSubmit` | Every user message   | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn                                                                                           |
-| `PreToolUse`       | Edit/Write/MultiEdit | Editing code: detect missing mappings, stale ADRs, uncovered source → warn (or block). Editing a PRD `*.alps.xml`: warn-only notice for downstream ADRs that now lag it |
+| Hook               | When it fires      | Role                                                                          |
+| ------------------ | ------------------ | ----------------------------------------------------------------------------- |
+| `UserPromptSubmit` | Every user message | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn |
 
-Default mode is `warn`. Export `ALPS_ADR_ENFORCE=block` to make `PreToolUse` deny edits to stale or unmapped **code** sources (exit 2, with the reason passed through model context for self-correction). PRD edits are never blocked — the PRD is the most-upstream source, so a PRD edit only emits a warn-only propagation notice.
+The directive prompts the model to read (or author) the relevant ADR before changing behavior. It never blocks an edit — keeping the PRD → ADR → code flow intact is the model's job, re-prompted every turn so it survives session compaction.
 
 ## Relationship to alps-writer
 

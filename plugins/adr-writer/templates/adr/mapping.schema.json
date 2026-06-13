@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ALPS-ADR Mapping",
-  "description": "Maps ALPS Section 7 features to ADRs and the code paths they govern. Read by alps-writer plugin hooks to detect ADR drift.",
+  "description": "Maps ALPS Section 7 features to the ADRs that record their decisions. The link between an ADR and the code that implements it is not stored here — agents locate the relevant code by reading the ADR and searching the repo.",
   "type": "object",
   "required": ["categories"],
   "properties": {
@@ -14,7 +14,7 @@
       "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/ — a single segment for top-level categories (e.g., 'auth') or a slash-separated path of at most two segments for sub-vertical-slice folders (e.g., 'auth/login'). See README 'Category id format'.",
       "additionalProperties": {
         "type": "object",
-        "required": ["codePaths", "adrs"],
+        "required": ["adrs"],
         "properties": {
           "feature": {
             "type": "string",
@@ -23,21 +23,6 @@
           "alpsFeatureId": {
             "type": "string",
             "description": "Stable id of the feature in the ALPS document (e.g., F-AUTH-01)."
-          },
-          "alpsRevision": {
-            "type": "string",
-            "description": "Snapshot of the ALPS Section 7 feature this category's ADRs were last derived from — a short content digest or one-line summary written by feature-to-adr at conversion time. On re-run, feature-to-adr compares the current feature against this value to detect that the PRD moved ahead of the ADRs (PRD → ADR propagation). Opaque to hooks; compared only by the cycle skills."
-          },
-          "syncStatus": {
-            "type": "string",
-            "enum": ["synced", "pending-review"],
-            "description": "Propagation state of this category relative to its ALPS feature. 'synced' = ADRs reflect the current feature. 'pending-review' = the PRD feature changed since alpsRevision and the ADRs have not yet caught up; set by feature-to-adr (update mode) / adr-sync, cleared once the ADRs are re-reconciled. Absent is treated as 'synced'."
-          },
-          "codePaths": {
-            "type": "array",
-            "description": "Glob patterns identifying source files governed by this category's ADRs.",
-            "items": { "type": "string" },
-            "minItems": 1
           },
           "adrs": {
             "type": "array",

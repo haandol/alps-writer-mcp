@@ -52,9 +52,8 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 ├── skills/               # adr-new, adr-impl, adr-sync, adr-rollup
 ├── agents/               # adr-reviewer subagent
 ├── hooks/
-│   ├── hooks.json        # PreToolUse + UserPromptSubmit registration
-│   ├── check-adr-sync.mjs    # PreToolUse(Edit|Write|MultiEdit) — warn/block on stale ADR (code); warn-only on PRD edits
-│   └── surface-adr-context.mjs  # UserPromptSubmit — inject related ADR paths
+│   ├── hooks.json        # UserPromptSubmit registration
+│   └── surface-adr-context.mjs  # UserPromptSubmit — inject ADR-first directive + mapping snapshot
 └── templates/adr/
     ├── README.md         # ADR writing rules (copied into docs/adr/ on /adr-new)
     ├── authoring-rules.md, structure.md
@@ -97,16 +96,15 @@ The repo root is a Claude Code **marketplace** (`.claude-plugin/marketplace.json
 - **alps-writer** runs its MCP server from the committed bundle (`command: node`, `args: ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"]`) plus its local `skills/`. No hooks, no npm/npx.
 - **adr-writer** ships local `skills/`, `agents/`, `hooks/`, and `templates/adr/`. No MCP.
 
-Hook scripts (in adr-writer) are Node ESM (`.mjs`) and read NDJSON events from stdin per the Claude Code hooks spec. They use only Node built-ins (no extra deps), so the plugin requires nothing beyond a Node.js >= 20 runtime.
+The hook script (in adr-writer) is Node ESM (`.mjs`) and reads NDJSON events from stdin per the Claude Code hooks spec. It uses only Node built-ins (no extra deps), so the plugin requires nothing beyond a Node.js >= 20 runtime.
 
 ### Cycle hooks layout (adr-writer)
 
-| File                            | Event              | Purpose                                                                                                                                                             |
-| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject the ADR-first directive + current `docs/adr/.mapping.json` snapshot on every user turn.                                                                      |
-| `hooks/check-adr-sync.mjs`      | `PreToolUse`       | Code edits: warn (or block) on missing ADR / stale ADR / unmapped source. PRD (`*.alps.xml`) edits: warn-only notice for ADRs that now lag the PRD (never blocked). |
+| File                            | Event              | Purpose                                                                                        |
+| ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
+| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject the ADR-first directive + current `docs/adr/.mapping.json` snapshot on every user turn. |
 
-The cycle relies on the **main session model** for text understanding — none of the hooks call an auxiliary LLM and none use intent regex. Hooks supply structured context; classification stays with the main model.
+The cycle relies on the **main session model** for text understanding — the hook calls no auxiliary LLM and uses no intent regex. It supplies structured context; classification (and keeping the PRD → ADR → code flow intact) stays with the main model. There is deliberately no `PreToolUse` enforcement hook: the ADR ↔ code link is not stored, so a non-LLM hook can't map an edited file back to an ADR — that judgment belongs to the model.
 
 The directive is re-injected every turn (UserPromptSubmit) instead of once at SessionStart so it survives Claude Code's session compaction — a one-shot SessionStart injection vanishes after the first compaction, while per-turn injection stays present for the whole session.
 

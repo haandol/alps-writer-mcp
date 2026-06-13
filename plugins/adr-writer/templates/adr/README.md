@@ -36,7 +36,7 @@ flowchart LR
 - 외부 시스템·서비스에 의존할 때의 **fallback / degradation 정책**
 - 한 결정이 가진 **의도된 트레이드오프와 리스크**
 
-**회색지대가 아닌 것들** — 에이전트/리뷰어가 codePaths 의 코드를 직접 읽으면 알 수 있는 것은 ADR 의 일이 아니다. 함수/클래스 책임 분담, 시그니처, 필드 타입, 디자인 패턴, 디렉토리 레이아웃, 에러 메시지, 환경 변수, 의사코드 등은 코드와 docstring·README·AGENTS.md 가 source of truth 다. ADR 에 옮겨 적으면 코드 변경 때마다 ADR 도 함께 갱신해야 하는 부담만 늘고 drift 가 쌓인다. 자세한 금지/유지 항목 표는 [`authoring-rules.md`](./authoring-rules.md#adr에-포함하지-않는-것) 참조.
+**회색지대가 아닌 것들** — 에이전트/리뷰어가 그 ADR 이 다스리는 코드를 직접 읽으면 알 수 있는 것은 ADR 의 일이 아니다. 함수/클래스 책임 분담, 시그니처, 필드 타입, 디자인 패턴, 디렉토리 레이아웃, 에러 메시지, 환경 변수, 의사코드 등은 코드와 docstring·README·AGENTS.md 가 source of truth 다. ADR 에 옮겨 적으면 코드 변경 때마다 ADR 도 함께 갱신해야 하는 부담만 늘고 drift 가 쌓인다. 자세한 금지/유지 항목 표는 [`authoring-rules.md`](./authoring-rules.md#adr에-포함하지-않는-것) 참조.
 
 ### 의존성은 단방향, 참조는 어느 방향으로도 직접 적지 않는다
 
@@ -66,7 +66,7 @@ flowchart RL
 
 ADR 에 한 줄을 적기 전에 다음을 묻는다.
 
-> "에이전트가 이 카테고리의 codePaths 를 그대로 읽으면, 이 사실을 발견할 수 있는가?"
+> "에이전트가 이 ADR 이 다스리는 코드를 그대로 읽으면, 이 사실을 발견할 수 있는가?"
 >
 > **YES** → ADR 에 넣지 않는다 (코드가 source of truth).
 > **NO** → 회색지대 후보다. 그 다음으로 [리트머스 테스트](./authoring-rules.md#두-단계-필터)를 통과해야 ADR 에 들어간다.

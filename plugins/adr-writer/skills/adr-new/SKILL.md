@@ -32,8 +32,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 1. **어떤 문제/요구가 이 결정을 부르고 있나?** (Context)
 2. **이 결정을 변별하는 압력·제약·요구사항은 무엇인가?** (Decision Drivers — 3-5개. "확장성", "유지보수성" 같은 일반 품질 속성이 아니라 옵션 사이의 선택을 실제로 가르는 사실/제약. 작성 규칙은 `authoring-rules.md` "Decision Drivers" 참조). 사용자가 단답이면 "성능·보안·비용·복잡도·팀 역량·일정 중 어떤 것이 이 결정을 좁히고 있나요?" 로 한 번 더 유도
 3. **어떤 선택을 하려고 하는가? 핵심 한 줄.** (Decision)
-4. **검토했지만 채택하지 않은 다른 안이 있는가? 최소 2개의 현실적 대안을 받는다** (대안 검토 — `authoring-rules.md` "대안 검토 — 최소 2개 이상" 참조. 사용자가 "그냥 이거 한 가지밖에 생각 안 했다" 면 한 번 되묻는다 — "이전에 한 번이라도 검토 테이블에 올랐던 다른 접근이 있나요? 가령 직접 구현 / 외부 서비스 / 다른 라이브러리. 진짜로 외길이라면 ADR 보다는 docstring·README 영역일 수 있어요." 그래도 없다면 BLOCK 으로 7단계 검토에서 잡힌다 — 임의로 strawman 을 만들지 않는다)
-5. **이 결정이 코드의 어느 영역을 바꾸는가?** (codePaths 입력 — 4 단계에서 더 다듬는다)
+4. **검토했지만 채택하지 않은 다른 안이 있는가? 최소 2개의 현실적 대안을 받는다** (대안 검토 — `authoring-rules.md` "대안 검토 — 최소 2개 이상" 참조. 사용자가 "그냥 이거 한 가지밖에 생각 안 했다" 면 한 번 되묻는다 — "이전에 한 번이라도 검토 테이블에 올랐던 다른 접근이 있나요? 가령 직접 구현 / 외부 서비스 / 다른 라이브러리. 진짜로 외길이라면 ADR 보다는 docstring·README 영역일 수 있어요." 그래도 없다면 BLOCK 으로 자동 검토에서 잡힌다 — 임의로 strawman 을 만들지 않는다)
 
 사용자가 한 번에 모두 답하면 그대로 받고, 단답이면 1-2 라운드로 끊어 묻는다. 답을 모르겠다고 하면 추측해 채우지 말고 "이 부분은 비워둔 채 Proposed 로 저장하고, /adr-impl 단계에서 보강할까요?" 로 합의.
 
@@ -49,20 +48,15 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 - **Decision은 vertical slice로 묘사** — 한 단락 또는 sequenceDiagram으로 사용자 동작 → API → 데이터 변형까지 끊김 없이 잇는다. 한 피쳐 카테고리에서 UI/API/Data 결정을 모두 다루는 것이 정상이며, 레이어별 ADR로 쪼개지 않는다. 비동기·상태 전이가 핵심이면 stateDiagram-v2 / flowchart 사용
 - 금지/유지 항목 상세는 `authoring-rules.md` 참조 (다이어그램 내부도 동일하게 적용)
 
-### 4. codePaths 추천 + 확인
+### 4. 매핑 갱신
 
-`structure.md` "codePaths 추천 절차" 를 그대로 따른다 — 2단계 4번에서 받은 영역과 ADR Decision 키워드를 입력으로 전달.
-
-### 5. 매핑 갱신
-
-`docs/adr/.mapping.json` (스키마: `${CLAUDE_PLUGIN_ROOT}/templates/adr/mapping.schema.json`)
+`docs/adr/.mapping.json` (스키마: `${CLAUDE_PLUGIN_ROOT}/templates/adr/mapping.schema.json`). 매핑은 ALPS feature ↔ ADR 관계만 저장한다 — **ADR ↔ 코드 경로는 저장하지 않는다** (코드는 ADR 을 읽고 그때그때 찾는다).
 
 ```json
 {
   "categories": {
     "<category>": {
       "feature": "<ADR 제목 또는 카테고리를 대표하는 한 줄>",
-      "codePaths": ["<4단계에서 확인된 글롭들>"],
       "adrs": ["docs/adr/<category>/NNNN-...md"],
       "tableDocs": ["<DB 변경이 있고 docs/tables/ 또는 schema.prisma 등을 갱신했다면>"]
     }
@@ -70,23 +64,23 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 }
 ```
 
-- 같은 카테고리에 이미 entry 가 있으면 `adrs` 배열에 새 ADR 경로를 push 하고 `codePaths` 는 합집합으로 갱신.
+- 같은 카테고리에 이미 entry 가 있으면 `adrs` 배열에 새 ADR 경로를 push 한다.
 - ALPS PRD 가 함께 있는 프로젝트라면 `alpsDocument`, `alpsFeatureId` 도 채운다 — 없으면 둘 다 생략한다 (필수 필드 아님).
 
-### 6. README 인덱스 갱신
+### 5. README 인덱스 갱신
 
 `docs/adr/README.md` 의 "카테고리별 ADR 목록" 에 한 줄 요약을 추가한다 — 이 한 줄이 다음 `/adr-sync --quick` 의 진입점이므로 본문 변경 시 함께 갱신해야 한다.
 
-### 7. 자동 검토 (adr-reviewer 위임)
+### 6. 자동 검토 (adr-reviewer 위임)
 
 저장 직전 `adr-reviewer` subagent 를 호출해 격리된 컨텍스트에서 룰 검증을 받는다.
 
 - 입력: 작성된 ADR 파일 경로, 매핑 entry 변경 전/후, (있다면) ALPS Section 7 발췌
 - 출력: `PASS` / `FIX_REQUIRED` / `BLOCK` punch list
 
-`PASS` 가 아니면 결과를 사용자에게 요약해 보여주고, `FIX_REQUIRED` 항목은 본 세션에서 직접 패치한다. `BLOCK` 이면 ADR 분리 또는 보조 문서 동시 작업이 필요하므로 8 단계로 가지 말고 3 단계로 돌아간다.
+`PASS` 가 아니면 결과를 사용자에게 요약해 보여주고, `FIX_REQUIRED` 항목은 본 세션에서 직접 패치한다. `BLOCK` 이면 ADR 분리 또는 보조 문서 동시 작업이 필요하므로 7 단계로 가지 말고 3 단계로 돌아간다.
 
-### 8. 사용자 확인
+### 7. 사용자 확인
 
 검토를 통과한 ADR 과 매핑을 다음 형식으로 보여주고 승인 요청:
 
@@ -96,7 +90,6 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 **Decision (요약)**: <2-3문장>
 **Decision Drivers**: <3-5개 한 줄씩>
 **검토 대안**: <옵션 N개 — 채택안 + 미채택안들>
-**영향 범위 (codePaths)**: <글롭 목록>
 **선행 조건**: <의존 ADR 또는 없음>
 
 이대로 `Proposed`(미구현)로 저장하고 구현(/adr-impl)으로 넘어갈까요? 구현·테스트가 끝나면 `/adr-impl`이 자동으로 `Accepted`로 전환합니다.
@@ -104,7 +97,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 
 승인 전까지 코드 수정을 시작하지 않는다. 사용자가 수정을 요청하면 ADR 을 갱신한 뒤 다시 확인.
 
-### 9. 다음 단계 안내
+### 8. 다음 단계 안내
 
 저장 완료 후 한 줄로 다음 단계를 제시한다:
 
