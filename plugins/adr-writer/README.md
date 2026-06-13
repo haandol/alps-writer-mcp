@@ -26,12 +26,12 @@ The shared authoring rules and procedures (codePaths recommendation, category-sp
 
 Two hooks support the main session — **no external LLM calls**; the main model classifies text and decides.
 
-| Hook               | When it fires        | Role                                                                              |
-| ------------------ | -------------------- | --------------------------------------------------------------------------------- |
-| `UserPromptSubmit` | Every user message   | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn     |
-| `PreToolUse`       | Edit/Write/MultiEdit | Detect missing mappings, stale ADRs, and uncovered source areas → warn (or block) |
+| Hook               | When it fires        | Role                                                                                                                                                                    |
+| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UserPromptSubmit` | Every user message   | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn                                                                                           |
+| `PreToolUse`       | Edit/Write/MultiEdit | Editing code: detect missing mappings, stale ADRs, uncovered source → warn (or block). Editing a PRD `*.alps.xml`: warn-only notice for downstream ADRs that now lag it |
 
-Default mode is `warn`. Export `ALPS_ADR_ENFORCE=block` to make `PreToolUse` deny edits to stale or unmapped sources (exit 2, with the reason passed through model context for self-correction).
+Default mode is `warn`. Export `ALPS_ADR_ENFORCE=block` to make `PreToolUse` deny edits to stale or unmapped **code** sources (exit 2, with the reason passed through model context for self-correction). PRD edits are never blocked — the PRD is the most-upstream source, so a PRD edit only emits a warn-only propagation notice.
 
 ## Relationship to alps-writer
 

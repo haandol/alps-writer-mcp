@@ -53,7 +53,7 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 ├── agents/               # adr-reviewer subagent
 ├── hooks/
 │   ├── hooks.json        # PreToolUse + UserPromptSubmit registration
-│   ├── check-adr-sync.mjs    # PreToolUse(Edit|Write|MultiEdit) — warn/block on stale ADR
+│   ├── check-adr-sync.mjs    # PreToolUse(Edit|Write|MultiEdit) — warn/block on stale ADR (code); warn-only on PRD edits
 │   └── surface-adr-context.mjs  # UserPromptSubmit — inject related ADR paths
 └── templates/adr/
     ├── README.md         # ADR writing rules (copied into docs/adr/ on /adr-new)
@@ -101,10 +101,10 @@ Hook scripts (in adr-writer) are Node ESM (`.mjs`) and read NDJSON events from s
 
 ### Cycle hooks layout (adr-writer)
 
-| File                            | Event              | Purpose                                                                                        |
-| ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
-| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject the ADR-first directive + current `docs/adr/.mapping.json` snapshot on every user turn. |
-| `hooks/check-adr-sync.mjs`      | `PreToolUse`       | Warn (or block) on missing ADR / stale ADR / unmapped source edits.                            |
+| File                            | Event              | Purpose                                                                                                                                                             |
+| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject the ADR-first directive + current `docs/adr/.mapping.json` snapshot on every user turn.                                                                      |
+| `hooks/check-adr-sync.mjs`      | `PreToolUse`       | Code edits: warn (or block) on missing ADR / stale ADR / unmapped source. PRD (`*.alps.xml`) edits: warn-only notice for ADRs that now lag the PRD (never blocked). |
 
 The cycle relies on the **main session model** for text understanding — none of the hooks call an auxiliary LLM and none use intent regex. Hooks supply structured context; classification stays with the main model.
 
