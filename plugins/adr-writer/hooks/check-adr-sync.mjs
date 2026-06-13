@@ -287,10 +287,12 @@ function main() {
     return emit({
       block: MODE === "block",
       message:
-        `[alps-writer] ADR may be stale for category "${cat.id}".\n` +
+        `[alps-writer] Code is newer than the mapped ADR for category "${cat.id}" (>24h).\n` +
         `  Editing: ${rel}\n` +
         `  Mapped ADRs:\n${adrList}\n` +
-        `  Code is newer than ADR by >24h. Consider /adr-sync ${cat.id} before/after this edit.\n` +
+        `  코드가 ADR 보다 앞서 있습니다. 다음 중 어느 경우인지 구분하세요:\n` +
+        `    (a) ADR 결정을 그대로 구현/보강한 것 → /adr-impl 이 Status 를 Accepted 로 올리거나, /adr-sync ${cat.id} 가 구현 사실을 정렬.\n` +
+        `    (b) ADR 결정 자체를 코드에서 바꾼 것 → 먼저 ADR 을 갱신(또는 새 ADR 로 supersede)해야 한다. 회색지대 결정은 ADR 이 권위 — 코드에 맞춰 ADR 을 덮어쓰지 않는다.\n` +
         (MODE === "block"
           ? `  (ALPS_ADR_ENFORCE=block — write blocked until ADR is reviewed.)`
           : `  (warn mode — proceeding.)`),
