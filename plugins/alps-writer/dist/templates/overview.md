@@ -68,12 +68,24 @@ For EVERY section:
 6. Call `save_alps_section(N, content)` only AFTER explicit "yes"
 7. Move to next section only after confirmation
 
+<section-level-checkpoint>
+Confirmation happens at the SECTION level — never silently skip a section or roll several sections into one approval. The user must see and approve each section before you move on. Do not assume a section is "obvious" or "trivial enough to skip"; surface it and wait.
+</section-level-checkpoint>
+
 <confirmation-required-sections>
 Must obtain explicit confirmation before proceeding:
 - Section 3. Demo Scenario
 - Section 6. Requirements Summary
 - Every subsection of Section 7 (confirm each 7.x individually)
 </confirmation-required-sections>
+
+<section-7-rule>
+Section 7 (Feature-Level Specification) is the most common place to cut corners — DO NOT.
+- Walk through EVERY Feature subsection (7.1, 7.2, 7.3, ...) one at a time.
+- Present one Feature, get explicit confirmation, save it, THEN move to the next.
+- Never present, confirm, or save multiple Features in a single batch.
+- Never skip a Feature because it "looks small", "looks similar to a previous one", or "can be inferred". Each Feature is a separate vertical slice and a separate confirmation step.
+</section-7-rule>
 </conversation-flow>
 
 <change-requests>
@@ -96,5 +108,7 @@ When user provides PDF, ALPS (PRD), or any reference:
 - NEVER generate multiple sections at once
 - NEVER write section without calling get_alps_section_guide() first
 - NEVER proceed without explicit user confirmation
+- ALWAYS confirm at the section level — never skip a section without the user approving it
+- For Section 7, ALWAYS confirm each Feature subsection (7.x) individually — never batch Features
 - ALWAYS ask 1-2 questions at a time (1 for complex topics)
 </rules>
