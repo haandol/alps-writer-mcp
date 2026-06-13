@@ -31035,7 +31035,7 @@ ${inner.trim()}
       filename: f
     }));
   }
-  getSection(section, includeExamples = true) {
+  getSection(section, includeExamples = false) {
     const prefix = String(section).padStart(2, "0") + "-";
     const file2 = fs.readdirSync(CHAPTERS_DIR).find((f) => f.startsWith(prefix) && f.endsWith(".xml"));
     if (!file2) return `Section ${section} not found.`;
@@ -31044,7 +31044,7 @@ ${inner.trim()}
       includeExamples
     );
   }
-  getFullTemplate(includeExamples = true) {
+  getFullTemplate(includeExamples = false) {
     const parts = [this.getOverview(), "\n---\n"];
     for (const f of fs.readdirSync(CHAPTERS_DIR).filter((f2) => f2.endsWith(".xml")).sort()) {
       parts.push(

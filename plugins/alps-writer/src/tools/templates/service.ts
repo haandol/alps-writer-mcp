@@ -63,7 +63,7 @@ export class TemplateService {
       }));
   }
 
-  getSection(section: number, includeExamples = true): string {
+  getSection(section: number, includeExamples = false): string {
     const prefix = String(section).padStart(2, "0") + "-";
     const file = fs
       .readdirSync(CHAPTERS_DIR)
@@ -75,7 +75,7 @@ export class TemplateService {
     );
   }
 
-  getFullTemplate(includeExamples = true): string {
+  getFullTemplate(includeExamples = false): string {
     const parts = [this.getOverview(), "\n---\n"];
     for (const f of fs
       .readdirSync(CHAPTERS_DIR)
