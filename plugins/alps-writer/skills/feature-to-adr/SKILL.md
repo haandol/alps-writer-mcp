@@ -103,7 +103,6 @@ ALPS feature 가 워크숍식 ID 를 가진 경우, `/adr-new` 가 부여하는 
 
 - `alpsDocument` — 현재 `.alps.xml` 경로.
 - 해당 카테고리 entry 의 `alpsFeatureId` — 명시적 Feature ID 가 있으면 기록.
-- 해당 카테고리 entry 의 `alpsFeatureId` — 명시적 Feature ID 가 있으면 기록.
 - 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 예: 6.3 에 `F3 -->|depends on| F1` 이 있으면 `f3` 카테고리의 `dependsOn` 에 `f1` 을 넣는다 (카테고리 키 변환 규칙은 2단계와 동일). 의존이 없는 feature 는 `dependsOn` 을 생략하거나 `[]` 로 둔다. 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다.
 - 해당 카테고리 entry 의 `alpsRevision` — 이번에 변환한 Section 7 feature 의 짧은 content digest 또는 한 줄 요약을 기록한다. 다음 `/feature-to-adr` 재실행 때 이 값과 현재 feature 내용을 비교해 changed 를 감지한다 (1단계 변경 감지의 기준값). `syncStatus` 는 신규 변환 시 `synced` 로 둔다.
 
