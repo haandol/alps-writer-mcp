@@ -123,7 +123,9 @@ ADR이 의존하는 비-ADR 문서도 함께 본다:
 grep -rn "ADR <카테고리>/<번호>\|docs/adr/<카테고리>" -- packages/ apps/ src/ .claude/
 
 # (b) ADR 본문에 남은 PRD 경로/Section 인용 — ADR → PRD 역참조 (원칙상 0건)
-grep -rnE "\.alps\.xml|ALPS Section|Section [0-9]" -- docs/adr/
+# ALPS PRD Section 인용만 노린다. "Section 6.3", "ALPS Section 7", feature-id 형태에
+# 한정해 ADR 자체의 "## Status" 류 일반 표현을 오탐하지 않게 한다.
+grep -rnE "\.alps\.xml|ALPS Section|Section [0-9]+\.[0-9]|F-[A-Z]+-[0-9]" -- docs/adr/
 ```
 
 (a) 에서 찾은 코드→ADR 역참조는 코드에서 제거해 `.mapping.json` 으로, (b) 에서 찾은 ADR→PRD 역참조는 ADR 본문에서 제거해 `alpsDocument`/`alpsFeatureId` 로 이전한다 — 둘 다 같은 PR 에서 처리. `docs/adr/` 내부의 ADR ↔ ADR Related 링크는 정상이므로 (a) 의 grep 대상에서 코드/소스 디렉토리만 둔다.

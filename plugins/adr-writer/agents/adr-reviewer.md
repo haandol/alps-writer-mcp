@@ -1,6 +1,6 @@
 ---
 name: adr-reviewer
-description: Review an ADR draft (or ADR + mapping change) against the docs/adr authoring rules in an isolated context. Use this before finalizing a new ADR via /feature-to-adr, or whenever you want a second pass that doesn't pollute the main session. Returns a punch list — pass / fix / block — without rewriting the ADR itself.
+description: Review an ADR draft (or ADR + mapping change) against the docs/adr authoring rules in an isolated context. Use this before finalizing a new ADR via /adr-new (or /feature-to-adr, which delegates to it), or whenever you want a second pass that doesn't pollute the main session. Returns a punch list — pass / fix / block — without rewriting the ADR itself.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -10,7 +10,8 @@ ADR 초안과 매핑 변경을 격리된 컨텍스트에서 점검하고 검토 
 
 ## 언제 호출되는가
 
-- `/feature-to-adr` 가 ADR 초안을 작성한 직후, 사용자에게 승인을 요청하기 전
+- `/adr-new` 가 ADR 초안을 작성한 직후, 사용자에게 승인을 요청하기 전 (정식 호출 경로 — reviewer 를 직접 부르는 주체)
+- `/feature-to-adr` 를 통한 경우 — ADR 작성을 `/adr-new` 에 위임하므로 reviewer 호출도 그 `/adr-new` 안에서 일어난다
 - 사람이 ADR 을 직접 손으로 편집한 뒤 second-opinion 이 필요할 때
 
 호출자는 다음을 prompt 로 넘긴다:
