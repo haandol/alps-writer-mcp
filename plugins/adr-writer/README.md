@@ -38,4 +38,4 @@ The companion [`alps-writer`](https://github.com/haandol/alps-writer-plugins) pl
 
 ## License
 
-[Apache-2.0](../../LICENSE)
+[MIT](../../LICENSE)

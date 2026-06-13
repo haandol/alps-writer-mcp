@@ -7,7 +7,7 @@
   },
   "homepage": "https://github.com/haandol/alps-writer-plugins",
   "repository": "https://github.com/haandol/alps-writer-plugins",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "keywords": [
     "adr",
     "architecture-decision-record",

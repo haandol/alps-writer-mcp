@@ -18,7 +18,7 @@
         "name": "haandol"
       },
       "homepage": "https://github.com/haandol/alps-writer-plugins",
-      "license": "Apache-2.0",
+      "license": "MIT",
       "category": "development",
       "tags": ["alps", "prd", "spec-driven", "mcp"],
       "strict": false
@@ -32,7 +32,7 @@
         "name": "haandol"
       },
       "homepage": "https://github.com/haandol/alps-writer-plugins",
-      "license": "Apache-2.0",
+      "license": "MIT",
       "category": "development",
       "tags": ["adr", "spec-driven", "drift-detection", "hooks"],
       "strict": false
