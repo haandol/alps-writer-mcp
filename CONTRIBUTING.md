@@ -51,6 +51,7 @@ We follow the [Conventional Commits v1.0.0](https://www.conventionalcommits.org/
 | `adr`       | adr-writer plugin (skills, hooks, agents, templates)        |
 | `plugin`    | Plugin manifests / marketplace / distribution               |
 | `deps`      | Dependencies (`package.json`)                               |
+| `release`   | Version bumps across plugin manifests + marketplace         |
 
 ### Subject (required)
 
