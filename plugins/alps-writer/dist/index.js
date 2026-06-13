@@ -31061,9 +31061,10 @@ ${inner.trim()}
     const refs = SECTION_REFERENCES[section];
     if (refs) {
       const refNames = refs.map((r) => `Section ${r} (${SECTION_TITLES[r]})`);
+      const readCalls = refs.map((r) => `read_alps_section(${r})`).join(", ");
       return `\u26A0\uFE0F REQUIRED: This section depends on ${refNames.join(", ")}.
 Before proceeding, you MUST:
-1. Call read_alps_section(${refs[0]}) to review referenced content
+1. Call ${readCalls} to review every referenced section
 2. Summarize key points from referenced section(s) in your response
 3. If referenced sections are incomplete, warn the user first
 
@@ -31328,7 +31329,7 @@ var DocumentController = class {
 
 // src/index.ts
 var server = new McpServer(
-  { name: "alps-writer", version: "0.3.0" },
+  { name: "alps-writer", version: "0.4.2" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 

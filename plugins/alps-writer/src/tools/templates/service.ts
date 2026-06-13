@@ -97,9 +97,10 @@ export class TemplateService {
     const refs = SECTION_REFERENCES[section];
     if (refs) {
       const refNames = refs.map((r) => `Section ${r} (${SECTION_TITLES[r]})`);
+      const readCalls = refs.map((r) => `read_alps_section(${r})`).join(", ");
       return `⚠️ REQUIRED: This section depends on ${refNames.join(", ")}.
 Before proceeding, you MUST:
-1. Call read_alps_section(${refs[0]}) to review referenced content
+1. Call ${readCalls} to review every referenced section
 2. Summarize key points from referenced section(s) in your response
 3. If referenced sections are incomplete, warn the user first
 
