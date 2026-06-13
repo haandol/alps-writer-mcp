@@ -38,7 +38,7 @@ flowchart LR
 
 **회색지대가 아닌 것들** — 에이전트/리뷰어가 codePaths 의 코드를 직접 읽으면 알 수 있는 것은 ADR 의 일이 아니다. 함수/클래스 책임 분담, 시그니처, 필드 타입, 디자인 패턴, 디렉토리 레이아웃, 에러 메시지, 환경 변수, 의사코드 등은 코드와 docstring·README·AGENTS.md 가 source of truth 다. ADR 에 옮겨 적으면 코드 변경 때마다 ADR 도 함께 갱신해야 하는 부담만 늘고 drift 가 쌓인다. 자세한 금지/유지 항목 표는 [`authoring-rules.md`](./authoring-rules.md#adr에-포함하지-않는-것) 참조.
 
-### 의존성은 단방향, 참조는 어느 방향으로도 박지 않는다
+### 의존성은 단방향, 참조는 어느 방향으로도 직접 적지 않는다
 
 PRD → ADR → 코드 는 **논리적 단방향 의존**이다. 안쪽(=상류) 레이어가 바뀌면 바깥쪽이 따라 바뀌지만, 그 반대는 일어나면 안 된다.
 
@@ -52,11 +52,15 @@ flowchart RL
     ADR -. 논리적 의존 .-> PRD
 ```
 
-- **ADR → 코드 참조 금지**: ADR 에 파일·함수·줄 번호를 박지 않는다. 자세한 규칙은 [`authoring-rules.md`](./authoring-rules.md#코드-참조-깊이--폴더-단위까지만).
-- **코드 → ADR 참조 금지**: 주석·상수·import 에 ADR ID 나 경로를 박지 않는다. ADR 번호는 split / rollup / supersede 로 이동하므로, 코드에 박혀 있으면 결정이 바뀌지 않았는데도 구조 변경이 코드 줄줄이 수정을 강제한다.
-- **ADR 결정이 바뀌면 코드는 바뀐다** — 그게 단방향 의존이 의도하는 정상 흐름이다.
-- **연결은 외부 매핑 레이어에 둔다**: ADR ↔ 코드 경로 ↔ ALPS feature 의 관계는 [`docs/adr/.mapping.json`](./structure.md#alps--adr-매핑) 한 곳에만 적는다.
-- **안정성 기울기 검증**: 변경 빈도가 `Code >> ADR >> PRD` 를 따라야 한다. 휘발성 높은 레이어의 변경이 안정 레이어의 변경을 끌고 다닌다면, 화살표가 잘못 그려진 것 — 보통 ADR 이 코드 디테일을 들고 있거나 코드가 ADR ID 를 들고 있다.
+참조는 **양쪽 변(PRD↔ADR, ADR↔코드) 어디에도 직접 적지 않는다** — 연결은 외부 매핑 레이어 한 곳에만 둔다.
+
+- **ADR → 코드 참조 금지**: ADR 에 파일·함수·줄 번호를 적지 않는다. 자세한 규칙은 [`authoring-rules.md`](./authoring-rules.md#코드-참조-깊이--폴더-단위까지만).
+- **코드 → ADR 참조 금지**: 주석·상수·import 에 ADR ID 나 경로를 남기지 않는다. ADR 번호는 split / rollup / supersede 로 이동하므로, 코드가 ADR ID 를 들고 있으면 결정이 바뀌지 않았는데도 구조 변경이 코드 줄줄이 수정을 강제한다.
+- **ADR → PRD 참조 금지**: ADR 본문(Context·Related 포함)에 ALPS 파일 경로·Section 번호·feature-id 를 적지 않는다. ADR 은 PRD 의 *동기를 흡수*하되 PRD 를 _가리키지_ 않는다 — PRD feature 가 split / 재번호 / 재구성되면, 결정이 바뀌지 않았는데도 ADR 본문 수정을 강제하기 때문이다. PRD 의 user story·acceptance criteria 를 ADR 에 복사하지도 않는다 (중복 → drift).
+- **PRD → ADR 참조 금지**: ALPS 문서가 특정 ADR ID·경로를 본문에 적지 않는다. PRD 는 가장 안정적인 계약이며 하류 산출물을 알지 못한다.
+- **ADR 결정이 바뀌면 코드는 바뀐다 / PRD 가 바뀌면 ADR·코드가 바뀐다** — 그게 단방향 의존이 의도하는 정상 흐름이다. 역방향(코드 변경이 ADR 을, ADR 변경이 PRD 를 끌고 가는 것)은 일어나면 안 된다.
+- **연결은 외부 매핑 레이어에 둔다**: ALPS feature ↔ ADR ↔ 코드 경로 의 관계는 [`docs/adr/.mapping.json`](./structure.md#alps--adr-매핑) 한 곳에만 적는다 (`alpsDocument`·`alpsFeatureId` 필드). 세 산출물 중 어느 것도 다른 것을 본문에서 직접 가리키지 않고, 이 매핑이 유일한 결합점이다.
+- **안정성 기울기 검증**: 변경 빈도가 `Code >> ADR >> PRD` 를 따라야 한다. 휘발성 높은 레이어의 변경이 안정 레이어의 변경을 끌고 다닌다면, 화살표가 잘못 그려진 것 — 보통 ADR 이 코드 디테일을 들고 있거나, 코드가 ADR ID 를, ADR 이 ALPS 경로를 들고 있다.
 
 ### 코드 직독 테스트 (1차 필터)
 
@@ -109,7 +113,7 @@ ADR 에 한 줄을 적기 전에 다음을 묻는다.
 | **디자인 문서/토큰**      | HOW (시각·인터랙션 관점) | "primary 컬러, 입력 필드 높이 48px, 에러 토스트 패턴"        |
 | **코드/AGENTS.md/README** | HOW (상세 구현)          | "파일 구조, 함수 시그니처, 셋업 명령어"                      |
 
-규칙: ALPS의 user story·acceptance criteria를 ADR에 복사하지 않고 Related 링크만 남긴다. 디자인 토큰 값은 ADR이 아니라 디자인 문서로, 함수 시그니처·파일 경로는 ADR이 아니라 코드와 docstring으로 간다.
+규칙: ALPS의 user story·acceptance criteria를 ADR에 복사하지 않는다. PRD 와의 연결은 ADR 본문(Related 포함)에 링크로 남기지 않고 `.mapping.json` 의 `alpsFeatureId` 에만 둔다 (위 [의존성 모델](#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다) 참조). 디자인 토큰 값은 ADR이 아니라 디자인 문서로, 함수 시그니처·파일 경로는 ADR이 아니라 코드와 docstring으로 간다.
 
 ## 상태
 
@@ -148,7 +152,7 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 
 ## Context
 
-결정이 필요한 배경과 문제. ALPS feature ID가 있으면 첫 줄에 명시.
+결정이 필요한 배경과 문제. PRD 의 비즈니스 동기를 여기서 *흡수*해 서술한다 — ALPS 파일 경로·Section 번호·feature-id 를 본문에 적지 않는다 (PRD 연결은 `.mapping.json` 의 `alpsFeatureId` 에만).
 
 ## Decision Drivers
 
@@ -177,9 +181,10 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 
 ## Related
 
-- ALPS feature: `prd/<doc>.alps.xml` Section 7 #<feature-id>
-- 관련 ADR: [...]
+- 관련 ADR: [...] (같은/의존 카테고리의 ADR 링크 — ADR ↔ ADR 참조는 정상)
 - 스키마/테이블 문서: [...] (DB 변경이 있는 경우)
+
+> PRD(ALPS feature) 와의 연결은 여기 적지 않는다 — `.mapping.json` 의 `alpsDocument`·`alpsFeatureId` 가 유일한 결합점이다.
 ```
 
 ## 카테고리별 ADR 목록

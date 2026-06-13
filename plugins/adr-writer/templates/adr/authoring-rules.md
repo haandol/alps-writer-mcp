@@ -23,7 +23,7 @@ ADR 안에서 코드를 가리킬 때는 **폴더(디렉토리) 단위**까지�
 
 본문, 표, Mermaid 다이어그램 모두에 동일하게 적용된다. 함수명·클래스명·파일명을 본문에서 직접 인용해야 한다면 그 결정은 ADR이 아니라 docstring·README·인라인 주석에 적합한지 다시 판단한다.
 
-대칭으로, **코드 측에서도 ADR ID·경로를 본문에 박지 않는다** — 주석·상수·import 어디에도. ADR ↔ 코드 의 연결은 [`structure.md`](./structure.md#alps--adr-매핑) 의 `.mapping.json` 한 곳에만 둔다. 자세한 근거는 [README 의 의존성 모델](./README.md#의존성은-단방향-참조는-어느-방향으로도-박지-않는다) 참조.
+대칭으로, **코드 측에서도 ADR ID·경로를 본문에 남기지 않는다** — 주석·상수·import 어디에도. 마찬가지로 **ADR 본문에 PRD(ALPS) 경로·Section 번호·feature-id 를 적지 않는다** (Context·Related 포함). ALPS feature ↔ ADR ↔ 코드 의 연결은 [`structure.md`](./structure.md#alps--adr-매핑) 의 `.mapping.json` 한 곳에만 둔다. 자세한 근거는 [README 의 의존성 모델](./README.md#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다) 참조.
 
 ## 다이어그램 내 코드 참조
 
@@ -182,12 +182,13 @@ PR 리뷰어 또는 작성자 본인이 머지 전에 확인한다.
 - [ ] **코드 직독 테스트** — 본문의 모든 단락에 대해 "이 사실이 codePaths 의 코드를 읽으면 자명한가?" 를 물었을 때, 자명한 항목이 본문에 남아 있지 않은가 (자명한 것은 코드가 source of truth)
 - [ ] **회색지대 점검** — 본문에 (a) 채택 근거 / 대안 비교, (b) 비즈니스 규칙의 시스템 번역, (c) 도메인 규칙·상태 전이, (d) 외부 의존 fallback 중 **하나 이상**이 실제로 들어 있는가 (없으면 ADR 의 가치가 약함)
 - [ ] **폴더 단위 이하 코드 참조**가 본문/표/다이어그램 어디에도 남아 있지 않은가
-- [ ] **코드 측 역참조 없음** — 이 ADR 이 다루는 `codePaths` 의 코드(주석·상수·import)에 ADR ID·경로가 박혀 있지 않은가 (연결은 `.mapping.json` 한 곳에만 — `/adr-sync` 5단계가 grep 으로 점검)
+- [ ] **코드 측 역참조 없음** — 이 ADR 이 다루는 `codePaths` 의 코드(주석·상수·import)에 ADR ID·경로가 남아 있지 않은가 (연결은 `.mapping.json` 한 곳에만 — `/adr-sync` 5단계가 grep 으로 점검)
 - [ ] **금지 항목**(코드 스니펫, 구현 상수, 함수 호출 그래프, 필드 타입표, 환경 변수 이름, 의사코드, 전체 JSON, 마이그레이션 명령어)이 들어가지 않았는가
 - [ ] **Decision Drivers** 가 3-5개로 적혀 있고, 의견이 아니라 옵션을 변별하는 사실/제약인가
 - [ ] **대안이 최소 2개** 적혀 있고, 각 대안의 pros/cons 가 Decision Drivers 에 비추어 적혀 있는가 (strawman 아닌가)
 - [ ] **Mermaid 다이어그램**이 필요한 결정인데 누락되지 않았는가
 - [ ] **DB 키 패턴**을 바꿨다면 `docs/tables/{name}.md`(또는 동등 문서)와 양방향 링크가 있는가
-- [ ] **Related**에 ALPS feature ID와 의존 ADR 링크가 모두 있는가
+- [ ] **PRD 역참조 없음** — 본문(Context·Related 포함)에 ALPS 경로·Section 번호·feature-id 가 적혀 있지 않은가 (PRD 연결은 `.mapping.json` 의 `alpsFeatureId` 한 곳에만)
+- [ ] **Related**에 의존 ADR 링크(있다면)가 유효한가 — ADR ↔ ADR 참조는 정상이며, PRD 링크는 넣지 않는다
 - [ ] **한 ADR = 한 결정** 원칙이 지켜졌는가 (분리 신호 없음)
 - [ ] **`.mapping.json`**의 해당 카테고리 entry가 새 ADR을 포함하는가
