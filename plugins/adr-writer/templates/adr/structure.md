@@ -161,7 +161,7 @@ docs/adr/
 
 ### 관련 코드 찾기
 
-`/adr-sync`, `/adr-impl`, `/adr-rollup` 등이 한 ADR 의 코드 정합을 검증할 때, 그 ADR 이 다스리는 코드를 매 실행마다 다음으로 좁힌다 (매핑에 경로를 박아두지 않는 이유: 코드 구조 변경이 안정 레이어인 매핑·ADR 을 끌고 다니지 않게 하려는 것):
+`/adr-sync`, `/adr-impl`, `/adr-rollup` 등이 한 ADR 의 코드 정합을 검증할 때, 그 ADR 이 다스리는 코드를 매 실행마다 다음으로 좁힌다 (매핑에 경로를 저장하지 않는 이유: 코드 구조 변경이 안정 레이어인 매핑·ADR 을 끌고 다니지 않게 하려는 것):
 
 1. ADR 의 Decision / Mermaid / 제목에서 도메인 키워드(엔티티명·동작·API path·상태값) 추출.
 2. `Glob`/`Grep` 으로 그 키워드가 사는 코드를 찾는다 — vertical slice 프로젝트면 보통 `src/features/<feature>/`, 레이어 단위 모노레포면 여러 레이어 폴더(`packages/web/...`, `services/...`)에 흩어져 있다. 카테고리 키(`auth`, `orders`)가 디렉토리명과 일치하는 경우가 많으니 첫 후보로 삼는다.

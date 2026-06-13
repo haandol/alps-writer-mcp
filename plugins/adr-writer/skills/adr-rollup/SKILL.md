@@ -135,7 +135,7 @@ Date: <오늘>
 - `docs/adr/README.md` 카테고리 목록에서 삭제된 ADR 항목 제거, 통합 ADR의 한 줄 요약을 현재 결정에 맞게 갱신.
 - `docs/adr/.mapping.json`의 해당 카테고리 `adrs` 배열에서 삭제된 경로 제거.
 - 다른 ADR이 삭제된 ADR을 참조하는 Related 링크를 통합 ADR로 변경.
-- 코드 주석·문서에 박힌 stale ADR 인용 sanity grep (예: `grep -rn "ADR <옛-경로>\|<제거된-번호>"` 대상 코드/문서) 후 정정.
+- 코드 주석·문서에 남은 stale ADR 인용 sanity grep (예: `grep -rn "ADR <옛-경로>\|<제거된-번호>"` 대상 코드/문서) 후 정정.
 
 ### 8. 사용자 확인
 
