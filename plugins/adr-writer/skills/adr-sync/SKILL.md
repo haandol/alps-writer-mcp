@@ -118,19 +118,19 @@ ADR이 의존하는 비-ADR 문서도 함께 본다:
 - 코드 주석·상수·import 에 남은 ADR 인용 (`// See ADR auth/0002 §1`, `ADR_REF = "auth/0002"`) — **코드 → ADR 역참조는 원칙상 금지**다 (`README.md` "의존성은 단방향, 참조는 어느 방향으로도 직접 적지 않는다"). 정정이 아니라 **제거**한다. ADR 번호는 split/rollup/supersede 로 이동하므로 코드가 ADR ID 를 들고 있으면 결정이 안 바뀌었는데도 구조 변경이 코드 수정을 줄줄이 강제한다. (코드↔ADR 연결은 매핑에도 저장하지 않는다 — 관련 코드는 ADR 을 읽고 그때그때 찾는다.)
 - ADR 본문(Context·Related 포함)에 남은 PRD 인용 (`prd/foo.alps.xml`, `ALPS Section 7 #F-AUTH-01`, `Section 6.3`) — **ADR → PRD 역참조도 원칙상 금지**다 (같은 의존성 모델). 코드↔ADR 과 대칭으로, 정정이 아니라 **제거**하고 그 PRD↔ADR 연결을 `.mapping.json` 의 `alpsDocument`/해당 카테고리 `alpsFeatureId` 로 옮긴다. ALPS feature 가 split/재번호/재구성되면 결정이 안 바뀌었는데도 ADR 본문 수정을 강제하므로, 연결은 매핑 한 곳에만 둔다. (제거 결과는 7단계 보고 **Fixed** 에 기재.)
 
-수정 후 양방향 역참조 sanity grep을 돌린다 (예시):
+수정 후 양방향 역참조를 점검한다. **두 sanity grep 은 `${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh` 에 같은 정규식·스코프로 묶여 있으니, 매번 경로 깨지기 쉬운 grep 을 다시 타이핑하지 말고 그 스크립트를 실행한다**:
 
 ```bash
-# (a) 코드·문서 본문에 남은 ADR ID/경로 — 코드 → ADR 역참조 (원칙상 0건)
-grep -rn "ADR <카테고리>/<번호>\|docs/adr/<카테고리>" -- packages/ apps/ src/ .claude/
-
-# (b) ADR 본문에 남은 PRD 경로/Section 인용 — ADR → PRD 역참조 (원칙상 0건)
-# ALPS PRD Section 인용만 노린다. "Section 6.3", "ALPS Section 7", feature-id 형태에
-# 한정해 ADR 자체의 "## Status" 류 일반 표현을 오탐하지 않게 한다.
-grep -rnE "\.alps\.xml|ALPS Section|Section [0-9]+\.[0-9]|F-[A-Z]+-[0-9]" -- docs/adr/
+# (a) 코드 → ADR 역참조 + (b) ADR → PRD 역참조 (둘 다, 원칙상 0건) — 위반마다 file:line 출력
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 ```
 
-(a) 에서 찾은 코드→ADR 역참조는 코드에서 제거해 `.mapping.json` 으로, (b) 에서 찾은 ADR→PRD 역참조는 ADR 본문에서 제거해 `alpsDocument`/`alpsFeatureId` 로 이전한다 — 둘 다 같은 PR 에서 처리. `docs/adr/` 내부의 ADR ↔ ADR Related 링크는 정상이므로 (a) 의 grep 대상에서 코드/소스 디렉토리만 둔다.
+스크립트가 내부에서 도는 두 검사:
+
+- **(a) 코드 → ADR 역참조** — 코드·비-ADR 문서에 남은 `ADR <카테고리>/<번호>`·`docs/adr/<카테고리>`·`ADR_REF`. 코드 레이아웃은 repo 마다 다르므로(`packages/`·`apps/`·`src/` 뿐 아니라 `services/`·`cmd/`·`internal/`·`lib/` 또는 플랫 루트) 경로를 하드코딩하지 않고 빌드/벤더 디렉토리만 제외한 전체 트리를 훑되, `docs/adr/` 하위는 결과에서 제외한다 (`--exclude-dir` 은 디렉토리 basename 만 매칭하므로 `docs/adr` 같은 경로는 못 거른다 — 스크립트는 basename 제외 + `docs/adr/` 경로 prefix post-filter 둘 다 적용해 ADR ↔ ADR Related 링크를 오탐하지 않는다).
+- **(b) ADR → PRD 역참조** — 번호 매겨진 ADR 본문(`NNNN-*.md`)에 남은 `*.alps.xml`·`ALPS Section`·`Section N.N`·feature-id. `--include='[0-9][0-9][0-9][0-9]-*.md'` 로 ADR 본문만 보므로 seeded 규칙 문서(README·structure·authoring-rules)의 합법적 ALPS 언급은 오탐하지 않는다.
+
+(a) 에서 찾은 코드→ADR 역참조는 코드에서 제거해 `.mapping.json` 으로, (b) 에서 찾은 ADR→PRD 역참조는 ADR 본문에서 제거해 `alpsDocument`/`alpsFeatureId` 로 이전한다 — 둘 다 같은 PR 에서 처리. 정규식이 스크립트 한 곳에 모여 있으므로 sync 보고의 **Fixed** 에 정확한 위치(`file:line`)를 그대로 인용할 수 있다. 소비 repo 는 이 스크립트를 자기 pre-commit/CI 에 직접 wire 해 하드 게이트(exit 1)로 쓸 수 있다 — 플러그인은 강제하지 않고 스킬이 advisory 로만 호출한다.
 
 ### 6. 매핑·인덱스 hygiene
 

@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# adr-invariants.sh — one deterministic oracle for the PRD → ADR → code
+# one-way dependency invariants. The adr-sync / adr-rollup skills run this
+# instead of re-typing path-fragile greps, so the regexes have a single
+# source of truth. It prints file:line for every hit and exits non-zero on
+# any violation, so a consuming repo can wire it into pre-commit / CI as a
+# hard gate. The adr-writer plugin itself never blocks — when a skill calls
+# it, the result is advisory (the model decides what to fix).
+#
+# Usage:
+#   adr-invariants.sh [--adr-dir DIR] [--code-only|--prd-only|--rollup-only]
+#                     [--removed "<cat>/<NNNN> ..."]
+#
+#   --adr-dir DIR   ADR root (default: docs/adr)
+#   --code-only     run only check (a): code → ADR reverse references
+#   --prd-only      run only check (b): ADR → PRD reverse references
+#   --rollup-only   run only check (c): stale citations of removed ADRs
+#   --removed LIST  space-separated ADR ids/paths deleted by a rollup, e.g.
+#                   "auth/0002 auth/0003" — enables check (c)
+#
+# Exit: 0 = clean, 1 = at least one violation found, 2 = usage error.
+
+set -uo pipefail
+
+ADR_DIR="docs/adr"
+RUN_CODE=1
+RUN_PRD=1
+RUN_ROLLUP=0
+REMOVED=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --adr-dir) ADR_DIR="${2:-}"; shift 2 ;;
+    --code-only) RUN_CODE=1; RUN_PRD=0; RUN_ROLLUP=0; shift ;;
+    --prd-only) RUN_CODE=0; RUN_PRD=1; RUN_ROLLUP=0; shift ;;
+    --rollup-only) RUN_CODE=0; RUN_PRD=0; RUN_ROLLUP=1; shift ;;
+    --removed) REMOVED="${2:-}"; RUN_ROLLUP=1; shift 2 ;;
+    -h|--help)
+      sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *) echo "adr-invariants: unknown arg '$1'" >&2; exit 2 ;;
+  esac
+done
+
+found=0
+
+# Common excludes for whole-tree scans. grep --exclude-dir matches a
+# directory BASENAME glob, never a path, so we pass the ADR dir's basename
+# here and additionally post-filter hits by the full "$ADR_DIR/" prefix
+# below — ADR↔ADR Related links inside docs/adr are legitimate and must not
+# be flagged as code→ADR violations.
+ADR_BASENAME="$(basename "$ADR_DIR")"
+EXCLUDES=(
+  --exclude-dir=.git
+  --exclude-dir=node_modules
+  --exclude-dir=dist
+  --exclude-dir=build
+  --exclude-dir=vendor
+  --exclude-dir="$ADR_BASENAME"
+)
+
+# (a) code → ADR reverse references: no ADR ID / path / ADR_REF in code or
+# non-ADR docs. Layout-agnostic: scans the whole tree minus excludes rather
+# than a hardcoded packages/apps/src list. The post-filter drops any hit
+# still under "$ADR_DIR/" (covers the case where a deeper dir shares the
+# ADR basename, or grep lacks path-aware --exclude-dir).
+if [ "$RUN_CODE" -eq 1 ]; then
+  hits="$(grep -rnE "ADR [A-Za-z0-9_-]+/[0-9]{4}|${ADR_DIR}/[A-Za-z0-9_-]+|ADR_REF" \
+    "${EXCLUDES[@]}" . 2>/dev/null | grep -vE "(^|/)${ADR_DIR}/")" || true
+  if [ -n "$hits" ]; then
+    echo "✗ (a) code → ADR reverse references (remove from code; link lives in .mapping.json):"
+    printf '%s\n' "$hits"
+    found=1
+  fi
+fi
+
+# (b) ADR → PRD reverse references: numbered ADR bodies must not cite ALPS
+# paths / Section numbers / feature-ids. Seeded rule docs (README,
+# structure, authoring-rules) legitimately mention ALPS, so scope to
+# NNNN-*.md only.
+if [ "$RUN_PRD" -eq 1 ]; then
+  hits="$(grep -rnE "\.alps\.xml|ALPS Section|Section [0-9]+\.[0-9]|F-[A-Z]+-[0-9]" \
+    --include='[0-9][0-9][0-9][0-9]-*.md' -- "$ADR_DIR" 2>/dev/null)" || true
+  if [ -n "$hits" ]; then
+    echo "✗ (b) ADR → PRD reverse references (remove from ADR body; link lives in .mapping.json alpsFeatureId):"
+    printf '%s\n' "$hits"
+    found=1
+  fi
+fi
+
+# (c) stale citations of ADRs a rollup deleted. Only runs when --removed is
+# given. Each token is an ADR id (cat/NNNN) or path fragment.
+if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$REMOVED" ]; then
+  for ref in $REMOVED; do
+    pat="$(printf '%s' "$ref" | sed 's/[.[\*^$/]/\\&/g')"
+    hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|${pat}\.md" \
+      --exclude-dir=.git --exclude-dir=node_modules . 2>/dev/null)" || true
+    if [ -n "$hits" ]; then
+      echo "✗ (c) stale citation of removed ADR '${ref}' (repoint to the consolidated ADR):"
+      printf '%s\n' "$hits"
+      found=1
+    fi
+  done
+fi
+
+if [ "$found" -eq 0 ]; then
+  echo "✓ ADR one-way invariants clean"
+fi
+exit "$found"
