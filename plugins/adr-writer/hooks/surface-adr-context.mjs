@@ -45,6 +45,9 @@ function summarizeMapping(mapping, cwd) {
     const fid = entry.alpsFeatureId ? ` [${entry.alpsFeatureId}]` : "";
     const feature = entry.feature ? ` — ${entry.feature}` : "";
     lines.push(`• ${cat}${fid}${feature}`);
+    if (entry.dependsOn?.length) {
+      lines.push(`    depends on: ${entry.dependsOn.join(", ")}`);
+    }
     for (const adr of entry.adrs || []) {
       const exists = existsSync(path.join(cwd, adr)) ? "" : " [missing]";
       lines.push(`    ${adr}${exists}`);
@@ -71,7 +74,7 @@ function main() {
     "[ADR-first directive] 이번 사용자 요청이 신규 기능 추가나 기존 기능의 동작/구조 변경에 해당하는지 직접 판단하라. 단순 버그픽스, 리팩터링, lint/포맷, 문서 수정, 운영/배포 명령, 정보 조회는 면제다.",
     "",
     "해당한다면 다음 사이클을 따른다 — 사용자에게 한 줄로 'ADR을 먼저 점검/작성하겠다'고 알리고 진행:",
-    "1. 아래 매핑 스냅샷에서 영향 받는 카테고리를 찾아 docs/adr/<category>/ 의 ADR을 먼저 읽는다. 신규 영역이면 /adr-new <category> 로 ADR을 직접 작성한다 (ALPS Section 7 feature가 이미 있다면 /feature-to-adr 로 일괄 변환해도 된다 — helper 경로).",
+    "1. 아래 매핑 스냅샷에서 영향 받는 카테고리를 찾아 docs/adr/<category>/ 의 ADR을 먼저 읽는다. 스냅샷의 'depends on:' 으로 표시된 선행 카테고리가 있으면 그 선행이 먼저 구현(Accepted)돼 있는지 함께 본다 — 구현 순서 강제(선행부터 위상 순서로)는 /adr-impl 이 담당하므로, 여기서는 선행 존재만 인지하면 된다. 신규 영역이면 /adr-new <category> 로 ADR을 직접 작성한다 (ALPS Section 7 feature가 이미 있다면 /feature-to-adr 로 일괄 변환해도 된다 — helper 경로).",
     "2. ADR을 짧게 작성/수정한다 — WHY, 대안 비교, Consequences, DB 키 디자인만. 구현 세부(파일 경로 이하·코드 스니펫·상수)는 넣지 않는다. 작성 규칙은 docs/adr/authoring-rules.md 를 따른다.",
     "3. ADR이 정한 결정대로 코드를 작성한다. 코드에는 ADR ID·경로를 남기지 않고, ADR 본문에도 파일 경로·함수명을 적지 않는다(연결은 코드에도 ADR에도 두지 않는다 — 관련 코드는 ADR을 읽고 그때그때 찾는다). 구현 중 결정이 바뀌면 ADR을 즉시 갱신해 같은 커밋에 함께 담는다.",
     "4. 테스트/검증 결과로 ADR의 Consequences·엣지케이스를 보강한다. 끝나면 /adr-sync 로 ADR↔코드 정합과 README 인덱스를 정렬한다.",

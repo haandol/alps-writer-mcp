@@ -80,7 +80,7 @@ docs/adr/
 ## 구현 레퍼런스
 
 - ALPS PRD: `prd/<doc>.alps.xml` (Section 7이 feature spec의 source of truth)
-- 매핑: `docs/adr/.mapping.json` (feature ↔ 코드 경로 ↔ ADR)
+- 매핑: `docs/adr/.mapping.json` (ALPS feature ↔ ADR. **코드 경로는 저장하지 않는다** — 관련 코드는 ADR 을 읽고 그때그때 찾는다)
 
 > **권장**: 이 섹션 아래에 프로젝트별 **피쳐 진입점**을 명시한다. vertical slice 구조에서는 한 피쳐의 UI/API/Data 코드가 같은 폴더 트리에 모이므로, 카테고리 → 진입점 매핑이 자연스럽게 1:1 이 된다.
 >
@@ -151,13 +151,16 @@ docs/adr/
       "feature": "Marketplace Listings",
       "alpsFeatureId": "F-MKT-01",
       "adrs": ["docs/adr/marketplace/0001-listing-search.md"],
+      "dependsOn": ["auth"],
       "tableDocs": ["docs/tables/listings.md"]
     }
   }
 }
 ```
 
-매핑 파일은 `/feature-to-adr` 명령으로 생성·갱신된다. 플랫 구조 프로젝트는 카테고리 키로 Feature ID(`f1`, `f2`)를 그대로 써도 된다.
+매핑 파일은 `/adr-new`(빈 골격 생성 + entry 작성)와 `/feature-to-adr`(ALPS Section 7 일괄 변환)로 생성·갱신된다. 플랫 구조 프로젝트는 카테고리 키로 Feature ID(`f1`, `f2`)를 그대로 써도 된다.
+
+- `dependsOn` — 이 카테고리가 의존하는 선행 카테고리 키 배열. `/adr-impl` 의 선행 게이트가 읽어 선행 ADR 을 먼저 구현하도록 정렬한다. ALPS 가 있으면 `/feature-to-adr` 가 Section 6.3 에서 옮겨오고, ALPS 없이 `/adr-new` 로 직접 작성하면 작성자가 지목한 선행을 기록한다. **기존 카테고리 키만 참조하고 비순환(self-edge 금지)을 유지**한다 — `/adr-sync` 6단계가 dangling·순환을 점검한다.
 
 ### 관련 코드 찾기
 

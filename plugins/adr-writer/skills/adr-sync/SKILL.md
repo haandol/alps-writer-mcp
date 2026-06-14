@@ -87,6 +87,7 @@ Quick mode는 이 단계만 수행한다.
 - **카테고리 키 검사** — `structure.md` "안티패턴 카테고리"(기술 레이어/구조 단위: `frontend`, `api`, `db` 등)가 있으면 drift로 표시. 사용자에게 피쳐 단위로 재정렬하자고 제안
 - **슬라이스 추출 가능성 검사** — 각 ADR의 Decision이 한 피쳐의 UI → API → Data 를 단일 슬라이스로 다루는지 본다. 한 피쳐의 결정이 여러 카테고리에 흩어져 있으면(예: `auth-ui`/`auth-api` 분리) drift — 한 카테고리로 합치자고 제안
 - 위반은 `Suggestions` 가 아니라 `Fixed` 또는 `Contradictions Resolved` 에 기록한다 — 카테고리 분류는 ADR 사이클의 신뢰 기반이라 미루지 않는다.
+- **카테고리 키를 재명명·병합하면 다른 entry 의 `dependsOn` 이 그 옛 키를 가리킬 수 있다** — 재정렬과 같은 변경 단위에서 모든 `dependsOn` 참조를 새 키로 바꾸고(병합으로 키가 의존하던 쪽에 흡수됐으면 그 엣지는 제거), 6단계 `dependsOn` 무결성 점검으로 dangling 이 남지 않았는지 확인한다.
 
 ### 3.6. 카테고리 비대화 점검 (분할 권고)
 
@@ -103,7 +104,8 @@ Quick mode는 이 단계만 수행한다.
 각 수정된 ADR의 Related 링크를 따라 다른 ADR을 점검한다:
 
 - 같은 동작을 다르게 묘사하는지 (임계값, 에러 코드, 흐름 단계)
-- Status 충돌: `Accepted`(구현 완료) ADR이 `Proposed`(미구현) ADR의 기능에만 의존하고 있는지 — 의존 ADR이 미구현이면 의존하는 ADR도 실제로는 동작하지 않을 수 있으므로 Status 검증
+- Status 충돌: `Accepted`(구현 완료) 카테고리가 `dependsOn` 으로 가리키는 선행 카테고리가 아직 `Proposed`(미구현) 인지 — 선행이 미구현이면 의존하는 쪽도 실제로는 동작하지 않을 수 있다. 권위 있는 의존 관계는 `.mapping.json` 의 `dependsOn` 이므로 그것을 1차 근거로 삼고, Related 링크는 보조로 본다. 위반은 `Contradictions Resolved`(또는 사용자 판단이 필요하면 `Suggestions`)에 기록.
+- Related 링크(또는 Decision 본문)가 다른 카테고리를 선행으로 가리키는데 이 카테고리의 `dependsOn` 에는 빠져 있으면 → 의존 방향이 모호할 수 있으니 자동으로 쓰지 말고 `Suggestions` 에 `[dependsOn missing] <category> — Related 가 선행 <X> 를 시사하나 dependsOn 에 없음` 으로 남긴다 (sync 의 "조용히 덮어쓰지 않고 제안한다" 기조와 동일).
 - Superseded ADR이 옛 ADR의 모든 결정을 커버하지 못함
 - 카테고리 이관 후 stale한 cross-reference
 
@@ -135,6 +137,10 @@ grep -rnE "\.alps\.xml|ALPS Section|Section [0-9]+\.[0-9]|F-[A-Z]+-[0-9]" -- doc
 - `docs/adr/.mapping.json`의 `adrs` 배열이 디스크의 실제 파일과 일치
 - README의 모든 항목이 존재하는 파일을 가리킴
 - 디스크의 모든 ADR 파일이 정확히 한 번 인덱싱됨
+- **`dependsOn` 무결성** (`/adr-impl` 의 선행 게이트가 이 필드로 구현 순서를 정하므로, stale 해지면 미래 impl 을 조용히 잘못 정렬한다 — `adrs` 배열과 동급으로 점검한다):
+  - 각 카테고리 entry 의 `dependsOn` 키가 모두 `categories` 에 실재하는 카테고리 키인지 — dangling 키(특히 3.5 의 카테고리 병합/재명명 이후 남은 옛 키)는 drift 다.
+  - 모든 `dependsOn` 엣지의 합집합이 비순환 그래프인지 (스키마의 "keep acyclic", self-edge 금지 포함).
+  - 자동 정정 가능하면(예: 이번 sync 의 3.5 에서 키를 재명명·병합한 경우 그 변경을 dependsOn 에도 반영) **Fixed** 에, 사용자 판단이 필요하면(예: 순환 발견 — `/adr-impl` 2단계 "의존 그래프에 순환이 있으면" 분기의 halt-and-ask 와 동일 프레이밍) **Contradictions Resolved** 또는 **Suggestions** 에 기록한다.
 
 ### 7. Report
 

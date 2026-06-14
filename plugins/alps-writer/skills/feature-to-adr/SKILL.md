@@ -26,12 +26,13 @@ adr-writer 를 먼저 설치해 주세요:  /plugin install adr-writer@alps-writ
 - `mcp__alps-writer__load_alps_document`로 현재 문서를 로드.
 - `mcp__alps-writer__read_alps_section(7)`로 feature 목록 추출.
 - `mcp__alps-writer__read_alps_section(6)`로 **Section 6.3 Feature Dependency Diagram 을 항상 확인**한다. ALPS 는 feature 사이 의존성을 6.3 의 Mermaid `graph TD`(`F2 -->|depends on| F1` 형태)로 들고 있다 — 이 그래프가 곧 "어떤 feature 가 어떤 feature 보다 먼저 구현돼야 하는가"의 source of truth 다. 그래프가 있으면 의존 엣지를 모두 파싱해 둔다(4단계에서 매핑에 옮긴다). 그래프가 비어 있거나 6.3 자체가 없으면 feature 간 의존이 없는 것으로 본다 — 억지로 만들어내지 않는다.
+  - **파싱 직후 그래프 무결성을 검사한다** (위상 정렬·`dependsOn` 기록은 비순환 DAG 를 전제로 하므로 — 매핑 스키마의 "keep acyclic (no self-edge)"). (a) **self-edge**(`F1 -->|depends on| F1`)는 무시하고 `"F1 이 자기 자신에 의존 — 무시함"` 한 줄을 알린다. (b) **순환**(`F1 ↔ F2`, 또는 더 긴 back-edge)이 있으면 위상 정렬이 불가능하므로 **큐 정렬·카테고리 생성·`dependsOn` 기록을 시작하지 않고 멈춘다** — 어떤 feature 들이 서로 물려 있는지 사용자에게 알리고, Section 6.3 의 순환을 먼저 끊도록 요청한 뒤(필요 시 `/alps` 로 6.3 수정) 재실행하게 한다. 이 한 번의 검사가 아래 위상 정렬(처리 대상 결정)과 4단계 `dependsOn` 기록 두 곳을 모두 보호하므로, cyclic 그래프가 `.mapping.json` 에 영구 기록돼 하류(`adr-impl`·`adr-sync`)에서 뒤늦게 터지는 것을 막는다.
 - Section 6.2(Non-Functional Requirements)와 Section 4.2(Technology Stack / 제약)도 함께 읽어둔다. 이들은 ADR 의 **Decision Drivers** 후보다 — 측정 가능한 NFR(예: "p95 3초 이내")과 전역 제약(예: "AWS 만 사용", "팀이 Node 경험만")이 옵션을 변별하는 압력이 된다. 각 NFR 의 Scope(`Global` 또는 Feature ID)를 보고 어느 feature 의 Driver 로 넘길지 분류해 둔다(3단계에서 `/adr-new` 에 전달).
 - ALPS 문서가 없으면 사용자에게 알리고 `mcp__alps-writer__init_alps_document` 또는 `/alps-init`을 권유한 뒤 중단.
 
 처리 대상 결정:
 
-- **인자가 있는 경우**: 해당 카테고리/피쳐 ID에 매칭되는 feature 1개만 큐에 넣는다.
+- **인자가 있는 경우**: 해당 카테고리/피쳐 ID에 매칭되는 feature 1개만 큐에 넣는다. 단 이 단일 feature 가 6.3 에서 의존하는 선행이 아직 ADR 로 변환되지 않았다면, 기록될 `dependsOn` 이 매핑에 entry 없는 카테고리 키를 가리키는 **dangling 참조**가 될 수 있다 — `adr-impl` 이 이를 미구현 선행으로 처리하지만(그쪽 step 2 의 dangling 분기), 선행이 미변환임을 알면 인자 없이 전체 Section 7 을 의존성 닫힘 순서로 변환하는 편이 깔끔하다고 한 줄 안내한다.
 - **인자가 없는 경우**: Section 7 의 **모든 feature** 를 큐에 넣는다. 6.3 의존성 그래프가 있으면 **의존성 위상 순서**(의존 대상이 의존하는 쪽보다 먼저)로 큐를 정렬한다 — 그래야 카테고리를 만들 때 `dependsOn` 이 가리킬 선행 카테고리가 이미 존재한다. 그래프가 없으면 ALPS 등장 순서를 따른다. 단 `docs/adr/.mapping.json` 에 이미 ADR 이 매핑된 feature 는 큐에서 제외한다 (재실행 시 중복 방지).
 - 큐가 비어 있으면 "변환할 신규 feature 가 없습니다" 메시지를 띄우고 종료.
 - 큐에 2개 이상이 들어 있으면 사용자에게 처리 순서를 한 번 보여주고 "이 순서로 모든 피쳐를 ADR 로 변환하겠습니다. 진행할까요?" 한 번만 확인. 이후 각 피쳐는 `/adr-new` 의 승인 시점에서만 멈춘다.
@@ -71,7 +72,8 @@ ALPS feature 가 워크숍식 ID 를 가진 경우, `/adr-new` 가 부여하는 
 
 - `alpsDocument` — 현재 `.alps.xml` 경로.
 - 해당 카테고리 entry 의 `alpsFeatureId` — 명시적 Feature ID 가 있으면 기록.
-- 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 예: 6.3 에 `F3 -->|depends on| F1` 이 있으면 `f3` 카테고리의 `dependsOn` 에 `f1` 을 넣는다 (카테고리 키 변환 규칙은 2단계와 동일). 의존이 없는 feature 는 `dependsOn` 을 생략하거나 `[]` 로 둔다. 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다.
+- 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱(및 무결성 검사)한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 예: 6.3 에 `F3 -->|depends on| F1` 이 있으면 `f3` 카테고리의 `dependsOn` 에 `f1` 을 넣는다 (카테고리 키 변환 규칙은 2단계와 동일). 의존이 없는 feature 는 `dependsOn` 을 생략하거나 `[]` 로 둔다. 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다.
+  - 기록 전 각 `dependsOn` 키가 **이미 매핑에 entry 가 있는(또는 이번 배치에서 먼저 생성될) 카테고리 키**인지 확인한다 (스키마 invariant "Must reference existing category keys"). 전체 배치 실행은 1단계 위상 정렬로 선행이 먼저 생성되므로 충족되지만, 단일 feature 인자 실행은 위 dangling 케이스가 정상이다. 1단계 무결성 검사를 통과했으므로 self-edge·순환은 여기 도달하지 않는다.
 
 ```json
 {
