@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ALPS-ADR Mapping",
-  "description": "Maps ALPS Section 7 features to the ADRs that record their decisions. The link between an ADR and the code that implements it is not stored here — agents locate the relevant code by reading the ADR and searching the repo.",
+  "description": "Maps ALPS Section 7 features to the ADRs that record their decisions, organized by DDD bounded context (top-level category key) and feature/vertical-slice (optional second segment). Carries an optional advisory subdomainType (core/supporting/generic) overlay per context. The link between an ADR and the code that implements it is not stored here — agents locate the relevant code by reading the ADR and searching the repo.",
   "type": "object",
   "required": ["categories"],
   "properties": {
@@ -11,18 +11,23 @@
     },
     "categories": {
       "type": "object",
-      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/ — a single segment for top-level categories (e.g., 'auth') or a slash-separated path of at most two segments for sub-vertical-slice folders (e.g., 'auth/login'). See structure.md '.mapping.json 정책' under 'sub-vertical-slice 분할'.",
+      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/. The top segment is a DDD bounded context / subdomain named with the domain expert's ubiquitous-language term (e.g., 'identity', 'ordering'); the optional second segment is a user-perceived feature / vertical slice (e.g., 'identity/login'). At most two segments — no deeper nesting. When a context holds exactly one feature the second segment is elided and a single-segment key means context==feature (legacy/flat layout, e.g. 'auth', or a workshop Feature ID 'f1'). See structure.md '디렉토리 구조' and '.mapping.json 정책'.",
       "additionalProperties": {
         "type": "object",
         "required": ["adrs"],
         "properties": {
           "feature": {
             "type": "string",
-            "description": "Human-readable feature name from ALPS Section 7."
+            "description": "Human-readable feature name from ALPS Section 7 (for feature-level entries) or the bounded-context name (for context-level entries)."
           },
           "alpsFeatureId": {
             "type": "string",
-            "description": "Stable id of the feature in the ALPS document (e.g., F-AUTH-01)."
+            "description": "Stable id of the feature in the ALPS document (e.g., F-LOGIN-01)."
+          },
+          "subdomainType": {
+            "type": "string",
+            "enum": ["core", "supporting", "generic"],
+            "description": "DDD subdomain classification of the bounded context this category belongs to. Advisory metadata only — never a hard gate and never a folder tier. Feature contexts are typically core/supporting; system-wide cross-cutting contexts (infra/integration/security/platform/data) are generic. Place it on the context-level entry (the top-folder entry, or a single-feature flat entry); per-feature sub-folder entries inherit the parent context's type conceptually and may omit it. Surfaced by adr-sync and the hook snapshot as advisory context (e.g. grouping by domain, 'generic — candidate for off-the-shelf'), never enforced. Omit when unknown."
           },
           "adrs": {
             "type": "array",
@@ -32,7 +37,7 @@
           },
           "dependsOn": {
             "type": "array",
-            "description": "Category ids this category depends on (prerequisites). Sourced from the ALPS Section 6.3 Feature Dependency Diagram by feature-to-adr (edge 'this --depends on--> X' becomes X in this list), or recorded directly by adr-new when the author names a prerequisite ADR. Read by adr-impl to implement prerequisite ADRs first, and validated by adr-sync. Must reference existing category keys; keep acyclic (no self-edge).",
+            "description": "Category ids this category depends on (prerequisites). Sourced from the ALPS Section 6.3 Feature Dependency Diagram by feature-to-adr (edge 'this --depends on--> X' becomes X in this list), or recorded directly by adr-new when the author names a prerequisite ADR. Read by adr-impl to implement prerequisite ADRs first, and validated by adr-sync. Uses the same key namespace as 'categories' (single-segment or two-segment context/feature keys). Edges MAY cross bounded-context boundaries (e.g. an ordering/checkout feature depending on an identity/login feature is a normal DDD context relationship). Must reference existing category keys; keep acyclic (no self-edge).",
             "items": { "type": "string" },
             "uniqueItems": true
           },

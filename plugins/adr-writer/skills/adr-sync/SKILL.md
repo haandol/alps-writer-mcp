@@ -82,16 +82,18 @@ Quick mode는 이 단계만 수행한다.
 
 ### 3.5. 카테고리 슬라이스 무결성 점검
 
-`.mapping.json` 의 카테고리 키가 vertical slice 원칙(피쳐 단위)을 따르는지 본다 — 안티패턴 카테고리 목록과 cross-cutting 사용 조건은 `structure.md` "흔한 카테고리 예시" 참조.
+`.mapping.json` 의 카테고리 키가 DDD 도메인(bounded context) × 피쳐(vertical slice) 원칙을 따르는지 본다 — 안티패턴 카테고리 목록, subdomain 분류, cross-cutting 사용 조건은 `structure.md` "흔한 context · subdomain 예시" 참조.
 
-- **카테고리 키 검사** — `structure.md` "안티패턴 카테고리"(기술 레이어/구조 단위: `frontend`, `api`, `db` 등)가 있으면 drift로 표시. 사용자에게 피쳐 단위로 재정렬하자고 제안
-- **슬라이스 추출 가능성 검사** — 각 ADR의 Decision이 한 피쳐의 UI → API → Data 를 단일 슬라이스로 다루는지 본다. 한 피쳐의 결정이 여러 카테고리에 흩어져 있으면(예: `auth-ui`/`auth-api` 분리) drift — 한 카테고리로 합치자고 제안
-- 위반은 `Suggestions` 가 아니라 `Fixed` 또는 `Contradictions Resolved` 에 기록한다 — 카테고리 분류는 ADR 사이클의 신뢰 기반이라 미루지 않는다.
+- **카테고리 키 검사 (양 세그먼트 모두)** — `structure.md` "안티패턴 카테고리"(기술 레이어/구조 단위: `frontend`, `api`, `db` 등)가 context 폴더 세그먼트에든 피쳐 sub-folder 세그먼트에든(`identity/api`) 있으면 drift로 표시. 사용자에게 도메인·피쳐 단위로 재정렬하자고 제안
+- **슬라이스 추출 가능성 검사** — 각 ADR의 Decision이 한 피쳐(leaf — 피쳐 sub-folder 또는 단일-피쳐 context)의 UI → API → Data 를 단일 슬라이스로 다루는지 본다. 한 피쳐의 결정이 여러 카테고리에 흩어져 있으면(예: `auth-ui`/`auth-api` 분리) drift — 한 카테고리로 합치자고 제안
+- **context coherence 검사 (advisory)** — 한 피쳐 sub-folder 가 그 언어를 소유하지 않는 context 아래에 놓여 있는지 본다 (예: 가격 결정이 `identity/` 밑에). 위반이면 **하드 정정이 아니라** `Suggestions` 에 `[Context mismatch] <category> — 피쳐가 소속 context 의 도메인 언어와 어긋남. 적절한 context 로 이동 검토` 로 advisory 기록 — 도메인 경계 판단은 사용자 몫이라 폴더를 자동 이동하지 않는다.
+- **subdomainType 표시 (advisory)** — context entry 에 `subdomainType` 이 있으면 보고에 도메인별 그룹핑/주석으로 보여준다 (예: `generic — 기성품 대체 후보`). 없다고 drift 로 잡지 않는다 — 선택적 메타데이터다.
+- 안티패턴 키·슬라이스 분산 위반은 `Suggestions` 가 아니라 `Fixed` 또는 `Contradictions Resolved` 에 기록한다 — 카테고리 분류는 ADR 사이클의 신뢰 기반이라 미루지 않는다. (context mismatch·subdomainType 누락은 advisory 라 `Suggestions` 에 남긴다.)
 - **카테고리 키를 재명명·병합하면 다른 entry 의 `dependsOn` 이 그 옛 키를 가리킬 수 있다** — 재정렬과 같은 변경 단위에서 모든 `dependsOn` 참조를 새 키로 바꾸고(병합으로 키가 의존하던 쪽에 흡수됐으면 그 엣지는 제거), 6단계 `dependsOn` 무결성 점검으로 dangling 이 남지 않았는지 확인한다.
 
 ### 3.6. 카테고리 비대화 점검 (분할 권고)
 
-각 카테고리(또는 sub-folder)의 ADR 파일 수가 `structure.md` "카테고리가 비대해질 때 — sub-vertical-slice 분할" 에서 정한 임계값(15) 이상인지 본다. 이상이면 같은 섹션의 "점검·제안 절차" 의 sub-feature 후보 도출을 그대로 적용한다.
+각 피쳐 sub-folder(또는 context 직속)의 ADR 파일 수가 `structure.md` "context 가 비대해질 때 — 피쳐 sub-folder 로 분할" 에서 정한 임계값(15) 이상인지 본다. 이상이면 같은 섹션의 "점검·제안 절차" 의 피쳐 후보 도출을 그대로 적용한다. context 가 이미 여러 피쳐 sub-folder 로 나뉘어 있고 각각이 15 미만이면 합계가 커도 분할하지 않는다.
 
 - sync 사이클에서는 **분할을 자동 수행하지 않는다** — 폴더 이동은 cross-reference·hook lookup 키·README 인덱스에 동시 영향을 주므로 사용자 합의가 필요하다.
 - 결과는 `Suggestions` 섹션에 `[Sub-folder split recommended] <category> 안에 ADR <n>개 — 후보 sub-feature: ...` 형태로 한 줄 권고로 남긴다. 다음 사이클에서 사용자가 합의하면 `structure.md` 의 분할 절차로 분할.

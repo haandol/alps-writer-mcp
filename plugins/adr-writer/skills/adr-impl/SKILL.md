@@ -17,7 +17,7 @@ disable-model-invocation: true
 
    인자별 분기:
    - **인자가 파일 경로** → 그 ADR 파일 한 개를 대상으로 한다.
-   - **인자가 카테고리 또는 ALPS Feature ID** (예: `f1`, `F1`, `auth`, `f-auth-01`) → `docs/adr/.mapping.json` 의 카테고리 키 또는 entry 의 `alpsFeatureId` 와 대조해 매칭. `/adr-new` 와 `/feature-to-adr` 모두 카테고리 키를 그대로 사용하므로 워크숍처럼 번호 기반 PRD 라면 1:1 로 맞다.
+   - **인자가 카테고리 또는 ALPS Feature ID** (예: `f1`, `F1`, `auth`, `f-auth-01`, 또는 2-세그먼트 `identity/login`) → `docs/adr/.mapping.json` 의 카테고리 키 또는 entry 의 `alpsFeatureId` 와 대조해 매칭. `/adr-new` 와 `/feature-to-adr` 모두 카테고리 키를 그대로 사용하므로 워크숍처럼 번호 기반 PRD 라면 1:1 로 맞다. 사용자가 context prefix 없이 피쳐 세그먼트만 줬는데(`login`) 여러 context 에 같은 피쳐명이 있어 모호하면 어느 context 인지 한 번 되묻는다 (그룹핑을 쓴 다중-context repo 에서만 드물게 발생).
    - **인자가 비어 있거나 매칭이 모호하거나 매핑/매핑 파일이 없을 때** — `Proposed` 상태(미구현)인 ADR 목록을 한 번에 보여주고 사용자에게 어떤 ADR 을 구현할지 묻는다 (아래 "Proposed 목록 출력" 절차).
 
    **Proposed 목록 출력 절차**:
@@ -67,8 +67,8 @@ disable-model-invocation: true
    - `.mapping.json` 자체가 없거나 대상 카테고리의 entry 가 아예 없는 레거시 ADR 셋이라면 의존을 알 수 없으므로 게이트를 건너뛰되, 한 줄로 "의존성 정보가 없어 순서 점검을 건너뜁니다 (`/feature-to-adr` 또는 `.mapping.json` 의 `dependsOn` 으로 보강 가능)" 라고 알린다. (entry 는 있는데 `dependsOn` 키만 없는 경우는 위 "의존 미선언" 분기로 처리하지 이 레거시 케이스가 아니다.)
 
 3. **계획 수립**
-   - ADR의 Decision/Mermaid 다이어그램에서 vertical slice 를 추출한다 (UI → API → 데이터). 한 ADR 은 한 피쳐의 슬라이스 전체를 다루므로, 구현 계획도 같은 피쳐 안에서 UI/API/Data 모든 레이어를 **함께** 변경하는 단위로 잡는다.
-   - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/` 등 — `structure.md` "흔한 카테고리 예시 — 안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
+   - ADR의 Decision/Mermaid 다이어그램에서 vertical slice 를 추출한다 (UI → API → 데이터). 한 ADR 은 한 피쳐(leaf — 피쳐 sub-folder 또는 단일-피쳐 context)의 슬라이스 전체를 다루므로, 구현 계획도 같은 피쳐 안에서 UI/API/Data 모든 레이어를 **함께** 변경하는 단위로 잡는다.
+   - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/`, `identity/api` 등 context·피쳐 어느 세그먼트든 — `structure.md` "흔한 context · subdomain 예시 — 안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
    - ADR Decision 의 키워드로 `Glob`/`Grep` 해 관련 기존 코드를 찾아 읽고 차이를 식별한다 (코드 위치는 매핑에 없으므로 ADR 을 읽고 직접 탐색 — `structure.md` "관련 코드 찾기"). 같은 피쳐의 UI/API/Data 코드가 한곳에 모여 있는지 확인.
    - 변경 계획을 사용자에게 제시하고 승인받는다.
 

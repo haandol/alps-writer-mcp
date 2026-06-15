@@ -21,7 +21,7 @@ disable-model-invocation: true
 - **인자가 카테고리** (`adr-rollup auth`): 해당 카테고리만.
 - **인자가 ADR 묶음** (사용자가 "auth/0001, 0002, 0003 합쳐줘"): 그 묶음만.
 
-**통합은 항상 카테고리 안에서만 일어난다.** 카테고리 분류는 vertical slice(피쳐) 단위이고 `.mapping.json`·hook이 의존하는 신뢰 기반이므로, 같은 logical decision처럼 보여도 카테고리 경계를 넘어 합치지 않는다. 카테고리 자체가 잘못 쪼개져 있다고 의심되면 통합하지 말고 `Suggestions`로 보고한다 (재분류는 `adr-sync`/`structure.md` 절차).
+**통합은 항상 한 카테고리(leaf — 피쳐 sub-folder 또는 단일-피쳐 context) 안에서만 일어난다.** 카테고리 분류는 vertical slice(피쳐) 단위이고 `.mapping.json`·hook이 의존하는 신뢰 기반이므로, 같은 logical decision처럼 보여도 카테고리 경계를 넘어 합치지 않는다 — 특히 **같은 bounded context 를 공유한다는 이유만으로 서로 다른 피쳐 sub-folder(`identity/login` 과 `identity/signup`)의 ADR 을 합치지 않는다**. context 직속 cross-cutting ADR(`identity/0001-...`)도 그 자리에서만 체인을 합친다. 카테고리 자체가 잘못 쪼개져 있다고 의심되면 통합하지 말고 `Suggestions`로 보고한다 (재분류는 `adr-sync`/`structure.md` 절차).
 
 ## 무엇을 합치고 무엇을 남기는가
 

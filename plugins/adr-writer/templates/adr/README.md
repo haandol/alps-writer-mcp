@@ -5,7 +5,7 @@
 이 문서는 인덱스다. 상세 규칙·구조는 sub-doc 으로 분리해 둔다.
 
 - [`authoring-rules.md`](./authoring-rules.md) — ADR 본문에 무엇을 넣고 무엇을 빼는지, 두 단계 필터·코드 참조 깊이·DB 동시 작업·리뷰 체크리스트
-- [`structure.md`](./structure.md) — 디렉토리 레이아웃, sub-vertical-slice 분할, 카테고리 예시, `.mapping.json` 정책
+- [`structure.md`](./structure.md) — DDD 도메인(bounded context) × 피쳐 디렉토리 레이아웃, 피쳐 sub-folder 분할, subdomain 분류, `.mapping.json` 정책
 
 ## ADR이란?
 
@@ -87,7 +87,7 @@ ADR 에 한 줄을 적기 전에 다음을 묻는다.
 | **UX 아키텍처**  | 라우팅 구조, 상태 관리 라이브러리 선택, 디자인 시스템 채택 — 토큰 자체는 디자인 문서로 |
 | **마이그레이션** | API 버전 전환 전략, 백필 절차의 안전성, downtime 허용 범위                             |
 
-카테고리 폴더(`docs/adr/<category>/`)는 **피쳐(vertical slice) 단위**로 묶는다 — ALPS Section 7 의 feature 와 1:1 매핑이 기본. 기술 레이어로 카테고리를 만들지 않는 이유와 cross-cutting 카테고리 사용 조건은 [`structure.md`](./structure.md#디렉토리-구조).
+ADR 폴더는 **DDD 도메인(bounded context) × 피쳐(vertical slice)** 두 축으로 묶는다 — 최상위 폴더(`docs/adr/<context>/`)는 도메인 전문가의 모델 경계(bounded context), sub-folder(`<context>/<feature>/`)는 한 사용자 동작의 vertical slice 다. ALPS Section 7 의 feature 는 그 sub-folder(또는 피쳐가 하나뿐이라 평면으로 둔 context 폴더)와 1:1 매핑된다. 기술 레이어로 폴더를 만들지 않는 이유, subdomain 분류(core/supporting/generic), cross-cutting context 사용 조건은 [`structure.md`](./structure.md#디렉토리-구조--ddd-도메인bounded-context--피쳐vertical-slice).
 
 ## ADR이 아닌 것 (anti-patterns)
 
@@ -191,13 +191,20 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 
 새 ADR을 추가하면 이 섹션에 한 줄 요약을 직접 추가한다. 자동 생성하지 않는다. 한 줄 요약은 다음 quick-mode 동기화 점검의 진입점이 되므로 본문이 바뀔 때 함께 갱신한다.
 
-<!-- 예시:
-### Auth
-- [0001: JWT Rotation](./auth/0001-jwt-rotation.md) — Accepted. 구현됨. Refresh token rotation, 7일 만료, sliding session.
-- [0002: SSO Integration](./auth/0002-sso-integration.md) — Proposed. 미구현. SAML 기반 사내 SSO, IdP는 추후 결정.
+목록은 **bounded context(도메인)별로 묶어** 적는다 — context heading 아래에 그 context 의 피쳐 sub-folder 별로 한 줄씩 풀어 쓰고, subdomain 분류(core/supporting/generic)가 `.mapping.json` 에 있으면 heading 옆에 표기한다. context 직속 cross-cutting ADR 은 그 context heading 바로 아래에 둔다. **이 그룹핑은 폴더 위에 얹은 논리 뷰다** — 실제 디렉토리 트리는 [디렉토리 구조](./structure.md#디렉토리-구조--ddd-도메인bounded-context--피쳐vertical-slice)대로이며, 도메인 그룹핑 때문에 폴더가 이동하지는 않는다.
 
-### Billing
-- [0001: Subscription Tiers](./billing/0001-subscription-tiers.md) — Accepted. 구현됨. Free/Pro/Enterprise 3티어, 월/연 토글.
+<!-- 예시:
+### identity (core subdomain)
+- [0001: Token Rotation](./identity/0001-token-rotation.md) — Accepted. 구현됨. context 전반 refresh token rotation, 7일 만료.   ← context 직속 cross-cutting
+
+#### identity/login
+- [0001: Password Policy](./identity/login/0001-password-policy.md) — Accepted. 구현됨. 최소 길이·복잡도, 해시 정책.
+
+#### identity/signup
+- [0001: Email Verification](./identity/signup/0001-email-verification.md) — Proposed. 미구현. 가입 후 이메일 인증 흐름.
+
+### billing (supporting subdomain)
+- [0001: Subscription Tiers](./billing/0001-subscription-tiers.md) — Accepted. 구현됨. Free/Pro/Enterprise 3티어, 월/연 토글.   ← 단일-피쳐 context, flat
 -->
 
 ## 참고
