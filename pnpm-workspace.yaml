@@ -3,3 +3,10 @@ packages:
 
 allowBuilds:
   esbuild: true
+
+# Force the transitive hono (pulled in by @modelcontextprotocol/sdk) up to a
+# patched release. <4.12.25 carries 5 advisories (CORS wildcard, serve-static
+# path traversal, Lambda adapter header/cookie bugs); the SDK allows hono ^4,
+# so >=4.12.25 stays compatible without bumping the SDK itself.
+overrides:
+  hono@<4.12.25: ">=4.12.25"
