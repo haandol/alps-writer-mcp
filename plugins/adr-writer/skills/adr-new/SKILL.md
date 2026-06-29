@@ -77,7 +77,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 - 같은 카테고리에 이미 entry 가 있으면 `adrs` 배열에 새 ADR 경로를 push 한다.
 - **`dependsOn`** — 2단계 5번에서 사용자가 선행 조건으로 지목한 카테고리 키들을 배열로 기록한다. `/adr-impl` 의 선행 게이트가 읽는 바로 그 필드이며 같은 카테고리-키 id-space 다. 기존 카테고리 키만 참조하고 비순환(자기 자신 포함 금지)을 유지한다 (스키마: `mapping.schema.json` 의 `dependsOn`). 엣지가 다른 context 의 카테고리를 가리켜도 정상이다. 사용자가 5번에 "없음" 으로 답했다면 `dependsOn` 을 `[]` 로 기록한다 — 빈 배열은 "의존 없음을 명시적으로 점검 완료" 의 뜻이고, `/adr-impl` 이 안내 없이 진행한다. `dependsOn` 을 아예 생략하면 `/adr-impl` 이 "의존 미선언" 으로 보고 한 줄 경고를 띄우므로, 5번을 물어본 `/adr-new` 경로에서는 생략하지 않는다.
 - **`subdomainType`** (선택) — 2단계 6번에서 답이 있을 때만 context 수준 entry 에 기록한다 (피쳐 sub-folder entry 는 부모 context 분류를 상속하므로 보통 생략). 평면·미상이면 생략 — advisory 메타데이터라 비워도 매핑은 유효하다.
-- ALPS PRD 가 함께 있는 프로젝트라면 `alpsDocument`, `alpsFeatureId` 도 채운다 — 없으면 둘 다 생략한다 (필수 필드 아님). ALPS 가 있는 경우 `dependsOn` 은 보통 `/feature-to-adr` 가 Section 6.3 에서 채우므로, `/adr-new` 단독 호출에서 사용자가 선행을 지목하지 않았다면 비워둔다.
+- ALPS PRD 가 함께 있는 프로젝트라면 `alpsDocument`, `alpsFeatureId` 도 채운다 — 없으면 둘 다 생략한다 (필수 필드 아님). ALPS 가 있는 경우 `dependsOn` 은 보통 `/feature-to-adr` 가 Section 6.3 에서 채운다. 그래도 `/adr-new` 단독 호출에서 2단계 5번을 물었다면, 사용자가 선행을 지목하지 않았더라도 위 규칙대로 **`dependsOn` 을 `[]` 로 기록한다 — 키를 생략하지 않는다** (생략하면 `/adr-impl` 이 "의존 미선언" 경고를 띄운다). `[]` 와 키 생략을 같게 취급하지 않는 건 `/adr-impl` 선행 게이트의 "의존 없음(점검 완료)" vs "미선언(경고)" 분기와 직접 맞물린다.
 
 ### 5. README 인덱스 갱신
 

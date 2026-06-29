@@ -128,18 +128,45 @@ Date: <오늘>
 
 ### 6. 체인의 나머지 ADR 삭제
 
-체인 안의 더 높은 번호 ADR 파일을 삭제한다 (Deprecated로 남기지 않음). Git 히스토리에 원본이 보존된다. 빠진 번호는 결번으로 둔다 — renumber 금지.
+체인 안의 더 높은 번호 ADR 파일을 삭제한다 (Deprecated로 남기지 않음). Git 히스토리에 원본이 보존된다. 이 시점엔 결번이 생기지만 그대로 두고, 마지막 9단계(번호 정리)에서 한 번에 메운다.
 
 같은 카테고리에 있더라도 **다른 logical decision을 다루는 ADR은 절대 삭제하지 않는다.** 삭제는 항상 묶음 단위.
 
-### 7. README + 매핑 + cross-reference 갱신
+### 7. 번호 정리 (gap 메우기 — rollup 한정)
 
-- `docs/adr/README.md` 카테고리 목록에서 삭제된 ADR 항목 제거, 통합 ADR의 한 줄 요약을 현재 결정에 맞게 갱신.
-- `docs/adr/.mapping.json`의 해당 카테고리 `adrs` 배열에서 삭제된 경로 제거.
-- 다른 ADR이 삭제된 ADR을 참조하는 Related 링크를 통합 ADR로 변경.
-- 코드 주석·문서에 남은 stale ADR 인용을 정정한다. 삭제한 ADR id 들을 `${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh --rollup-only --removed "<cat>/<NNNN> ..."` 로 점검하면(코드→ADR·ADR→PRD grep 과 같은 source of truth) 위반마다 `file:line` 이 출력되고, 그 인용들을 통합 ADR 로 repoint 한다.
+삭제 후 생긴 결번을 메워 카테고리 번호를 다시 연속으로 만든다. **이 renumber 는 rollup 에만 있는 단계다** — split(`structure.md`)·`adr-sync` 는 여전히 "결번 유지, renumber 금지"다 (그쪽은 통합이 아니라 분산이므로 흔적이 남는 게 정상). rollup 은 "rollup 흔적을 남기지 않는다"(4단계 규칙 1)는 철학을 따르고, 결번 자체가 흔적이므로 여기서 메운다.
 
-### 8. 사용자 확인
+**이번 rollup 에서 ADR 을 실제로 삭제한 카테고리(leaf)에만 적용한다.** 체인을 못 찾아 건너뛴 카테고리, merge 가 한 건도 없던 카테고리는 건드리지 않는다 (그 카테고리의 기존 split 결번은 그대로 보존).
+
+절차 (카테고리 단위, 한 카테고리 안에서만):
+
+1. 삭제 후 **살아남은** ADR 파일들을 현재 번호 오름차순으로 정렬한다 — survivor(통합본)도, 한 번도 체인이 아니었던 독립 ADR 도 모두 포함.
+2. 카테고리의 **가장 낮은 번호부터 1씩 증가**하도록 연속 번호를 재배정한다. 상대 순서는 유지. 예: `0001`(통합본), `0004`, `0005` 만 남았으면 → `0001`, `0002`, `0003`. `0001` 은 이미 자리가 맞으니 그대로, `0004 → 0002`, `0005 → 0003`.
+3. 번호가 바뀌는 파일을 `git mv` 로 rename 한다 (`git mv docs/adr/<cat>/0004-foo.md docs/adr/<cat>/0002-foo.md`) — kebab title 부분은 그대로. Git 으로 옮겨야 이력이 따라온다.
+4. **파일 안의 제목 `# ADR NNNN: ...` 헤더의 번호도 새 번호로 고친다** — 파일명만 바꾸고 본문 제목을 두면 불일치가 남는다.
+
+renumber 로 경로가 바뀐 ADR 은 8단계의 cross-reference 갱신에서 삭제분과 함께 한 번에 repoint 한다.
+
+### 8. README + 매핑 + cross-reference 갱신 (삭제 + renumber 함께 반영)
+
+7단계까지 끝난 **최종 번호** 기준으로 모든 참조를 한 번에 맞춘다:
+
+- `docs/adr/README.md` 카테고리 목록에서 삭제된 ADR 항목 제거, 번호가 바뀐 항목은 새 번호·새 파일명으로 갱신, 통합 ADR의 한 줄 요약을 현재 결정에 맞게 갱신.
+- `docs/adr/.mapping.json`의 해당 카테고리 `adrs` 배열에서 삭제된 경로 제거 + renumber 로 바뀐 경로를 새 경로로 갱신.
+- 다른 ADR이 삭제된/번호가 바뀐 ADR을 참조하는 Related 링크를 최종 번호로 변경.
+- 코드 주석·문서에 남은 stale ADR 인용을 정정한다. **삭제분과 renumber 분은 repoint 방향이 다르므로 스크립트에 서로 다른 플래그로 넘긴다** — 한 번의 호출에 둘 다 줄 수 있다:
+
+  ```bash
+  ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh --rollup-only \
+    --removed "<cat>/<삭제된-NNNN> ..." \
+    --renumbered "<cat>/<옛-NNNN>:<cat>/<새-NNNN> ..."
+  ```
+
+  - `--removed` (check **(c)**) — 체인에서 **삭제된** ADR id. 출력은 "repoint to the consolidated ADR" — 그 인용을 **통합(survivor) ADR** 로 옮긴다 (결정이 거기로 흡수됐으므로).
+  - `--renumbered` (check **(d)**) — renumber 로 번호만 바뀐 같은 ADR 의 `옛:새` 쌍. 출력은 "repoint to its new number" — 그 인용을 **그 ADR 의 새 번호** 로 옮긴다 (결정은 다른 ADR 로 이동한 게 아니라 번호만 바뀌었으므로).
+  - 두 플래그를 분리해 넘기므로 스크립트가 `(c)`/`(d)` 로 구분 출력하고, "통합본으로" vs "새 번호로" repoint 를 혼동하지 않는다. 이 grep 은 코드→ADR·ADR→PRD 검사와 같은 source of truth 다.
+
+### 9. 사용자 확인
 
 저장(삭제 포함) 전까지 변경 요약을 제시하고 승인을 받는다. 전체 범위 실행이면 카테고리별로 묶어 보고한다.
 
@@ -152,11 +179,12 @@ Date: <오늘>
 - 핵심 결정: <1-2문장, 현재 코드 기준>
 - 코드 정합: <검증한 주장과 코드에 맞춰 고친 부분>
 - 제거된 내용: <이미 해결된 리스크, 폐기된 접근 등>
+- 번호 정리: <renumber 된 파일 옛→새, 예: 0004→0002, 0005→0003> (바뀐 게 없으면 생략)
 
 ### 통합되지 않은 같은 카테고리 ADR
 
-- 0004-<독립 결정 A>.md, 0005-<독립 결정 B>.md, ...
-  (다른 logical decision이라 그대로 둠)
+- 0002-<독립 결정 A>.md, 0003-<독립 결정 B>.md, ...
+  (다른 logical decision이라 그대로 둠 — 단 renumber 로 번호는 당겨질 수 있음)
 
 ### Code re-alignment needed (회색지대 결정이 코드와 모순)
 
@@ -176,3 +204,11 @@ Date: <오늘>
 - Roll-up은 **정보 손실이 아니라 정보 압축**이다. 중요한 결정 누락 금지.
 - 의심스러우면 합치지 않는다. 분리 상태가 안전하다.
 - 코드가 source of truth 인 것은 **구현 사실·Status 에 한정**된다 — 이것들이 코드와 충돌하면 통합본을 코드에 맞춰 정정한다. 반면 **회색지대 결정(채택 근거·도메인 규칙·상태 전이·fallback·키 디자인의 의도)은 ADR 이 권위**다. 코드가 이 결정과 모순되면 통합본을 코드에 맞춰 덮어쓰지 말고 5단계 3번처럼 "결정 변경 vs 위반"으로 분기해 사용자에게 묻는다. 회색지대 결정까지 코드에 맞추면 코드 변경이 ADR 을 끌고 다녀 PRD → ADR → 코드 단방향이 깨진다 (`adr-sync` "source of truth 의 범위"와 같은 프레이밍).
+
+### renumber 의 외부 영향 (7단계 적용 시 인지할 것)
+
+7단계 renumber 는 repo 안의 참조를 8단계에서 모두 정정하지만, repo 밖·이력 도구에는 영향이 남는다. 손실이 아니라 trade-off 이므로 인지하고 진행한다:
+
+- **외부 링크는 깨진다**: 옛 경로(`docs/adr/<cat>/0004-...md`)를 가리키던 PR·이슈·위키·북마크의 URL 은 renumber 후 404 가 된다 (GitHub 은 파일 rename 에 리다이렉트를 주지 않는다). 자주 인용되는 ADR 을 renumber 한다면 8단계 보고에 "옛 경로 → 새 경로" 표를 남겨 사용자가 외부 참조를 갱신할 수 있게 한다.
+- **git blame 해석**: `git mv` 로 옮겼으므로 라인 이력은 따라오지만, renumber 커밋 직후 `git blame` 은 모든 라인을 그 커밋의 rename 으로 표시할 수 있다. 실제 결정 변경 이력을 보려면 rename 을 건너뛰는 `git log --follow` 또는 rollup 커밋의 `git show` 로 본다.
+- 이 두 비용이 부담스러운 카테고리(예: 외부에서 영구 링크로 많이 참조됨)면, renumber 를 건너뛰고 결번을 유지하는 선택지를 사용자에게 제시할 수 있다 — 단 그건 split·sync 의 기본 동작(결번 유지)으로 돌아가는 것이고, rollup 의 "흔적 없음" 철학과는 trade-off 다.

@@ -7,6 +7,8 @@ description: Verify that ADRs in docs/adr/ accurately describe the current codeb
 
 `docs/adr/`의 모든 ADR이 shipping 코드와 일치하는지 검증한다. drift된 ADR을 수정하고, 관련 ADR 사이의 모순을 잡고, README 인덱스를 동기화한다.
 
+검증·정정과 함께 **각 ADR을 "현재 코드를 설명하는 하나의 온전한(self-contained) 문서"로 다듬는다.** 시간이 지나며 본문 중간중간에 누적된 evolution narration("처음엔 ~였다가 ~로 바꿨다", "v2 에서 ~를 추가", "기존 방식 대비 ~로 변경" 류)을 현재 상태 단일 서술로 재구성해, 한 ADR만 읽어도 최신 코드의 비즈니스·기술 결정이 끊김 없이 읽히게 한다. 옛 버전 히스토리는 Git 이 보존하므로 ADR 본문에 진화 이력을 들고 있지 않는다 (이것은 단일 ADR 안에서의 정리이고, 여러 ADR 에 분산된 진화 _체인_ 을 한 ADR 로 합치는 것은 `adr-rollup` 의 일이다).
+
 기본은 **deep mode**: 범위 내 모든 ADR 본문을 읽고 모든 주장(API, error code, enum, 엔티티 필드, Status, Related 링크)을 코드와 대조한다. `--quick` 플래그가 있으면 README 한 줄 요약만 빠르게 점검.
 
 ## 모드
@@ -62,6 +64,12 @@ Quick mode는 이 단계만 수행한다.
 3. 구현 세부사항 bloat 식별 — 다음 두 기준으로 본문을 훑고 점진적으로 제거한다:
    - **코드 직독 테스트** (`README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대"): 본문 단락이 관련 코드를 읽으면 자명한가? 자명하면 ADR 에서 뺀다 (함수 책임 분담, 모듈 의존 그래프, 필드 타입표, 에러 메시지·UI 라벨, 환경 변수 이름, 의사코드 등).
    - **금지 항목 표** (`authoring-rules.md` "ADR에 포함하지 않는 것"): 파일 경로(폴더 이하), 코드 스니펫, 구현 상수·튜닝값, 엔티티 필드 상세 표, 마이그레이션 명령어, 전체 JSON.
+     3.5. **evolution narration 정리 — 온전한 현재-상태 문서로 재구성**. 한 ADR 안에 시간이 지나며 끼어든 진화 서술을 현재 상태 단일 서술로 다듬어, 그 ADR 하나만 읽어도 최신 코드의 결정이 끊김 없이 읽히게 한다. 다음을 찾아 고친다:
+   - **진화 어법 → 현재형 단언**: "처음엔 X 였다가 Y 로 바꿨다", "v2 에서 Z 추가", "기존 A 대비 B 로 변경", "as of 2024-...", "deprecated 됐던 ~" 류 시간순 서술을, 현재 코드가 하는 것만 남긴 단언("시스템은 Y 로 동작한다")으로 바꾼다. 더 이상 코드에 없는 옛 단계는 삭제한다 (Git 이 이력 보존).
+   - **본문 중간에 박힌 Changelog/History/Revision/Update 류 단락·소제목 제거**: 이런 절은 ADR 본문이 아니라 Git 의 몫이다. 단 다른 ADR 을 supersede/replace 한 사실 자체는 `Status`·`Related` 에 한 줄로만 남기고 본문 서사로 풀지 않는다.
+   - **중복·모순된 결정 서술 통합**: 같은 결정을 본문 여러 곳에서 서로 다른 시점으로 서술하면, 현재 코드 기준 한 번만 서술하도록 합친다.
+   - 재구성은 `authoring-rules.md`의 표준 ADR 구조(Context / Decision Drivers / Decision / 대안 검토 / Consequences)에 맞춰 문단을 재배치하되, **회색지대 결정(채택 근거·대안·도메인 규칙·상태 전이·fallback)은 절대 누락하지 않는다** — 진화 서술 안에 묻혀 있던 진짜 근거·대안을 현재형으로 살려 옮긴다. 정보 _압축_ 이지 _손실_ 이 아니다.
+   - 단, **회색지대 결정이 코드와 모순될 때는 narration 정리라는 이름으로 ADR 을 코드에 맞춰 조용히 덮어쓰지 않는다** — 아래 "source of truth 의 범위" 분기를 그대로 따른다 (결정 변경 vs 위반).
 4. 회색지대 충실도 점검 — 본문에 (a) 대안 비교/채택 근거 (b) 비즈니스 규칙의 시스템 번역 (c) 도메인 규칙·상태 전이 (d) 외부 의존 fallback 중 하나도 없으면 ADR 가치가 약하다는 신호 → `Suggestions` 에 "회색지대 보강 또는 ADR 폐기 검토" 로 기록.
 5. Decision Drivers / 대안 ≥2 점검 (`authoring-rules.md` "Decision Drivers" / "대안 검토 — 최소 2개 이상"):
    - Decision Drivers 가 빈약(0-2개)하거나 일반 품질 속성("유지보수성", "확장성") 일색이면 → `Suggestions` 에 "Drivers 를 옵션 변별하는 사실/제약으로 보강" 으로 기록
@@ -155,6 +163,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 
 ### Fixed
 - [ADR <category>/NNNN: ...] — X 섹션이 이제 Y라고 함 (이유: <근거>)
+- [ADR <category>/NNNN: 문서 정리] — evolution narration 제거/현재형 재구성: <무엇을 어떻게>. 살린 회색지대 결정: <근거·대안>. (해당 ADR 에 한함)
 
 ### Contradictions Resolved
 - [ADR A ↔ ADR B] — 무엇이 충돌했고 어떻게 화해시켰는지
@@ -174,5 +183,5 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 ## Notes
 
 - ADR은 **왜 이 결정이 내려졌는지**를 기록. 작은 버그 수정·스타일 변경은 ADR 갱신 사유가 아니다.
-- 카테고리 내 번호는 순차 증가. split으로 내용이 빠진 번호는 결번으로 둔다 (renumber 금지).
+- 카테고리 내 번호는 순차 증가. split으로 내용이 빠진 번호는 결번으로 둔다 (renumber 금지). sync 는 번호를 재배치하지 않는다 — 결번 메우기(renumber)는 `adr-rollup` 이 체인을 합쳐 삭제할 때만 수행하는 단계다.
 - 코드가 source of truth 인 것은 **구현 사실·Status 에 한정**된다 — 이것들이 코드와 충돌하면 ADR 을 코드에 맞춰 정정한다. 반면 **회색지대 결정(채택 근거·도메인 규칙·상태 전이·fallback)은 ADR 이 권위**다. 코드가 이 결정과 모순되면 ADR 을 코드에 맞춰 덮어쓰지 말고 "결정 변경 vs 위반" 으로 분기한다 (위 3단계 6번 "source of truth 의 범위" 참조). 회색지대 결정까지 코드에 맞추면 코드 변경이 ADR 을 끌고 다녀 단방향이 깨진다.

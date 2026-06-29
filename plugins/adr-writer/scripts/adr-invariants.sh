@@ -10,13 +10,21 @@
 # Usage:
 #   adr-invariants.sh [--adr-dir DIR] [--code-only|--prd-only|--rollup-only]
 #                     [--removed "<cat>/<NNNN> ..."]
+#                     [--renumbered "<cat>/<old>:<cat>/<new> ..."]
 #
-#   --adr-dir DIR   ADR root (default: docs/adr)
-#   --code-only     run only check (a): code → ADR reverse references
-#   --prd-only      run only check (b): ADR → PRD reverse references
-#   --rollup-only   run only check (c): stale citations of removed ADRs
-#   --removed LIST  space-separated ADR ids/paths deleted by a rollup, e.g.
-#                   "auth/0002 auth/0003" — enables check (c)
+#   --adr-dir DIR     ADR root (default: docs/adr)
+#   --code-only       run only check (a): code → ADR reverse references
+#   --prd-only        run only check (b): ADR → PRD reverse references
+#   --rollup-only     run only check (c)+(d): stale citations after a rollup
+#   --removed LIST    space-separated ADR ids/paths a rollup DELETED, e.g.
+#                     "auth/0002 auth/0003" — enables check (c). Citations of
+#                     these repoint to the CONSOLIDATED (survivor) ADR.
+#   --renumbered LIST space-separated <old>:<new> pairs a rollup RENUMBERED
+#                     (same ADR, new number), e.g. "auth/0004:auth/0002
+#                     auth/0005:auth/0003" — enables check (d). Citations of
+#                     the old id repoint to that ADR's NEW number (not the
+#                     consolidated one). Kept separate from --removed so the
+#                     two repoint directions never get confused.
 #
 # Exit: 0 = clean, 1 = at least one violation found, 2 = usage error.
 
@@ -27,6 +35,7 @@ RUN_CODE=1
 RUN_PRD=1
 RUN_ROLLUP=0
 REMOVED=""
+RENUMBERED=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -35,6 +44,7 @@ while [ $# -gt 0 ]; do
     --prd-only) RUN_CODE=0; RUN_PRD=1; RUN_ROLLUP=0; shift ;;
     --rollup-only) RUN_CODE=0; RUN_PRD=0; RUN_ROLLUP=1; shift ;;
     --removed) REMOVED="${2:-}"; RUN_ROLLUP=1; shift 2 ;;
+    --renumbered) RENUMBERED="${2:-}"; RUN_ROLLUP=1; shift 2 ;;
     -h|--help)
       sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -88,8 +98,9 @@ if [ "$RUN_PRD" -eq 1 ]; then
   fi
 fi
 
-# (c) stale citations of ADRs a rollup deleted. Only runs when --removed is
-# given. Each token is an ADR id (cat/NNNN) or path fragment.
+# (c) stale citations of ADRs a rollup DELETED. Only runs when --removed is
+# given. Each token is an ADR id (cat/NNNN) or path fragment. These citations
+# repoint to the CONSOLIDATED (survivor) ADR — the decision lives there now.
 if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$REMOVED" ]; then
   for ref in $REMOVED; do
     pat="$(printf '%s' "$ref" | sed 's/[.[\*^$/]/\\&/g')"
@@ -97,6 +108,31 @@ if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$REMOVED" ]; then
       --exclude-dir=.git --exclude-dir=node_modules . 2>/dev/null)" || true
     if [ -n "$hits" ]; then
       echo "✗ (c) stale citation of removed ADR '${ref}' (repoint to the consolidated ADR):"
+      printf '%s\n' "$hits"
+      found=1
+    fi
+  done
+fi
+
+# (d) stale citations of ADRs a rollup RENUMBERED. Only runs when --renumbered
+# is given. Each token is an "<old>:<new>" pair — the SAME ADR moved to a new
+# number. These citations repoint to the ADR's NEW number, NOT the consolidated
+# one (the decision did not move into another ADR; only its number changed).
+# Kept distinct from (c) so the repoint direction is never ambiguous in output.
+if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$RENUMBERED" ]; then
+  for pair in $RENUMBERED; do
+    old="${pair%%:*}"
+    new="${pair#*:}"
+    if [ "$old" = "$pair" ] || [ -z "$new" ]; then
+      echo "adr-invariants: --renumbered expects '<old>:<new>' pairs, got '$pair'" >&2
+      found=1
+      continue
+    fi
+    pat="$(printf '%s' "$old" | sed 's/[.[\*^$/]/\\&/g')"
+    hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|${pat}\.md" \
+      --exclude-dir=.git --exclude-dir=node_modules . 2>/dev/null)" || true
+    if [ -n "$hits" ]; then
+      echo "✗ (d) stale citation of renumbered ADR '${old}' (repoint to its new number '${new}'):"
       printf '%s\n' "$hits"
       found=1
     fi
