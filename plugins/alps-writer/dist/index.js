@@ -31164,11 +31164,15 @@ ${content}
     m = content.match(/^# (.+?) (?:ALPS|PRD)/m);
     return m ? m[1] : "Untitled";
   }
+  expandHome(p) {
+    return p.startsWith("~") ? path3.join(os.homedir(), p.slice(1)) : p;
+  }
   get outputDir() {
-    return process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path3.join(process.cwd(), "prd");
+    const dir = process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path3.join(process.cwd(), "prd");
+    return this.expandHome(dir);
   }
   expandPath(p) {
-    if (p.startsWith("~")) return path3.join(os.homedir(), p.slice(1));
+    if (p.startsWith("~")) return this.expandHome(p);
     if (path3.isAbsolute(p)) return p;
     return path3.resolve(this.outputDir, p);
   }

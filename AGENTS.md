@@ -31,7 +31,7 @@ package.json              # Private workspace root (prettier/husky/lint-staged)
 pnpm-workspace.yaml       # packages: plugins/alps-writer
 
 plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
-├── .claude-plugin/plugin.json   # mcpServers (node dist/index.js) + alps-init, feature-to-adr skills
+├── .claude-plugin/plugin.json   # mcpServers only (node dist/index.js); skills/ (alps-init, feature-to-adr) are auto-discovered
 ├── package.json          # private; build tooling for the bundle
 ├── tsconfig.json, eslint.config.mjs
 ├── src/

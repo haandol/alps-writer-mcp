@@ -7,6 +7,11 @@
 # hard gate. The adr-writer plugin itself never blocks — when a skill calls
 # it, the result is advisory (the model decides what to fix).
 #
+# Requirements: bash and a grep that supports -r, -E, --include, and
+# --exclude-dir (GNU grep or BSD/macOS grep). busybox grep lacks
+# --exclude-dir; on such minimal images (e.g. Alpine CI) install GNU grep
+# before wiring this into a hard gate, or the exclude flags fail.
+#
 # Usage:
 #   adr-invariants.sh [--adr-dir DIR] [--code-only|--prd-only|--rollup-only]
 #                     [--removed "<cat>/<NNNN> ..."]
@@ -132,7 +137,7 @@ fi
 # "<cat>/NNNN.md" (dot right after the number) would miss every real link.
 if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$REMOVED" ]; then
   for ref in $REMOVED; do
-    pat="$(printf '%s' "$ref" | sed 's/[.[\*^$/]/\\&/g')"
+    pat="$(printf '%s' "$ref" | sed 's/[].[\*^$/(){}+?|]/\\&/g')"
     hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|${pat}(-[A-Za-z0-9-]*)?\.md" \
       --exclude-dir=.git --exclude-dir=node_modules . 2>/dev/null)" || true
     if [ -n "$hits" ]; then
@@ -159,7 +164,7 @@ if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$RENUMBERED" ]; then
       echo "adr-invariants: --renumbered expects '<old>:<new>' pairs, got '$pair'" >&2
       exit 2
     fi
-    pat="$(printf '%s' "$old" | sed 's/[.[\*^$/]/\\&/g')"
+    pat="$(printf '%s' "$old" | sed 's/[].[\*^$/(){}+?|]/\\&/g')"
     hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|${pat}(-[A-Za-z0-9-]*)?\.md" \
       --exclude-dir=.git --exclude-dir=node_modules . 2>/dev/null)" || true
     if [ -n "$hits" ]; then

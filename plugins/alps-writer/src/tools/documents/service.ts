@@ -65,14 +65,22 @@ export class DocumentService {
     return m ? m[1] : "Untitled";
   }
 
+  private expandHome(p: string): string {
+    return p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p;
+  }
+
   private get outputDir(): string {
-    return (
-      process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path.join(process.cwd(), "prd")
-    );
+    // Expand a leading ~ here too: env vars are passed verbatim by MCP clients
+    // (no shell expansion), so a documented value like "~/Documents/alps" must
+    // be resolved against $HOME rather than used as a literal "~" path segment
+    // when it serves as the base dir for a relative output path.
+    const dir =
+      process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path.join(process.cwd(), "prd");
+    return this.expandHome(dir);
   }
 
   private expandPath(p: string): string {
-    if (p.startsWith("~")) return path.join(os.homedir(), p.slice(1));
+    if (p.startsWith("~")) return this.expandHome(p);
     if (path.isAbsolute(p)) return p;
     return path.resolve(this.outputDir, p);
   }
