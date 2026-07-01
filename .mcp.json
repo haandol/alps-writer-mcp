@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "alps-writer": {
-      "command": "npx",
-      "args": ["-y", "alps-writer"]
-    }
-  }
-}

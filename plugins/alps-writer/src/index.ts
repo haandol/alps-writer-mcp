@@ -27,12 +27,14 @@ Keywords: PRD, ALPS, 기획서, 기획 문서, 제품 요구사항, 제품 스�
 <WORKFLOW>
 1. init_alps_document() or load_alps_document()
 2. get_alps_overview() - MUST call first to get conversation guide
-3. For each section 1-9, ONE section at a time:
+3. Author the sections ONE at a time in this dependency-respecting order: 1, 2, 3, 4, 6, 5, 7, 8, 9.
+   (Section numbering is unchanged — Section 5 is Design, Section 6 is Requirements. Only the questioning order differs: author Requirements (6) before Design (5), because Design reuses the Feature IDs defined in Section 6.1.)
+   For each section:
    a. get_alps_section_guide(N)
    b. get_alps_section(N)
    c. Follow conversation guide from overview
    d. Print the completed section and get explicit user confirmation
-   e. save_alps_section(N, content) only AFTER confirmation
+   e. save_alps_section(section, subsection_id, title, content) — all four arguments; subsection_id and title MUST match the section's XML template — only AFTER confirmation
    f. Move to the next section only after this one is confirmed
 4. Section 7 (Feature-Level Specification) is the exception that needs EXTRA care:
    each Feature subsection (7.1, 7.2, ...) is confirmed and saved INDIVIDUALLY.
@@ -136,8 +138,16 @@ server.tool(
 3. 사용자가 확인한 후에만 이 도구를 호출하세요`,
   {
     section: z.number().min(1).max(9).describe("Section number (1-9)"),
-    subsection_id: z.string().describe('Subsection ID (e.g., "1" for X.1, "1.2" for X.1.2)'),
-    title: z.string().describe("Title of the subsection"),
+    subsection_id: z
+      .string()
+      .describe(
+        'Subsection ID — the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Must match a <subsection id="N.x"> in the section\'s XML template.',
+      ),
+    title: z
+      .string()
+      .describe(
+        "Title of the subsection. MUST equal the title= attribute of the matching <subsection> in the section's XML template (the single source of truth for headings).",
+      ),
     content: z.string().describe("Content for the subsection (markdown)"),
   },
   ({ section, subsection_id, title, content }) => ({
