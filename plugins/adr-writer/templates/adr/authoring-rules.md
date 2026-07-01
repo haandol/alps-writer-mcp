@@ -138,9 +138,33 @@ API 엔드포인트 목록(Method, Path, 설명)은 아키텍처 결정의 일�
 
 이 신호 중 둘 이상이면 ADR을 분리한다 (예: `0003-payment.md` → `0003-payment-checkout.md` + `0004-payment-refund.md`).
 
+## 요구사항 변경으로 ADR을 고칠 때 — edit-in-place vs supersede 판정
+
+비즈니스 요구사항이 바뀌어 기존 결정에 손을 대야 할 때, **제자리 수정(edit-in-place)** 과 **새 ADR로 대체(supersede)** 중 무엇을 할지 정하는 단일 기준이다. 자주 반복되는 판단이므로 즉흥적으로 정하지 않고 아래 체크리스트를 따른다. 이 절이 그 판정의 source of truth이며, 다른 스킬·문서는 이 절을 링크한다.
+
+판정 기준은 **"왜 이 선택이었나"(Context · Decision Drivers · 채택 근거)가 바뀌는가**이다.
+
+**edit-in-place — 기존 ADR을 그 자리에서 고친다** (아래 중 하나라도 해당하고 "왜"가 그대로면):
+
+- Context / Decision Drivers / 채택 근거가 **그대로**이고, 세부만 조정된다.
+- 구현 사실을 정정한다 — Status, 엔티티명, API 표, 상태값 등 코드 직독으로 확인되는 것. (이건 `/adr-sync`의 "source of truth 범위: 구현 사실은 코드가 권위"와 같은 방향이다.)
+- 회색지대 결정의 **미세 조정** — 방향은 유지한 채 임계·경계·예외를 다듬는 정도.
+
+**supersede — 새 ADR을 만들고 옛 것을 `Status: Superseded by [ADR XXXX](link)`로 남긴다** (아래 중 하나라도 해당하면):
+
+- **채택한 대안 자체가 바뀐다** (예: "낙관적 락" → "비관적 락"). 옛 근거를 history로 보존해야 한다.
+- **Decision Drivers가 뒤집힌다** — 결정을 좁히던 압력·제약이 달라졌다 (예: "PII 외부 반출 금지" 제약이 사라짐).
+- **결정 방향이 반대가 된다** — 하던 것을 안 하기로, 또는 그 역.
+
+즉 "왜"가 안 바뀌면 edit-in-place, "왜"가 달라져 옛 근거를 남겨야 하면 supersede다. 판단이 애매하면 supersede가 안전하다 — 근거를 지우지 않기 때문이다.
+
+> **한 ADR = 한 결정 힌트**: 고치려는 변경이 위 "[한 ADR = 한 결정](#한-adr--한-결정)"의 분리 신호(250줄 초과, 서로 다른 엔티티 결정 혼재)를 함께 만든다면, edit-in-place가 아니라 **분리 후 supersede** 신호일 가능성이 높다.
+
+supersede를 택하면 옛 ADR Status 전환 · 새/옛 ADR 양방향 Related 링크 · README 인덱스 갱신 · 옛 번호를 인용하던 다른 ADR의 repoint를 **한 변경 단위로** 처리한다 (Related는 ADR↔ADR 참조라 정상이다). 새 ADR은 `Proposed`로 저장하고, 구현·테스트가 끝나면 `/adr-impl`이 `Accepted`로 자동 승격한다.
+
 ## 같은 결정이 진화하면 새 ADR을 만든다
 
-같은 logical decision이 시간이 지나며 바뀌면 기존 ADR을 덮어쓰지 않고 **새 ADR을 만들어 history를 남긴다** — 옛 ADR은 `Status: Superseded by [ADR XXXX](link)`로 표시한다. 한 카테고리 안에 ADR이 여럿 있는 것은 정상이며, 통합 대상이 아니다.
+같은 logical decision이 시간이 지나며 바뀌면 기존 ADR을 덮어쓰지 않고 **새 ADR을 만들어 history를 남긴다** — 옛 ADR은 `Status: Superseded by [ADR XXXX](link)`로 표시한다 (제자리 수정으로 족한지 supersede가 필요한지는 위 "[요구사항 변경으로 ADR을 고칠 때](#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정)" 판정을 따른다). 한 카테고리 안에 ADR이 여럿 있는 것은 정상이며, 통합 대상이 아니다.
 
 같은 결정의 진화 history가 너무 분산되어 현재 상태를 한눈에 보기 어려워졌을 때만 `/adr-rollup`으로 그 묶음을 통합한다 (전체 카테고리가 아니라 묶음 단위). roll-up 절차와 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/skills/adr-rollup/SKILL.md` 참조.
 
