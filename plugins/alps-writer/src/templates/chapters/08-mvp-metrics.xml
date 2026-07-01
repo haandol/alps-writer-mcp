@@ -12,7 +12,7 @@
 | Post creation count | Database query | F4 |
 | Revisit count within 14 days | User session tracking | KPI |
 | Average response latency | APM monitoring | NF3 |
-| Uptime logs | Infrastructure monitoring | NF4 |
+| Concurrent-user load test | Load testing (release gate) | NF2 |
     </example>
   </subsection>
   <subsection id="8.2" title="Success Thresholds">
@@ -22,8 +22,8 @@
 |-----|----------|--------|-------------------|
 | Sign-up conversion rate | N/A | ≥ 20% | First 30 days |
 | Revisit rate (14 days) | N/A | ≥ 30% | Ongoing |
-| Average response latency | N/A | &lt; 3 seconds | Ongoing |
-| System uptime | N/A | ≥ 99.5% | Ongoing |
+| Average response latency | N/A | &lt; 3 seconds (p95) | Ongoing |
+| Concurrent users sustained | N/A | ≥ 1,000 | Release test |
     </example>
   </subsection>
 </section>

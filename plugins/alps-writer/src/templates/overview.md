@@ -14,6 +14,9 @@ This document provides a comprehensive framework to capture and validate all ess
 8. MVP Metrics - Detail methods for collecting and analyzing data _(references: Section 2, 6)_
 9. Out of Scope - List features deferred for future iterations
 
+> **Recommended authoring order:** 1 → 2 → 3 → 4 → **6 → 5** → 7 → 8 → 9.
+> The section numbering and the final document order are unchanged (Section 5 is Design, Section 6 is Requirements). Only the order in which you _ask questions_ differs: author Section 6 (Requirements) before Section 5 (Design), because Section 5 reuses the Feature IDs (F1, F2, …) defined in Section 6.1. This is the only place the questioning order departs from the numeric order.
+
 ---
 
 ## Section Reference Rules
@@ -65,15 +68,15 @@ For EVERY section:
 3. Ask 1 (max 2) focused questions from the guide
 4. Integrate answers iteratively
 5. When complete, print FULL section and ask for confirmation
-6. Call `save_alps_section(N, content)` only AFTER explicit "yes"
-7. Move to next section only after confirmation
+6. Call `save_alps_section(section, subsection_id, title, content)` — one call per X.n subsection — only AFTER explicit "yes". `subsection_id` and `title` MUST match the `<subsection id="N.x" title="...">` in that section's XML template.
+7. Move to the next section only after confirmation. Follow the recommended authoring order above — author Section 6 (Requirements) before Section 5 (Design).
 
 <section-level-checkpoint>
 Confirmation happens at the SECTION level — never silently skip a section or roll several sections into one approval. The user must see and approve each section before you move on. Do not assume a section is "obvious" or "trivial enough to skip"; surface it and wait.
 </section-level-checkpoint>
 
 <confirmation-required-sections>
-Must obtain explicit confirmation before proceeding:
+Every section requires confirmation (see the section-level checkpoint above). These need EXTRA-strict, non-skippable confirmation:
 - Section 3. Demo Scenario
 - Section 6. Requirements Summary
 - Every subsection of Section 7 (confirm each 7.x individually)
@@ -90,11 +93,11 @@ Section 7 (Feature-Level Specification) is the most common place to cut corners 
 
 <change-requests>
 When user asks to edit/update/modify/remove/add anything:
-1. Print only the modified subsection with `v{n}` suffix (e.g., `### 1.1 Purpose v2`)
+1. Print only the modified subsection with a `v{n}` DISPLAY marker (e.g., `### 1.1 Purpose v2`). This marker is a conversational diff cue only — it is NEVER persisted.
 2. Include short change-log (1-3 bullets)
 3. Ask ONE follow-up question
 4. Do NOT reprint entire section unless requested
-5. After "no more changes", ask permission to proceed to next section
+5. After "no more changes", call `save_alps_section` with the ORIGINAL title (e.g., `Purpose`, no `v2`) and the SAME `subsection_id` so it overwrites in place, then ask permission to proceed to the next section
 </change-requests>
 
 <reference-document-handling>
@@ -111,4 +114,6 @@ When user provides PDF, ALPS (PRD), or any reference:
 - ALWAYS confirm at the section level — never skip a section without the user approving it
 - For Section 7, ALWAYS confirm each Feature subsection (7.x) individually — never batch Features
 - ALWAYS ask 1-2 questions at a time (1 for complex topics)
+- When saving, ALWAYS call `save_alps_section(section, subsection_id, title, content)` with all four arguments; `subsection_id` and `title` must match the section's XML template
+- Author Section 6 (Requirements) before Section 5 (Design) — see the recommended authoring order
 </rules>

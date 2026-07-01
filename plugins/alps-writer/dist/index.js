@@ -31066,7 +31066,7 @@ ${inner.trim()}
 Before proceeding, you MUST:
 1. Call ${readCalls} to review every referenced section
 2. Summarize key points from referenced section(s) in your response
-3. If referenced sections are incomplete, warn the user first
+3. If a referenced section is empty, STOP and author it first (per the recommended authoring order) \u2014 do not fabricate its content, then return here
 
 ${guide}`;
     }
@@ -31237,7 +31237,7 @@ ${content}
       const subId = `${section}.${subsectionId}`;
       const subs = this.parseSubsections(content, section);
       const sub = subs.get(subId);
-      if (sub) return `## ${subId}. ${sub.title}
+      if (sub) return `### ${subId}. ${sub.title}
 
 ${sub.content}`;
       return `Subsection ${subId} not found.`;
@@ -31351,12 +31351,14 @@ Keywords: PRD, ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \uC81C\uD488
 <WORKFLOW>
 1. init_alps_document() or load_alps_document()
 2. get_alps_overview() - MUST call first to get conversation guide
-3. For each section 1-9, ONE section at a time:
+3. Author the sections ONE at a time in this dependency-respecting order: 1, 2, 3, 4, 6, 5, 7, 8, 9.
+   (Section numbering is unchanged \u2014 Section 5 is Design, Section 6 is Requirements. Only the questioning order differs: author Requirements (6) before Design (5), because Design reuses the Feature IDs defined in Section 6.1.)
+   For each section:
    a. get_alps_section_guide(N)
    b. get_alps_section(N)
    c. Follow conversation guide from overview
    d. Print the completed section and get explicit user confirmation
-   e. save_alps_section(N, content) only AFTER confirmation
+   e. save_alps_section(section, subsection_id, title, content) \u2014 all four arguments; subsection_id and title MUST match the section's XML template \u2014 only AFTER confirmation
    f. Move to the next section only after this one is confirmed
 4. Section 7 (Feature-Level Specification) is the exception that needs EXTRA care:
    each Feature subsection (7.1, 7.2, ...) is confirmed and saved INDIVIDUALLY.
@@ -31447,8 +31449,12 @@ server.tool(
 3. \uC0AC\uC6A9\uC790\uAC00 \uD655\uC778\uD55C \uD6C4\uC5D0\uB9CC \uC774 \uB3C4\uAD6C\uB97C \uD638\uCD9C\uD558\uC138\uC694`,
   {
     section: external_exports.number().min(1).max(9).describe("Section number (1-9)"),
-    subsection_id: external_exports.string().describe('Subsection ID (e.g., "1" for X.1, "1.2" for X.1.2)'),
-    title: external_exports.string().describe("Title of the subsection"),
+    subsection_id: external_exports.string().describe(
+      `Subsection ID \u2014 the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Must match a <subsection id="N.x"> in the section's XML template.`
+    ),
+    title: external_exports.string().describe(
+      "Title of the subsection. MUST equal the title= attribute of the matching <subsection> in the section's XML template (the single source of truth for headings)."
+    ),
     content: external_exports.string().describe("Content for the subsection (markdown)")
   },
   ({ section, subsection_id, title, content }) => ({

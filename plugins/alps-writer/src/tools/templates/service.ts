@@ -102,7 +102,7 @@ export class TemplateService {
 Before proceeding, you MUST:
 1. Call ${readCalls} to review every referenced section
 2. Summarize key points from referenced section(s) in your response
-3. If referenced sections are incomplete, warn the user first
+3. If a referenced section is empty, STOP and author it first (per the recommended authoring order) — do not fabricate its content, then return here
 
 ${guide}`;
     }

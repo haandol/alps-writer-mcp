@@ -3,10 +3,13 @@
 - Briefly describe the demo scenario that shows how key hypotheses can be validated.
 - Ensure the scenario aligns with Section 2.
   </description>
-  <example>
+  <subsection id="3.1" title="Demo Scenario">
+    <description>Walk through the concrete end-to-end scenario that validates the Section 2 hypothesis.</description>
+    <example>
 1. Amanda visited the shoes category page on our shopping website a week ago.
 2. Amanda received a 30% discount coupon via email.
 3. Amanda clicks the link in the email, which redirects her to the shoes category page.
 4. Amanda buys a pair of shoes using the discount coupon, which is automatically applied to the order.
-  </example>
+    </example>
+  </subsection>
 </section>

@@ -159,7 +159,7 @@ ${content}
       const subId = `${section}.${subsectionId}`;
       const subs = this.parseSubsections(content, section);
       const sub = subs.get(subId);
-      if (sub) return `## ${subId}. ${sub.title}\n\n${sub.content}`;
+      if (sub) return `### ${subId}. ${sub.title}\n\n${sub.content}`;
       return `Subsection ${subId} not found.`;
     }
 
