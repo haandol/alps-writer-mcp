@@ -79,7 +79,7 @@ ALPS feature 가 워크숍식 ID 를 가진 경우, `/adr-new` 가 부여하는 
 
 - `alpsDocument` — 현재 `.alps.xml` 경로.
 - 해당 카테고리 entry 의 `alpsFeatureId` — 명시적 Feature ID 가 있으면 기록.
-- 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱(및 무결성 검사)한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 예: 6.3 에 `F3 -->|depends on| F1` 이 있으면 `f3` 카테고리의 `dependsOn` 에 `f1` 을 넣는다 (카테고리 키 변환 규칙은 2단계와 동일 — 그룹핑을 적용했으면 `<context>/<feature>` 키, 아니면 단일 세그먼트). 의존이 없는 feature 는 `dependsOn` 을 생략하거나 `[]` 로 둔다. 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다. 의존 엣지는 **다른 context 의 feature 를 가리켜도 정상**이다 (DDD context 사이 관계).
+- 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱(및 무결성 검사)한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 예: 6.3 에 `F3 -->|depends on| F1` 이 있으면 `f3` 카테고리의 `dependsOn` 에 `f1` 을 넣는다 (카테고리 키 변환 규칙은 2단계와 동일 — 그룹핑을 적용했으면 `<context>/<feature>` 키, 아니면 단일 세그먼트). **6.3 그래프를 점검한 결과 이 feature 에 선행이 없더라도 `dependsOn` 을 `[]` 로 기록한다 — 키를 생략하지 않는다.** 6.3 을 실제로 점검한 이상 이 상태는 "의존 없음(점검 완료)" 이지 "미선언" 이 아니며, `/adr-impl` 선행 게이트는 `[]`(안내 없이 진행) 와 키 생략("의존 미선언" 경고) 을 다르게 처리하기 때문이다 (`/adr-new` 4단계와 동일 규칙). 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다. 의존 엣지는 **다른 context 의 feature 를 가리켜도 정상**이다 (DDD context 사이 관계).
   - 기록 전 각 `dependsOn` 키가 **이미 매핑에 entry 가 있는(또는 이번 배치에서 먼저 생성될) 카테고리 키**인지 확인한다 (스키마 invariant "Must reference existing category keys"). 전체 배치 실행은 1단계 위상 정렬로 선행이 먼저 생성되므로 충족되지만, 단일 feature 인자 실행은 위 dangling 케이스가 정상이다. 1단계 무결성 검사를 통과했으므로 self-edge·순환은 여기 도달하지 않는다.
 - (선택) context 수준 entry 의 `subdomainType` — 2단계에서 도메인 그룹핑을 적용했고 그 도메인의 DDD 분류가 명확하면 `core`/`supporting`/`generic` 중 하나를 context entry 에 기록한다. PRD 에 신호가 없거나 평면 구조면 **생략한다** — advisory 메타데이터이므로 비워도 매핑은 유효하고, 억지로 분류하지 않는다.
 

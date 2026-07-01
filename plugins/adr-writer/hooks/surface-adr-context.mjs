@@ -91,12 +91,32 @@ function main() {
 
   const cwd = process.cwd();
   const eventCwd = process.env.CLAUDE_PROJECT_DIR || cwd;
-  const mappingFile = path.join(eventCwd, MAPPING_PATH);
-  const mapping = loadJSON(mappingFile);
+  // Honor an absolute ALPS_ADR_MAPPING as-is; path.join would otherwise splice
+  // it onto eventCwd (path.join("/proj", "/abs/x") -> "/proj/abs/x").
+  const mappingFile = path.isAbsolute(MAPPING_PATH)
+    ? MAPPING_PATH
+    : path.join(eventCwd, MAPPING_PATH);
 
   // Stay quiet in repos that haven't opted into the cycle (no mapping file).
   if (!existsSync(mappingFile)) {
     process.stdout.write("{}\n");
+    process.exit(0);
+  }
+
+  const mapping = loadJSON(mappingFile);
+
+  // The file exists but failed to parse (merge-conflict markers, trailing
+  // comma, truncated write). Surface the corruption instead of letting
+  // summarizeMapping(null) render it as "(empty — no ADRs registered)", which
+  // would hide the damage and invite duplicate /adr-new entries every turn.
+  if (mapping === null) {
+    const warn = {
+      hookSpecificOutput: {
+        hookEventName: "UserPromptSubmit",
+        additionalContext: `[ADR-first directive] ⚠ ${MAPPING_PATH} 가 존재하지만 JSON 파싱에 실패했습니다 (병합 충돌 마커·트레일링 콤마·잘린 write 등 손상 가능성). ADR 매핑 스냅샷을 표시할 수 없으니, ADR 사이클을 계속하기 전에 이 파일을 먼저 복구하세요.`,
+      },
+    };
+    process.stdout.write(JSON.stringify(warn) + "\n");
     process.exit(0);
   }
 
