@@ -1,6 +1,6 @@
 {
   "name": "alps-writer-plugins",
-  "version": "0.4.9",
+  "version": "0.4.10",
   "private": true,
   "description": "Claude Code marketplace: ALPS (PRD) authoring + ADR-driven development, as two independent plugins.",
   "type": "module",
