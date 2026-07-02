@@ -11,7 +11,7 @@
     },
     "categories": {
       "type": "object",
-      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/. The top segment is a DDD bounded context / subdomain named with the domain expert's ubiquitous-language term (e.g., 'identity', 'ordering'); the optional second segment is a user-perceived feature / vertical slice (e.g., 'identity/login'). At most two segments — no deeper nesting. When a context holds exactly one feature the second segment is elided and a single-segment key means context==feature (legacy/flat layout, e.g. 'auth', or a workshop Feature ID 'f1'). See structure.md '디렉토리 구조' and '.mapping.json 정책'.",
+      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/. The top segment is a DDD bounded context / subdomain named with the domain expert's ubiquitous-language term (e.g., 'identity', 'ordering'); the optional second segment is a user-perceived feature / vertical slice (e.g., 'identity/login'). At most two segments — no deeper nesting. When a context holds exactly one feature the second segment is elided and a single-segment key means context==feature (legacy/flat layout, e.g. 'auth'). Keys are derived from the feature NAME, never from a PRD Feature ID — the id is preserved in 'alpsFeatureId' instead, so '/adr-impl f1' matches via that field and the folder need not be named 'f1'. Only when no meaningful kebab name exists (e.g. a purely numeric workshop id) is the id used as a fallback single-segment key. See structure.md '디렉토리 구조' and '.mapping.json 정책'.",
       "additionalProperties": {
         "type": "object",
         "required": ["adrs"],
@@ -22,7 +22,7 @@
           },
           "alpsFeatureId": {
             "type": "string",
-            "description": "Stable id of the feature in the ALPS document (e.g., F-LOGIN-01)."
+            "description": "Stable id of the feature in the ALPS document (e.g., F-LOGIN-01). This is where the PRD Feature ID lives — the category KEY is derived from the feature name, not this id, so '/adr-impl f1' resolves by matching this field. Populated by feature-to-adr from ALPS Section 7; omit when there is no ALPS PRD."
           },
           "subdomainType": {
             "type": "string",

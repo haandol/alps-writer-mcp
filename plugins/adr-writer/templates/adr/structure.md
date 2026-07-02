@@ -181,7 +181,7 @@ bounded context(도메인) 폴더가 기본이고, 그 안의 피쳐가 UI → A
 }
 ```
 
-매핑 파일은 `/adr-new`(빈 골격 생성 + entry 작성)와 `/feature-to-adr`(ALPS Section 7 일괄 변환)로 생성·갱신된다. 평면(단일-피쳐 context) 프로젝트는 카테고리 키로 Feature ID(`f1`, `f2`)를 그대로 써도 된다 — 그 경우 단일 세그먼트 키가 context==feature 를 뜻한다.
+매핑 파일은 `/adr-new`(빈 골격 생성 + entry 작성)와 `/feature-to-adr`(ALPS Section 7 일괄 변환)로 생성·갱신된다. 카테고리 키는 feature 이름에서 canonical 하게 파생하고(`login`, `identity/login`), ALPS Feature ID(`F1`)는 키가 아니라 entry 의 `alpsFeatureId` 로 보존한다 — `/adr-impl f1` 같은 ID 호출은 그 필드로 매칭되므로 키를 ID 로 고정할 필요가 없다. feature 이름이 없어 의미 있는 kebab 을 못 뽑는 워크숍/번호 기반 PRD 에서만 `f1`, `f2` 를 fallback 키로 쓴다 — 그 경우에만 단일 세그먼트 키가 `alpsFeatureId` 와 겹치며 context==feature 를 뜻한다.
 
 - `subdomainType` — context 의 DDD subdomain 분류(`core`/`supporting`/`generic`). **선택적·advisory 메타데이터**다: 강제되지 않고, `/adr-new` 가 매번 묻지 않으며, 있으면 `/adr-sync`·hook 스냅샷이 도메인별 그룹핑/주석으로 표시한다. context 수준 entry(최상위 세그먼트, 또는 단일-피쳐 평면 entry)에 둔다 — 피쳐 sub-folder entry 는 개념적으로 부모 context 의 분류를 상속하므로 생략해도 된다. 알 수 없으면 생략한다 (없어도 매핑은 유효하다).
 - `dependsOn` — 이 카테고리가 의존하는 선행 카테고리 키 배열. `/adr-impl` 의 선행 게이트가 읽어 선행 ADR 을 먼저 구현하도록 정렬한다. ALPS 가 있으면 `/feature-to-adr` 가 Section 6.3 에서 옮겨오고, ALPS 없이 `/adr-new` 로 직접 작성하면 작성자가 지목한 선행을 기록한다. **기존 카테고리 키만 참조하고 비순환(self-edge 금지)을 유지**한다 — `/adr-sync` 6단계가 dangling·순환을 점검한다. 엣지는 **context 경계를 가로질러도 된다** (예: `catalog/search` 가 `identity/login` 에 의존 — DDD context 사이 관계가 ADR 의존으로 나타난 정상 케이스).

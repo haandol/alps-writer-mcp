@@ -20,7 +20,7 @@ disable-model-invocation: true
      - 먼저 디스크에서 같은 카테고리 디렉토리의 kebab-title 매칭(`docs/adr/<cat>/*-<title>.md`, 번호 뒤 문자열이 일치하는 ADR)을 본다 — git 없이 동작하고 가장 단순하다.
      - 매칭이 모호하거나 없으면 git rename 이력으로 확정한다: `git log --all --diff-filter=R --name-status -- '*<title>.md'` (또는 `git log --all --diff-filter=R --name-status` 출력에서 옛 경로를 grep) 하면 `R100  docs/adr/<cat>/<옛>.md  docs/adr/<cat>/<새>.md` 형태로 옛→새 매핑이 한 줄로 나온다 — 가장 명확하다. (옛 경로에 `git log --follow -- <옛경로>` 도 rename 을 추적해 커밋들을 보여주지만, 새 경로를 한눈에 주지는 않으므로 `--diff-filter=R --name-status` 를 쓴다.)
      - 찾으면 "`<옛경로>` 는 rollup 으로 `<새경로>` 로 이동했습니다. 이 파일을 구현할까요?" 로 확인 후 새 경로를 대상으로 삼는다. 그래도 못 찾으면 아래 "Proposed 목록 출력" 으로 폴백한다.
-   - **인자가 카테고리 또는 ALPS Feature ID** (예: `f1`, `F1`, `auth`, `f-auth-01`, 또는 2-세그먼트 `identity/login`) → `docs/adr/.mapping.json` 의 카테고리 키 또는 entry 의 `alpsFeatureId` 와 대조해 매칭. `/adr-new` 와 `/feature-to-adr` 모두 카테고리 키를 그대로 사용하므로 워크숍처럼 번호 기반 PRD 라면 1:1 로 맞다. 사용자가 context prefix 없이 피쳐 세그먼트만 줬는데(`login`) 여러 context 에 같은 피쳐명이 있어 모호하면 어느 context 인지 한 번 되묻는다 (그룹핑을 쓴 다중-context repo 에서만 드물게 발생).
+   - **인자가 카테고리 또는 ALPS Feature ID** (예: `auth`, `identity/login`, 또는 `F1`/`f1` 같은 Feature ID) → `docs/adr/.mapping.json` 의 **카테고리 키와 각 entry 의 `alpsFeatureId` 를 모두** 대조해 매칭한다. 카테고리 키는 기능 이름에서 canonical 하게 파생되므로(`identity/login`), 사용자가 `F1`/`f1` 처럼 Feature ID 로 호출하면 키가 아니라 `alpsFeatureId` 필드로 매칭된다 — 폴더명이 `f1` 이 아니어도 ID 호출이 그대로 동작하는 이유다 (feature 이름이 없어 ID 를 fallback 키로 쓴 경우에만 키와 `alpsFeatureId` 가 겹친다). 사용자가 context prefix 없이 피쳐 세그먼트만 줬는데(`login`) 여러 context 에 같은 피쳐명이 있어 모호하면 어느 context 인지 한 번 되묻는다 (그룹핑을 쓴 다중-context repo 에서만 드물게 발생).
    - **인자가 비어 있거나 매칭이 모호하거나 매핑/매핑 파일이 없을 때** — `Proposed` 상태(미구현)인 ADR 목록을 한 번에 보여주고 사용자에게 어떤 ADR 을 구현할지 묻는다 (아래 "Proposed 목록 출력" 절차).
 
    **Proposed 목록 출력 절차**:
@@ -31,11 +31,11 @@ disable-model-invocation: true
       ```
       아직 구현되지 않은 ADR 이 N개 있습니다. 어떤 ADR 을 구현할까요?
 
-      1. f1 — 이메일 가입 (docs/adr/f1/0001-email-signup.md)
-      2. f2 — 비밀번호 재설정 (docs/adr/f2/0001-password-reset.md)
+      1. identity/login — 이메일 가입 (docs/adr/identity/login/0001-email-signup.md, F1)
+      2. identity/password-reset — 비밀번호 재설정 (docs/adr/identity/password-reset/0001-password-reset.md, F2)
       3. cart — 장바구니 합산 (docs/adr/cart/0003-cart-totals.md)
 
-      번호 또는 카테고리/Feature ID 로 답해주세요. 한 번에 여러 개를 구현하려면 "1,2" 또는 "f1, f2" 처럼 답하세요.
+      번호 또는 카테고리 키/Feature ID 로 답해주세요 (예: `identity/login` 또는 `F1`). 한 번에 여러 개를 구현하려면 "1,2" 또는 "identity/login, cart" 처럼 답하세요.
       ```
 
    4. 사용자가 답하면 그 선택을 카테고리 인자로 받아 다시 1단계 시작 부분으로 돌아간다.

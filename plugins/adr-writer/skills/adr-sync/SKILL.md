@@ -109,6 +109,21 @@ Quick mode는 이 단계만 수행한다.
 
 > **PRD 변경은 sync 가 추적하지 않는다**: ALPS(PRD) 는 한 번 `/feature-to-adr` 로 ADR 에 반영된 뒤로는 결정이 ADR 레벨에서 관리된다. PRD 가 나중에 바뀌면 그 변경은 ADR 을 직접 편집(또는 새 ADR 로 supersede)하는 것으로 흡수하고, sync 는 어디까지나 `ADR ↔ 코드` 정합만 본다. adr-writer 는 ALPS 를 알지 못하므로(AGENTS.md 플러그인 분리) PRD↔ADR drift 를 들여다볼 수단 자체가 없다.
 
+### 3.7. stale Feature-ID 네이밍 canonical화 (제안 후 확인)
+
+옛 `/feature-to-adr`(ID 를 키·파일명에 그대로 심던 버전)로 만든 ADR 은 `docs/adr/f1/0001-f1-email-signup.md` 처럼 폴더명·파일명에 `fN` 이 박혀 있을 수 있다. 현재 규칙은 **Feature ID 를 파일명·폴더명에 넣지 않고 `.mapping.json` 의 `alpsFeatureId` 로만 보존**한다 (`structure.md` "디렉토리 구조", `authoring-rules.md` "명명 규칙"). sync 는 이 stale 네이밍을 감지해 canonical path 를 **제안하고, 사용자 확인을 받은 뒤에만** 옮긴다 — 폴더/파일 이동은 git rename·`dependsOn`·README 인덱스에 동시 영향을 주므로 자동 수행하지 않는다.
+
+두 케이스를 **분리**해 다룬다 (섞으면 re-key 가 필요 없는 안전한 정리까지 사용자 판단을 요구하게 된다):
+
+- **(1) 파일명의 `fN` 접두사** (`NNNN-fN-title.md` → `NNNN-title.md`) — 카테고리 키·폴더는 그대로 두고 파일명에서 `fN-` 조각만 제거한다. **번호(`NNNN`)는 건드리지 않으므로 renumber 가 아니다** (renumber 는 `adr-rollup` 만의 단계 — Notes 참조). `dependsOn` 은 키를 참조하지 파일명을 참조하지 않으므로 영향 없다. 갱신 대상은 그 파일의 README 인덱스 링크·다른 ADR 의 Related 링크뿐이다. 안전한 정리이므로 **한 번에 묶어 제안**한다("아래 3개 파일명에서 `fN-` 접두사를 제거해 canonical 하게 맞출까요?").
+- **(2) 폴더명·카테고리 키가 `fN`** (`docs/adr/f1/...`) — feature 이름 기반 canonical 키로 re-key 를 제안한다. 이름을 알아야 하므로 후보를 만들 근거를 먼저 수집한다: 해당 카테고리 ADR 들의 제목·Decision 한 줄, `.mapping.json` 의 `feature`(사람이 읽는 이름)·`alpsFeatureId`. 이를 kebab-case 로 다듬어 후보 키(`f1` → `login` 또는 `identity/login`)를 제시하되, **도메인 그룹핑(2-세그먼트) 여부는 사용자에게 확정받는다** — importer 와 같은 선에서, sync 가 PRD 없는 도메인 경계를 임의로 만들지 않는다. 확인이 오면:
+  - `git mv docs/adr/f1 docs/adr/<canonical>` (2-세그먼트면 `docs/adr/<context>/<feature>`). 함께 (1) 의 파일명 `fN-` 접두사도 제거한다.
+  - `.mapping.json` 에서 카테고리 키 `f1` → `<canonical>` 로 re-key 하고, **원래 ID 를 잃지 않도록 그 entry 의 `alpsFeatureId` 에 `F1`(원래 대문자 ID)을 기록**한다 — 이게 `/adr-impl f1` 호출이 canonical 폴더에서도 계속 매칭되는 근거다 (`adr-impl` step 1). 이미 `alpsFeatureId` 가 있으면 그대로 둔다.
+  - **다른 entry 의 `dependsOn` 이 옛 키 `f1` 을 가리키면 모두 새 키로 바꾼다** — 3.5 의 재명명 규칙과 동일하고, 6단계 `dependsOn` 무결성 점검이 dangling 이 남지 않았는지 재확인한다.
+  - README 인덱스의 카테고리 라인·파일 링크를 새 경로로 갱신한다.
+- **확인 형식**: 이동 전 옛 경로 → 새 경로 표와, re-key 되는 키·보존될 `alpsFeatureId`·갱신될 `dependsOn` 참조를 한 번에 보여주고 승인받는다. 사용자가 거절하면 그대로 두고 `Suggestions` 에 `[Feature-ID naming] <category> — 옛 fN 네이밍. canonical화 보류` 로 남긴다.
+- 정리 결과는 7단계 보고의 **Fixed** 에 `[Naming] docs/adr/f1/0001-f1-x.md → docs/adr/identity/login/0001-x.md (key f1→identity/login, alpsFeatureId=F1 보존)` 형태로 기재한다.
+
 ### 4. Cross-ADR 모순 점검
 
 각 수정된 ADR의 Related 링크를 따라 다른 ADR을 점검한다:
@@ -178,10 +193,12 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 - [New ADR needed?] — ADR 없는 결정 발견
 - [Supersede recommended?] — 패치 범위를 넘은 drift
 - [Sub-folder split recommended] — <category>: ADR <n>개, 후보 sub-feature ...
+- [Feature-ID naming] — <category>: 옛 fN 네이밍, canonical화 보류 (사용자가 거절 시)
 ```
 
 ## Notes
 
 - ADR은 **왜 이 결정이 내려졌는지**를 기록. 작은 버그 수정·스타일 변경은 ADR 갱신 사유가 아니다.
-- 카테고리 내 번호는 순차 증가. split으로 내용이 빠진 번호는 결번으로 둔다 (renumber 금지). sync 는 번호를 재배치하지 않는다 — 결번 메우기(renumber)는 `adr-rollup` 이 체인을 합쳐 삭제할 때만 수행하는 단계다.
+- 카테고리 내 번호는 순차 증가. split으로 내용이 빠진 번호는 결번으로 둔다 (renumber 금지). sync 는 번호를 재배치하지 않는다 — 결번 메우기(renumber)는 `adr-rollup` 이 체인을 합쳐 삭제할 때만 수행하는 단계다. **3.7 의 canonical화는 renumber 가 아니다** — 파일명의 `fN-` 접두사 제거·폴더 re-key 는 번호(`NNNN`)를 그대로 두므로 위 renumber 금지와 충돌하지 않는다.
+- 3.7 의 Feature-ID 네이밍 canonical화는 `--quick` 에서도 감지·제안만 한다 (README 인덱스의 `f1/...` 경로만 봐도 stale 네이밍이 드러난다) — 실제 이동은 두 모드 모두 사용자 확인 뒤에만 수행한다.
 - 코드가 source of truth 인 것은 **구현 사실·Status 에 한정**된다 — 이것들이 코드와 충돌하면 ADR 을 코드에 맞춰 정정한다. 반면 **회색지대 결정(채택 근거·도메인 규칙·상태 전이·fallback)은 ADR 이 권위**다. 코드가 이 결정과 모순되면 ADR 을 코드에 맞춰 덮어쓰지 말고 "결정 변경 vs 위반" 으로 분기한다 (위 3단계 6번 "source of truth 의 범위" 참조). 회색지대 결정까지 코드에 맞추면 코드 변경이 ADR 을 끌고 다녀 단방향이 깨진다.

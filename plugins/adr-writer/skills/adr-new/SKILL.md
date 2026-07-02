@@ -15,7 +15,7 @@ ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 �
 ### 1. 인자 해석
 
 - **`<category>`** (필수) — kebab-case 카테고리 키. 다음 세 형태를 모두 받는다 (`structure.md` "디렉토리 구조" 참조):
-  - **단일 세그먼트 context/평면 키** (`identity`, `auth`, `f1`) — 단일-피쳐 context(평면) 또는 context 직속 cross-cutting 결정. 워크숍/번호 기반이면 `f1`, `f-auth-01` 등 ALPS Feature ID 도 그대로 사용.
+  - **단일 세그먼트 context/평면 키** (`identity`, `auth`) — 단일-피쳐 context(평면) 또는 context 직속 cross-cutting 결정. 키는 기능 이름에서 파생한다. feature 이름이 없어 의미 있는 kebab 을 못 뽑는 워크숍/번호 기반 PRD 에서만 `f1`, `f-auth-01` 같은 ALPS Feature ID 를 fallback 키로 쓴다 (그 외에는 `alpsFeatureId` 로만 보존).
   - **2-세그먼트 `<context>/<feature>` 키** (`identity/login`, `ordering/checkout`) — bounded context 안의 한 피쳐(vertical slice). context 가 피쳐를 여럿 품을 때 쓴다.
 
   카테고리 결정 규칙(최상위=bounded context, sub-folder=피쳐, 금지 카테고리, cross-cutting/subdomain 조건)은 `structure.md` "디렉토리 구조" / "흔한 context · subdomain 예시 — 안티패턴 카테고리" 참조. 사용자가 안티패턴 카테고리(`frontend`, `backend`, `api`, `db` 등 — context 폴더든 피쳐 sub-folder 든)를 입력하면 한 번 되묻는다 — "이 결정이 한 피쳐(예: `identity/login`, `ordering/checkout`)에 속하나요? 두 개 이상이 공유하면 system-wide cross-cutting context(`infra`, `data`, `integration`, `security`, `platform`)를 권합니다."
@@ -48,7 +48,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 `docs/adr/` 의 `README.md`·`authoring-rules.md`·`structure.md`(없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/` 동일 파일) 를 엄격히 따른다.
 
 - 카테고리 디렉토리: `docs/adr/<category>/` (없으면 생성, 플랫 구조 프로젝트면 `docs/adr/` 만 사용)
-- 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` (워크숍 등에서 ALPS Feature ID 추적이 필요하면 `NNNN-fN-kebab-title.md`)
+- 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` — 언제나 canonical 형태로 둔다. **ALPS Feature ID 는 파일명에 넣지 않는다** (`0001-f1-...` 처럼 붙이지 않는다) — ID 추적은 `.mapping.json` 의 `alpsFeatureId` 가 담당하고 `/adr-impl f1` 호출은 그 필드로 매칭된다.
 - **본문 최상단 `Date:` 는 ADR 작성일(`YYYY-MM-DD`)로 채운다** — 작성 시점 기록이며, Status 전환 날짜(`Accepted (YYYY-MM-DD)`)와는 별개다. `Proposed` Status 줄에는 날짜를 붙이지 않는다.
 - **Status 는 항상 `Proposed` 로 시작** (`/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환). 사용자에게 승격 여부를 묻지 않는다 — 자동 전환 정책은 `README.md` "자동 전환 규칙" 참조
 - 본문 구조: Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / Related

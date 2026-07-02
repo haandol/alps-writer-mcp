@@ -193,10 +193,10 @@ ADR 본문은 한국어로 작성한다. 기술 용어, 코드 식별자, 영문
 
 ## 명명 규칙
 
-- 파일명: `XXXX-kebab-case-title.md` (워크숍 등에서 PRD Feature ID를 추적하고 싶으면 `XXXX-fN-kebab-case-title.md` 형태)
+- 파일명: `XXXX-kebab-case-title.md`. **PRD Feature ID(`F1` 등)를 파일명·폴더명에 넣지 않는다** — ID 추적은 `.mapping.json` 의 `alpsFeatureId` 필드가 담당하므로 파일명은 언제나 canonical 한 `XXXX-kebab-case-title.md` 로 둔다. (`/adr-impl f1` 같은 ID 호출은 그 필드로 매칭된다.)
 - 번호는 카테고리 내에서 순차적으로 증가. split으로 빠진 번호는 결번으로 둔다 (renumber 금지). **단 rollup 은 예외** — 체인을 합쳐 ADR 을 삭제한 카테고리는 `adr-rollup` 마지막 단계에서 결번을 메워 다시 연속 번호로 만든다 (rollup 흔적을 남기지 않는다는 원칙). split·sync 에는 renumber 가 없다.
 - 제목은 명확하고 간결하게
-- **폴더 이름 = ubiquitous language**: 최상위 context 폴더는 도메인 전문가가 쓰는 모델 용어로 짓고(`identity/`, `ordering/`), 피쳐 sub-folder 는 사용자 동작 용어로 짓는다(`login/`, `checkout/`). 두 층의 어휘가 다를 수 있다 — context 는 도메인 모델의 말, leaf 는 사용자가 인지하는 동작의 말. 단, 카테고리 키 자체는 `.mapping.json` 의 `alpsFeatureId` 추적 일관성을 위해 ALPS feature 의 동작 이름(또는 워크숍 ID)을 유지해도 된다. 어느 층이든 기술 레이어 이름(`api`, `db`, `services`)은 금지 (`structure.md` "안티패턴 카테고리").
+- **폴더 이름 = ubiquitous language**: 최상위 context 폴더는 도메인 전문가가 쓰는 모델 용어로 짓고(`identity/`, `ordering/`), 피쳐 sub-folder 는 사용자 동작 용어로 짓는다(`login/`, `checkout/`). 두 층의 어휘가 다를 수 있다 — context 는 도메인 모델의 말, leaf 는 사용자가 인지하는 동작의 말. 카테고리 키는 ALPS feature 의 동작 이름에서 kebab-case 로 파생한다 — PRD Feature ID(`F1`)는 키가 아니라 `.mapping.json` 의 `alpsFeatureId` 로 보존한다 (feature 이름이 없어 의미 있는 kebab 을 뽑을 수 없을 때만 ID 를 fallback 키로 쓴다). 어느 층이든 기술 레이어 이름(`api`, `db`, `services`)은 금지 (`structure.md` "안티패턴 카테고리").
 
 ## ADR 리뷰 체크리스트
 
