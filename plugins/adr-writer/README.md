@@ -13,12 +13,12 @@ ADR-driven development cycle for Claude Code. Author Architecture Decision Recor
 
 ## Slash commands
 
-| Command                    | Role                                                                                                  |
-| -------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `/adr-new <category>`      | Author a new ADR directly — the default authoring path                                                |
-| `/adr-impl [id]`           | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build |
-| `/adr-sync [id] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                    |
-| `/adr-rollup <id>`         | Consolidate ADR groups whose evolution history of one logical decision is split                       |
+| Command                          | Role                                                                                                      |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `/adr-new <category>`            | Author a new ADR directly — the default authoring path                                                    |
+| `/adr-impl [id]`                 | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build     |
+| `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                        |
+| `/adr-rollup [category]`         | Consolidate ADR groups whose evolution history of one logical decision is split (no arg → all categories) |
 
 The shared authoring rules and procedures (category-split, Status transitions, finding the code an ADR governs) live in `docs/adr/` (`README.md`, `authoring-rules.md`, `structure.md`) — seeded from this plugin's `templates/adr/` on first run. Every command reads them as the single source of truth.
 

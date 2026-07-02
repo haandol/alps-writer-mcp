@@ -1,6 +1,7 @@
 ---
 name: adr-sync
-description: Verify that ADRs in docs/adr/ accurately describe the current codebase and fix any drift. Uses the category-to-code-path mapping at docs/adr/.mapping.json. Use when the user invokes /adr-sync or asks to audit ADRs against shipping code. Keywords - "/adr-sync", "ADR sync", "ADR drift check", "ADR 동기화", "ADR drift 검사".
+description: Verify that ADRs in docs/adr/ accurately describe the current codebase and fix any drift. Uses the ALPS-feature↔ADR mapping at docs/adr/.mapping.json (no code paths — the code an ADR governs is found by reading the ADR and searching the repo). Use when the user invokes /adr-sync or asks to audit ADRs against shipping code. Keywords - "/adr-sync", "ADR sync", "ADR drift check", "ADR 동기화", "ADR drift 검사".
+argument-hint: "[category?] [--quick]"
 ---
 
 # adr-sync
@@ -28,13 +29,9 @@ description: Verify that ADRs in docs/adr/ accurately describe the current codeb
 - `docs/adr/.mapping.json` 읽기 (ALPS feature ↔ ADR 매핑). 매핑은 ADR↔코드 경로를 저장하지 않는다 — 한 ADR이 다스리는 코드 위치는 **ADR Decision 본문을 읽고 그때그때 repo 를 탐색**해 찾는다 (아래 "관련 코드 찾기").
 - 디스크의 ADR 파일 전수 조회: `docs/adr/<category>/*.md`. README에 없는 파일이 있거나, README는 가리키는데 파일이 없으면 그 자체가 drift.
 
-#### 관련 코드 찾기 (codePaths 없이)
+#### 관련 코드 찾기
 
-ADR 검증·Status 판정은 그 ADR이 다스리는 코드를 봐야 한다. 매핑에 코드 경로가 없으므로 매 ADR마다 다음으로 범위를 좁힌다:
-
-1. ADR 의 Decision / Mermaid / 제목에서 도메인 키워드(엔티티명·동작·API path·상태값)를 뽑는다.
-2. `Glob`/`Grep` 으로 그 키워드가 사는 코드를 찾는다 — 보통 `src/features/<feature>/`, `packages/`, `services/` 등 vertical slice 진입점에 모여 있다. 카테고리 키(`auth`, `orders`)가 디렉토리명과 일치하는 경우가 많으니 첫 후보로 삼는다.
-3. 찾은 범위가 맞는지 ADR Decision 과 대조해 확인한 뒤 그 범위에서 검증한다. 한 번 찾은 범위는 이 sync 실행 동안 재사용한다 (매핑에 영구 저장하지는 않는다).
+ADR 검증·Status 판정은 그 ADR이 다스리는 코드를 봐야 한다. 매핑에 코드 경로가 없으므로 매 ADR마다 `structure.md` "관련 코드 찾기"의 3단계(Decision/Mermaid/제목에서 도메인 키워드 추출 → `Glob`/`Grep` 으로 좁힘 → ADR Decision 과 대조 확인)로 범위를 좁힌다. **한 번 찾은 범위는 이 sync 실행 동안 재사용**한다 (Pass 1 → Pass 2, 매핑에 영구 저장하지는 않는다).
 
 #### 매핑 파일이 없을 때
 
@@ -44,7 +41,7 @@ ADR 검증·Status 판정은 그 ADR이 다스리는 코드를 봐야 한다. �
 
 각 ADR에 대해 `docs/adr/README.md`의 한 줄 Key Decision을 추출하고, "관련 코드 찾기"로 좁힌 범위에 grep을 돌린다. 결과를 **In Sync** 또는 **Drift Suspected**로 표시.
 
-Quick mode는 이 단계만 수행한다.
+Quick mode는 이 단계와, 3.7 의 인덱스 기반 stale `fN` 네이밍 **감지·제안**만 수행한다 (README 인덱스의 `fN/...` 경로만 봐도 드러나므로) — 나머지 3.x deep 검사와 실제 파일 이동은 건너뛴다.
 
 ### 3. Pass 2 — deep verification (deep mode 항상 실행)
 
@@ -117,7 +114,10 @@ Quick mode는 이 단계만 수행한다.
 
 - **(1) 파일명의 `fN` 접두사** (`NNNN-fN-title.md` → `NNNN-title.md`) — 카테고리 키·폴더는 그대로 두고 파일명에서 `fN-` 조각만 제거한다. **번호(`NNNN`)는 건드리지 않으므로 renumber 가 아니다** (renumber 는 `adr-rollup` 만의 단계 — Notes 참조). `dependsOn` 은 키를 참조하지 파일명을 참조하지 않으므로 영향 없다. 갱신 대상은 그 파일의 README 인덱스 링크·다른 ADR 의 Related 링크뿐이다. 안전한 정리이므로 **한 번에 묶어 제안**한다("아래 3개 파일명에서 `fN-` 접두사를 제거해 canonical 하게 맞출까요?").
 - **(2) 폴더명·카테고리 키가 `fN`** (`docs/adr/f1/...`) — feature 이름 기반 canonical 키로 re-key 를 제안한다. 이름을 알아야 하므로 후보를 만들 근거를 먼저 수집한다: 해당 카테고리 ADR 들의 제목·Decision 한 줄, `.mapping.json` 의 `feature`(사람이 읽는 이름)·`alpsFeatureId`. 이를 kebab-case 로 다듬어 후보 키(`f1` → `login` 또는 `identity/login`)를 제시하되, **도메인 그룹핑(2-세그먼트) 여부는 사용자에게 확정받는다** — importer 와 같은 선에서, sync 가 PRD 없는 도메인 경계를 임의로 만들지 않는다. 확인이 오면:
-  - `git mv docs/adr/f1 docs/adr/<canonical>` (2-세그먼트면 `docs/adr/<context>/<feature>`). 함께 (1) 의 파일명 `fN-` 접두사도 제거한다.
+  - **이동 전 목적지 충돌·부모 부재를 먼저 점검한다** (없으면 `git mv` 가 실패하거나 조용히 잘못된 중첩을 만든다):
+    - 목적지 키/디렉토리(`docs/adr/<canonical>`)나 `.mapping.json` 의 canonical 키가 **이미 존재하면** — `git mv` 가 옛 폴더를 그 안으로 밀어넣어 `docs/adr/identity/login/f1/...` 같은 3-세그먼트 중첩(“최대 2 세그먼트” 위반, `structure.md`)을 만든다. 자동 진행하지 말고 멈춰서 병합(기존 카테고리에 흡수)인지 다른 이름인지 사용자에게 되묻는다.
+    - 2-세그먼트로 승격하는데 **부모 context 폴더(`docs/adr/<context>`)가 없으면** `git mv` 가 `fatal: No such file or directory` 로 실패하므로, 먼저 `mkdir -p docs/adr/<context>` 로 부모만 만든 뒤 이동한다.
+  - `git mv docs/adr/f1 docs/adr/<canonical>` (2-세그먼트면 `docs/adr/<context>/<feature>`). 함께 (1) 의 파일명 `fN-` 접두사도 제거한다. (`git mv` 는 git 이 추적하는 커밋된 파일을 전제로 한다 — 미추적/미커밋이면 실패하므로 그때는 plain `mv` 로 진행할지 되묻는다.)
   - `.mapping.json` 에서 카테고리 키 `f1` → `<canonical>` 로 re-key 하고, **원래 ID 를 잃지 않도록 그 entry 의 `alpsFeatureId` 에 `F1`(원래 대문자 ID)을 기록**한다 — 이게 `/adr-impl f1` 호출이 canonical 폴더에서도 계속 매칭되는 근거다 (`adr-impl` step 1). 이미 `alpsFeatureId` 가 있으면 그대로 둔다.
   - **다른 entry 의 `dependsOn` 이 옛 키 `f1` 을 가리키면 모두 새 키로 바꾼다** — 3.5 의 재명명 규칙과 동일하고, 6단계 `dependsOn` 무결성 점검이 dangling 이 남지 않았는지 재확인한다.
   - README 인덱스의 카테고리 라인·파일 링크를 새 경로로 갱신한다.
@@ -156,6 +156,8 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 - **(b) ADR → PRD 역참조** — 번호 매겨진 ADR 본문(`NNNN-*.md`)에 남은 `*.alps.xml`·`ALPS Section`·`Section N.N`·feature-id. `--include='[0-9][0-9][0-9][0-9]-*.md'` 로 ADR 본문만 보므로 seeded 규칙 문서(README·structure·authoring-rules)의 합법적 ALPS 언급은 오탐하지 않는다.
 
 (a) 에서 찾은 코드→ADR 역참조는 코드에서 제거해 `.mapping.json` 으로, (b) 에서 찾은 ADR→PRD 역참조는 ADR 본문에서 제거해 `alpsDocument`/`alpsFeatureId` 로 이전한다 — 둘 다 같은 PR 에서 처리. 정규식이 스크립트 한 곳에 모여 있으므로 sync 보고의 **Fixed** 에 정확한 위치(`file:line`)를 그대로 인용할 수 있다. 소비 repo 는 이 스크립트를 자기 pre-commit/CI 에 직접 wire 해 하드 게이트(exit 1)로 쓸 수 있다 — 플러그인은 강제하지 않고 스킬이 advisory 로만 호출한다.
+
+> **`docs/adr/` 밖 소스코드 편집은 사전 승인 게이트를 거친다**: (a) 의 코드→ADR 역참조 제거는 ADR 문서가 아니라 **실제 소스코드 파일**(주석·상수·import)을 편집한다. `/adr-sync` 는 model-invocable 이라 자동 트리거될 수 있으므로, ADR 문서·`.mapping.json`·README 정정과 달리 이 소스코드 편집은 **write 전에 대상 목록(`file:line` + 제거할 참조)을 요약해 사용자 승인을 한 번 받고** 적용한다 — `/adr-new` step 7·`/adr-rollup` 8단계 저장 게이트와 같은 선이다. `--quick`(검사·제안만) 실행이나 승인이 없으면 제거하지 않고 `Suggestions` 에 `[Code→ADR ref] <file:line> — 코드에 ADR 역참조. 제거 대상(승인 필요)` 으로 남긴다. ADR 본문 정정·Status 자동 전환은 이 게이트 대상이 아니다 (Status 전환은 `/adr-impl` 과 동일한 무-확인 자동 정책 — `README.md` "자동 전환 규칙").
 
 ### 6. 매핑·인덱스 hygiene
 

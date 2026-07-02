@@ -105,7 +105,12 @@ EXCLUDES=(
 # code dirs that merely share the ADR basename (src/adr/, lib/adr/) are still
 # scanned — they are never pruned up front.
 if [ "$RUN_CODE" -eq 1 ]; then
-  hits="$(grep -rnE "ADR [A-Za-z0-9_-]+/[0-9]{4}|${ADR_DIR}/[A-Za-z0-9_-]+|ADR_REF" \
+  # The first branch allows an optional second path segment so a canonical
+  # two-segment reference ("ADR identity/login/0001") is caught, not just the
+  # flat one-segment form ("ADR auth/0002"). Without it, check (a) would be
+  # strictly weaker than the rollup checks (c)/(d), which already match the
+  # two-segment text form the plugin emits today.
+  hits="$(grep -rnE "ADR [A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)?/[0-9]{4}|${ADR_DIR}/[A-Za-z0-9_-]+|ADR_REF" \
     "${EXCLUDES[@]}" . 2>/dev/null | grep -vE "(^|/)${ADR_DIR}/")" || true
   if [ -n "$hits" ]; then
     echo "✗ (a) code → ADR reverse references (remove from code; link lives in .mapping.json):"

@@ -1,6 +1,7 @@
 ---
 name: adr-rollup
 description: Roll up ADRs so each logical decision lives in exactly one current-state ADR, aligned to the shipping code. Default scope is **every category** when no argument is given; an argument narrows to one category or an explicit ADR bundle. Within each category, merge the evolution chain of the same logical decision (refine / supersede / replace) into its lowest-numbered ADR and delete the rest — distinct decisions and separate categories stay untouched. Keywords - "adr rollup", "ADR 정리", "ADR 개수 줄이기", "같은 결정 합치기", "evolution chain merge", "Superseded chain 정리".
+argument-hint: "[category-or-adr-bundle?]"
 disable-model-invocation: true
 ---
 

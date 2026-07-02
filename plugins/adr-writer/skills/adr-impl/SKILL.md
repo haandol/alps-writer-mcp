@@ -1,7 +1,7 @@
 ---
 name: adr-impl
 description: Implement an ADR — check dependencies first, implement prerequisites in topological order, write code, run tests, then auto-promote ADR Status from Proposed to Accepted. Enforces the ADR-first development cycle. Use when the user invokes /adr-impl or asks to implement an ADR / a Proposed feature whose decision is already recorded. Keywords - "/adr-impl", "ADR 구현", "implement ADR", "Proposed ADR 코드 반영".
-argument-hint: "[adr-path-or-category]"
+argument-hint: "[adr-path-or-category-or-feature-id]"
 disable-model-invocation: true
 ---
 
@@ -48,23 +48,23 @@ disable-model-invocation: true
 
 2. **의존성 확인 (선행 ADR 게이트) — 건너뛸 수 없는 필수 단계**
 
-   feature 는 서로 의존한다 — 예를 들어 "결제(f3)" 는 "장바구니(f2)" 가 먼저 동작해야 구현이 의미가 있다. 이 의존을 무시하고 요청받은 ADR 부터 구현하면 선행이 없는 위에 코드를 쌓게 되어 실제 동작 순서와 어긋난다. 그래서 **구현·계획에 앞서 의존부터 본다 — 이 단계는 생략하거나 뒤로 미룰 수 없다.**
+   feature 는 서로 의존한다 — 예를 들어 "결제(`checkout`)" 는 "장바구니(`cart`)" 가 먼저 동작해야 구현이 의미가 있다. 이 의존을 무시하고 요청받은 ADR 부터 구현하면 선행이 없는 위에 코드를 쌓게 되어 실제 동작 순서와 어긋난다. 그래서 **구현·계획에 앞서 의존부터 본다 — 이 단계는 생략하거나 뒤로 미룰 수 없다.** (아래 예시의 카테고리 키는 이름 기반 canonical 키다 — `f1` 같은 Feature ID 로 호출하면 1단계가 `alpsFeatureId` 로 매칭해 이 canonical 카테고리를 찾는다.)
    - 대상 카테고리의 `docs/adr/.mapping.json` entry 에서 `dependsOn` 을 읽는다 (이 값은 `/feature-to-adr` 가 ALPS Section 6.3 Feature Dependency Diagram 에서 옮겨오거나, `/adr-new` 가 작성 시 선행 조건으로 직접 기록한 것이다).
      - entry 는 있는데 **`dependsOn` 키 자체가 없으면** — 의존이 선언되지 않은 것이다. 한 줄로 "이 ADR 에 `dependsOn` 이 선언돼 있지 않아 선행 점검 없이 진행합니다 — 선행 ADR 이 있으면 `.mapping.json` 의 `dependsOn` 또는 `/feature-to-adr` 로 보강하세요" 라고 알린 뒤 3단계로 진행한다 ("의존 없음" 과 "의존 미선언" 을 조용히 같게 취급하지 않는다).
      - `dependsOn` 이 **빈 배열(`[]`)** 이면 의존 없음을 명시적으로 점검 완료한 것이므로 안내 없이 3단계로 진행한다.
-   - `dependsOn` 에 키가 있으면 그래프를 **한 노드씩 따라가며 전이적 선행 카테고리**를 방문한다(예: f3 → f2 → f1). 방문하는 각 노드가 **dangling 참조**(`.mapping.json` entry 가 없거나 ADR 파일이 디스크에 한 개도 없음)이면 그 자리에서 멈춘다 — 전이 확장은 그 노드의 entry·`dependsOn` 을 읽어야 다음 hop 으로 넘어가므로, 중간 노드가 dangling 이면 더 깊은 선행에 도달할 수 없다(그래서 "다 모은 뒤" 가 아니라 hop 마다 점검한다). dangling 이 아니면 그 노드의 `dependsOn` 을 읽어 더 깊은 선행으로 확장하고, 방문한 노드의 ADR Status 를 확인한다.
+   - `dependsOn` 에 키가 있으면 그래프를 **한 노드씩 따라가며 전이적 선행 카테고리**를 방문한다(예: `checkout` → `cart` → `identity/login`). 방문하는 각 노드가 **dangling 참조**(`.mapping.json` entry 가 없거나 ADR 파일이 디스크에 한 개도 없음)이면 그 자리에서 멈춘다 — 전이 확장은 그 노드의 entry·`dependsOn` 을 읽어야 다음 hop 으로 넘어가므로, 중간 노드가 dangling 이면 더 깊은 선행에 도달할 수 없다(그래서 "다 모은 뒤" 가 아니라 hop 마다 점검한다). dangling 이 아니면 그 노드의 `dependsOn` 을 읽어 더 깊은 선행으로 확장하고, 방문한 노드의 ADR Status 를 확인한다.
    - **dangling 참조를 만나면** — `dependsOn` 이 아직 변환·작성되지 않은 선행을 가리키는 경우다 (특히 `/feature-to-adr` 를 단일 feature 인자로 돌렸을 때 발생). 미구현 선행과 동일하게 구현을 멈추고, 그 선행은 ADR 자체가 없음을 알린 뒤 `/adr-new <category>` 로 직접 작성하거나 `/feature-to-adr` 로 해당 feature 를 변환하도록 안내한다.
    - **선행 ADR 이 전부 `Accepted`(구현 완료)** 면 의존이 충족된 것이므로 그대로 3단계로 진행한다.
    - **선행 ADR 중 `Proposed`(미구현) 가 하나라도 있으면 구현을 멈추고**, 무엇이 먼저 필요한지 사용자에게 안내한 뒤 선택을 받는다. 사용자가 선행부터 구현하기로 하면 의존 위상 순서(가장 깊은 선행부터)로 대상 목록을 재구성해 1단계 식별 결과에 더한다.
-   - **대상이 여러 ADR 일 때는(사용자가 직접 여러 개를 골랐든, 위에서 선행을 더했든) 항상 `dependsOn` 그래프로 위상 정렬한 뒤 가장 깊은 선행부터 순서대로 구현한다.** 사용자가 입력한 나열 순서(`f3, f1, f2`)를 그대로 따르지 않는다 — 의존 순서가 입력 순서보다 우선한다. 정렬한 구현 순서를 사용자에게 한 줄로 보여주고("구현 순서: f1 → f2 → f3") 진행한다.
-   - 의존 그래프에 순환이 있으면(예: f1 ↔ f2) 위상 정렬이 불가능하므로 구현을 멈추고, 어떤 카테고리들이 서로 물려 있는지 알린 뒤 어디부터 끊어서 시작할지 사용자에게 묻는다.
+   - **대상이 여러 ADR 일 때는(사용자가 직접 여러 개를 골랐든, 위에서 선행을 더했든) 항상 `dependsOn` 그래프로 위상 정렬한 뒤 가장 깊은 선행부터 순서대로 구현한다.** 사용자가 입력한 나열 순서(`checkout, identity/login, cart`)를 그대로 따르지 않는다 — 의존 순서가 입력 순서보다 우선한다. 정렬한 구현 순서를 사용자에게 한 줄로 보여주고("구현 순서: identity/login → cart → checkout") 진행한다.
+   - 의존 그래프에 순환이 있으면(예: `cart` ↔ `checkout`) 위상 정렬이 불가능하므로 구현을 멈추고, 어떤 카테고리들이 서로 물려 있는지 알린 뒤 어디부터 끊어서 시작할지 사용자에게 묻는다.
 
      ```
-     `f3`(결제) 은 `f2`(장바구니) 에 의존하는데 `f2` 가 아직 미구현(Proposed) 입니다.
-     의존 순서상 `f2` 를 먼저 구현해야 `f3` 가 제대로 동작합니다.
+     `checkout`(결제) 은 `cart`(장바구니) 에 의존하는데 `cart` 가 아직 미구현(Proposed) 입니다.
+     의존 순서상 `cart` 를 먼저 구현해야 `checkout` 가 제대로 동작합니다.
 
-     - `f2` 부터 순서대로 구현하려면: "f2부터" 또는 "둘 다 순서대로"
-     - 그래도 `f3` 만 먼저 구현하려면: "f3만" (선행이 미구현이라 일부 동작이 비어 있을 수 있음)
+     - `cart` 부터 순서대로 구현하려면: "cart부터" 또는 "둘 다 순서대로"
+     - 그래도 `checkout` 만 먼저 구현하려면: "checkout만" (선행이 미구현이라 일부 동작이 비어 있을 수 있음)
      ```
 
    - `.mapping.json` 자체가 없거나 대상 카테고리의 entry 가 아예 없는 레거시 ADR 셋이라면 의존을 알 수 없으므로 게이트를 건너뛰되, 한 줄로 "의존성 정보가 없어 순서 점검을 건너뜁니다 (`/feature-to-adr` 또는 `.mapping.json` 의 `dependsOn` 으로 보강 가능)" 라고 알린다. (entry 는 있는데 `dependsOn` 키만 없는 경우는 위 "의존 미선언" 분기로 처리하지 이 레거시 케이스가 아니다.)
