@@ -24,7 +24,7 @@ disable-model-invocation: true
    - **인자가 비어 있거나 매칭이 모호하거나 매핑/매핑 파일이 없을 때** — `Proposed` 상태(미구현)인 ADR 목록을 한 번에 보여주고 사용자에게 어떤 ADR 을 구현할지 묻는다 (아래 "Proposed 목록 출력" 절차).
 
    **Proposed 목록 출력 절차**:
-   1. `docs/adr/.mapping.json` 이 있으면 모든 카테고리를 순회. 없으면 `docs/adr/*/*.md` 를 직접 grep 해서 ADR 파일 목록을 만든다.
+   1. `docs/adr/.mapping.json` 이 있으면 모든 카테고리를 순회. 없으면 `docs/adr/**/*.md` 를 **재귀로** 훑어(예: `find docs/adr -name '[0-9][0-9][0-9][0-9]-*.md'`) ADR 파일 목록을 만든다 — 평면 키(`docs/adr/auth/0001.md`)와 2-세그먼트 피쳐 sub-folder(`docs/adr/identity/login/0001.md`)를 **모두** 포함해야 한다. 비재귀 glob(`docs/adr/*/*.md`)은 2-세그먼트 sub-folder ADR 을 통째로 놓치므로 쓰지 않는다.
    2. 각 ADR 파일의 `## Status` 섹션을 읽어 `Proposed` 만 추린다 (`Accepted`, `Deprecated`, `Superseded` 는 제외).
    3. 사용자에게 다음 형식으로 한 번 보여주고 선택을 받는다:
 
@@ -71,7 +71,7 @@ disable-model-invocation: true
 
 3. **계획 수립**
    - ADR의 Decision/Mermaid 다이어그램에서 vertical slice 를 추출한다 (UI → API → 데이터). 한 ADR 은 한 피쳐(leaf — 피쳐 sub-folder 또는 단일-피쳐 context)의 슬라이스 전체를 다루므로, 구현 계획도 같은 피쳐 안에서 UI/API/Data 모든 레이어를 **함께** 변경하는 단위로 잡는다.
-   - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/`, `identity/api` 등 context·피쳐 어느 세그먼트든 — `structure.md` "흔한 context · subdomain 예시 — 안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
+   - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/`, `identity/api` 등 context·피쳐 어느 세그먼트든 — `structure.md` "안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
    - ADR Decision 의 키워드로 `Glob`/`Grep` 해 관련 기존 코드를 찾아 읽고 차이를 식별한다 (코드 위치는 매핑에 없으므로 ADR 을 읽고 직접 탐색 — `structure.md` "관련 코드 찾기"). 같은 피쳐의 UI/API/Data 코드가 한곳에 모여 있는지 확인.
    - 변경 계획을 사용자에게 제시하고 승인받는다.
 
@@ -96,7 +96,15 @@ disable-model-invocation: true
    - 변경 사항을 사용자에게 한 줄로 알린다 ("ADR auth/0003 Status를 Accepted로 갱신했습니다")
 
 7. **마무리**
-   - 변경된 코드와 ADR이 정합한지 한 번 더 확인 (`/adr-sync <category>`).
+   - Status 승격(6단계) 직후 결정론적 하네스로 ADR·매핑·인덱스 구조를 빠르게 재확인한다:
+
+     ```bash
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <구현한 카테고리 키>
+     ```
+
+     이 검사는 Status 를 `Accepted (YYYY-MM-DD)` 로 바꾼 편집이 형식에 맞는지(R1), README 인덱스 한 줄 요약과 `.mapping.json` 이 정합한지(R8), 코드에 ADR 역참조가 새로 남지 않았는지(R17, 내부 `adr-invariants.sh --code-only`)를 기계적으로 잡아준다. `error` 가 나오면 커밋 전에 고친다.
+
+   - 그런 다음 변경된 코드와 ADR 의 **의미적** 정합(회색지대 결정 ↔ 코드 동작)을 `/adr-sync <category>` 로 확인한다 — 하네스는 형식·정합을, sync 는 결정 drift 를 본다.
 
 **금지**:
 

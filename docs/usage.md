@@ -129,6 +129,19 @@ One hook supports the main Claude Code session — **with no external LLM calls*
 
 The directive tells the model: when a request adds or changes behavior, read the relevant ADRs (or author one with `/adr-new`) before touching code. Classification is left to the main model — the hook never blocks an edit; keeping the PRD → ADR → code flow intact is the model's job, prompted every turn.
 
+## Deterministic self-test
+
+Two dependency-free scripts under the adr-writer plugin let the cycle verify ADR well-formedness without an LLM judgment call. The skills invoke them at their verification steps (`/adr-new` before the reviewer, `/adr-impl` after Status promotion, `/adr-sync` at the start of deep verification), so the `adr-reviewer` subagent only spends tokens on judgment rules.
+
+| Script                           | What it checks                                                                                                                                                                                                                                                                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/adr-invariants.sh`      | Repo-wide one-way-dependency oracle: code→ADR and ADR→PRD reverse references, rollup stale citations. Fail-closed on grep error; exit 0/1/2 so a consuming repo can wire it into pre-commit/CI.                                                                                                                                        |
+| `scripts/adr-structure-lint.mjs` | Per-ADR body + `.mapping.json` + README index + disk: Status enum/date, required sections, canonical filename, path depth ≤2, anti-pattern category segments, Decision Drivers / alternatives counts, Related-link existence, `dependsOn` integrity, index↔mapping↔disk consistency. Invokes `adr-invariants.sh` and folds its result. |
+
+```bash
+node <adr-writer-plugin>/scripts/adr-structure-lint.mjs [category]   # structure + invariants
+```
+
 ## Mapping file
 
 `docs/adr/.mapping.json` records the ALPS-feature ↔ ADR link only — it stores no code paths, and no artifact references another in its own body. See the schema at [`plugins/adr-writer/templates/adr/mapping.schema.json`](../plugins/adr-writer/templates/adr/mapping.schema.json). `/adr-new` creates the category entry (`feature`, `adrs`); `/feature-to-adr` additionally backfills the ALPS link fields (`alpsDocument`, `alpsFeatureId`, `dependsOn`). The code an ADR governs is found by reading the ADR and searching the repo, not stored here.

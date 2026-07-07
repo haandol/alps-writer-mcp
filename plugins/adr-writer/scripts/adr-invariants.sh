@@ -98,6 +98,21 @@ EXCLUDES=(
   --exclude-dir=vendor
 )
 
+# Fail CLOSED on a genuine grep error. grep's exit codes are 0=match,
+# 1=no-match, 2=error (unsupported flag on busybox — see the header note —, a
+# broken regex, an unreadable file). The old `... 2>/dev/null || true` idiom
+# swallowed 2 along with the benign 1, so a grep that never actually ran was
+# reported as "clean" (exit 0) — a silent false-negative in a CI gate. Callers
+# capture the scanning grep's own status (never a pipe's, which pipefail can
+# mask when a later stage exits 1) and pass it here BEFORE inspecting hits.
+check_grep_rc() { # $1=rc  $2=check label
+  if [ "$1" -ge 2 ]; then
+    echo "adr-invariants: grep failed (rc=$1) during ${2} — cannot verify, failing closed (exit 2)" >&2
+    echo "  (a grep without -r/-E/--include/--exclude-dir support, e.g. busybox, triggers this; install GNU grep)" >&2
+    exit 2
+  fi
+}
+
 # (a) code → ADR reverse references: no ADR ID / path / ADR_REF in code or
 # non-ADR docs. Layout-agnostic: scans the whole tree minus excludes rather
 # than a hardcoded packages/apps/src list. The post-filter drops any hit
@@ -110,8 +125,19 @@ if [ "$RUN_CODE" -eq 1 ]; then
   # flat one-segment form ("ADR auth/0002"). Without it, check (a) would be
   # strictly weaker than the rollup checks (c)/(d), which already match the
   # two-segment text form the plugin emits today.
-  hits="$(grep -rnE "ADR [A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)?/[0-9]{4}|${ADR_DIR}/[A-Za-z0-9_-]+|ADR_REF" \
-    "${EXCLUDES[@]}" . 2>/dev/null | grep -vE "(^|/)${ADR_DIR}/")" || true
+  raw="$(grep -rnE "ADR [A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)?/[0-9]{4}|${ADR_DIR}/[A-Za-z0-9_-]+|ADR_REF" \
+    "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
+  check_grep_rc "$rc" "check (a) code→ADR scan"
+  # Drop hits whose FILE lives under the ADR dir (legit ADR↔ADR Related links).
+  # grep -rn from '.' emits "./<path>:<lineno>:<content>", so the file path is
+  # at the LINE START — anchor the post-filter there. The old whole-line
+  # `-vE "(^|/)${ADR_DIR}/"` also matched the pattern in the CONTENT field, so a
+  # genuine code→ADR ref whose text merely contains "docs/adr/" (e.g. a comment
+  # "see ../docs/adr/identity/login/0001.md") was silently dropped.
+  hits=""
+  if [ -n "$raw" ]; then
+    hits="$(printf '%s\n' "$raw" | grep -vE "^\.?/?${ADR_DIR}/")" || true
+  fi
   if [ -n "$hits" ]; then
     echo "✗ (a) code → ADR reverse references (remove from code; link lives in .mapping.json):"
     printf '%s\n' "$hits"
@@ -124,8 +150,17 @@ fi
 # structure, authoring-rules) legitimately mention ALPS, so scope to
 # NNNN-*.md only.
 if [ "$RUN_PRD" -eq 1 ]; then
-  hits="$(grep -rnE "\.alps\.xml|ALPS Section|Section [0-9]+\.[0-9]|F-[A-Z]+-[0-9]" \
-    --include='[0-9][0-9][0-9][0-9]-*.md' -- "$ADR_DIR" 2>/dev/null)" || true
+  # Every alternative is ALPS-specific so an ADR body citing an unrelated spec
+  # section ("per HTTP RFC 7231 Section 6.5 …") is not flagged. The old bare
+  # "Section [0-9]+\.[0-9]" branch matched any "Section N.N" and false-positived
+  # on RFC/spec citations; scope it to an ALPS-qualified form. The remaining
+  # alternatives (`.alps.xml`, `ALPS Section`, the F-XXX-N feature-id) are
+  # already ALPS-only. `--include` scopes to numbered ADR bodies so seeded rule
+  # docs (README/structure/authoring-rules) that legitimately mention ALPS are
+  # exempt.
+  hits="$(grep -rnE "\.alps\.xml|ALPS Section|ALPS.*Section [0-9]+\.[0-9]|Section [0-9]+\.[0-9].*ALPS|F-[A-Z]+-[0-9]" \
+    --include='[0-9][0-9][0-9][0-9]-*.md' -- "$ADR_DIR" 2>/dev/null)"; rc=$?
+  check_grep_rc "$rc" "check (b) ADR→PRD scan"
   if [ -n "$hits" ]; then
     echo "✗ (b) ADR → PRD reverse references (remove from ADR body; link lives in .mapping.json alpsFeatureId):"
     printf '%s\n' "$hits"
@@ -143,8 +178,19 @@ fi
 if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$REMOVED" ]; then
   for ref in $REMOVED; do
     pat="$(printf '%s' "$ref" | sed 's/[].[\*^$/(){}+?|]/\\&/g')"
-    hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|${pat}(-[A-Za-z0-9-]*)?\.md" \
-      --exclude-dir=.git --exclude-dir=node_modules . 2>/dev/null)" || true
+    # The bare ".md" branch needs a LEFT boundary or the id false-positives as a
+    # suffix of a longer surviving id: removing "auth/0002" would otherwise flag
+    # an unrelated "oauth/0002-token.md" (the "auth/0002-token.md" substring).
+    # `(^|[^A-Za-z0-9_-])` treats an identifier char (letter/digit/_/-) before
+    # the id as a continuation (reject), while a "/" or separator is a real
+    # boundary (accept) — so "docs/adr/auth/…" and "./auth/…" still match. The
+    # "ADR <id>" and "<adr-dir>/<id>" branches are already left-anchored by
+    # their literal prefixes. EXCLUDES (not the ad-hoc two-flag list) so build
+    # artifacts under dist/build/vendor don't leak stale-citation noise, matching
+    # check (a)'s scan policy.
+    hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|(^|[^A-Za-z0-9_-])${pat}(-[A-Za-z0-9-]*)?\.md" \
+      "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
+    check_grep_rc "$rc" "check (c) removed-ADR citation scan"
     if [ -n "$hits" ]; then
       echo "✗ (c) stale citation of removed ADR '${ref}' (repoint to the consolidated ADR):"
       printf '%s\n' "$hits"
@@ -170,8 +216,10 @@ if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$RENUMBERED" ]; then
       exit 2
     fi
     pat="$(printf '%s' "$old" | sed 's/[].[\*^$/(){}+?|]/\\&/g')"
-    hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|${pat}(-[A-Za-z0-9-]*)?\.md" \
-      --exclude-dir=.git --exclude-dir=node_modules . 2>/dev/null)" || true
+    # Same left-boundary + EXCLUDES rationale as check (c) above.
+    hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|(^|[^A-Za-z0-9_-])${pat}(-[A-Za-z0-9-]*)?\.md" \
+      "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
+    check_grep_rc "$rc" "check (d) renumbered-ADR citation scan"
     if [ -n "$hits" ]; then
       echo "✗ (d) stale citation of renumbered ADR '${old}' (repoint to its new number '${new}'):"
       printf '%s\n' "$hits"

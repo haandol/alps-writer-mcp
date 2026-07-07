@@ -67,10 +67,7 @@ test("B7-B: git mv into an EXISTING destination silently nests to 3 segments", (
     const r = gitMv(dir, "docs/adr/f1", "docs/adr/identity/login");
     assert.equal(r.code, 0, "git mv does not error — it nests, silently");
     // The bug: a 3-segment path appears, violating "at most 2 segments".
-    const nested = path.join(
-      dir,
-      "docs/adr/identity/login/f1/0001-f1-email-signup.md",
-    );
+    const nested = path.join(dir, "docs/adr/identity/login/f1/0001-f1-email-signup.md");
     assert.ok(
       fs.existsSync(nested),
       "reproduces the silent 3-segment nesting the collision pre-check prevents",
@@ -82,11 +79,7 @@ test("filename fN- prefix strip is a pure rename — NNNN is preserved (not a re
   withTmp((dir) => {
     seedLegacyFn(dir);
     // case (1): strip the fN- prefix, keep the number
-    git(dir, [
-      "mv",
-      "docs/adr/f1/0001-f1-email-signup.md",
-      "docs/adr/f1/0001-email-signup.md",
-    ]);
+    git(dir, ["mv", "docs/adr/f1/0001-f1-email-signup.md", "docs/adr/f1/0001-email-signup.md"]);
     const listing = execFileSync("ls", [path.join(dir, "docs/adr/f1")], {
       encoding: "utf8",
     });

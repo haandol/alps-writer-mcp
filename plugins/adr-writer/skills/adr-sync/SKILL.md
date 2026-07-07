@@ -45,6 +45,14 @@ Quick mode는 이 단계와, 3.7 의 인덱스 기반 stale `fN` 네이밍 **감
 
 ### 3. Pass 2 — deep verification (deep mode 항상 실행)
 
+**시작 전 결정론적 하네스로 구조·정합을 먼저 확보한다** — LLM 이 파일명·Status enum·인덱스 정합 같은 기계적 규칙에 토큰을 쓰기 전에 걸러낸다:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs [category]   # 인자 없으면 전체
+```
+
+이 하네스는 각 ADR 본문 + `.mapping.json` + README 인덱스 + 디스크 상태를 파싱해 다음을 기계적으로 검증한다: Status enum·날짜 형식(R1 앞부분), 필수 섹션 존재, 파일명 canonical·stale `fN-` 접두사, 경로 깊이 ≤2, 안티패턴 카테고리 세그먼트(R5 앞부분), Decision Drivers/대안 개수(R13/R14), Related 링크 실재(R10), `dependsOn` 무결성(R16), 인덱스↔매핑↔디스크 3자 정합(R8), 그리고 내부적으로 `adr-invariants.sh` 로 코드→ADR·ADR→PRD 역참조(R15/R17). 하네스가 잡은 `error` 는 아래 Pass 2 의 해당 단계(파일명/인덱스/매핑 hygiene 은 6단계, Status 형식은 아래 2-Status, 역참조 제거는 5단계)에서 정정하고 7단계 보고 **Fixed** 에 기재한다. 하네스가 못 보는 **의미 판정**(코드 실재로 본 Status drift, 회색지대 결정 ↔ 코드 모순, evolution narration 정리)은 아래 deep 단계가 이어서 수행한다 — 하네스는 형식·정합, sync 본문은 결정 drift 를 본다.
+
 각 대상 ADR에 대해:
 
 1. ADR 본문을 전부 읽는다.
@@ -65,7 +73,7 @@ Quick mode는 이 단계와, 3.7 의 인덱스 기반 stale `fN` 네이밍 **감
    - **진화 어법 → 현재형 단언**: "처음엔 X 였다가 Y 로 바꿨다", "v2 에서 Z 추가", "기존 A 대비 B 로 변경", "as of 2024-...", "deprecated 됐던 ~" 류 시간순 서술을, 현재 코드가 하는 것만 남긴 단언("시스템은 Y 로 동작한다")으로 바꾼다. 더 이상 코드에 없는 옛 단계는 삭제한다 (Git 이 이력 보존).
    - **본문 중간에 박힌 Changelog/History/Revision/Update 류 단락·소제목 제거**: 이런 절은 ADR 본문이 아니라 Git 의 몫이다. 단 다른 ADR 을 supersede/replace 한 사실 자체는 `Status`·`Related` 에 한 줄로만 남기고 본문 서사로 풀지 않는다.
    - **중복·모순된 결정 서술 통합**: 같은 결정을 본문 여러 곳에서 서로 다른 시점으로 서술하면, 현재 코드 기준 한 번만 서술하도록 합친다.
-   - 재구성은 `authoring-rules.md`의 표준 ADR 구조(Context / Decision Drivers / Decision / 대안 검토 / Consequences)에 맞춰 문단을 재배치하되, **회색지대 결정(채택 근거·대안·도메인 규칙·상태 전이·fallback)은 절대 누락하지 않는다** — 진화 서술 안에 묻혀 있던 진짜 근거·대안을 현재형으로 살려 옮긴다. 정보 _압축_ 이지 _손실_ 이 아니다.
+   - 재구성은 `README.md` `## ADR 템플릿` 의 표준 섹션 순서(Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / Related)와 `authoring-rules.md` 의 섹션별 작성 규칙에 맞춰 문단을 재배치하되, **회색지대 결정(채택 근거·대안·도메인 규칙·상태 전이·fallback)은 절대 누락하지 않는다** — 진화 서술 안에 묻혀 있던 진짜 근거·대안을 현재형으로 살려 옮긴다. 정보 _압축_ 이지 _손실_ 이 아니다.
    - 단, **회색지대 결정이 코드와 모순될 때는 narration 정리라는 이름으로 ADR 을 코드에 맞춰 조용히 덮어쓰지 않는다** — 아래 "source of truth 의 범위" 분기를 그대로 따른다 (결정 변경 vs 위반).
 4. 회색지대 충실도 점검 — 본문에 (a) 대안 비교/채택 근거 (b) 비즈니스 규칙의 시스템 번역 (c) 도메인 규칙·상태 전이 (d) 외부 의존 fallback 중 하나도 없으면 ADR 가치가 약하다는 신호 → `Suggestions` 에 "회색지대 보강 또는 ADR 폐기 검토" 로 기록.
 5. Decision Drivers / 대안 ≥2 점검 (`authoring-rules.md` "Decision Drivers" / "대안 검토 — 최소 2개 이상"):

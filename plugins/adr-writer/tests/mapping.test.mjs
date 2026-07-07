@@ -7,42 +7,16 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { TEMPLATES } from "./helpers.mjs";
+// The pure invariant checkers now live in scripts/adr-lint-lib.mjs so the same
+// logic backs both these tests (fixtures) and the adr-structure-lint harness
+// (a project's real .mapping.json). Import them instead of redefining inline.
+import { KEY_RE, dependsOnDangling, hasCycle, selfEdges } from "../scripts/adr-lint-lib.mjs";
 
-const SCHEMA = JSON.parse(
-  fs.readFileSync(path.join(TEMPLATES, "mapping.schema.json"), "utf8"),
-);
-
-// --- pure invariant checkers (mirror what the skills must guarantee) ---
-
-const KEY_RE = /^[a-z0-9-]+(\/[a-z0-9-]+)?$/; // ≤2 kebab segments
-
-function dependsOnDangling(mapping) {
-  const keys = new Set(Object.keys(mapping.categories));
-  const bad = [];
-  for (const [k, e] of Object.entries(mapping.categories))
-    for (const d of e.dependsOn || []) if (!keys.has(d)) bad.push(`${k}→${d}`);
-  return bad;
-}
-
-function hasCycle(mapping) {
-  const g = mapping.categories;
-  const state = {}; // 0=unvisited,1=onstack,2=done
-  let cyclic = false;
-  const dfs = (n) => {
-    if (!g[n]) return;
-    state[n] = 1;
-    for (const m of g[n].dependsOn || []) {
-      if (state[m] === 1) cyclic = true;
-      else if (!state[m]) dfs(m);
-    }
-    state[n] = 2;
-  };
-  for (const n of Object.keys(g)) if (!state[n]) dfs(n);
-  return cyclic;
-}
+const SCHEMA = JSON.parse(fs.readFileSync(path.join(TEMPLATES, "mapping.schema.json"), "utf8"));
 
 test("schema documents alpsFeatureId as the id home (key derives from name)", () => {
-  const desc = SCHEMA.properties.categories.additionalProperties.properties.alpsFeatureId.description;
+  const desc =
+    SCHEMA.properties.categories.additionalProperties.properties.alpsFeatureId.description;
   assert.match(desc, /category KEY is derived from the feature name/i);
 });
 
@@ -99,4 +73,58 @@ test("Feature-ID-shaped keys (f1) still pass key regex as a fallback layout", ()
   // fallback is allowed by the schema when no meaningful kebab name exists
   assert.match("f1", KEY_RE);
   assert.match("f-auth-01", KEY_RE);
+});
+
+test("self-edge (a→a) is detected as a cycle AND by selfEdges", () => {
+  const mapping = { categories: { a: { adrs: [], dependsOn: ["a"] } } };
+  assert.equal(hasCycle(mapping), true, "a self-loop is a cycle");
+  assert.deepEqual(selfEdges(mapping), ["a"]);
+});
+
+test("selfEdges is empty for a clean acyclic mapping", () => {
+  const mapping = {
+    categories: {
+      "identity/login": { adrs: [], dependsOn: [] },
+      "ordering/checkout": { adrs: [], dependsOn: ["identity/login"] },
+    },
+  };
+  assert.deepEqual(selfEdges(mapping), []);
+});
+
+test("KEY_RE REJECTS 3-segment, uppercase, and trailing-slash keys", () => {
+  assert.equal(KEY_RE.test("identity/login/social"), false, "3 segments banned");
+  assert.equal(KEY_RE.test("Identity"), false, "uppercase banned");
+  assert.equal(KEY_RE.test("identity/"), false, "trailing slash banned");
+  assert.equal(KEY_RE.test("-lead"), false, "leading hyphen banned");
+  assert.equal(KEY_RE.test("trail-"), false, "trailing hyphen banned");
+});
+
+// --- schema hardening (mapping.schema.json) ---
+
+test("schema pins category keys to ≤2 kebab segments via propertyNames.pattern", () => {
+  const pat = SCHEMA.properties.categories.propertyNames?.pattern;
+  assert.ok(pat, "categories must declare propertyNames.pattern");
+  const re = new RegExp(pat);
+  assert.equal(re.test("identity/login"), true);
+  assert.equal(re.test("identity/login/social"), false);
+  assert.equal(re.test("F1"), false);
+});
+
+test("schema rejects unknown entry fields (additionalProperties:false)", () => {
+  const entry = SCHEMA.properties.categories.additionalProperties;
+  assert.equal(entry.additionalProperties, false, "entry must forbid unknown fields");
+  assert.equal(SCHEMA.additionalProperties, false, "top-level must forbid unknown fields");
+  // $schema + alpsDocument + categories are the only allowed top-level keys
+  assert.ok(SCHEMA.properties.$schema, "$schema must be an allowed top-level key");
+});
+
+test("schema adrs allows empty (context grouping) and requires uniqueItems", () => {
+  const adrs = SCHEMA.properties.categories.additionalProperties.properties.adrs;
+  assert.equal(adrs.uniqueItems, true, "adrs must be uniqueItems");
+  assert.equal("minItems" in adrs, false, "minItems removed — context entries may have adrs:[]");
+  // adrs stays required (the key must be present, even if empty)
+  assert.ok(
+    SCHEMA.properties.categories.additionalProperties.required.includes("adrs"),
+    "adrs stays required",
+  );
 });

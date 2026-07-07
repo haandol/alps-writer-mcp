@@ -12,6 +12,7 @@ export const PLUGIN_ROOT = path.resolve(HERE, "..");
 export const INVARIANTS = path.join(PLUGIN_ROOT, "scripts", "adr-invariants.sh");
 export const HOOK = path.join(PLUGIN_ROOT, "hooks", "surface-adr-context.mjs");
 export const TEMPLATES = path.join(PLUGIN_ROOT, "templates", "adr");
+export const STRUCTURE_LINT = path.join(PLUGIN_ROOT, "scripts", "adr-structure-lint.mjs");
 
 // Make a fresh temp dir; caller removes it (or use withTmp).
 export function mkTmp(prefix = "adr-test-") {
@@ -51,12 +52,27 @@ export function commitAll(dir, msg = "init") {
 
 // Run adr-invariants.sh in `dir`. Returns {code, stdout}. Never throws on a
 // non-zero exit (exit 1 = violations found is an expected outcome we assert on).
-export function runInvariants(dir, extraArgs = []) {
+// `env` merges over process.env — used to inject a stub PATH (fail-closed test).
+export function runInvariants(dir, extraArgs = [], env = {}) {
   try {
     const stdout = execFileSync("bash", [INVARIANTS, ...extraArgs], {
       cwd: dir,
       encoding: "utf8",
+      env: { ...process.env, ...env },
     });
+    return { code: 0, stdout };
+  } catch (e) {
+    return { code: e.status ?? -1, stdout: (e.stdout || "") + (e.stderr || "") };
+  }
+}
+
+// Run adr-structure-lint.mjs in `dir`. Returns {code, stdout}. --json is added
+// by default so tests can parse findings; pass raw=true for the text report.
+export function runStructureLint(dir, extraArgs = [], { json = true } = {}) {
+  const args = [STRUCTURE_LINT, ...extraArgs];
+  if (json && !extraArgs.includes("--json")) args.push("--json");
+  try {
+    const stdout = execFileSync("node", args, { cwd: dir, encoding: "utf8" });
     return { code: 0, stdout };
   } catch (e) {
     return { code: e.status ?? -1, stdout: (e.stdout || "") + (e.stderr || "") };
@@ -65,10 +81,10 @@ export function runInvariants(dir, extraArgs = []) {
 
 // Run the UserPromptSubmit hook against a fixture and return the parsed
 // additionalContext string (or the whole JSON when raw=true).
-export function runHook(dir, { raw = false } = {}) {
+export function runHook(dir, { raw = false, env = {} } = {}) {
   const out = execFileSync("node", [HOOK], {
     cwd: dir,
-    env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+    env: { ...process.env, CLAUDE_PROJECT_DIR: dir, ...env },
     input: "{}",
     encoding: "utf8",
   });

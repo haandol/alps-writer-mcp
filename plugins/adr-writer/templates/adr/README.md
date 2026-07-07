@@ -5,7 +5,7 @@
 이 문서는 인덱스다. 상세 규칙·구조는 sub-doc 으로 분리해 둔다.
 
 - [`authoring-rules.md`](./authoring-rules.md) — ADR 본문에 무엇을 넣고 무엇을 빼는지, 두 단계 필터·코드 참조 깊이·DB 동시 작업·리뷰 체크리스트
-- [`structure.md`](./structure.md) — DDD 도메인(bounded context) × 피쳐 디렉토리 레이아웃, 피쳐 sub-folder 분할, subdomain 분류, `.mapping.json` 정책
+- [`structure.md`](./structure.md) — DDD 도메인(bounded context) × 피쳐 디렉토리 레이아웃, 피쳐 sub-folder 분할, subdomain 분류, [`ALPS ↔ ADR 매핑`](./structure.md#alps--adr-매핑)(`.mapping.json` 정책)
 
 ## ADR이란?
 
@@ -178,7 +178,7 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 
 ## Implementation Notes
 
-아키텍처 수준의 구현 고려사항만. 코드 스니펫·파일 경로·필드별 스키마·구현 상수는 포함하지 않는다.
+(선택 섹션 — 아키텍처 수준의 구현 고려사항이 있을 때만 둔다. 없으면 생략한다.) 아키텍처 수준의 구현 고려사항만. 코드 스니펫·파일 경로·필드별 스키마·구현 상수는 포함하지 않는다.
 
 ## Related
 

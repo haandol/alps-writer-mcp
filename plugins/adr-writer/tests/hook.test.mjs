@@ -110,3 +110,40 @@ test("directive always carries the ADR-first cycle framing", () => {
     assert.match(ctx, /\[ADR-first directive\]/);
   });
 });
+
+test("absolute ALPS_ADR_MAPPING is honored as-is (not joined onto CLAUDE_PROJECT_DIR)", () => {
+  withTmp((dirA) => {
+    withTmp((dirB) => {
+      // dirA (the project dir) has NO mapping; dirB holds the real one at an
+      // absolute path. The hook must read dirB's mapping, not emit '{}'.
+      const abs = write(dirB, "custom-mapping.json", JSON.stringify(CANONICAL_MAPPING));
+      const raw = runHook(dirA, { raw: true, env: { ALPS_ADR_MAPPING: abs } });
+      const ctx = raw.hookSpecificOutput?.additionalContext ?? "";
+      assert.match(ctx, /▸ identity \(core\)/, "absolute mapping path must be loaded");
+    });
+  });
+});
+
+test("subdomainType falls back to a feature sub-folder when no context-level entry declares it", () => {
+  withTmp((dir) => {
+    // Only 'identity/login' exists (no bare 'identity' entry), and it carries
+    // subdomainType — the context heading should borrow it.
+    write(
+      dir,
+      "docs/adr/.mapping.json",
+      JSON.stringify({
+        categories: {
+          "identity/login": {
+            feature: "Login",
+            subdomainType: "core",
+            adrs: ["docs/adr/identity/login/0001-x.md"],
+            dependsOn: [],
+          },
+        },
+      }),
+    );
+    write(dir, "docs/adr/identity/login/0001-x.md", "# adr\n");
+    const ctx = runHook(dir);
+    assert.match(ctx, /▸ identity \(core\)/);
+  });
+});

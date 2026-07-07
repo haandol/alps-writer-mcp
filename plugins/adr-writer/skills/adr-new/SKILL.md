@@ -18,7 +18,7 @@ ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 �
   - **단일 세그먼트 context/평면 키** (`identity`, `auth`) — 단일-피쳐 context(평면) 또는 context 직속 cross-cutting 결정. 키는 기능 이름에서 파생한다. feature 이름이 없어 의미 있는 kebab 을 못 뽑는 워크숍/번호 기반 PRD 에서만 `f1`, `f-auth-01` 같은 ALPS Feature ID 를 fallback 키로 쓴다 (그 외에는 `alpsFeatureId` 로만 보존).
   - **2-세그먼트 `<context>/<feature>` 키** (`identity/login`, `ordering/checkout`) — bounded context 안의 한 피쳐(vertical slice). context 가 피쳐를 여럿 품을 때 쓴다.
 
-  카테고리 결정 규칙(최상위=bounded context, sub-folder=피쳐, 금지 카테고리, cross-cutting/subdomain 조건)은 `structure.md` "디렉토리 구조" / "흔한 context · subdomain 예시 — 안티패턴 카테고리" 참조. 사용자가 안티패턴 카테고리(`frontend`, `backend`, `api`, `db` 등 — context 폴더든 피쳐 sub-folder 든)를 입력하면 한 번 되묻는다 — "이 결정이 한 피쳐(예: `identity/login`, `ordering/checkout`)에 속하나요? 두 개 이상이 공유하면 system-wide cross-cutting context(`infra`, `data`, `integration`, `security`, `platform`)를 권합니다."
+  카테고리 결정 규칙(최상위=bounded context, sub-folder=피쳐, 금지 카테고리, cross-cutting/subdomain 조건)은 `structure.md` "디렉토리 구조" / "안티패턴 카테고리" 참조. 사용자가 안티패턴 카테고리(`frontend`, `backend`, `api`, `db` 등 — context 폴더든 피쳐 sub-folder 든)를 입력하면 한 번 되묻는다 — "이 결정이 한 피쳐(예: `identity/login`, `ordering/checkout`)에 속하나요? 두 개 이상이 공유하면 system-wide cross-cutting context(`infra`, `data`, `integration`, `security`, `platform`)를 권합니다."
 
 - **`[title]`** (선택) — 명령 인자로 제목을 받으면 그 제목으로 시작. 없으면 사용자에게 한 번 물어본다 ("어떤 결정을 ADR 로 남길까요? 제목 한 줄").
 
@@ -51,7 +51,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 - 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` — 언제나 canonical 형태로 둔다. **ALPS Feature ID 는 파일명에 넣지 않는다** (`0001-f1-...` 처럼 붙이지 않는다) — ID 추적은 `.mapping.json` 의 `alpsFeatureId` 가 담당하고 `/adr-impl f1` 호출은 그 필드로 매칭된다.
 - **본문 최상단 `Date:` 는 ADR 작성일(`YYYY-MM-DD`)로 채운다** — 작성 시점 기록이며, Status 전환 날짜(`Accepted (YYYY-MM-DD)`)와는 별개다. `Proposed` Status 줄에는 날짜를 붙이지 않는다.
 - **Status 는 항상 `Proposed` 로 시작** (`/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환). 사용자에게 승격 여부를 묻지 않는다 — 자동 전환 정책은 `README.md` "자동 전환 규칙" 참조
-- 본문 구조: Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / Related
+- 본문 구조: Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / (선택) Implementation Notes / Related. **필수 섹션은 Status·Context·Decision·Consequences** 네 개이며, `adr-structure-lint` 가 이 넷의 존재를 하드 체크한다. Decision Drivers·대안 검토는 강력 권장(누락 시 경고), Implementation Notes 는 아키텍처 수준 구현 고려사항이 있을 때만 두는 선택 섹션이다 (README `## ADR 템플릿` 과 동일).
 - **회색지대만 적는다** — 코드 직독으로 알 수 있는 것(함수 책임, 모듈 의존, 필드 타입, 에러 메시지·로그·환경 변수 이름, 의사코드)은 본문에 넣지 않는다. 채택 근거, 비즈니스 규칙의 시스템 번역, 도메인 규칙·상태 전이, 외부 의존 fallback 같은 "코드만 봐서는 안 보이는 결정의 동기" 가 본문의 중심이 되어야 한다 — 상세는 `README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
 - **Decision은 vertical slice로 묘사** — 한 단락 또는 sequenceDiagram으로 사용자 동작 → API → 데이터 변형까지 끊김 없이 잇는다. 한 피쳐(leaf — 피쳐 sub-folder 또는 단일-피쳐 context)에서 UI/API/Data 결정을 모두 다루는 것이 정상이며, 레이어별 ADR로 쪼개지 않는다. 비동기·상태 전이가 핵심이면 stateDiagram-v2 / flowchart 사용
 - 금지/유지 항목 상세는 `authoring-rules.md` 참조 (다이어그램 내부도 동일하게 적용)
@@ -83,11 +83,28 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 
 `docs/adr/README.md` 의 "카테고리별 ADR 목록" 에 한 줄 요약을 추가한다 — 이 한 줄이 다음 `/adr-sync --quick` 의 진입점이므로 본문 변경 시 함께 갱신해야 한다.
 
-### 6. 자동 검토 (adr-reviewer 위임)
+### 6. 자동 검토 — 결정론적 하네스 먼저, 그 다음 adr-reviewer
 
-저장 직전 `adr-reviewer` subagent 를 호출해 격리된 컨텍스트에서 룰 검증을 받는다.
+저장 직전 두 단계로 검증한다. **먼저 결정론적 하네스**로 기계적 규칙을 걸러낸 뒤, **판단이 필요한 룰만 adr-reviewer** 에 넘긴다 — LLM 검토가 파일명·Status enum·섹션 존재 같은 뻔한 것에 토큰을 쓰지 않도록.
 
-- 입력: 작성된 ADR 파일 경로, 매핑 entry 변경 전/후, (있다면) ALPS Section 7 발췌
+**(a) 결정론적 하네스 — `adr-structure-lint`**:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <이번에 작성한 ADR 의 카테고리 키>
+```
+
+이 하네스는 이번 ADR 이 사는 `docs/adr/` 를 파싱해 다음을 기계적으로 검증한다 (근거: `authoring-rules.md`·`README.md`·`structure.md`):
+
+- Status enum·날짜 형식(R1 앞부분), 필수 섹션(Status/Context/Decision/Consequences) 존재, 파일명 canonical(`NNNN-kebab.md`, stale `fN-` 접두사 금지), 제목번호=파일명번호, 경로 깊이 ≤2 세그먼트
+- 안티패턴 카테고리 세그먼트(R5 앞부분), Decision Drivers 3-5개(R13), 대안 ≥2개(R14), Related 링크 실재(R10)
+- `.mapping.json` 스키마·`dependsOn` 무결성(dangling/self-edge/순환 — R16), README 인덱스 ↔ 매핑 ↔ 디스크 3자 정합(R8)
+- 내부적으로 `adr-invariants.sh` 를 호출해 코드→ADR·ADR→PRD 역참조(R15/R17)도 함께 본다
+
+`error` 가 있으면 저장(7단계)으로 가기 전에 본 세션에서 고친다 (대개 ADR 본문·매핑·README 편집으로 해결). `warning`(대안/드라이버 개수, 코드참조 의심 등)은 adr-reviewer 판단과 함께 다룬다.
+
+**(b) adr-reviewer 위임 — 판단이 필요한 룰**: 하네스가 통과(또는 warning 만)하면 `adr-reviewer` subagent 를 호출한다. reviewer 는 하네스가 못 잡는 **판단 룰에 집중**한다 — 코드 직독/리트머스 필터(R4), 회색지대 충실도(R12), 대안이 strawman 인지(R14 질), Decision Drivers 가 의견이 아닌 변별 사실인지(R13 질), 구현 세부 침투(R3), vertical slice 응집(R5 뒷부분).
+
+- 입력: 작성된 ADR 파일 경로, 매핑 entry 변경 전/후, (있다면) ALPS Section 7 발췌, **하네스 결과 요약(통과/남은 warning)**
 - 출력: `PASS` / `FIX_REQUIRED` / `BLOCK` punch list
 
 `PASS` 가 아니면 결과를 사용자에게 요약해 보여주고, `FIX_REQUIRED` 항목은 본 세션에서 직접 패치한다. `BLOCK` 이면 ADR 분리 또는 보조 문서 동시 작업이 필요하므로 7 단계로 가지 말고 3 단계로 돌아간다.

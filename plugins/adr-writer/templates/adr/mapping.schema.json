@@ -1,20 +1,29 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ALPS-ADR Mapping",
-  "description": "Maps ALPS Section 7 features to the ADRs that record their decisions, organized by DDD bounded context (top-level category key) and feature/vertical-slice (optional second segment). Carries an optional advisory subdomainType (core/supporting/generic) overlay per context. The link between an ADR and the code that implements it is not stored here — agents locate the relevant code by reading the ADR and searching the repo.",
+  "description": "Maps ALPS Section 7 features to the ADRs that record their decisions, organized by DDD bounded context (top-level category key) and feature/vertical-slice (optional second segment). Carries an optional advisory subdomainType (core/supporting/generic) overlay per context. The link between an ADR and the code that implements it is not stored here — agents locate the relevant code by reading the ADR and searching the repo. Note: draft-07 cannot express the dependsOn cross-entry invariants (references an existing key, no self-edge, acyclic) — those are enforced by scripts/adr-structure-lint.mjs (R16) and adr-sync step 6, not this schema.",
   "type": "object",
   "required": ["categories"],
+  "additionalProperties": false,
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional JSON Schema pointer; ignored by the tools but allowed so editors can resolve validation."
+    },
     "alpsDocument": {
       "type": "string",
       "description": "Path to the ALPS .alps.xml file relative to the repo root."
     },
     "categories": {
       "type": "object",
-      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/. The top segment is a DDD bounded context / subdomain named with the domain expert's ubiquitous-language term (e.g., 'identity', 'ordering'); the optional second segment is a user-perceived feature / vertical slice (e.g., 'identity/login'). At most two segments — no deeper nesting. When a context holds exactly one feature the second segment is elided and a single-segment key means context==feature (legacy/flat layout, e.g. 'auth'). Keys are derived from the feature NAME, never from a PRD Feature ID — the id is preserved in 'alpsFeatureId' instead, so '/adr-impl f1' matches via that field and the folder need not be named 'f1'. Only when no meaningful kebab name exists (e.g. a purely numeric workshop id) is the id used as a fallback single-segment key. See structure.md '디렉토리 구조' and '.mapping.json 정책'.",
+      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/. The top segment is a DDD bounded context / subdomain named with the domain expert's ubiquitous-language term (e.g., 'identity', 'ordering'); the optional second segment is a user-perceived feature / vertical slice (e.g., 'identity/login'). At most two segments — no deeper nesting; the propertyNames.pattern enforces the ≤2-kebab-segment shape so a 3-segment key ('identity/login/social') or an uppercase key ('F1') is rejected at validation time, not just in prose. When a context holds exactly one feature the second segment is elided and a single-segment key means context==feature (legacy/flat layout, e.g. 'auth'). Keys are derived from the feature NAME, never from a PRD Feature ID — the id is preserved in 'alpsFeatureId' instead, so '/adr-impl f1' matches via that field and the folder need not be named 'f1'. Only when no meaningful kebab name exists (e.g. a purely numeric workshop id) is the id used as a fallback single-segment key. See structure.md '디렉토리 구조' and 'ALPS ↔ ADR 매핑'.",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)?$"
+      },
       "additionalProperties": {
         "type": "object",
         "required": ["adrs"],
+        "additionalProperties": false,
         "properties": {
           "feature": {
             "type": "string",
@@ -31,9 +40,9 @@
           },
           "adrs": {
             "type": "array",
-            "description": "Paths to ADR markdown files (relative to repo root).",
+            "description": "Paths to ADR markdown files (relative to repo root), each listed exactly once across the whole file. MAY be empty ([]) for a context-level grouping entry that holds no context-direct (cross-cutting) ADR — its feature sub-folder entries carry the actual ADRs (e.g. an 'identity' entry with adrs:[] alongside 'identity/login' and 'identity/signup'). Feature/flat entries normally have at least one path. adr-sync step 6 additionally requires every on-disk NNNN-*.md to appear here exactly once and every path here to resolve on disk.",
             "items": { "type": "string" },
-            "minItems": 1
+            "uniqueItems": true
           },
           "dependsOn": {
             "type": "array",
