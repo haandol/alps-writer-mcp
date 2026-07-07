@@ -12,15 +12,14 @@
 //
 // Each function is annotated with the SKILL.md step it mirrors, so if a skill's
 // deterministic contract changes, this file is the one place to update.
-import { readFileSync, writeFileSync, copyFileSync, appendFileSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import path from "node:path";
-import { write, TEMPLATES } from "./helpers.mjs";
+import { write, seedRuleDocs } from "./helpers.mjs";
 
 // /adr-new step 1 ("매핑 상태 점검") — first run in a repo with no docs/adr:
 // seed the three rule docs from templates/ and an empty mapping skeleton.
 export function seedScaffold(dir) {
-  for (const f of ["README.md", "structure.md", "authoring-rules.md"])
-    copyFileSync(path.join(TEMPLATES, f), write(dir, `docs/adr/${f}`, ""));
+  seedRuleDocs(dir);
   write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }, null, 2) + "\n");
   return dir;
 }

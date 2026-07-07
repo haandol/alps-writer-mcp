@@ -5,16 +5,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { withTmp, write, initRepo, runInvariants, TEMPLATES } from "./helpers.mjs";
+import { withTmp, write, initRepo, runInvariants, seedRuleDocs, TEMPLATES } from "./helpers.mjs";
 
 // A minimal but realistic canonical fixture: DDD context × feature folders,
 // canonical NNNN-title.md filenames (no fN prefix), seeded rule docs.
 function seedCanonicalRepo(dir) {
   initRepo(dir);
   // seeded rule docs legitimately mention ALPS — check (b) must not flag them
-  for (const f of ["README.md", "structure.md", "authoring-rules.md"]) {
-    fs.copyFileSync(path.join(TEMPLATES, f), write(dir, `docs/adr/${f}`, ""));
-  }
+  seedRuleDocs(dir);
   write(
     dir,
     "docs/adr/identity/login/0001-password-policy.md",

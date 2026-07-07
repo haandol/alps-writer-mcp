@@ -14,7 +14,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { withTmp, initRepo, runStructureLint, runHook } from "./helpers.mjs";
+import { withTmp, initRepo, parseLint, runHook } from "./helpers.mjs";
 import {
   seedScaffold,
   authorAdr,
@@ -24,16 +24,9 @@ import {
   promote,
 } from "./authoring.mjs";
 
-// parse the --json report → { ok, errors:[{rule,...}], warnings:[...] }
-function lint(dir, args = []) {
-  const { code, stdout } = runStructureLint(dir, ["--no-invariants", ...args]);
-  return { code, ...JSON.parse(stdout) };
-}
-// full run including the adr-invariants.sh sub-run (reverse refs)
-function lintFull(dir, args = []) {
-  const { code, stdout } = runStructureLint(dir, args);
-  return { code, ...JSON.parse(stdout) };
-}
+// parse the --json report → { code, ok, errors:[{rule,...}], warnings:[...] }
+const lint = (dir, args = []) => parseLint(dir, args);
+const lintFull = (dir, args = []) => parseLint(dir, args, { full: true });
 const rules = (r) => r.errors.map((e) => e.rule);
 
 // ── the happy path: a fresh repo, one /adr-new, harness green ─────────────

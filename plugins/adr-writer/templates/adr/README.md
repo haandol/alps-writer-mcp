@@ -113,7 +113,7 @@ ADR 폴더는 **DDD 도메인(bounded context) × 피쳐(vertical slice)** 두 �
 | **디자인 문서/토큰**      | HOW (시각·인터랙션 관점) | "primary 컬러, 입력 필드 높이 48px, 에러 토스트 패턴"        |
 | **코드/AGENTS.md/README** | HOW (상세 구현)          | "파일 구조, 함수 시그니처, 셋업 명령어"                      |
 
-규칙: ALPS의 user story·acceptance criteria를 ADR에 복사하지 않는다. PRD 와의 연결은 ADR 본문(Related 포함)에 링크로 남기지 않고 `.mapping.json` 의 `alpsFeatureId` 에만 둔다 (위 [의존성 모델](#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다) 참조). 디자인 토큰 값은 ADR이 아니라 디자인 문서로, 함수 시그니처·파일 경로는 ADR이 아니라 코드와 docstring으로 간다.
+규칙: ALPS의 user story·acceptance criteria를 ADR에 복사하지 않고, PRD 연결은 위 [의존성 모델](#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다)대로 `.mapping.json` 의 `alpsFeatureId` 에만 둔다. 디자인 토큰 값은 디자인 문서로, 함수 시그니처·파일 경로는 코드와 docstring으로 간다.
 
 ## 상태
 

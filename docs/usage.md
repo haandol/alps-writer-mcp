@@ -131,16 +131,13 @@ The directive tells the model: when a request adds or changes behavior, read the
 
 ## Deterministic self-test
 
-Two dependency-free scripts under the adr-writer plugin let the cycle verify ADR well-formedness without an LLM judgment call. The skills invoke them at their verification steps (`/adr-new` before the reviewer, `/adr-impl` after Status promotion, `/adr-sync` at the start of deep verification), so the `adr-reviewer` subagent only spends tokens on judgment rules.
-
-| Script                           | What it checks                                                                                                                                                                                                                                                                                                                         |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/adr-invariants.sh`      | Repo-wide one-way-dependency oracle: code→ADR and ADR→PRD reverse references, rollup stale citations. Fail-closed on grep error; exit 0/1/2 so a consuming repo can wire it into pre-commit/CI.                                                                                                                                        |
-| `scripts/adr-structure-lint.mjs` | Per-ADR body + `.mapping.json` + README index + disk: Status enum/date, required sections, canonical filename, path depth ≤2, anti-pattern category segments, Decision Drivers / alternatives counts, Related-link existence, `dependsOn` integrity, index↔mapping↔disk consistency. Invokes `adr-invariants.sh` and folds its result. |
+Two dependency-free scripts under the adr-writer plugin verify ADR well-formedness without an LLM judgment call, so the `adr-reviewer` subagent only spends tokens on judgment rules. The skills invoke them at their verification steps: `/adr-new` before the reviewer, `/adr-impl` after Status promotion, `/adr-sync` at the start of deep verification.
 
 ```bash
 node <adr-writer-plugin>/scripts/adr-structure-lint.mjs [category]   # structure + invariants
 ```
+
+`adr-structure-lint.mjs` checks per-ADR structure + mapping/index consistency and folds in `adr-invariants.sh` (the repo-wide reverse-reference oracle). See the full per-script check list in the [adr-writer README](../plugins/adr-writer/README.md#deterministic-self-test-harness).
 
 ## Mapping file
 

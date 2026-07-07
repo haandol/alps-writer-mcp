@@ -2,7 +2,7 @@
 // test runner + child_process only. Each test builds a throwaway fixture
 // repo under os.tmpdir() so runs are hermetic and parallel-safe.
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,6 +35,13 @@ export function write(dir, rel, content) {
   return full;
 }
 
+// The three seeded rule docs a real repo gets on first /adr-new. Several
+// fixtures need them present so the harness / invariants (b) behave; seed once.
+export const RULE_DOCS = ["README.md", "structure.md", "authoring-rules.md"];
+export function seedRuleDocs(dir) {
+  for (const f of RULE_DOCS) copyFileSync(path.join(TEMPLATES, f), write(dir, `docs/adr/${f}`, ""));
+}
+
 export function git(dir, args) {
   return execFileSync("git", args, { cwd: dir, encoding: "utf8" });
 }
@@ -50,12 +57,12 @@ export function commitAll(dir, msg = "init") {
   git(dir, ["commit", "-qm", msg]);
 }
 
-// Run adr-invariants.sh in `dir`. Returns {code, stdout}. Never throws on a
+// Run a command in `dir`, returning {code, stdout} instead of throwing on a
 // non-zero exit (exit 1 = violations found is an expected outcome we assert on).
 // `env` merges over process.env — used to inject a stub PATH (fail-closed test).
-export function runInvariants(dir, extraArgs = [], env = {}) {
+function runCapture(cmd, args, dir, env = {}) {
   try {
-    const stdout = execFileSync("bash", [INVARIANTS, ...extraArgs], {
+    const stdout = execFileSync(cmd, args, {
       cwd: dir,
       encoding: "utf8",
       env: { ...process.env, ...env },
@@ -66,17 +73,26 @@ export function runInvariants(dir, extraArgs = [], env = {}) {
   }
 }
 
+// Run adr-invariants.sh in `dir`. Returns {code, stdout}.
+export function runInvariants(dir, extraArgs = [], env = {}) {
+  return runCapture("bash", [INVARIANTS, ...extraArgs], dir, env);
+}
+
 // Run adr-structure-lint.mjs in `dir`. Returns {code, stdout}. --json is added
-// by default so tests can parse findings; pass raw=true for the text report.
+// by default so tests can parse findings; pass json=false for the text report.
 export function runStructureLint(dir, extraArgs = [], { json = true } = {}) {
   const args = [STRUCTURE_LINT, ...extraArgs];
   if (json && !extraArgs.includes("--json")) args.push("--json");
-  try {
-    const stdout = execFileSync("node", args, { cwd: dir, encoding: "utf8" });
-    return { code: 0, stdout };
-  } catch (e) {
-    return { code: e.status ?? -1, stdout: (e.stdout || "") + (e.stderr || "") };
-  }
+  return runCapture("node", args, dir);
+}
+
+// Run the lint with --json and return {code, ...parsed report}. The default
+// --no-invariants keeps the structural checks isolated from the reverse-ref
+// sub-run; pass full=true to include adr-invariants.sh.
+export function parseLint(dir, extraArgs = [], { full = false } = {}) {
+  const args = full ? extraArgs : ["--no-invariants", ...extraArgs];
+  const { code, stdout } = runStructureLint(dir, args);
+  return { code, ...JSON.parse(stdout) };
 }
 
 // Run the UserPromptSubmit hook against a fixture and return the parsed

@@ -113,6 +113,28 @@ check_grep_rc() { # $1=rc  $2=check label
   fi
 }
 
+# Scan the tree for stale citations of one ADR id, shared by rollup checks
+# (c)/(d) which differ only in their report message and repoint direction. The
+# "${pat}(-...)?\.md" branch catches the kebab-title link forms the plugin
+# emits (README index / Related links point at "<cat>/NNNN-kebab-title.md" via
+# "./"/"../" paths, so matching only "<cat>/NNNN.md" would miss every real
+# link). The "(^|[^A-Za-z0-9_-])" LEFT boundary keeps a removed/renumbered id
+# from false-positiving as the suffix of a longer surviving id (removing
+# "auth/0002" must not flag "oauth/0002-token.md"); the "ADR <id>" and
+# "<adr-dir>/<id>" branches are already left-anchored by their literal prefixes.
+# EXCLUDES (not an ad-hoc list) so dist/build/vendor artifacts don't leak noise,
+# matching check (a)'s scan policy. Prints the matching lines; caller frames the
+# message and sets `found`.
+scan_citation() { # $1=id token → stdout: file:line:content hits (may be empty)
+  local pat
+  pat="$(printf '%s' "$1" | sed 's/[].[\*^$/(){}+?|]/\\&/g')"
+  local hits rc
+  hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|(^|[^A-Za-z0-9_-])${pat}(-[A-Za-z0-9-]*)?\.md" \
+    "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
+  check_grep_rc "$rc" "rollup citation scan for '$1'"
+  printf '%s' "$hits"
+}
+
 # (a) code → ADR reverse references: no ADR ID / path / ADR_REF in code or
 # non-ADR docs. Layout-agnostic: scans the whole tree minus excludes rather
 # than a hardcoded packages/apps/src list. The post-filter drops any hit
@@ -171,26 +193,9 @@ fi
 # (c) stale citations of ADRs a rollup DELETED. Only runs when --removed is
 # given. Each token is an ADR id (cat/NNNN) or path fragment. These citations
 # repoint to the CONSOLIDATED (survivor) ADR — the decision lives there now.
-# The "${pat}(-...)?\.md" branch catches the kebab-title link forms this
-# plugin actually emits — README index entries and ADR Related links point at
-# "<cat>/NNNN-kebab-title.md" via relative "./"/"../" paths, so matching only
-# "<cat>/NNNN.md" (dot right after the number) would miss every real link.
 if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$REMOVED" ]; then
   for ref in $REMOVED; do
-    pat="$(printf '%s' "$ref" | sed 's/[].[\*^$/(){}+?|]/\\&/g')"
-    # The bare ".md" branch needs a LEFT boundary or the id false-positives as a
-    # suffix of a longer surviving id: removing "auth/0002" would otherwise flag
-    # an unrelated "oauth/0002-token.md" (the "auth/0002-token.md" substring).
-    # `(^|[^A-Za-z0-9_-])` treats an identifier char (letter/digit/_/-) before
-    # the id as a continuation (reject), while a "/" or separator is a real
-    # boundary (accept) — so "docs/adr/auth/…" and "./auth/…" still match. The
-    # "ADR <id>" and "<adr-dir>/<id>" branches are already left-anchored by
-    # their literal prefixes. EXCLUDES (not the ad-hoc two-flag list) so build
-    # artifacts under dist/build/vendor don't leak stale-citation noise, matching
-    # check (a)'s scan policy.
-    hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|(^|[^A-Za-z0-9_-])${pat}(-[A-Za-z0-9-]*)?\.md" \
-      "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
-    check_grep_rc "$rc" "check (c) removed-ADR citation scan"
+    hits="$(scan_citation "$ref")"
     if [ -n "$hits" ]; then
       echo "✗ (c) stale citation of removed ADR '${ref}' (repoint to the consolidated ADR):"
       printf '%s\n' "$hits"
@@ -215,11 +220,7 @@ if [ "$RUN_ROLLUP" -eq 1 ] && [ -n "$RENUMBERED" ]; then
       echo "adr-invariants: --renumbered expects '<old>:<new>' pairs, got '$pair'" >&2
       exit 2
     fi
-    pat="$(printf '%s' "$old" | sed 's/[].[\*^$/(){}+?|]/\\&/g')"
-    # Same left-boundary + EXCLUDES rationale as check (c) above.
-    hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|(^|[^A-Za-z0-9_-])${pat}(-[A-Za-z0-9-]*)?\.md" \
-      "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
-    check_grep_rc "$rc" "check (d) renumbered-ADR citation scan"
+    hits="$(scan_citation "$old")"
     if [ -n "$hits" ]; then
       echo "✗ (d) stale citation of renumbered ADR '${old}' (repoint to its new number '${new}'):"
       printf '%s\n' "$hits"

@@ -5,7 +5,7 @@
 // fires on a bad fixture and passes a clean one.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { withTmp, write, runStructureLint } from "./helpers.mjs";
+import { withTmp, write, runStructureLint, parseLint } from "./helpers.mjs";
 import {
   classifyStatus,
   checkFilename,
@@ -285,9 +285,8 @@ Proposed
 test("CLI: clean repo exits 0 with no errors", () => {
   withTmp((dir) => {
     seedClean(dir);
-    const { code, stdout } = runStructureLint(dir, ["--no-invariants"]);
-    assert.equal(code, 0, stdout);
-    const r = JSON.parse(stdout);
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, JSON.stringify(r.errors));
     assert.equal(r.ok, true);
     assert.deepEqual(r.errors, []);
   });
@@ -301,9 +300,9 @@ test("CLI: bad Status enum is a hard error", () => {
       "docs/adr/identity/login/0001-password-policy.md",
       `# ADR 0001: x\n\nDate: 2026-07-01\n\n## Status\nDone\n\n## Context\nc\n\n## Decision\nd\n\n### 대안 검토\n- a\n- b\n\n## Consequences\nok\n\n## Related\n- [0002](./0002-rate-limit.md)\n`,
     );
-    const { code, stdout } = runStructureLint(dir, ["--no-invariants"]);
-    assert.equal(code, 1);
-    assert.ok(JSON.parse(stdout).errors.some((e) => e.rule === "status-enum"));
+    const r = parseLint(dir);
+    assert.equal(r.code, 1);
+    assert.ok(r.errors.some((e) => e.rule === "status-enum"));
   });
 });
 
@@ -315,9 +314,9 @@ test("CLI: 3-segment nesting is flagged as path-depth error", () => {
       "docs/adr/identity/login/social/0001-oauth.md",
       `# ADR 0001: x\n\n## Status\nProposed\n\n## Context\nc\n\n## Decision\nd\n\n### 대안 검토\n- a\n- b\n\n## Consequences\nok\n`,
     );
-    const { code, stdout } = runStructureLint(dir, ["--no-invariants"]);
-    assert.equal(code, 1);
-    assert.ok(JSON.parse(stdout).errors.some((e) => e.rule === "path-depth"));
+    const r = parseLint(dir);
+    assert.equal(r.code, 1);
+    assert.ok(r.errors.some((e) => e.rule === "path-depth"));
   });
 });
 
@@ -341,9 +340,9 @@ test("CLI: mapping adrs path with no file on disk is flagged", () => {
         },
       }),
     );
-    const { code, stdout } = runStructureLint(dir, ["--no-invariants"]);
-    assert.equal(code, 1);
-    assert.ok(JSON.parse(stdout).errors.some((e) => e.rule === "mapping-dangling-adr"));
+    const r = parseLint(dir);
+    assert.equal(r.code, 1);
+    assert.ok(r.errors.some((e) => e.rule === "mapping-dangling-adr"));
   });
 });
 
@@ -355,9 +354,9 @@ test("CLI: an on-disk ADR absent from mapping is an index orphan", () => {
       "docs/adr/identity/login/0003-lockout.md",
       `# ADR 0003: x\n\n## Status\nProposed\n\n## Context\nc\n\n## Decision\nd\n\n### 대안 검토\n- a\n- b\n\n## Consequences\nok\n`,
     );
-    const { code, stdout } = runStructureLint(dir, ["--no-invariants"]);
-    assert.equal(code, 1);
-    assert.ok(JSON.parse(stdout).errors.some((e) => e.rule === "index-orphan-mapping"));
+    const r = parseLint(dir);
+    assert.equal(r.code, 1);
+    assert.ok(r.errors.some((e) => e.rule === "index-orphan-mapping"));
   });
 });
 

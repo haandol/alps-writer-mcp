@@ -56,7 +56,7 @@ ADR이 누적되면 한 context(또는 피쳐 폴더)에 결정이 쌓여 번호
 - **최대 1단계 깊이**: `docs/adr/<context>/<feature>/NNNN-...md` 까지만. 2단계 이상은 만들지 않는다 (`identity/login/social/...` 금지).
 - **sub-folder 는 피쳐(vertical slice)**: ALPS Section 7 의 feature 와 1:1 로 매핑되는 사용자가 인지하는 단위로 자른다 — `identity/login/`, `identity/signup/`, `identity/password-reset/`, `ordering/checkout/`, `ordering/refund/` 처럼 한 사용자 동작에 해당하는 묶음. UI/API/Data 결정이 sub-folder 안에서 모두 끝나야 한다.
 - **금지되는 sub-folder**: `identity/api/`, `identity/db/`, `identity/components/`, `identity/services/` 같은 **기술 레이어 분할** — 안티패턴 카테고리 규칙과 동일하게 vertical slice 가 깨진다. 분할 후에도 한 sub-folder 안에 UI → API → Data 가 모여야 한다.
-- **번호 정책**: sub-folder 안에서 `NNNN` 을 새로 시작한다. 분할 시 기존 ADR 의 번호를 재배치하지 않는다 — 결번을 유지하고 git 이력으로 추적. 분할 시점은 Roll-up 이 아니므로 본문은 그대로 옮기기만 한다. (renumber 는 `adr-rollup` 만의 단계다 — 체인을 합쳐 삭제가 일어난 카테고리에서만 결번을 메운다. split·sync 는 renumber 하지 않는다.)
+- **번호 정책**: sub-folder 안에서 `NNNN` 을 새로 시작한다. 분할 시 기존 ADR 의 번호를 재배치하지 않는다 — 결번을 유지하고 git 이력으로 추적하며, 본문은 그대로 옮기기만 한다. (전체 renumber 정책은 [`authoring-rules.md`](./authoring-rules.md) "명명 규칙" — renumber 는 `adr-rollup` 만의 단계다.)
 - **피쳐 sub-folder vs 형제 context (`identity-sso/`)**: 두 피쳐가 진짜로 독립된 모델 경계이고 cross-cutting 결정도 거의 공유하지 않으면 형제 context(`identity/`, `identity-sso/`)가 더 깔끔하다. 한 context 안에서 공통 결정(예: `identity/0001-token-rotation.md`)을 부모 폴더에 남겨야 하는 경우에만 피쳐 sub-folder 를 쓴다.
 - **README 인덱스**: sub-folder 가 생기면 README 의 카테고리 목록을 `identity/login/`, `identity/signup/` 처럼 sub-folder 별로 한 줄씩 풀어 적는다. context 직속에 남은 cross-cutting ADR(예: `identity/0001-token-rotation.md`)은 context 라인에 그대로 둔다.
 - **`.mapping.json` 정책**: 피쳐 sub-folder 도 별도 카테고리 entry 로 등록한다 — 키는 `identity/login` 처럼 슬래시를 유지. 카테고리 키가 피쳐 디렉토리명과 일치하면 "관련 코드 찾기" 의 첫 후보로 쓰기 좋으니 키 형식의 일관성을 지킨다. `subdomainType`(core/supporting/generic)은 context 수준 entry 에 둔다 (아래 "ALPS ↔ ADR 매핑").
@@ -87,7 +87,7 @@ docs/adr/
 1. 작업 대상 폴더(피쳐 sub-folder 또는 context 직속)의 `*.md` 개수를 센다 — README 인덱스가 아니라 실제 파일 기준.
 2. **15개 미만이면 그대로 진행**. 분할은 제안조차 하지 않는다.
 3. **15개 이상이면 한 번 제안한다**. 사용자가 거절하면 같은 세션에서 다시 묻지 않고 계속 진행한다 — 분할은 강제가 아니다.
-4. 제안할 때 피쳐 후보를 함께 보여준다. 기존 ADR 제목·Decision 한 줄 요약을 훑어 사용자가 인지하는 단위(로그인, 가입, 비밀번호 재설정 같은 한 동작)로 묶고, ALPS Section 7 feature 가 있으면 그대로 매핑한다. context 전체에 걸친 cross-cutting ADR 은 부모 폴더 직속에 남기고, `identity/api/`·`identity/db/` 같은 기술 레이어 분할은 후보로 만들지 않는다.
+4. 제안할 때 피쳐 후보를 함께 보여준다. 기존 ADR 제목·Decision 한 줄 요약을 훑어 사용자가 인지하는 단위(로그인, 가입, 비밀번호 재설정 같은 한 동작)로 묶고, ALPS Section 7 feature 가 있으면 그대로 매핑한다. context 전체에 걸친 cross-cutting ADR 은 부모 폴더 직속에 남기고, 기술 레이어 분할(아래 "안티패턴 카테고리")은 후보로 만들지 않는다.
 5. 분할이 합의되면 위 분할 규칙(1단계 깊이, README 인덱스, `.mapping.json` 키)에 따라 폴더 이동을 수행한다.
 6. 같은 logical decision 의 evolution chain 이 보이면 분할 전에 `/adr-rollup` 부터 권한다 — 분할로 흩으면 chain 추적이 어려워진다.
 
