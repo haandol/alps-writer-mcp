@@ -23,7 +23,7 @@ ADR 안에서 코드를 가리킬 때는 **폴더(디렉토리) 단위**까지�
 
 본문, 표, Mermaid 다이어그램 모두에 동일하게 적용된다. 함수명·클래스명·파일명을 본문에서 직접 인용해야 한다면 그 결정은 ADR이 아니라 docstring·README·인라인 주석에 적합한지 다시 판단한다.
 
-대칭으로, **코드 측에서도 ADR ID·경로를 본문에 남기지 않는다** — 주석·상수·import 어디에도. 마찬가지로 **ADR 본문에 PRD(ALPS) 경로·Section 번호·feature-id 를 적지 않는다** (Context·Related 포함). ALPS feature ↔ ADR ↔ 코드 의 연결은 [`structure.md`](./structure.md#alps--adr-매핑) 의 `.mapping.json` 한 곳에만 둔다. 자세한 근거는 [README 의 의존성 모델](./README.md#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다) 참조.
+대칭으로, **코드 측에서도 ADR ID·경로를 본문에 남기지 않는다** — 주석·상수·import 어디에도. 마찬가지로 **ADR 본문에 PRD(ALPS) 경로·Section 번호·feature-id 를 적지 않는다** (Context·Related 포함) — adr-writer 는 standalone 이라 ADR 은 import 시점에 PRD 의 동기를 한 번 흡수할 뿐 다시 PRD 를 가리키지 않으며, 매핑도 PRD 참조를 저장하지 않는다. 카테고리 → ADR → (탐색으로 찾는) 코드 의 연결은 [`structure.md`](./structure.md#adr-레지스트리-mappingjson) 의 `.mapping.json` 한 곳에만 둔다. 자세한 근거는 [README 의 의존성 모델](./README.md#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다) 참조.
 
 ## 다이어그램 내 코드 참조
 
@@ -160,7 +160,7 @@ API 엔드포인트 목록(Method, Path, 설명)은 아키텍처 결정의 일�
 
 > **한 ADR = 한 결정 힌트**: 고치려는 변경이 위 "[한 ADR = 한 결정](#한-adr--한-결정)"의 분리 신호(250줄 초과, 서로 다른 엔티티 결정 혼재)를 함께 만든다면, edit-in-place가 아니라 **분리 후 supersede** 신호일 가능성이 높다.
 
-supersede를 택하면 옛 ADR Status 전환 · 새/옛 ADR 양방향 Related 링크 · README 인덱스 갱신 · 옛 번호를 인용하던 다른 ADR의 repoint를 **한 변경 단위로** 처리한다 (Related는 ADR↔ADR 참조라 정상이다). 새 ADR은 `Proposed`로 저장하고, 구현·테스트가 끝나면 `/adr-impl`이 `Accepted`로 자동 승격한다.
+supersede를 택하면 옛 ADR Status 전환 · 새/옛 ADR 양방향 Related 링크 · `.mapping.json` 인덱스(`adrs[]` 의 path·status·summary) 갱신 · 옛 번호를 인용하던 다른 ADR의 repoint를 **한 변경 단위로** 처리한다 (Related는 ADR↔ADR 참조라 정상이다). 새 ADR은 `Proposed`로 저장하고, 구현·테스트가 끝나면 `/adr-impl`이 `Accepted`로 자동 승격한다.
 
 ## 같은 결정이 진화하면 새 ADR을 만든다
 
@@ -193,17 +193,17 @@ ADR 본문은 한국어로 작성한다. 기술 용어, 코드 식별자, 영문
 
 ## 명명 규칙
 
-- 파일명: `XXXX-kebab-case-title.md`. **PRD Feature ID(`F1` 등)를 파일명·폴더명에 넣지 않는다** — ID 추적은 `.mapping.json` 의 `alpsFeatureId` 필드가 담당하므로 파일명은 언제나 canonical 한 `XXXX-kebab-case-title.md` 로 둔다. (`/adr-impl f1` 같은 ID 호출은 그 필드로 매칭된다.)
+- 파일명: `XXXX-kebab-case-title.md`. **PRD Feature ID(`F1` 등)를 파일명·폴더명에 넣지 않는다** — Feature ID 는 어디에도 저장하지 않으며, 카테고리 키는 언제나 canonical 한 name 기반이고 파일명도 `XXXX-kebab-case-title.md` 로 둔다. (`/adr-impl` 은 카테고리 키로만 대상을 해석한다 — `f1` 은 fallback 키였을 때만 존재하는 평범한 literal 키다.)
 - 번호는 카테고리 내에서 순차적으로 증가. split으로 빠진 번호는 결번으로 둔다 (renumber 금지). **단 rollup 은 예외** — 체인을 합쳐 ADR 을 삭제한 카테고리는 `adr-rollup` 마지막 단계에서 결번을 메워 다시 연속 번호로 만든다 (rollup 흔적을 남기지 않는다는 원칙). split·sync 에는 renumber 가 없다.
 - 제목은 명확하고 간결하게
-- **폴더 이름 = ubiquitous language**: 최상위 context 폴더는 도메인 전문가가 쓰는 모델 용어로 짓고(`identity/`, `ordering/`), 피쳐 sub-folder 는 사용자 동작 용어로 짓는다(`login/`, `checkout/`). 두 층의 어휘가 다를 수 있다 — context 는 도메인 모델의 말, leaf 는 사용자가 인지하는 동작의 말. 어느 층이든 기술 레이어 이름(`api`, `db`, `services`)은 금지 (`structure.md` "안티패턴 카테고리"). 카테고리 키 파생·Feature ID·fallback 키 규칙은 `structure.md` "ALPS ↔ ADR 매핑".
+- **폴더 이름 = ubiquitous language**: 최상위 context 폴더는 도메인 전문가가 쓰는 모델 용어로 짓고(`identity/`, `ordering/`), 피쳐 sub-folder 는 사용자 동작 용어로 짓는다(`login/`, `checkout/`). 두 층의 어휘가 다를 수 있다 — context 는 도메인 모델의 말, leaf 는 사용자가 인지하는 동작의 말. 어느 층이든 기술 레이어 이름(`api`, `db`, `services`)은 금지 (`structure.md` "안티패턴 카테고리"). 카테고리 키 파생·fallback 키 규칙은 `structure.md` "ADR 레지스트리 (.mapping.json)".
 
 ## ADR 리뷰 체크리스트
 
 PR 리뷰어 또는 작성자 본인이 머지 전에 확인한다.
 
 - [ ] **Status가 유효한 값**인가 (`Proposed`/`Accepted`/`Deprecated`/`Superseded by [...]`)
-- [ ] **결정 한 줄 요약**이 README의 카테고리별 목록에 갱신되었는가
+- [ ] **결정 한 줄 요약**이 `.mapping.json` 의 해당 `adrs[]` 레코드(summary)에 갱신되었는가
 - [ ] **코드 직독 테스트** — 본문의 모든 단락에 대해 "이 사실이 이 ADR 이 다스리는 코드를 읽으면 자명한가?" 를 물었을 때, 자명한 항목이 본문에 남아 있지 않은가 (자명한 것은 코드가 source of truth)
 - [ ] **회색지대 점검** — 본문에 (a) 채택 근거 / 대안 비교, (b) 비즈니스 규칙의 시스템 번역, (c) 도메인 규칙·상태 전이, (d) 외부 의존 fallback 중 **하나 이상**이 실제로 들어 있는가 (없으면 ADR 의 가치가 약함)
 - [ ] **폴더 단위 이하 코드 참조**가 본문/표/다이어그램 어디에도 남아 있지 않은가
@@ -213,7 +213,7 @@ PR 리뷰어 또는 작성자 본인이 머지 전에 확인한다.
 - [ ] **대안이 최소 2개** 적혀 있고, 각 대안의 pros/cons 가 Decision Drivers 에 비추어 적혀 있는가 (strawman 아닌가)
 - [ ] **Mermaid 다이어그램**이 필요한 결정인데 누락되지 않았는가
 - [ ] **DB 키 패턴**을 바꿨다면 `docs/tables/{name}.md`(또는 동등 문서)와 양방향 링크가 있는가
-- [ ] **PRD 역참조 없음** — 본문(Context·Related 포함)에 ALPS 경로·Section 번호·feature-id 가 적혀 있지 않은가 (PRD 연결은 `.mapping.json` 의 `alpsFeatureId` 한 곳에만)
+- [ ] **PRD 역참조 없음** — 본문(Context·Related 포함)에 ALPS 경로·Section 번호·feature-id 가 적혀 있지 않은가 (adr-writer 는 ALPS 를 참조하지 않으므로 ADR 본문·매핑 어디에도 PRD 를 가리키지 않는다)
 - [ ] **Related**에 의존 ADR 링크(있다면)가 유효한가 — ADR ↔ ADR 참조는 정상이며, PRD 링크는 넣지 않는다
 - [ ] **한 ADR = 한 결정** 원칙이 지켜졌는가 (분리 신호 없음)
 - [ ] **`.mapping.json`**의 해당 카테고리 entry가 새 ADR을 포함하는가

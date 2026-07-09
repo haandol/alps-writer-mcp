@@ -184,7 +184,7 @@ if [ "$RUN_PRD" -eq 1 ]; then
     --include='[0-9][0-9][0-9][0-9]-*.md' -- "$ADR_DIR" 2>/dev/null)"; rc=$?
   check_grep_rc "$rc" "check (b) ADR→PRD scan"
   if [ -n "$hits" ]; then
-    echo "✗ (b) ADR → PRD reverse references (remove from ADR body; link lives in .mapping.json alpsFeatureId):"
+    echo "✗ (b) ADR → PRD reverse references (remove from ADR body; adr-writer is standalone — the mapping stores no PRD link):"
     printf '%s\n' "$hits"
     found=1
   fi

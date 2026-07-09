@@ -44,13 +44,13 @@ roll-up 대상은 **"같은 결정의 진화 체인"** — 동일 logical decisi
 
 ### 1. 인덱스·매핑 로드
 
-- `docs/adr/README.md` (인덱스 + 회색지대 모델), `docs/adr/authoring-rules.md` (포함/제외 규칙), `docs/adr/structure.md` (카테고리 정책) 읽기.
-- `docs/adr/.mapping.json` 읽기 — ALPS feature ↔ ADR 매핑. 매핑에 코드 경로는 없으므로, 코드 정합 검증에 필요한 코드는 ADR Decision 을 읽고 `Glob`/`Grep` 으로 찾는다 (`structure.md` "관련 코드 찾기"). 매핑이 없으면 디스크의 `docs/adr/<category>/` 디렉토리명으로 카테고리를 추론해 진행한다.
+- `docs/adr/README.md` (개념 인덱스 + 회색지대 모델 — ADR 목록은 없다), `docs/adr/authoring-rules.md` (포함/제외 규칙), `docs/adr/structure.md` (카테고리 정책) 읽기.
+- `docs/adr/.mapping.json` 읽기 — 단일 ADR 인덱스(카테고리 → adrs[] 의 path·status·summary) + `dependsOn`. 매핑에 코드 경로도 PRD 참조도 없으므로, 코드 정합 검증에 필요한 코드는 ADR Decision 을 읽고 `Glob`/`Grep` 으로 찾는다 (`structure.md` "관련 코드 찾기"). 매핑이 없으면 디스크의 `docs/adr/<category>/` 디렉토리명으로 카테고리를 추론해 진행한다.
 - 대상 카테고리 결정: 인자 없으면 디스크의 `docs/adr/<category>/` 전체.
 
 ### 2. 카테고리별 체인 식별
 
-각 카테고리에서 ADR 본문, README 한 줄 요약, `Status`, `Related`, `Superseded by` 링크를 모두 읽고 "같은 logical decision"끼리 묶는다. 한 카테고리에 묶음이 여럿일 수도, 하나도 없을 수도 있다. 묶음이 없는 카테고리는 건너뛴다.
+각 카테고리에서 ADR 본문, `.mapping.json` 의 adrs[] 레코드(summary·status), `Related`, `Superseded by` 링크를 모두 읽고 "같은 logical decision"끼리 묶는다 (README 에는 ADR별 한 줄 요약이 없다 — 인덱스는 매핑에 있다). 한 카테고리에 묶음이 여럿일 수도, 하나도 없을 수도 있다. 묶음이 없는 카테고리는 건너뛴다.
 
 전체 범위 실행이면 카테고리마다 이 과정을 반복하되, 통합은 카테고리 내부로 한정한다.
 
@@ -148,12 +148,11 @@ Date: <오늘>
 
 renumber 로 경로가 바뀐 ADR 은 8단계의 cross-reference 갱신에서 삭제분과 함께 한 번에 repoint 한다.
 
-### 8. README + 매핑 + cross-reference 갱신 (삭제 + renumber 함께 반영)
+### 8. 매핑 인덱스 + cross-reference 갱신 (삭제 + renumber 함께 반영)
 
-7단계까지 끝난 **최종 번호** 기준으로 모든 참조를 한 번에 맞춘다:
+7단계까지 끝난 **최종 번호** 기준으로 모든 참조를 한 번에 맞춘다. ADR 인덱스는 `.mapping.json` 한 곳이다 (README 에는 ADR 목록이 없다):
 
-- `docs/adr/README.md` 카테고리 목록에서 삭제된 ADR 항목 제거, 번호가 바뀐 항목은 새 번호·새 파일명으로 갱신, 통합 ADR의 한 줄 요약을 현재 결정에 맞게 갱신.
-- `docs/adr/.mapping.json`의 해당 카테고리 `adrs` 배열에서 삭제된 경로 제거 + renumber 로 바뀐 경로를 새 경로로 갱신.
+- `docs/adr/.mapping.json`의 해당 카테고리 `adrs` 배열에서 삭제된 ADR 레코드 제거, renumber 로 바뀐 레코드의 `path` 를 새 경로로 갱신, 통합(survivor) ADR 레코드의 `summary`·`status` 를 현재 결정에 맞게 갱신.
 - 다른 ADR이 삭제된/번호가 바뀐 ADR을 참조하는 Related 링크를 최종 번호로 변경.
 - 코드 주석·문서에 남은 stale ADR 인용을 정정한다. **삭제분과 renumber 분은 repoint 방향이 다르므로 스크립트에 서로 다른 플래그로 넘긴다** — 한 번의 호출에 둘 다 줄 수 있다:
 

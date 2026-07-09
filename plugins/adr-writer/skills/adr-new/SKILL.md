@@ -1,6 +1,6 @@
 ---
 name: adr-new
-description: Author a new ADR directly (no ALPS PRD required). Drafts a Proposed ADR, seeds docs/adr/.mapping.json, and updates the README index. Use when the user invokes /adr-new or asks to write an ADR for a fresh decision (refactor, infra choice, new feature direction). Keywords - "/adr-new", "ADR 새로 작성", "ADR 만들어줘", "draft an ADR", "write a new ADR".
+description: Author a new ADR directly (no ALPS PRD required). Drafts a Proposed ADR and records it in the docs/adr/.mapping.json index (path + Status + Key Decision summary). Use when the user invokes /adr-new or asks to write an ADR for a fresh decision (refactor, infra choice, new feature direction). Keywords - "/adr-new", "ADR 새로 작성", "ADR 만들어줘", "draft an ADR", "write a new ADR".
 argument-hint: "<category> [title?]"
 ---
 
@@ -15,7 +15,7 @@ ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 �
 ### 1. 인자 해석
 
 - **`<category>`** (필수) — kebab-case 카테고리 키. 다음 세 형태를 모두 받는다 (`structure.md` "디렉토리 구조" 참조):
-  - **단일 세그먼트 context/평면 키** (`identity`, `auth`) — 단일-피쳐 context(평면) 또는 context 직속 cross-cutting 결정. 키는 기능 이름에서 파생한다. feature 이름이 없어 의미 있는 kebab 을 못 뽑는 워크숍/번호 기반 PRD 에서만 `f1`, `f-auth-01` 같은 ALPS Feature ID 를 fallback 키로 쓴다 (그 외에는 `alpsFeatureId` 로만 보존).
+  - **단일 세그먼트 context/평면 키** (`identity`, `auth`) — 단일-피쳐 context(평면) 또는 context 직속 cross-cutting 결정. 키는 기능 이름에서 파생한다. feature 이름이 없어 의미 있는 kebab 을 못 뽑는 워크숍/번호 기반 PRD 에서만 `f1`, `f-auth-01` 같은 ALPS Feature ID 를 fallback 키로 쓴다 — 이때도 ID 를 별도 필드로 보존하지 않고, 그저 이번 카테고리 키를 파생하는 데만 쓴다.
   - **2-세그먼트 `<context>/<feature>` 키** (`identity/login`, `ordering/checkout`) — bounded context 안의 한 피쳐(vertical slice). context 가 피쳐를 여럿 품을 때 쓴다.
 
   카테고리 결정 규칙(최상위=bounded context, sub-folder=피쳐, 금지 카테고리, cross-cutting/subdomain 조건)은 `structure.md` "디렉토리 구조" / "안티패턴 카테고리" 참조. 사용자가 안티패턴 카테고리(`frontend`, `backend`, `api`, `db` 등 — context 폴더든 피쳐 sub-folder 든)를 입력하면 한 번 되묻는다 — "이 결정이 한 피쳐(예: `identity/login`, `ordering/checkout`)에 속하나요? 두 개 이상이 공유하면 system-wide cross-cutting context(`infra`, `data`, `integration`, `security`, `platform`)를 권합니다."
@@ -26,7 +26,7 @@ ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 �
 
 - `docs/adr/` 가 없으면 디렉토리를 만든다.
 - `docs/adr/README.md` (와 `authoring-rules.md`, `structure.md`) 가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/` 의 동일 파일 3종을 함께 복사한다.
-- `docs/adr/.mapping.json` 이 없으면 빈 골격(`{ "categories": {} }`) 으로 만든다 — `alpsDocument` 필드는 ALPS PRD 가 있을 때만 채운다.
+- `docs/adr/.mapping.json` 이 없으면 빈 골격(`{ "categories": {} }`) 으로 만든다.
 
 카테고리 비대화 점검 — 카테고리가 정해지면 `structure.md` "context 가 비대해질 때 — 피쳐 sub-folder 로 분할" 의 점검·제안 절차를 따른다. 대상 폴더(피쳐 sub-folder 또는 context 직속)의 ADR 이 15 개 이상이면 피쳐 sub-folder 분할을 한 번 제안하고, 사용자가 받아들이면 이번 ADR 부터 sub-folder(`docs/adr/<context>/<feature>/`) 안에 작성한다 — 평면 키 `pricing` 이 `pricing/<feature>` 로 자라는 정상 경로다. 거절하거나 15 미만이면 평면 구조 그대로 진행 — 다시 묻지 않는다.
 
@@ -48,7 +48,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 `docs/adr/` 의 `README.md`·`authoring-rules.md`·`structure.md`(없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/` 동일 파일) 를 엄격히 따른다.
 
 - 카테고리 디렉토리: `docs/adr/<category>/` (없으면 생성, 플랫 구조 프로젝트면 `docs/adr/` 만 사용)
-- 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` — 언제나 canonical 형태로 둔다. **ALPS Feature ID 는 파일명에 넣지 않는다** (`0001-f1-...` 처럼 붙이지 않는다) — ID 추적은 `.mapping.json` 의 `alpsFeatureId` 가 담당하고 `/adr-impl f1` 호출은 그 필드로 매칭된다.
+- 카테고리 내 다음 번호 부여. 파일명: `NNNN-kebab-title.md` — 언제나 canonical 형태로 둔다. **ALPS Feature ID 는 파일명에 넣지 않는다** (`0001-f1-...` 처럼 붙이지 않는다) — Feature ID 는 어디에도 저장하지 않으며, `/adr-impl` 은 카테고리 키로 대상을 매칭한다.
 - **본문 최상단 `Date:` 는 ADR 작성일(`YYYY-MM-DD`)로 채운다** — 작성 시점 기록이며, Status 전환 날짜(`Accepted (YYYY-MM-DD)`)와는 별개다. `Proposed` Status 줄에는 날짜를 붙이지 않는다.
 - **Status 는 항상 `Proposed` 로 시작** (`/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환). 사용자에게 승격 여부를 묻지 않는다 — 자동 전환 정책은 `README.md` "자동 전환 규칙" 참조
 - 본문 구조: Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / (선택) Implementation Notes / Related. **필수 섹션은 Status·Context·Decision·Consequences** 네 개이며, `adr-structure-lint` 가 이 넷의 존재를 하드 체크한다. Decision Drivers·대안 검토는 강력 권장(누락 시 경고), Implementation Notes 는 아키텍처 수준 구현 고려사항이 있을 때만 두는 선택 섹션이다 (README `## ADR 템플릿` 과 동일).
@@ -58,7 +58,7 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 
 ### 4. 매핑 갱신
 
-`docs/adr/.mapping.json` (스키마: `${CLAUDE_PLUGIN_ROOT}/templates/adr/mapping.schema.json`). 매핑은 ALPS feature ↔ ADR 관계만 저장한다 — **ADR ↔ 코드 경로는 저장하지 않는다** (코드는 ADR 을 읽고 그때그때 찾는다).
+`docs/adr/.mapping.json` (스키마: `${CLAUDE_PLUGIN_ROOT}/templates/adr/mapping.schema.json`). 매핑은 **단일 ADR 인덱스**다 — 각 ADR 을 path·Status·요약 한 줄로 한 번씩 등재한다. **ADR ↔ 코드 경로는 저장하지 않고**(코드는 ADR 을 읽고 그때그때 찾는다), **PRD 참조도 저장하지 않는다**(adr-writer 는 standalone).
 
 ```json
 {
@@ -66,7 +66,13 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
     "<category>": {
       "feature": "<ADR 제목 또는 카테고리를 대표하는 한 줄>",
       "subdomainType": "<core|supporting|generic — 2단계 6번을 물어 답이 있을 때만>",
-      "adrs": ["docs/adr/<category>/NNNN-...md"],
+      "adrs": [
+        {
+          "path": "docs/adr/<category>/NNNN-...md",
+          "status": "Proposed",
+          "summary": "<Key Decision 한 줄 요약>"
+        }
+      ],
       "dependsOn": ["<선행 카테고리 키>"],
       "tableDocs": ["<DB 변경이 있고 docs/tables/ 또는 schema.prisma 등을 갱신했다면>"]
     }
@@ -74,14 +80,15 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 }
 ```
 
-- 같은 카테고리에 이미 entry 가 있으면 `adrs` 배열에 새 ADR 경로를 push 한다.
+- `adrs` 항목은 문자열이 아니라 `{ "path", "status", "summary" }` **객체**다. `path` 는 repo 기준 상대 경로, `status` 는 방금 쓴 ADR 본문 `## Status` 를 그대로 미러링하므로 새 ADR 은 언제나 `"Proposed"` 로 시작한다, `summary` 는 Decision 을 압축한 한 줄(Key Decision). 이 레코드가 곧 ADR 인덱스 항목이다 (자세한 인덱스 역할은 5단계).
+- 같은 카테고리에 이미 entry 가 있으면 `adrs` 배열에 새 레코드 객체를 push 한다.
 - **`dependsOn`** — 2단계 5번에서 사용자가 선행 조건으로 지목한 카테고리 키들을 배열로 기록한다. `/adr-impl` 의 선행 게이트가 읽는 바로 그 필드이며 같은 카테고리-키 id-space 다. 기존 카테고리 키만 참조하고 비순환(자기 자신 포함 금지)을 유지한다 (스키마: `mapping.schema.json` 의 `dependsOn`). 엣지가 다른 context 의 카테고리를 가리켜도 정상이다. 사용자가 5번에 "없음" 으로 답했다면 `dependsOn` 을 `[]` 로 기록한다 — 빈 배열은 "의존 없음을 명시적으로 점검 완료" 의 뜻이고, `/adr-impl` 이 안내 없이 진행한다. `dependsOn` 을 아예 생략하면 `/adr-impl` 이 "의존 미선언" 으로 보고 한 줄 경고를 띄우므로, 5번을 물어본 `/adr-new` 경로에서는 생략하지 않는다.
 - **`subdomainType`** (선택) — 2단계 6번에서 답이 있을 때만 context 수준 entry 에 기록한다 (피쳐 sub-folder entry 는 부모 context 분류를 상속하므로 보통 생략). 평면·미상이면 생략 — advisory 메타데이터라 비워도 매핑은 유효하다.
-- ALPS PRD 가 함께 있는 프로젝트라면 `alpsDocument`, `alpsFeatureId` 도 채운다 — 없으면 둘 다 생략한다 (필수 필드 아님). ALPS 가 있는 경우 `dependsOn` 은 보통 `/feature-to-adr` 가 Section 6.3 에서 채운다. 그래도 `/adr-new` 단독 호출에서 2단계 5번을 물었다면, 사용자가 선행을 지목하지 않았더라도 위 규칙대로 **`dependsOn` 을 `[]` 로 기록한다 — 키를 생략하지 않는다** (생략하면 `/adr-impl` 이 "의존 미선언" 경고를 띄운다). `[]` 와 키 생략을 같게 취급하지 않는 건 `/adr-impl` 선행 게이트의 "의존 없음(점검 완료)" vs "미선언(경고)" 분기와 직접 맞물린다.
+- adr-writer 는 PRD 링크를 저장하지 않는다 — 이 ADR 이 ALPS import 에서 왔더라도 `feature` 는 그저 사람이 읽는 라벨일 뿐 PRD 역참조가 아니다. import 된 카테고리라면 `dependsOn` 은 보통 `/feature-to-adr` 가 Section 6.3 에서 채운다. 그래도 `/adr-new` 단독 호출에서 2단계 5번을 물었다면, 사용자가 선행을 지목하지 않았더라도 위 규칙대로 **`dependsOn` 을 `[]` 로 기록한다 — 키를 생략하지 않는다** (생략하면 `/adr-impl` 이 "의존 미선언" 경고를 띄운다). `[]` 와 키 생략을 같게 취급하지 않는 건 `/adr-impl` 선행 게이트의 "의존 없음(점검 완료)" vs "미선언(경고)" 분기와 직접 맞물린다.
 
-### 5. README 인덱스 갱신
+### 5. 인덱스 갱신
 
-`docs/adr/README.md` 의 "카테고리별 ADR 목록" 에 한 줄 요약을 추가한다 — 이 한 줄이 다음 `/adr-sync --quick` 의 진입점이므로 본문 변경 시 함께 갱신해야 한다.
+ADR 인덱스는 `docs/adr/.mapping.json` 이다 — README 는 더 이상 ADR 목록을 들고 있지 않다. 4단계에서 push 한 `adrs[]` 레코드(path + `status:"Proposed"` + summary)가 곧 인덱스 항목이며, 이 레코드의 `summary` 가 다음 `/adr-sync --quick` 의 진입점이고 UserPromptSubmit 훅이 매 턴 렌더링하는 인덱스 한 줄이다. 즉 별도 편집 없이 4단계에서 이미 인덱스가 갱신된 것이므로, 여기서는 (a) `summary` 한 줄이 Decision 을 정확히 압축하는지, (b) `status` 가 본문 `## Status`(=`Proposed`)와 일치하는지를 확정만 하면 된다 (4단계 참조). README 는 개념 인덱스(ADR 이 무엇인지·회색지대·의존 모델·템플릿) 로만 남으므로 여기서 건드리지 않는다.
 
 ### 6. 자동 검토 — 결정론적 하네스 먼저, 그 다음 adr-reviewer
 
@@ -97,10 +104,10 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <이번에 작성한 A
 
 - Status enum·날짜 형식(R1 앞부분), 필수 섹션(Status/Context/Decision/Consequences) 존재, 파일명 canonical(`NNNN-kebab.md`, stale `fN-` 접두사 금지), 제목번호=파일명번호, 경로 깊이 ≤2 세그먼트
 - 안티패턴 카테고리 세그먼트(R5 앞부분), Decision Drivers 3-5개(R13), 대안 ≥2개(R14), Related 링크 실재(R10)
-- `.mapping.json` 스키마·`dependsOn` 무결성(dangling/self-edge/순환 — R16), README 인덱스 ↔ 매핑 ↔ 디스크 3자 정합(R8)
+- `.mapping.json` 스키마·`dependsOn` 무결성(dangling/self-edge/순환 — R16), 매핑 ↔ 디스크 정합(R8) + 매핑 `adrs` 레코드(path/status/summary) 형식·status↔본문 정합
 - 내부적으로 `adr-invariants.sh` 를 호출해 코드→ADR·ADR→PRD 역참조(R15/R17)도 함께 본다
 
-`error` 가 있으면 저장(7단계)으로 가기 전에 본 세션에서 고친다 (대개 ADR 본문·매핑·README 편집으로 해결). `warning`(대안/드라이버 개수, 코드참조 의심 등)은 adr-reviewer 판단과 함께 다룬다.
+`error` 가 있으면 저장(7단계)으로 가기 전에 본 세션에서 고친다 (대개 ADR 본문·매핑 편집으로 해결). `warning`(대안/드라이버 개수, 코드참조 의심 등)은 adr-reviewer 판단과 함께 다룬다.
 
 **(b) adr-reviewer 위임 — 판단이 필요한 룰**: 하네스가 통과(또는 warning 만)하면 `adr-reviewer` subagent 를 호출한다. reviewer 는 하네스가 못 잡는 **판단 룰에 집중**한다 — 코드 직독/리트머스 필터(R4), 회색지대 충실도(R12), 대안이 strawman 인지(R14 질), Decision Drivers 가 의견이 아닌 변별 사실인지(R13 질), 구현 세부 침투(R3), vertical slice 응집(R5 뒷부분).
 

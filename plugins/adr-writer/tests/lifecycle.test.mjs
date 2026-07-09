@@ -2,27 +2,24 @@
 //
 // The /adr-new and /adr-impl skills are LLM prompts, so this suite can't invoke
 // them directly. Instead it reproduces their DETERMINISTIC contract via
-// authoring.mjs (seed scaffold → author ADR → register mapping → index in
-// README → promote Status) and asserts, at each step, that the deterministic
-// oracle — scripts/adr-structure-lint.mjs, which itself runs adr-invariants.sh
-// — agrees the artifacts are well-formed.
+// authoring.mjs (seed scaffold → author ADR → register in the .mapping.json
+// index → promote Status in body + index) and asserts, at each step, that the
+// deterministic oracle — scripts/adr-structure-lint.mjs, which itself runs
+// adr-invariants.sh — agrees the artifacts are well-formed.
+//
+// .mapping.json is the single ADR index (the README holds no ADR list), so the
+// index-orphan check is disk↔mapping only, and promotion must keep the index
+// record's Status in lockstep with the body.
 //
 // The load-bearing tests (skip one authoring step → harness goes red) prove the
 // harness actually gates each part of the contract, not just that a happy path
 // passes. That is the real value: it pins WHAT a correct /adr-new must produce.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { withTmp, initRepo, parseLint, runHook } from "./helpers.mjs";
-import {
-  seedScaffold,
-  authorAdr,
-  registerMapping,
-  indexInReadme,
-  adrNew,
-  promote,
-} from "./authoring.mjs";
+import { seedScaffold, authorAdr, registerMapping, adrNew, promote } from "./authoring.mjs";
 
 // parse the --json report → { code, ok, errors:[{rule,...}], warnings:[...] }
 const lint = (dir, args = []) => parseLint(dir, args);
@@ -66,9 +63,9 @@ test("e2e: a flat single-feature context (auth) is also harness-clean", () => {
 test("e2e: skipping the mapping registration (step 4) → harness flags index-orphan", () => {
   withTmp((dir) => {
     seedScaffold(dir);
-    // author + index but DO NOT registerMapping
-    const adr = authorAdr(dir, { category: "identity/login", slug: "password-policy" });
-    indexInReadme(dir, { adr });
+    // author the ADR on disk but DO NOT registerMapping — .mapping.json is the
+    // single ADR index, so an unregistered ADR is a hard orphan.
+    authorAdr(dir, { category: "identity/login", slug: "password-policy" });
     const r = lint(dir);
     assert.equal(r.ok, false);
     assert.ok(rules(r).includes("index-orphan-mapping"), rules(r).join(","));
@@ -90,15 +87,34 @@ test("e2e: registering a mapping path with no file on disk → harness flags map
   });
 });
 
-test("e2e: skipping the README index (step 5) → harness warns (not a hard error)", () => {
+test("e2e: omitting the index summary → harness warns (not a hard error)", () => {
   withTmp((dir) => {
     seedScaffold(dir);
     const adr = authorAdr(dir, { category: "identity/login", slug: "password-policy" });
+    // registered without a one-line summary — advisory, since the summary is
+    // the /adr-sync --quick entry point but not load-bearing for correctness.
     registerMapping(dir, { key: "identity/login", feature: "Login", adr });
-    // no indexInReadme
     const r = lint(dir);
-    assert.equal(r.ok, true, "missing index line is advisory, not a hard error");
-    assert.ok(r.warnings.some((w) => w.rule === "index-orphan-readme"));
+    assert.equal(r.ok, true, "missing summary is advisory, not a hard error");
+    assert.ok(r.warnings.some((w) => w.rule === "map-adrs-item-summary-missing"));
+  });
+});
+
+test("e2e: mapping index Status out of lockstep with the ADR body → harness flags it", () => {
+  withTmp((dir) => {
+    seedScaffold(dir);
+    // body says Proposed; index record claims Accepted → the index went stale.
+    const adr = authorAdr(dir, { category: "identity/login", slug: "password-policy" });
+    registerMapping(dir, {
+      key: "identity/login",
+      feature: "Login",
+      adr,
+      status: "Accepted (2026-07-02)",
+      summary: "bcrypt 최소 12자",
+    });
+    const r = lint(dir);
+    assert.equal(r.ok, false);
+    assert.ok(rules(r).includes("status-index-mismatch"), rules(r).join(","));
   });
 });
 
@@ -114,7 +130,6 @@ test("e2e: authoring with a Feature-ID filename (0001-f1-…) → harness flags 
       slug: "f1-email-signup",
     });
     registerMapping(dir, { key: "identity/login", feature: "Login", adr });
-    indexInReadme(dir, { adr });
     const r = lint(dir);
     assert.ok(rules(r).includes("filename"), rules(r).join(","));
   });
@@ -143,7 +158,6 @@ test("e2e: authoring with only 1 alternative → harness flags alternatives-coun
       alternatives: ["대안 A: 이것만"],
     });
     registerMapping(dir, { key: "identity/login", feature: "Login", adr });
-    indexInReadme(dir, { adr });
     const r = lint(dir);
     assert.ok(rules(r).includes("alternatives-count"), rules(r).join(","));
   });
@@ -198,7 +212,6 @@ test("e2e: dependsOn pointing at a non-existent category → harness flags dangl
       adr,
       dependsOn: ["identity/login"],
     });
-    indexInReadme(dir, { adr });
     const r = lint(dir);
     assert.equal(r.ok, false);
     assert.ok(rules(r).includes("map-dependson-dangling"), rules(r).join(","));

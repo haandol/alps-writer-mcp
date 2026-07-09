@@ -39,15 +39,21 @@ export const ANTIPATTERN_SEGMENTS = new Set([
 
 // Recognized entry field names (mapping.schema.json). Unknown keys are typos
 // that silently drop dependsOn/subdomainType, so the harness flags them (the
-// schema also sets additionalProperties:false).
+// schema also sets additionalProperties:false). adr-writer is standalone —
+// there is no ALPS/PRD field here (an imported feature's name lives in
+// `feature`, treated as a plain label, never a PRD back-reference).
 export const KNOWN_ENTRY_FIELDS = new Set([
   "feature",
-  "alpsFeatureId",
   "subdomainType",
   "adrs",
   "dependsOn",
   "tableDocs",
 ]);
+
+// Recognized fields on an adrs[] index record (mapping.schema.json adrs.items).
+// Each record indexes one ADR: its path, its Status (mirrors the ADR body), and
+// an optional one-line Key Decision summary.
+export const KNOWN_ADR_ITEM_FIELDS = new Set(["path", "status", "summary"]);
 
 export const SUBDOMAIN_TYPES = new Set(["core", "supporting", "generic"]);
 
@@ -105,10 +111,14 @@ export function hasCycle(mapping) {
 // is LLM/adr-sync territory; only the closed vocabulary + date convention is
 // deterministic here. README "상태" + "자동 전환 규칙":
 //   Proposed                                (never dated)
-//   Accepted (YYYY-MM-DD)
-//   Deprecated (YYYY-MM-DD)
+//   Accepted (YYYY-MM-DD)                    (parentheses hold ONLY the date)
+//   Deprecated (YYYY-MM-DD)                  (parentheses hold ONLY the date)
 //   Superseded by [ADR ...](...)            (successor link, not a date)
-// Informal states (Implemented/Done/Completed) are explicitly banned.
+// Informal states (Implemented/Done/Completed) are explicitly banned. The
+// Accepted/Deprecated parentheses carry the transition DATE ONLY — no extra
+// reference, feature id, or note (e.g. "Accepted (2026-07-09, F1)"): the anchors
+// on the matchers reject anything after the date, and the near-miss branch below
+// diagnoses it as "date-only" so the report says exactly what to strip.
 const STATUS_MATCHERS = [
   /^Proposed$/,
   /^Accepted \(\d{4}-\d{2}-\d{2}\)$/,
@@ -127,6 +137,11 @@ export function classifyStatus(statusValue) {
     return { ok: false, reason: "proposed-should-not-carry-date", value: v };
   if (/^Accepted$/.test(v) || /^Deprecated$/.test(v))
     return { ok: false, reason: "missing-date", value: v };
+  // Accepted/Deprecated with a parenthetical that is NOT exactly (YYYY-MM-DD):
+  // a mis-formatted date, or — the common offender — the date followed by extra
+  // text/reference ("Accepted (2026-07-09) — F1", "Accepted (2026-07-09, ref)").
+  // The parentheses must hold the date and nothing else.
+  if (/^(Accepted|Deprecated)\b/.test(v)) return { ok: false, reason: "date-only", value: v };
   if (/^Superseded\b/.test(v)) return { ok: false, reason: "superseded-needs-adr-link", value: v };
   return { ok: false, reason: "unrecognized", value: v };
 }
@@ -324,21 +339,45 @@ export function validateMappingShape(mapping) {
       err("entry-not-object", `category "${key}" entry is not an object`);
       continue;
     }
-    // adrs: required (key present), array of strings, unique. Empty allowed —
-    // a context-grouping entry may hold no context-direct ADR (its ADRs live
-    // in feature sub-folder entries). See mapping.schema.json adrs note.
+    // adrs: required (key present), array of index records, unique. Empty
+    // allowed — a context-grouping entry may hold no context-direct ADR (its
+    // ADRs live in feature sub-folder entries). Each record is an object with a
+    // required path + Status and an optional one-line summary (the array IS the
+    // ADR index; the README carries no separate list). See mapping.schema.json.
     if (!("adrs" in entry)) err("adrs-missing", `category "${key}": required "adrs" field absent`);
     else if (!Array.isArray(entry.adrs))
       err("adrs-not-array", `category "${key}": "adrs" is not an array`);
     else {
-      for (const p of entry.adrs) {
-        if (typeof p !== "string") {
-          err("adrs-item-type", `category "${key}": non-string adrs entry`);
+      for (const rec of entry.adrs) {
+        if (rec == null || typeof rec !== "object" || Array.isArray(rec)) {
+          err("adrs-item-type", `category "${key}": adrs item is not an object {path,status,...}`);
           continue;
         }
-        const keys = seenAdrs.get(p) || [];
+        if (typeof rec.path !== "string" || !rec.path) {
+          err("adrs-item-path", `category "${key}": adrs item missing string "path"`);
+          continue;
+        }
+        if (!("status" in rec)) {
+          err("adrs-item-status-missing", `category "${key}": adrs "${rec.path}" missing "status"`);
+        } else {
+          const st = classifyStatus(rec.status);
+          if (!st.ok)
+            err(
+              "adrs-item-status-enum",
+              `category "${key}": adrs "${rec.path}" status "${rec.status ?? ""}" is not a valid Status`,
+            );
+        }
+        if (!("summary" in rec) || !String(rec.summary || "").trim())
+          warn("adrs-item-summary-missing", `category "${key}": adrs "${rec.path}" has no summary`);
+        for (const f of Object.keys(rec))
+          if (!KNOWN_ADR_ITEM_FIELDS.has(f))
+            warn(
+              "adrs-item-unknown-field",
+              `category "${key}": adrs "${rec.path}" unknown field "${f}" (typo?)`,
+            );
+        const keys = seenAdrs.get(rec.path) || [];
         keys.push(key);
-        seenAdrs.set(p, keys);
+        seenAdrs.set(rec.path, keys);
       }
     }
     if ("subdomainType" in entry && !SUBDOMAIN_TYPES.has(entry.subdomainType))

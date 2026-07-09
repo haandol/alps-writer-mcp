@@ -5,7 +5,7 @@
 이 문서는 인덱스다. 상세 규칙·구조는 sub-doc 으로 분리해 둔다.
 
 - [`authoring-rules.md`](./authoring-rules.md) — ADR 본문에 무엇을 넣고 무엇을 빼는지, 두 단계 필터·코드 참조 깊이·DB 동시 작업·리뷰 체크리스트
-- [`structure.md`](./structure.md) — DDD 도메인(bounded context) × 피쳐 디렉토리 레이아웃, 피쳐 sub-folder 분할, subdomain 분류, [`ALPS ↔ ADR 매핑`](./structure.md#alps--adr-매핑)(`.mapping.json` 정책)
+- [`structure.md`](./structure.md) — DDD 도메인(bounded context) × 피쳐 디렉토리 레이아웃, 피쳐 sub-folder 분할, subdomain 분류, [`ADR 레지스트리`](./structure.md#adr-레지스트리-mappingjson)(`.mapping.json` 정책)
 
 ## ADR이란?
 
@@ -52,14 +52,14 @@ flowchart RL
     ADR -. 논리적 의존 .-> PRD
 ```
 
-참조는 **양쪽 변(PRD↔ADR, ADR↔코드) 어디에도 직접 적지 않는다** — 연결은 외부 매핑 레이어 한 곳에만 둔다.
+참조는 **양쪽 변(PRD↔ADR, ADR↔코드) 어디에도 직접 적지 않는다**. PRD↔ADR 는 아예 저장하지 않고(adr-writer 는 ALPS 를 참조하지 않는다), 카테고리·ADR·`dependsOn` 의 연결만 외부 매핑 레이어(`.mapping.json`) 한 곳에 둔다.
 
 - **ADR → 코드 참조 금지**: ADR 에 파일·함수·줄 번호를 적지 않는다. 자세한 규칙은 [`authoring-rules.md`](./authoring-rules.md#코드-참조-깊이--폴더-단위까지만).
 - **코드 → ADR 참조 금지**: 주석·상수·import 에 ADR ID 나 경로를 남기지 않는다. ADR 번호는 split / rollup / supersede 로 이동하므로, 코드가 ADR ID 를 들고 있으면 결정이 바뀌지 않았는데도 구조 변경이 코드 줄줄이 수정을 강제한다.
 - **ADR → PRD 참조 금지**: ADR 본문(Context·Related 포함)에 ALPS 파일 경로·Section 번호·feature-id 를 적지 않는다. ADR 은 PRD 의 *동기를 흡수*하되 PRD 를 _가리키지_ 않는다 — PRD feature 가 split / 재번호 / 재구성되면, 결정이 바뀌지 않았는데도 ADR 본문 수정을 강제하기 때문이다. PRD 의 user story·acceptance criteria 를 ADR 에 복사하지도 않는다 (중복 → drift).
 - **PRD → ADR 참조 금지**: ALPS 문서가 특정 ADR ID·경로를 본문에 적지 않는다. PRD 는 가장 안정적인 계약이며 하류 산출물을 알지 못한다.
 - **ADR 결정이 바뀌면 코드는 바뀐다 / PRD 가 바뀌면 ADR·코드가 바뀐다** — 그게 단방향 의존이 의도하는 정상 흐름이다. 역방향(코드 변경이 ADR 을, ADR 변경이 PRD 를 끌고 가는 것)은 일어나면 안 된다.
-- **연결은 외부 매핑 레이어에 둔다**: ALPS feature ↔ ADR ↔ 코드 경로 의 관계는 [`docs/adr/.mapping.json`](./structure.md#alps--adr-매핑) 한 곳에만 적는다 (`alpsDocument`·`alpsFeatureId` 필드). 세 산출물 중 어느 것도 다른 것을 본문에서 직접 가리키지 않고, 이 매핑이 유일한 결합점이다.
+- **연결은 외부 매핑 레이어에 둔다**: [`docs/adr/.mapping.json`](./structure.md#adr-레지스트리-mappingjson) 이 ADR 인덱스(카테고리 → adrs, 각 adr 의 path·status·summary)와 카테고리 간 `dependsOn` 을 한 곳에 기록한다. **PRD 참조는 매핑에 저장하지 않는다** — adr-writer 는 ALPS 를 참조하지 않는다. ADR↔코드 도 본문에서 직접 가리키지 않고(코드는 그때그때 탐색), 이 매핑이 카테고리·ADR·의존을 잇는 유일한 결합점이다.
 - **안정성 기울기 검증**: 변경 빈도가 `Code >> ADR >> PRD` 를 따라야 한다. 휘발성 높은 레이어의 변경이 안정 레이어의 변경을 끌고 다닌다면, 화살표가 잘못 그려진 것 — 보통 ADR 이 코드 디테일을 들고 있거나, 코드가 ADR ID 를, ADR 이 ALPS 경로를 들고 있다.
 
 ### 코드 직독 테스트 (1차 필터)
@@ -113,7 +113,7 @@ ADR 폴더는 **DDD 도메인(bounded context) × 피쳐(vertical slice)** 두 �
 | **디자인 문서/토큰**      | HOW (시각·인터랙션 관점) | "primary 컬러, 입력 필드 높이 48px, 에러 토스트 패턴"        |
 | **코드/AGENTS.md/README** | HOW (상세 구현)          | "파일 구조, 함수 시그니처, 셋업 명령어"                      |
 
-규칙: ALPS의 user story·acceptance criteria를 ADR에 복사하지 않고, PRD 연결은 위 [의존성 모델](#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다)대로 `.mapping.json` 의 `alpsFeatureId` 에만 둔다. 디자인 토큰 값은 디자인 문서로, 함수 시그니처·파일 경로는 코드와 docstring으로 간다.
+규칙: ALPS의 user story·acceptance criteria를 ADR에 복사하지 않는다 — 위 [의존성 모델](#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다)대로 ADR 은 ALPS 의 동기를 흡수하되 PRD 를 가리키지 않는다 (adr-writer 는 ALPS 를 참조하지 않는다). 디자인 토큰 값은 디자인 문서로, 함수 시그니처·파일 경로는 코드와 docstring으로 간다.
 
 ## 상태
 
@@ -137,7 +137,7 @@ Proposed → Accepted → Deprecated
 - `/adr-impl`이 ADR을 구현하고 테스트가 통과하면 그 명령이 ADR Status를 `Accepted`로 자동 갱신한다. 승격 여부를 따로 확인하지 않는다.
 - `/adr-sync`는 코드와 ADR을 대조해 Status drift를 잡는다: ADR이 `Accepted`인데 묘사한 동작이 코드에 없으면 `Proposed`로 되돌리고, ADR이 `Proposed`인데 코드+테스트가 있으면 `Accepted`로 올린다. (`Accepted`의 기준은 위 상태 표와 같이 **구현 + 테스트 통과**다 — 코드 존재만으로 올리지 않는다.)
 - **요구사항 변경으로 이미 `Accepted`된 ADR의 결정이 실제로 바뀌면**(제자리 수정이라도 결정 방향이 달라졌으면 — 판정은 [`authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때"](./authoring-rules.md#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정) 참조), 새 결정이 코드·테스트로 반영되기 전까지 Status를 `Proposed`로 되돌린다. 이후 `/adr-impl`이 다시 `Proposed → Accepted`로 자동 승격한다. supersede라면 되돌리는 대신 옛 ADR을 `Superseded`로 표기하고 새 ADR을 `Proposed`로 시작한다. 단순 구현 사실 정정(API 표·엔티티명 등)은 결정이 안 바뀐 것이므로 이 규칙 대상이 아니다 — `Accepted`를 유지한다.
-- 상태 전환 시 날짜를 함께 기록한다: `Accepted (YYYY-MM-DD)`, `Deprecated (YYYY-MM-DD)`. `Superseded`는 날짜 대신 후속 ADR 링크로 표기한다 (`Superseded by [ADR XXXX](link)`). `Proposed`에는 날짜를 붙이지 않는다 — 작성일은 본문 최상단 `Date:`(작성 시점, Status 전환일과 별개)에 두고, Status 줄의 날짜는 전환 시에만 기록한다.
+- 상태 전환 시 날짜를 함께 기록한다: `Accepted (YYYY-MM-DD)`, `Deprecated (YYYY-MM-DD)`. **괄호 안에는 날짜만 넣는다** — `Accepted (2026-07-09)` 처럼 날짜 하나뿐이며, 그 뒤에 참조·feature-id·구현 설명 같은 부가 텍스트를 붙이지 않는다 (`Accepted (2026-07-09) — F1 구현`, `Accepted (2026-07-09, ref)` 모두 금지 — `adr-structure-lint` 가 `date-only` 로 잡는다). `Superseded`는 날짜 대신 후속 ADR 링크로 표기한다 (`Superseded by [ADR XXXX](link)`). `Proposed`에는 날짜를 붙이지 않는다 — 작성일은 본문 최상단 `Date:`(작성 시점, Status 전환일과 별개)에 두고, Status 줄의 날짜는 전환 시에만 기록한다.
 - `Implemented`, `Done`, `Completed` 같은 비공식 상태는 사용하지 않는다.
 
 ## ADR 템플릿
@@ -149,11 +149,13 @@ Date: YYYY-MM-DD
 
 ## Status
 
-Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
+Proposed | Accepted (YYYY-MM-DD) | Deprecated (YYYY-MM-DD) | Superseded by [ADR XXXX](link)
+
+<!-- Accepted/Deprecated 괄호에는 전환 날짜만 — 그 뒤에 참조·설명을 붙이지 않는다. -->
 
 ## Context
 
-결정이 필요한 배경과 문제. PRD 의 비즈니스 동기를 여기서 *흡수*해 서술한다 — ALPS 파일 경로·Section 번호·feature-id 를 본문에 적지 않는다 (PRD 연결은 `.mapping.json` 의 `alpsFeatureId` 에만).
+결정이 필요한 배경과 문제. PRD 의 비즈니스 동기를 여기서 *흡수*해 서술한다 — ALPS 파일 경로·Section 번호·feature-id 를 본문에 적지 않는다. PRD 를 가리키지 않는다 (adr-writer 는 ALPS 를 참조하지 않는다).
 
 ## Decision Drivers
 
@@ -185,28 +187,12 @@ Proposed | Accepted | Deprecated | Superseded by [ADR XXXX](link)
 - 관련 ADR: [...] (같은/의존 카테고리의 ADR 링크 — ADR ↔ ADR 참조는 정상)
 - 스키마/테이블 문서: [...] (DB 변경이 있는 경우)
 
-> PRD(ALPS feature) 와의 연결은 여기 적지 않는다 — `.mapping.json` 의 `alpsDocument`·`alpsFeatureId` 가 유일한 결합점이다.
+> adr-writer 는 standalone 이므로 ADR 본문은 PRD 를 가리키지 않는다 — 여기에도 ALPS feature 링크를 적지 않는다. 매핑도 PRD 참조를 저장하지 않는다.
 ```
 
-## 카테고리별 ADR 목록
+## ADR 인덱스는 어디에 있나
 
-새 ADR을 추가하면 이 섹션에 한 줄 요약을 직접 추가한다. 자동 생성하지 않는다. 한 줄 요약은 다음 quick-mode 동기화 점검의 진입점이 되므로 본문이 바뀔 때 함께 갱신한다.
-
-목록은 **bounded context(도메인)별로 묶어** 적는다 — context heading 아래에 그 context 의 피쳐 sub-folder 별로 한 줄씩 풀어 쓰고, subdomain 분류(core/supporting/generic)가 `.mapping.json` 에 있으면 heading 옆에 표기한다. context 직속 cross-cutting ADR 은 그 context heading 바로 아래에 둔다. **이 그룹핑은 폴더 위에 얹은 논리 뷰다** — 실제 디렉토리 트리는 [디렉토리 구조](./structure.md#디렉토리-구조--ddd-도메인bounded-context--피쳐vertical-slice)대로이며, 도메인 그룹핑 때문에 폴더가 이동하지는 않는다.
-
-<!-- 예시:
-### identity (core subdomain)
-- [0001: Token Rotation](./identity/0001-token-rotation.md) — Accepted. 구현됨. context 전반 refresh token rotation, 7일 만료.   ← context 직속 cross-cutting
-
-#### identity/login
-- [0001: Password Policy](./identity/login/0001-password-policy.md) — Accepted. 구현됨. 최소 길이·복잡도, 해시 정책.
-
-#### identity/signup
-- [0001: Email Verification](./identity/signup/0001-email-verification.md) — Proposed. 미구현. 가입 후 이메일 인증 흐름.
-
-### billing (supporting subdomain)
-- [0001: Subscription Tiers](./billing/0001-subscription-tiers.md) — Accepted. 구현됨. Free/Pro/Enterprise 3티어, 월/연 토글.   ← 단일-피쳐 context, flat
--->
+ADR 목록은 이 README 가 아니라 [`docs/adr/.mapping.json`](./structure.md#adr-레지스트리-mappingjson) 이 단일하게 들고 있다 — 카테고리별 `adrs[]` 레코드마다 path·Status·한 줄 summary 를 담으며, 이 인덱스는 UserPromptSubmit hook 이 매 턴 렌더링한다. 그래서 README 는 별도의 ADR 목록을 두지 않고, ADR 이 무엇인지·회색지대 모델·의존성 모델·템플릿 같은 **개념 인덱스**만 유지한다. 새 ADR 을 추가하거나 본문 결정이 바뀌면 그 한 줄 요약은 `.mapping.json` 의 해당 `adrs[]` 레코드(path·status·summary)에 갱신한다.
 
 ## 참고
 

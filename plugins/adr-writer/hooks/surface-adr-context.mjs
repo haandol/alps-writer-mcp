@@ -37,7 +37,7 @@ function loadJSON(p) {
 
 // The category key encodes a DDD bounded context in its top segment
 // (before the first "/") and an optional feature/vertical-slice in the
-// second. A single-segment key (e.g. "auth", "f1") means context==feature
+// second. A single-segment key (e.g. "auth") means context==feature
 // (legacy/flat layout). subdomainType lives on the context-level entry.
 function contextOf(cat) {
   const i = cat.indexOf("/");
@@ -71,15 +71,21 @@ function summarizeMapping(mapping, cwd) {
     const sub = subType ? ` (${subType})` : "";
     lines.push(`▸ ${ctx}${sub}`);
     for (const [cat, entry] of members) {
-      const fid = entry.alpsFeatureId ? ` [${entry.alpsFeatureId}]` : "";
       const feature = entry.feature ? ` — ${entry.feature}` : "";
-      lines.push(`  • ${cat}${fid}${feature}`);
+      lines.push(`  • ${cat}${feature}`);
       if (entry.dependsOn?.length) {
         lines.push(`      depends on: ${entry.dependsOn.join(", ")}`);
       }
-      for (const adr of entry.adrs || []) {
-        const exists = existsSync(path.join(cwd, adr)) ? "" : " [missing]";
-        lines.push(`      ${adr}${exists}`);
+      // adrs[] is the ADR index: each record carries path + Status + a one-line
+      // Key Decision summary, so the model sees each ADR's state without a
+      // separate README list. Tolerate a bare-string legacy record.
+      for (const rec of entry.adrs || []) {
+        const p = rec && typeof rec === "object" ? rec.path : rec;
+        if (!p) continue;
+        const exists = existsSync(path.join(cwd, p)) ? "" : " [missing]";
+        const status = rec && typeof rec === "object" && rec.status ? ` — ${rec.status}` : "";
+        const summary = rec && typeof rec === "object" && rec.summary ? `: ${rec.summary}` : "";
+        lines.push(`      ${p}${status}${summary}${exists}`);
       }
     }
   }
@@ -127,7 +133,7 @@ function main() {
     "1. 아래 매핑 스냅샷에서 영향 받는 카테고리를 찾아 docs/adr/<category>/ 의 ADR을 먼저 읽는다. 스냅샷은 bounded context(▸ 표시)별로 묶여 있고 그 아래 피쳐(• <context>/<feature> 또는 단일 세그먼트 평면 키)가 나열된다. 'depends on:' 으로 표시된 선행 카테고리가 있으면 그 선행이 먼저 구현(Accepted)돼 있는지 함께 본다 — 구현 순서 강제(선행부터 위상 순서로)는 /adr-impl 이 담당하므로, 여기서는 선행 존재만 인지하면 된다. 신규 영역이면 /adr-new <category> 로 ADR을 직접 작성한다 (ALPS Section 7 feature가 이미 있다면 /feature-to-adr 로 일괄 변환해도 된다 — helper 경로).",
     "2. ADR을 짧게 작성/수정한다 — WHY, 대안 비교, Consequences, DB 키 디자인만. 구현 세부(파일 경로 이하·코드 스니펫·상수)는 넣지 않는다. 작성 규칙은 docs/adr/authoring-rules.md 를 따른다.",
     "3. ADR이 정한 결정대로 코드를 작성한다. 코드에는 ADR ID·경로를 남기지 않고, ADR 본문에도 파일 경로·함수명을 적지 않는다(연결은 코드에도 ADR에도 두지 않는다 — 관련 코드는 ADR을 읽고 그때그때 찾는다). 구현 중 결정이 바뀌면 ADR을 즉시 갱신해 같은 커밋에 함께 담는다.",
-    "4. 테스트/검증 결과로 ADR의 Consequences·엣지케이스를 보강한다. 끝나면 /adr-sync 로 ADR↔코드 정합과 README 인덱스를 정렬한다.",
+    "4. 테스트/검증 결과로 ADR의 Consequences·엣지케이스를 보강한다. 끝나면 /adr-sync 로 ADR↔코드 정합과 .mapping.json 인덱스(경로·Status·요약)를 정렬한다.",
     "",
     "면제 작업이라고 판단했다면 이 directive는 조용히 무시하고 평소대로 진행한다 — 사용자에게 면제 사실을 따로 알릴 필요는 없다.",
     "",

@@ -36,6 +36,17 @@ test("classifyStatus rejects informal / mis-dated statuses with a reason", () =>
   assert.equal(classifyStatus("").reason, "empty");
 });
 
+test("classifyStatus rejects extra text after the Accepted/Deprecated date (date-only)", () => {
+  // the parentheses must hold ONLY the date — no reference / feature-id / note
+  assert.equal(classifyStatus("Accepted (2026-07-09) — F1 구현").reason, "date-only");
+  assert.equal(classifyStatus("Accepted (2026-07-09, ref)").reason, "date-only");
+  assert.equal(classifyStatus("Accepted 2026-07-09").reason, "date-only");
+  assert.equal(classifyStatus("Deprecated (2026-07-09) 사유 있음").reason, "date-only");
+  // the clean date-only forms still pass
+  assert.equal(classifyStatus("Accepted (2026-07-09)").ok, true);
+  assert.equal(classifyStatus("Deprecated (2026-07-09)").ok, true);
+});
+
 // ── unit: checkFilename ─────────────────────────────────────────────────
 test("checkFilename accepts canonical NNNN-kebab and rejects fN-/uppercase", () => {
   assert.equal(checkFilename("0001-password-policy.md").ok, true);
@@ -158,7 +169,7 @@ test("validateMappingShape passes a clean mapping", () => {
     categories: {
       "identity/login": {
         feature: "Login",
-        adrs: ["docs/adr/identity/login/0001-x.md"],
+        adrs: [{ path: "docs/adr/identity/login/0001-x.md", status: "Proposed", summary: "s" }],
         dependsOn: [],
       },
       identity: { feature: "Identity", subdomainType: "core", adrs: [] },
@@ -171,10 +182,11 @@ test("validateMappingShape passes a clean mapping", () => {
 });
 
 test("validateMappingShape flags dangling, self-edge, unknown field, double-index", () => {
+  const rec = (p) => ({ path: p, status: "Proposed", summary: "s" });
   const m = {
     categories: {
-      api: { adrs: ["docs/adr/api/0001-x.md"], dependson: ["x"] }, // typo'd field + anti-pattern key
-      a: { adrs: ["docs/adr/api/0001-x.md"], dependsOn: ["a", "ghost"] }, // self-edge + dangling + double-index
+      api: { adrs: [rec("docs/adr/api/0001-x.md")], dependson: ["x"] }, // typo'd field + anti-pattern key
+      a: { adrs: [rec("docs/adr/api/0001-x.md")], dependsOn: ["a", "ghost"] }, // self-edge + dangling + double-index
     },
   };
   const codes = validateMappingShape(m).map((i) => i.code);
@@ -263,23 +275,24 @@ Proposed
         "identity/login": {
           feature: "Login",
           adrs: [
-            "docs/adr/identity/login/0001-password-policy.md",
-            "docs/adr/identity/login/0002-rate-limit.md",
+            {
+              path: "docs/adr/identity/login/0001-password-policy.md",
+              status: "Accepted (2026-07-02)",
+              summary: "bcrypt 최소 12자",
+            },
+            {
+              path: "docs/adr/identity/login/0002-rate-limit.md",
+              status: "Proposed",
+              summary: "토큰 버킷 레이트 리밋",
+            },
           ],
           dependsOn: [],
         },
       },
     }),
   );
-  write(
-    dir,
-    "docs/adr/README.md",
-    `# ADR
-## 카테고리별 ADR 목록
-- [0001](./identity/login/0001-password-policy.md) — Accepted
-- [0002](./identity/login/0002-rate-limit.md) — Proposed
-`,
-  );
+  // .mapping.json is the single ADR index; the README carries no ADR list.
+  write(dir, "docs/adr/README.md", `# ADR\n\nADR 인덱스는 .mapping.json 참조.\n`);
 }
 
 test("CLI: clean repo exits 0 with no errors", () => {
@@ -331,9 +344,21 @@ test("CLI: mapping adrs path with no file on disk is flagged", () => {
           "identity/login": {
             feature: "Login",
             adrs: [
-              "docs/adr/identity/login/0001-password-policy.md",
-              "docs/adr/identity/login/0002-rate-limit.md",
-              "docs/adr/identity/login/0099-ghost.md",
+              {
+                path: "docs/adr/identity/login/0001-password-policy.md",
+                status: "Accepted (2026-07-02)",
+                summary: "bcrypt 최소 12자",
+              },
+              {
+                path: "docs/adr/identity/login/0002-rate-limit.md",
+                status: "Proposed",
+                summary: "토큰 버킷",
+              },
+              {
+                path: "docs/adr/identity/login/0099-ghost.md",
+                status: "Proposed",
+                summary: "존재하지 않는 ADR",
+              },
             ],
             dependsOn: [],
           },

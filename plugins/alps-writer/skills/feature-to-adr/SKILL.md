@@ -43,13 +43,13 @@ adr-writer 를 먼저 설치해 주세요:  /plugin install adr-writer@alps-writ
 
 ### 2. 카테고리 결정 (importer 책임)
 
-카테고리 키 결정은 ALPS 측 지식이므로 importer 가 직접 정해 `/adr-new` 에 넘긴다. ALPS feature 는 그 자체가 vertical slice (UI → API → Data) 단위이므로, **한 feature 는 한 카테고리(leaf) 와 1:1 로 매핑** 한다. 다만 폴더는 DDD 도메인(bounded context) × 피쳐 두 축으로 조직되므로(`structure.md` "디렉토리 구조"), 카테고리 키가 단일 세그먼트(`auth`)인지 2-세그먼트(`identity/login`)인지는 아래 그룹핑 여부로 갈린다. **키는 언제나 feature 이름에서 파생하고 명시적 Feature ID 는 키에 쓰지 않는다** (아래 규칙 — ID 는 `alpsFeatureId` 로만 보존).
+카테고리 키 결정은 ALPS 측 지식이므로 importer 가 직접 정해 `/adr-new` 에 넘긴다. ALPS feature 는 그 자체가 vertical slice (UI → API → Data) 단위이므로, **한 feature 는 한 카테고리(leaf) 와 1:1 로 매핑** 한다. 다만 폴더는 DDD 도메인(bounded context) × 피쳐 두 축으로 조직되므로(`structure.md` "디렉토리 구조"), 카테고리 키가 단일 세그먼트(`auth`)인지 2-세그먼트(`identity/login`)인지는 아래 그룹핑 여부로 갈린다. **키는 언제나 feature 이름에서 파생하고 명시적 Feature ID 는 키에 쓰지 않는다** (아래 규칙 — ID 는 어디에도 저장하지 않는다).
 
 **카테고리 키는 언제나 feature 이름에서 canonical 하게 뽑는다** — feature 이름을 kebab-case 로 변환해 의미 있는 카테고리 키를 만든다 (예: "User Authentication" → `auth`, "Marketplace Listings" → `marketplace`). **기본은 단일 세그먼트(평면)** 다.
 
-- **명시적 Feature ID(`F1`, `F-AUTH-01`)가 있어도 그 ID 를 카테고리 키로 쓰지 않는다.** ID 는 4단계에서 entry 의 `alpsFeatureId` 필드로만 보존한다. 이렇게 해야 canonical ADR 구조(`identity/login/0001-...md`, `infra/0001-...md`)를 그대로 쓰고, 폴더명·파일명에 `f1` 이 중복으로 남지 않는다.
-  - **`/adr-impl f1` 처럼 ID 로 호출하는 경로는 그대로 살아 있다** — `/adr-impl` 1단계가 카테고리 키뿐 아니라 entry 의 `alpsFeatureId` 와도 대조해 매칭하므로(`adr-impl` step 1), 폴더가 의미 기반 이름(`identity/login`)이어도 `F1`/`f1` 호출이 해당 카테고리를 찾아낸다. 그래서 키를 ID 로 고정할 이유가 없다.
-- **fallback** — feature 이름이 없거나 `F1` 처럼 번호뿐이라 의미 있는 kebab 을 뽑을 수 없을 때만, ID 를 소문자로 변환한 값(`f1`, `f-auth-01`)을 단일 세그먼트 키로 쓴다. 이 경우에만 키와 `alpsFeatureId` 가 1:1 로 겹친다.
+- **명시적 Feature ID(`F1`, `F-AUTH-01`)가 있어도 그 ID 를 카테고리 키로 쓰지 않는다.** adr-writer 는 ALPS 를 참조하지 않으므로 ID 는 `.mapping.json` 어디에도 저장하지 않는다 (한 번 변환하고 나면 결정은 ADR 레벨에서 관리된다). 이렇게 해야 canonical ADR 구조(`identity/login/0001-...md`, `infra/0001-...md`)를 그대로 쓰고, 폴더명·파일명에 `f1` 이 중복으로 남지 않는다.
+  - **`/adr-impl` 은 카테고리 키로 대상을 찾는다** — feature 이름 기반 canonical 키(`identity/login`)든, 아래 fallback 의 리터럴 키(`f1`)든, `/adr-impl <key>` 는 그 키로 매칭한다(`adr-impl` step 1). 별도의 Feature-ID 조회 경로는 없으므로 키를 ID 로 고정할 이유가 없다.
+- **fallback** — feature 이름이 없거나 `F1` 처럼 번호뿐이라 의미 있는 kebab 을 뽑을 수 없을 때만, ID 를 소문자로 변환한 값(`f1`, `f-auth-01`)을 단일 세그먼트 키로 쓴다. 이 경우 그 값은 Feature ID 를 보존하는 필드가 아니라 그냥 리터럴 카테고리 키다.
 
 **도메인(bounded context) 그룹핑 — 기본 끔, 요청 시에만**: ALPS 에는 feature 위에 도메인을 묶는 개념이 없다 (Section 6.1/6.3/7 모두 feature 가 최소·최대 단위). 그래서 importer 는 **PRD 가 주지 않은 도메인 경계를 임의로 만들어내지 않는다** — adr-writer 가 ALPS-agnostic 이라는 불변식과 같은 선이다. 두 경우에만 2-세그먼트 `<context>/<feature>` 키를 쓴다:
 
@@ -62,7 +62,7 @@ ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고�
 
 ### 3. /adr-new 위임
 
-결정한 카테고리로 **`/adr-new <category>` 를 호출**하고, 해당 feature 의 ALPS Section 7 발췌를 컨텍스트로 함께 전달한다. ADR 초안 작성·자동 검토(adr-reviewer)·README 인덱스 갱신·`.mapping.json` 의 ADR 관련 필드 작성·`Proposed` 저장·사용자 승인은 **전부 `/adr-new`(→ adr-writer) 가 처리**한다. 본 스킬에서 ADR 작성 규칙을 다시 풀어쓰지 않는다.
+결정한 카테고리로 **`/adr-new <category>` 를 호출**하고, 해당 feature 의 ALPS Section 7 발췌를 컨텍스트로 함께 전달한다. ADR 초안 작성·자동 검토(adr-reviewer)·`.mapping.json` 인덱스 레코드 작성(adrs[] 의 path·status·summary)·`Proposed` 저장·사용자 승인은 **전부 `/adr-new`(→ adr-writer) 가 처리**한다. 본 스킬에서 ADR 작성 규칙을 다시 풀어쓰지 않는다.
 
 `/adr-new` 에 넘기는 입력:
 
@@ -72,24 +72,20 @@ ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고�
 - **Decision Drivers 후보** — 1단계에서 분류한, 이 feature 에 걸리는 NFR(6.2 에서 Scope 가 `Global` 이거나 이 Feature ID 인 것)과 전역 아키텍처 제약(4.2). 측정 가능한 제약 형태로 그대로 넘긴다(예: "p95 3초 이내", "AWS 만 사용"). `/adr-new` 는 이를 Decision Drivers 의 출발점으로 삼아 대안을 변별한다 — PRD 의 비기능 요구가 ADR 의 의사결정 근거로 이어지는 통로다.
 - **영향 영역 힌트** — user flow / technical description 에서 추출한 페이지·컴포넌트 키워드. ADR Decision 의 vertical slice 서술에 쓰인다 (매핑에 코드 경로로 저장되지는 않는다).
 
-ALPS feature 가 명시적 ID 를 가지더라도 파일명·폴더명에 그 ID 를 넣지 않는다 — `/adr-new` 가 부여하는 파일명은 canonical 하게 `NNNN-kebab-title.md` 형태다. ID 는 4단계에서 `alpsFeatureId` 로만 기록하고, ID 기반 호출(`/adr-impl f1`)은 그 필드로 매칭되므로 파일명에 흔적을 남길 필요가 없다.
+ALPS feature 가 명시적 ID 를 가지더라도 파일명·폴더명·카테고리 키에 그 ID 를 넣지 않는다 — `/adr-new` 가 부여하는 파일명은 canonical 하게 `NNNN-kebab-title.md` 형태이고, 키는 feature 이름 기반이다. ID 는 `.mapping.json` 어디에도 저장하지 않으며(adr-writer 는 ALPS 를 참조하지 않는다), `/adr-impl` 은 카테고리 키로 대상을 찾으므로 ID 흔적을 남길 필요가 없다.
 
-### 4. ALPS 연결 필드 보강 (importer 책임)
+### 4. 의존성(dependsOn) 보강 — importer 책임
 
-`/adr-new` 가 `.mapping.json` 의 카테고리 entry(feature·adrs 등)를 채운 뒤, importer 는 ALPS 지식이 필요한 **연결 필드만** 추가로 채운다 — adr-writer 는 ALPS 를 모르므로 이 부분은 importer 의 책임이다:
+`/adr-new` 가 ADR 을 작성하고 `.mapping.json` 의 카테고리 entry(feature·adrs 인덱스 레코드 등)를 채운 뒤, importer 는 6.3 그래프에서 온 **의존성만** 추가로 기록한다 — adr-writer 는 ALPS(그리고 6.3 그래프)를 모르므로 이 부분은 importer 의 책임이다. `.mapping.json` 에는 PRD 참조를 저장하지 않으므로(adr-writer 는 standalone), importer 가 뒤에 보강하는 것은 `dependsOn` 뿐이다:
 
-- `alpsDocument` — 현재 `.alps.xml` 경로.
-- 해당 카테고리 entry 의 `alpsFeatureId` — 명시적 Feature ID 가 있으면 기록.
-- 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱(및 무결성 검사)한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 6.3 의 의존 엣지는 Feature ID(`F3 -->|depends on| F1`)로 표현되지만, **`dependsOn` 에는 각 ID 가 아니라 그 feature 의 카테고리 키(2단계에서 이름 기반으로 정한 값)를 넣는다.** 예: `checkout` feature(`F3`)가 `login` feature(`F1`)에 의존하면 `checkout` entry(또는 그룹핑 시 `ordering/checkout`)의 `dependsOn` 에 `login`(또는 `identity/login`)을 넣는다. ID 를 그대로 키로 못 쓰므로 매핑할 때 `alpsFeatureId → 카테고리 키` 대응을 참조한다 (이번 배치에서 각 feature 의 키를 이미 정했으니 그 표를 재사용). **6.3 그래프를 점검한 결과 이 feature 에 선행이 없더라도 `dependsOn` 을 `[]` 로 기록한다 — 키를 생략하지 않는다.** 6.3 을 실제로 점검한 이상 이 상태는 "의존 없음(점검 완료)" 이지 "미선언" 이 아니며, `/adr-impl` 선행 게이트는 `[]`(안내 없이 진행) 와 키 생략("의존 미선언" 경고) 을 다르게 처리하기 때문이다 (`/adr-new` 4단계와 동일 규칙). 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다. 의존 엣지는 **다른 context 의 feature 를 가리켜도 정상**이다 (DDD context 사이 관계).
+- 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱(및 무결성 검사)한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 6.3 의 의존 엣지는 Feature ID(`F3 -->|depends on| F1`)로 표현되지만, **`dependsOn` 에는 각 ID 가 아니라 그 feature 의 카테고리 키(2단계에서 이름 기반으로 정한 값)를 넣는다.** 예: `checkout` feature(`F3`)가 `login` feature(`F1`)에 의존하면 `checkout` entry(또는 그룹핑 시 `ordering/checkout`)의 `dependsOn` 에 `login`(또는 `identity/login`)을 넣는다. Feature ID 자체는 어디에도 저장하지 않으므로, 엣지를 옮길 때는 이번 배치에서 각 feature 에 정한 `Feature ID → 카테고리 키` 대응표(2단계 산물)를 참조해 변환한다. **6.3 그래프를 점검한 결과 이 feature 에 선행이 없더라도 `dependsOn` 을 `[]` 로 기록한다 — 키를 생략하지 않는다.** 6.3 을 실제로 점검한 이상 이 상태는 "의존 없음(점검 완료)" 이지 "미선언" 이 아니며, `/adr-impl` 선행 게이트는 `[]`(안내 없이 진행) 와 키 생략("의존 미선언" 경고) 을 다르게 처리하기 때문이다 (`/adr-new` 4단계와 동일 규칙). 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다. 의존 엣지는 **다른 context 의 feature 를 가리켜도 정상**이다 (DDD context 사이 관계).
   - 기록 전 각 `dependsOn` 키가 **이미 매핑에 entry 가 있는(또는 이번 배치에서 먼저 생성될) 카테고리 키**인지 확인한다 (스키마 invariant "Must reference existing category keys"). 전체 배치 실행은 1단계 위상 정렬로 선행이 먼저 생성되므로 충족되지만, 단일 feature 인자 실행은 위 dangling 케이스가 정상이다. 1단계 무결성 검사를 통과했으므로 self-edge·순환은 여기 도달하지 않는다.
 - (선택) context 수준 entry 의 `subdomainType` — 2단계에서 도메인 그룹핑을 적용했고 그 도메인의 DDD 분류가 명확하면 `core`/`supporting`/`generic` 중 하나를 context entry 에 기록한다. PRD 에 신호가 없거나 평면 구조면 **생략한다** — advisory 메타데이터이므로 비워도 매핑은 유효하고, 억지로 분류하지 않는다.
 
 ```json
 {
-  "alpsDocument": "<현재 .alps.xml 경로>",
   "categories": {
     "<category>": {
-      "alpsFeatureId": "<있으면>",
       "dependsOn": ["<선행 카테고리 키>"]
     }
   }

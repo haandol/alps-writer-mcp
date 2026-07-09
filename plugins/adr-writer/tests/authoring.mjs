@@ -3,16 +3,20 @@
 //
 // The skills themselves are LLM prompts, so node:test can't run them. But the
 // artifacts they must emit — the seeded rule docs, the Proposed ADR file, the
-// .mapping.json entry, the README index line, and the Proposed→Accepted Status
-// flip — are all deterministic, and scripts/adr-structure-lint.mjs is the
-// oracle for "were they emitted correctly?". These helpers reproduce those
-// artifacts step by step so lifecycle.test.mjs can drive the full
-// author→implement flow and assert the harness stays green, then prove each
-// step is load-bearing (skip one → the harness goes red).
+// .mapping.json index entry (path + Status + one-line summary), and the
+// Proposed→Accepted Status flip in BOTH the body and the index — are all
+// deterministic, and scripts/adr-structure-lint.mjs is the oracle for "were
+// they emitted correctly?". These helpers reproduce those artifacts step by
+// step so lifecycle.test.mjs can drive the full author→implement flow and
+// assert the harness stays green, then prove each step is load-bearing (skip
+// one → the harness goes red).
+//
+// .mapping.json is the single ADR index — the README carries no separate ADR
+// list — so there is no README-index authoring step here.
 //
 // Each function is annotated with the SKILL.md step it mirrors, so if a skill's
 // deterministic contract changes, this file is the one place to update.
-import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { write, seedRuleDocs } from "./helpers.mjs";
 
@@ -84,59 +88,74 @@ export function authorAdr(dir, { category, num = "0001", slug, ...body }) {
 }
 
 // /adr-new step 4 — merge a category entry into .mapping.json (create the
-// entry or push onto an existing one's adrs[]). dependsOn defaults to [] per
-// the skill rule "물어봤으면 [] 로 기록, 키 생략 금지".
+// entry or push onto an existing one's adrs[]). Each adrs[] record indexes one
+// ADR: { path, status, summary } — the array IS the ADR index (no README
+// list). status defaults to Proposed (what /adr-new always writes). dependsOn
+// defaults to [] per the skill rule "물어봤으면 [] 로 기록, 키 생략 금지".
 export function registerMapping(
   dir,
-  { key, feature, adr, dependsOn = [], alpsFeatureId, subdomainType },
+  { key, feature, adr, status = "Proposed", summary = "", dependsOn = [], subdomainType },
 ) {
   const p = path.join(dir, "docs/adr/.mapping.json");
   const m = JSON.parse(readFileSync(p, "utf8"));
   m.categories ||= {};
   const entry = m.categories[key] || { adrs: [] };
   if (feature !== undefined) entry.feature = feature;
-  if (alpsFeatureId !== undefined) entry.alpsFeatureId = alpsFeatureId;
   if (subdomainType !== undefined) entry.subdomainType = subdomainType;
-  if (adr && !entry.adrs.includes(adr)) entry.adrs.push(adr);
+  if (adr) {
+    const rec = entry.adrs.find((r) => r.path === adr);
+    if (rec) {
+      rec.status = status;
+      if (summary) rec.summary = summary;
+    } else {
+      const item = { path: adr, status };
+      if (summary) item.summary = summary;
+      entry.adrs.push(item);
+    }
+  }
   entry.dependsOn = dependsOn;
   m.categories[key] = entry;
   writeFileSync(p, JSON.stringify(m, null, 2) + "\n");
   return m;
 }
 
-// /adr-new step 5 — add a one-line index entry to README's category list.
-// The link href ends with the ADR's path-relative-to-root so structure-lint's
-// readmeLinksTo() resolves it.
-export function indexInReadme(dir, { adr, summary = "" }) {
-  const relFromAdr = adr.replace(/^docs\/adr\//, "");
-  const line = `- [${path.basename(adr)}](./${relFromAdr})${summary ? ` — ${summary}` : ""}`;
-  appendFileSync(path.join(dir, "docs/adr/README.md"), `\n${line}\n`);
-}
-
-// Compose the deterministic half of one /adr-new invocation: author + map +
-// index. Returns the ADR's repo-relative path. (The reviewer/user-approval
-// steps are LLM/interactive and out of scope for a deterministic test.)
+// Compose the deterministic half of one /adr-new invocation: author + index in
+// .mapping.json. Returns the ADR's repo-relative path. (The reviewer/user-
+// approval steps are LLM/interactive and out of scope for a deterministic test.)
 export function adrNew(dir, opts) {
   const adr = authorAdr(dir, opts);
   registerMapping(dir, {
     key: opts.category,
     feature: opts.feature,
     adr,
+    status: opts.status,
+    summary: opts.summary,
     dependsOn: opts.dependsOn,
-    alpsFeatureId: opts.alpsFeatureId,
     subdomainType: opts.subdomainType,
   });
-  indexInReadme(dir, { adr, summary: opts.summary });
   return adr;
 }
 
 // /adr-impl step 6 — the automatic Proposed → Accepted (YYYY-MM-DD) promotion
-// after tests pass. Rewrites only the value line under ## Status.
+// after tests pass. Rewrites the value line under ## Status AND the mapping
+// index record's status in lockstep (adr-structure-lint asserts they agree).
 export function promote(dir, adr, date = "2026-07-02", status = `Accepted (${date})`) {
   const p = path.join(dir, adr);
   const src = readFileSync(p, "utf8");
   const out = src.replace(/(##\s+Status\s*\n\s*\n)([^\n]+)/, `$1${status}`);
   if (out === src) throw new Error(`promote: could not find Status line in ${adr}`);
   writeFileSync(p, out);
+  // keep the index in lockstep with the body
+  const mp = path.join(dir, "docs/adr/.mapping.json");
+  const m = JSON.parse(readFileSync(mp, "utf8"));
+  let hit = false;
+  for (const entry of Object.values(m.categories || {}))
+    for (const rec of entry.adrs || [])
+      if (rec.path === adr) {
+        rec.status = status;
+        hit = true;
+      }
+  if (!hit) throw new Error(`promote: ${adr} not found in .mapping.json index`);
+  writeFileSync(mp, JSON.stringify(m, null, 2) + "\n");
   return out;
 }

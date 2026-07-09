@@ -1,6 +1,6 @@
 # ADR 디렉토리 구조와 매핑
 
-`docs/adr/` 의 폴더 레이아웃, 카테고리 분할 규칙, ALPS feature ↔ ADR ↔ 코드 경로의 매핑 정책을 모은다. 작성 규칙은 [`authoring-rules.md`](./authoring-rules.md), 개념과 의존성 모델은 [`README.md`](./README.md) 참조.
+`docs/adr/` 의 폴더 레이아웃, 카테고리 분할 규칙, ADR 레지스트리(`.mapping.json`) 정책을 모은다. 작성 규칙은 [`authoring-rules.md`](./authoring-rules.md), 개념과 의존성 모델은 [`README.md`](./README.md) 참조.
 
 ## 디렉토리 구조 — DDD 도메인(bounded context) × 피쳐(vertical slice)
 
@@ -13,8 +13,8 @@
 
 ```
 docs/adr/
-├── README.md         # 인덱스 + 작성 규칙 (source of truth)
-├── .mapping.json     # ALPS feature ↔ ADR 매핑 (subdomainType 포함, 코드 경로는 저장 안 함)
+├── README.md         # 개념 인덱스 + 작성 규칙 (ADR 목록은 두지 않음)
+├── .mapping.json     # ADR 레지스트리/인덱스 (adrs·dependsOn·subdomainType. 코드 경로도 PRD 참조도 저장 안 함)
 ├── identity/                       # BOUNDED CONTEXT (core subdomain)
 │   ├── 0001-token-rotation.md      # context 전반 cross-cutting 결정 (부모 폴더 직속)
 │   ├── login/                      # 피쳐 (vertical slice — UI/API/Data 모두 포함)
@@ -41,7 +41,7 @@ docs/adr/
 - 시스템 전체에 걸친 cross-cutting context(`infra/`, `integration/`, `security/`, `platform/`)는 두 개 이상의 context/피쳐가 명시적으로 의존할 때만 만든다 (아래 "cross-cutting context — 정말 공유하는 결정만").
 - 키는 **최대 2 세그먼트**(`<context>` 또는 `<context>/<feature>`). 그 이상으로 깊어지지 않는다.
 - 파일명: `NNNN-kebab-case-title.md`. 번호는 그 폴더(context 직속 또는 피쳐 sub-folder) 안에서 순차 증가.
-- 새 context/피쳐 폴더를 추가하면 README의 디렉토리 구조와 카테고리별 ADR 목록을 함께 갱신한다.
+- 새 context/피쳐 폴더를 추가하면 `.mapping.json` 의 카테고리 키와 `adrs[]` path 를 갱신한다. README 는 개념적 디렉토리 구조 그림만 들고 있으므로, 트리 예시가 실제 레이아웃과 크게 어긋날 때만 함께 손본다 (per-ADR 목록은 두지 않는다).
 
 > **용어**: 이 문서에서 "카테고리(category)" 는 `.mapping.json` 의 entry 키 한 개를 가리키는 중립어다 — 단일-피쳐 context 면 `identity`, 다중-피쳐 context 면 `identity/login` 처럼 세그먼트 수가 다를 뿐 둘 다 한 개의 카테고리 entry 다. "bounded context" 는 최상위 폴더(도메인 경계), "피쳐(vertical slice)" 는 leaf(한 사용자 동작) 를 가리킨다.
 
@@ -58,8 +58,8 @@ ADR이 누적되면 한 context(또는 피쳐 폴더)에 결정이 쌓여 번호
 - **금지되는 sub-folder**: `identity/api/`, `identity/db/`, `identity/components/`, `identity/services/` 같은 **기술 레이어 분할** — 안티패턴 카테고리 규칙과 동일하게 vertical slice 가 깨진다. 분할 후에도 한 sub-folder 안에 UI → API → Data 가 모여야 한다.
 - **번호 정책**: sub-folder 안에서 `NNNN` 을 새로 시작한다. 분할 시 기존 ADR 의 번호를 재배치하지 않는다 — 결번을 유지하고 git 이력으로 추적하며, 본문은 그대로 옮기기만 한다. (전체 renumber 정책은 [`authoring-rules.md`](./authoring-rules.md) "명명 규칙" — renumber 는 `adr-rollup` 만의 단계다.)
 - **피쳐 sub-folder vs 형제 context (`identity-sso/`)**: 두 피쳐가 진짜로 독립된 모델 경계이고 cross-cutting 결정도 거의 공유하지 않으면 형제 context(`identity/`, `identity-sso/`)가 더 깔끔하다. 한 context 안에서 공통 결정(예: `identity/0001-token-rotation.md`)을 부모 폴더에 남겨야 하는 경우에만 피쳐 sub-folder 를 쓴다.
-- **README 인덱스**: sub-folder 가 생기면 README 의 카테고리 목록을 `identity/login/`, `identity/signup/` 처럼 sub-folder 별로 한 줄씩 풀어 적는다. context 직속에 남은 cross-cutting ADR(예: `identity/0001-token-rotation.md`)은 context 라인에 그대로 둔다.
-- **`.mapping.json` 정책**: 피쳐 sub-folder 도 별도 카테고리 entry 로 등록한다 — 키는 `identity/login` 처럼 슬래시를 유지. 카테고리 키가 피쳐 디렉토리명과 일치하면 "관련 코드 찾기" 의 첫 후보로 쓰기 좋으니 키 형식의 일관성을 지킨다. `subdomainType`(core/supporting/generic)은 context 수준 entry 에 둔다 (아래 "ALPS ↔ ADR 매핑").
+- **`.mapping.json` 인덱스**: sub-folder 가 생기면 `identity/login`, `identity/signup` 을 각각 별도 카테고리 키로 등록하고, 옮긴 ADR 의 `adrs[]` path 를 새 sub-folder 경로로 갱신한다. context 직속에 남은 cross-cutting ADR(예: `identity/0001-token-rotation.md`)은 부모 context 키의 `adrs[]` 에 그대로 둔다.
+- **키 정책**: 피쳐 sub-folder 도 별도 카테고리 entry 로 등록한다 — 키는 `identity/login` 처럼 슬래시를 유지. 카테고리 키가 피쳐 디렉토리명과 일치하면 "관련 코드 찾기" 의 첫 후보로 쓰기 좋으니 키 형식의 일관성을 지킨다. `subdomainType`(core/supporting/generic)은 context 수준 entry 에 둔다 (아래 "ADR 레지스트리 (.mapping.json)").
 
 ```
 docs/adr/
@@ -84,19 +84,19 @@ docs/adr/
 
 **점검·제안 절차** (`/adr-new`, `/adr-sync` 가 카테고리에 손댈 때 공통 호출):
 
-1. 작업 대상 폴더(피쳐 sub-folder 또는 context 직속)의 `*.md` 개수를 센다 — README 인덱스가 아니라 실제 파일 기준.
+1. 작업 대상 폴더(피쳐 sub-folder 또는 context 직속)의 `*.md` 개수를 센다 — 매핑의 `adrs[]` 가 아니라 실제 파일 기준.
 2. **15개 미만이면 그대로 진행**. 분할은 제안조차 하지 않는다.
 3. **15개 이상이면 한 번 제안한다**. 사용자가 거절하면 같은 세션에서 다시 묻지 않고 계속 진행한다 — 분할은 강제가 아니다.
 4. 제안할 때 피쳐 후보를 함께 보여준다. 기존 ADR 제목·Decision 한 줄 요약을 훑어 사용자가 인지하는 단위(로그인, 가입, 비밀번호 재설정 같은 한 동작)로 묶고, ALPS Section 7 feature 가 있으면 그대로 매핑한다. context 전체에 걸친 cross-cutting ADR 은 부모 폴더 직속에 남기고, 기술 레이어 분할(아래 "안티패턴 카테고리")은 후보로 만들지 않는다.
-5. 분할이 합의되면 위 분할 규칙(1단계 깊이, README 인덱스, `.mapping.json` 키)에 따라 폴더 이동을 수행한다.
+5. 분할이 합의되면 위 분할 규칙(1단계 깊이, `.mapping.json` 인덱스·키)에 따라 폴더 이동을 수행한다.
 6. 같은 logical decision 의 evolution chain 이 보이면 분할 전에 `/adr-rollup` 부터 권한다 — 분할로 흩으면 chain 추적이 어려워진다.
 
 > `/adr-rollup` 은 evolution chain 압축에만 집중하고 분할 제안은 하지 않는다 — 두 작업이 섞이면 사용자가 한 사이클에서 너무 많은 결정을 떠맡게 된다.
 
 ## 구현 레퍼런스
 
-- ALPS PRD: `prd/<doc>.alps.xml` (Section 7이 feature spec의 source of truth)
-- 매핑: `docs/adr/.mapping.json` (ALPS feature ↔ ADR. **코드 경로는 저장하지 않는다** — 관련 코드는 ADR 을 읽고 그때그때 찾는다)
+- ALPS PRD: `prd/<doc>.alps.xml` (Section 7이 feature spec의 source of truth — `/feature-to-adr` importer 가 한 번 읽는 원본일 뿐, 매핑은 이 경로를 참조하지 않는다)
+- 매핑: `docs/adr/.mapping.json` (ADR 레지스트리/인덱스. **코드 경로도 PRD 참조도 저장하지 않는다** — 관련 코드는 ADR 을 읽고 그때그때 찾는다)
 
 > **권장**: 이 섹션 아래에 프로젝트별 **피쳐 진입점**을 명시한다. vertical slice 구조에서는 한 피쳐의 UI/API/Data 코드가 같은 폴더 트리에 모이므로, 피쳐(leaf) → 진입점 매핑이 자연스럽게 1:1 이 된다. context 는 보통 여러 피쳐를 품으므로 context → 코드 는 1:다 가 될 수 있다.
 >
@@ -149,31 +149,46 @@ bounded context(도메인) 폴더가 기본이고, 그 안의 피쳐가 UI → A
 
 > **DDD 주의**: bounded context 는 **모델 경계**이지 기술 레이어가 아니다. `identity/`(도메인)는 OK 지만 `identity/api/`(레이어)는 금지 — subdomain 분류(core/supporting/generic)는 어느 도메인이 경쟁력의 핵심인지를 나타내는 메타데이터일 뿐, 폴더를 레이어로 쪼개라는 뜻이 아니다.
 
-## ALPS ↔ ADR 매핑
+## ADR 레지스트리 (.mapping.json)
 
-`docs/adr/.mapping.json`이 ALPS feature 와 그 결정을 기록한 ADR 의 관계를 저장한다. **ADR ↔ 코드 경로는 매핑에 저장하지 않는다** — 한 ADR 이 다스리는 코드 위치는 ADR Decision 을 읽고 그때그때 repo 를 탐색해 찾는다 (아래 "관련 코드 찾기"). 코드 구조가 리팩토링으로 바뀌어도 매핑은 손댈 필요가 없다 — 결정이 안 바뀌었으면 ADR 도 매핑도 그대로다.
+`docs/adr/.mapping.json` 은 이 프로젝트의 **단일 ADR 인덱스**다 — 카테고리(키) → `adrs`(각 adr = `{path, status, summary}`)와 카테고리 간 `dependsOn` 을 기록한다. **코드 경로도, PRD 참조도 저장하지 않는다** (adr-writer 는 standalone 이며 ALPS 를 참조하지 않는다). 한 ADR 이 다스리는 코드 위치는 ADR Decision 을 읽고 그때그때 repo 를 탐색해 찾는다 (아래 "관련 코드 찾기"). 코드 구조가 리팩토링으로 바뀌어도 매핑은 손댈 필요가 없다 — 결정이 안 바뀌었으면 ADR 도 매핑도 그대로다.
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/haandol/alps-writer-plugins/main/plugins/adr-writer/templates/adr/mapping.schema.json",
-  "alpsDocument": "prd/example.alps.xml",
   "categories": {
     "identity": {
       "feature": "Identity & Access",
       "subdomainType": "core",
-      "adrs": ["docs/adr/identity/0001-token-rotation.md"]
+      "adrs": [
+        {
+          "path": "docs/adr/identity/0001-token-rotation.md",
+          "status": "Accepted (2026-02-14)",
+          "summary": "refresh token 은 7일 만료로 회전하고 재사용 감지 시 계열을 폐기한다"
+        }
+      ]
     },
     "identity/login": {
       "feature": "Login",
-      "alpsFeatureId": "F-LOGIN-01",
-      "adrs": ["docs/adr/identity/login/0001-password-policy.md"],
+      "adrs": [
+        {
+          "path": "docs/adr/identity/login/0001-password-policy.md",
+          "status": "Accepted (2026-03-02)",
+          "summary": "최소 길이·복잡도 규칙과 argon2id 해시 정책을 고정한다"
+        }
+      ],
       "tableDocs": ["docs/tables/users.md"]
     },
     "catalog/search": {
       "feature": "Catalog Search",
-      "alpsFeatureId": "F-SEARCH-01",
       "subdomainType": "core",
-      "adrs": ["docs/adr/catalog/search/0001-listing-search.md"],
+      "adrs": [
+        {
+          "path": "docs/adr/catalog/search/0001-listing-search.md",
+          "status": "Proposed",
+          "summary": "리스팅 검색은 역색인 + prefix 필터로 처리하고 정렬 키를 분리한다"
+        }
+      ],
       "dependsOn": ["identity/login"],
       "tableDocs": ["docs/tables/listings.md"]
     }
@@ -181,8 +196,9 @@ bounded context(도메인) 폴더가 기본이고, 그 안의 피쳐가 UI → A
 }
 ```
 
-매핑 파일은 `/adr-new`(빈 골격 생성 + entry 작성)와 `/feature-to-adr`(ALPS Section 7 일괄 변환)로 생성·갱신된다. 카테고리 키는 feature 이름에서 canonical 하게 파생하고(`login`, `identity/login`), ALPS Feature ID(`F1`)는 키가 아니라 entry 의 `alpsFeatureId` 로 보존한다 — `/adr-impl f1` 같은 ID 호출은 그 필드로 매칭되므로 키를 ID 로 고정할 필요가 없다. feature 이름이 없어 의미 있는 kebab 을 못 뽑는 워크숍/번호 기반 PRD 에서만 `f1`, `f2` 를 fallback 키로 쓴다 — 그 경우에만 단일 세그먼트 키가 `alpsFeatureId` 와 겹치며 context==feature 를 뜻한다.
+매핑 파일은 `/adr-new`(빈 골격 생성 + entry 작성)와 `/feature-to-adr`(ALPS Section 7 일괄 변환)로 생성·갱신된다. 카테고리 키는 feature 이름에서 canonical 하게 파생하고(`login`, `identity/login`), Feature ID 는 **어디에도 저장하지 않는다** — `/adr-impl` 은 카테고리 키로만 대상을 해석하므로 ID 를 따로 보존할 필요가 없다. feature 이름이 없어 의미 있는 kebab 을 못 뽑는 워크숍/번호 기반 PRD 에서만 `f1`, `f2` 를 fallback 키로 쓴다 — 그때는 `f1` 이 평범한 literal 카테고리 키이므로 `/adr-impl f1` 도 그 키에 정상적으로 매칭된다 (Feature ID 매칭이 아니라 키 매칭이다).
 
+- `adrs` — 이 카테고리에 속한 ADR 레코드 배열. 각 항목은 `{ path, status, summary }` 객체다: `path` 는 repo-relative ADR 경로, `status` 는 ADR 본문의 `## Status` 줄을 그대로 미러링(`Proposed` | `Accepted (YYYY-MM-DD)` | `Deprecated (YYYY-MM-DD)` | `Superseded by [ADR ...](...)`), `summary` 는 Key Decision 한 줄 요약이다. **이 배열이 곧 ADR 인덱스다** — README 는 별도 목록을 두지 않고, UserPromptSubmit hook 이 이 레코드를 매 턴 렌더링한다. `status`·`summary` 는 본문이 바뀔 때 함께 갱신한다 (status 는 `/adr-impl`·`/adr-sync` 가 본문 `## Status` 와 lockstep 으로 유지).
 - `subdomainType` — context 의 DDD subdomain 분류(`core`/`supporting`/`generic`). **선택적·advisory 메타데이터**다: 강제되지 않고, `/adr-new` 가 매번 묻지 않으며, 있으면 `/adr-sync`·hook 스냅샷이 도메인별 그룹핑/주석으로 표시한다. context 수준 entry(최상위 세그먼트, 또는 단일-피쳐 평면 entry)에 둔다 — 피쳐 sub-folder entry 는 개념적으로 부모 context 의 분류를 상속하므로 생략해도 된다. 알 수 없으면 생략한다 (없어도 매핑은 유효하다).
 - `dependsOn` — 이 카테고리가 의존하는 선행 카테고리 키 배열. `/adr-impl` 의 선행 게이트가 읽어 선행 ADR 을 먼저 구현하도록 정렬한다. ALPS 가 있으면 `/feature-to-adr` 가 Section 6.3 에서 옮겨오고, ALPS 없이 `/adr-new` 로 직접 작성하면 작성자가 지목한 선행을 기록한다. **기존 카테고리 키만 참조하고 비순환(self-edge 금지)을 유지**한다 — `/adr-sync` 6단계가 dangling·순환을 점검한다. 엣지는 **context 경계를 가로질러도 된다** (예: `catalog/search` 가 `identity/login` 에 의존 — DDD context 사이 관계가 ADR 의존으로 나타난 정상 케이스).
 

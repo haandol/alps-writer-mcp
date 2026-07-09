@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ALPS-ADR Mapping",
-  "description": "Maps ALPS Section 7 features to the ADRs that record their decisions, organized by DDD bounded context (top-level category key) and feature/vertical-slice (optional second segment). Carries an optional advisory subdomainType (core/supporting/generic) overlay per context. The link between an ADR and the code that implements it is not stored here — agents locate the relevant code by reading the ADR and searching the repo. Note: draft-07 cannot express the dependsOn cross-entry invariants (references an existing key, no self-edge, acyclic) — those are enforced by scripts/adr-structure-lint.mjs (R16) and adr-sync step 6, not this schema.",
+  "title": "ADR Registry / Index",
+  "description": "The ADR registry for docs/adr/, organized by DDD bounded context (top-level category key) and feature/vertical-slice (optional second segment). This file is the single ADR index — each ADR is listed once with its path, Status, and a one-line Key Decision summary, so the README keeps NO separate ADR list. It carries an optional advisory subdomainType (core/supporting/generic) per context. The link between an ADR and the code that implements it is not stored here — agents locate the relevant code by reading the ADR and searching the repo. adr-writer is standalone: this file records no ALPS/PRD reference. A feature name may originate from an ALPS Section 7 feature when it was imported once via feature-to-adr, but the mapping treats it as a plain name and does not point back at the PRD. Note: draft-07 cannot express the cross-entry invariants (unique adr path across the whole file, dependsOn references an existing key, no self-edge, acyclic, mapping status mirrors the ADR body) — those are enforced by scripts/adr-lint-lib.mjs / adr-structure-lint.mjs (R8/R16) and adr-sync step 6, not this schema.",
   "type": "object",
   "required": ["categories"],
   "additionalProperties": false,
@@ -10,13 +10,9 @@
       "type": "string",
       "description": "Optional JSON Schema pointer; ignored by the tools but allowed so editors can resolve validation."
     },
-    "alpsDocument": {
-      "type": "string",
-      "description": "Path to the ALPS .alps.xml file relative to the repo root."
-    },
     "categories": {
       "type": "object",
-      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/. The top segment is a DDD bounded context / subdomain named with the domain expert's ubiquitous-language term (e.g., 'identity', 'ordering'); the optional second segment is a user-perceived feature / vertical slice (e.g., 'identity/login'). At most two segments — no deeper nesting; the propertyNames.pattern enforces the ≤2-kebab-segment shape so a 3-segment key ('identity/login/social') or an uppercase key ('F1') is rejected at validation time, not just in prose. When a context holds exactly one feature the second segment is elided and a single-segment key means context==feature (legacy/flat layout, e.g. 'auth'). Keys are derived from the feature NAME, never from a PRD Feature ID — the id is preserved in 'alpsFeatureId' instead, so '/adr-impl f1' matches via that field and the folder need not be named 'f1'. Only when no meaningful kebab name exists (e.g. a purely numeric workshop id) is the id used as a fallback single-segment key. See structure.md '디렉토리 구조' and 'ALPS ↔ ADR 매핑'.",
+      "description": "Map of category id (kebab-case) to mapping entry. Category id matches the ADR directory path under docs/adr/. The top segment is a DDD bounded context / subdomain named with the domain expert's ubiquitous-language term (e.g., 'identity', 'ordering'); the optional second segment is a user-perceived feature / vertical slice (e.g., 'identity/login'). At most two segments — no deeper nesting; the propertyNames.pattern enforces the ≤2-kebab-segment shape so a 3-segment key ('identity/login/social') or an uppercase key ('F1') is rejected at validation time, not just in prose. When a context holds exactly one feature the second segment is elided and a single-segment key means context==feature (legacy/flat layout, e.g. 'auth'). Keys are derived from the feature NAME. A PRD Feature ID is never used as a key (and is not stored anywhere in this file) — the folder need not be named 'f1', and /adr-impl resolves a target by its category key, not by a Feature ID. Only when no meaningful kebab name exists (e.g. a purely numeric workshop id) is a lowercased id used as a fallback single-segment key. See structure.md '디렉토리 구조' and 'ADR 레지스트리 (.mapping.json)'.",
       "propertyNames": {
         "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)?$"
       },
@@ -27,11 +23,7 @@
         "properties": {
           "feature": {
             "type": "string",
-            "description": "Human-readable feature name from ALPS Section 7 (for feature-level entries) or the bounded-context name (for context-level entries)."
-          },
-          "alpsFeatureId": {
-            "type": "string",
-            "description": "Stable id of the feature in the ALPS document (e.g., F-LOGIN-01). This is where the PRD Feature ID lives — the category KEY is derived from the feature name, not this id, so '/adr-impl f1' resolves by matching this field. Populated by feature-to-adr from ALPS Section 7; omit when there is no ALPS PRD."
+            "description": "Human-readable feature name (for feature-level entries) or bounded-context name (for context-level entries). When the category was imported once from an ALPS Section 7 feature this is that feature's name, but adr-writer treats it as a plain label — it is not a PRD reference."
           },
           "subdomainType": {
             "type": "string",
@@ -40,13 +32,31 @@
           },
           "adrs": {
             "type": "array",
-            "description": "Paths to ADR markdown files (relative to repo root), each listed exactly once across the whole file. MAY be empty ([]) for a context-level grouping entry that holds no context-direct (cross-cutting) ADR — its feature sub-folder entries carry the actual ADRs (e.g. an 'identity' entry with adrs:[] alongside 'identity/login' and 'identity/signup'). Feature/flat entries normally have at least one path. adr-sync step 6 additionally requires every on-disk NNNN-*.md to appear here exactly once and every path here to resolve on disk.",
-            "items": { "type": "string" },
+            "description": "The ADRs recorded under this category. Each item indexes one ADR by path + its current Status + a one-line Key Decision summary — this array IS the ADR index (the README carries no separate ADR list). Each path appears exactly once across the whole file. MAY be empty ([]) for a context-level grouping entry that holds no context-direct (cross-cutting) ADR — its feature sub-folder entries carry the actual ADRs (e.g. an 'identity' entry with adrs:[] alongside 'identity/login' and 'identity/signup'). Feature/flat entries normally have at least one item. adr-structure-lint additionally requires every on-disk NNNN-*.md to appear here exactly once, every path here to resolve on disk, and every item's status to mirror the ADR body's ## Status line.",
+            "items": {
+              "type": "object",
+              "required": ["path", "status"],
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Path to the ADR markdown file, relative to the repo root (e.g. docs/adr/identity/login/0001-password-policy.md)."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "The ADR's current Status, mirroring the ADR body's ## Status line: 'Proposed' | 'Accepted (YYYY-MM-DD)' | 'Deprecated (YYYY-MM-DD)' | 'Superseded by [ADR ...](...)'. This is the single index of status — adr-impl/adr-sync update it in lockstep with the body, and adr-structure-lint verifies the two agree."
+                },
+                "summary": {
+                  "type": "string",
+                  "description": "One-line Key Decision summary — the entry point for /adr-sync --quick and what the hook renders after the path. Recommended for every ADR; omitting it is advisory (adr-structure-lint warns)."
+                }
+              }
+            },
             "uniqueItems": true
           },
           "dependsOn": {
             "type": "array",
-            "description": "Category ids this category depends on (prerequisites). Sourced from the ALPS Section 6.3 Feature Dependency Diagram by feature-to-adr (edge 'this --depends on--> X' becomes X in this list), or recorded directly by adr-new when the author names a prerequisite ADR. Read by adr-impl to implement prerequisite ADRs first, and validated by adr-sync. Uses the same key namespace as 'categories' (single-segment or two-segment context/feature keys). Edges MAY cross bounded-context boundaries (e.g. an ordering/checkout feature depending on an identity/login feature is a normal DDD context relationship). Must reference existing category keys; keep acyclic (no self-edge).",
+            "description": "Category ids this category depends on (prerequisites). Recorded by adr-new when the author names a prerequisite ADR, or backfilled once by feature-to-adr from an ALPS Section 6.3 dependency graph (edge 'this --depends on--> X' becomes X in this list). Read by adr-impl to implement prerequisite ADRs first, and validated by adr-sync. Uses the same key namespace as 'categories' (single-segment or two-segment context/feature keys). Edges MAY cross bounded-context boundaries (e.g. an ordering/checkout feature depending on an identity/login feature is a normal DDD context relationship). Must reference existing category keys; keep acyclic (no self-edge).",
             "items": { "type": "string" },
             "uniqueItems": true
           },

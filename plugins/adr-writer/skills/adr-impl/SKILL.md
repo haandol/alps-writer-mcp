@@ -1,7 +1,7 @@
 ---
 name: adr-impl
 description: Implement an ADR — check dependencies first, implement prerequisites in topological order, write code, run tests, then auto-promote ADR Status from Proposed to Accepted. Enforces the ADR-first development cycle. Use when the user invokes /adr-impl or asks to implement an ADR / a Proposed feature whose decision is already recorded. Keywords - "/adr-impl", "ADR 구현", "implement ADR", "Proposed ADR 코드 반영".
-argument-hint: "[adr-path-or-category-or-feature-id]"
+argument-hint: "[adr-path-or-category]"
 disable-model-invocation: true
 ---
 
@@ -20,7 +20,7 @@ disable-model-invocation: true
      - 먼저 디스크에서 같은 카테고리 디렉토리의 kebab-title 매칭(`docs/adr/<cat>/*-<title>.md`, 번호 뒤 문자열이 일치하는 ADR)을 본다 — git 없이 동작하고 가장 단순하다.
      - 매칭이 모호하거나 없으면 git rename 이력으로 확정한다: `git log --all --diff-filter=R --name-status -- '*<title>.md'` (또는 `git log --all --diff-filter=R --name-status` 출력에서 옛 경로를 grep) 하면 `R100  docs/adr/<cat>/<옛>.md  docs/adr/<cat>/<새>.md` 형태로 옛→새 매핑이 한 줄로 나온다 — 가장 명확하다. (옛 경로에 `git log --follow -- <옛경로>` 도 rename 을 추적해 커밋들을 보여주지만, 새 경로를 한눈에 주지는 않으므로 `--diff-filter=R --name-status` 를 쓴다.)
      - 찾으면 "`<옛경로>` 는 rollup 으로 `<새경로>` 로 이동했습니다. 이 파일을 구현할까요?" 로 확인 후 새 경로를 대상으로 삼는다. 그래도 못 찾으면 아래 "Proposed 목록 출력" 으로 폴백한다.
-   - **인자가 카테고리 또는 ALPS Feature ID** (예: `auth`, `identity/login`, 또는 `F1`/`f1` 같은 Feature ID) → `docs/adr/.mapping.json` 의 **카테고리 키와 각 entry 의 `alpsFeatureId` 를 모두** 대조해 매칭한다. 카테고리 키는 기능 이름에서 canonical 하게 파생되므로(`identity/login`), 사용자가 `F1`/`f1` 처럼 Feature ID 로 호출하면 키가 아니라 `alpsFeatureId` 필드로 매칭된다 — 폴더명이 `f1` 이 아니어도 ID 호출이 그대로 동작하는 이유다 (feature 이름이 없어 ID 를 fallback 키로 쓴 경우에만 키와 `alpsFeatureId` 가 겹친다). 사용자가 context prefix 없이 피쳐 세그먼트만 줬는데(`login`) 여러 context 에 같은 피쳐명이 있어 모호하면 어느 context 인지 한 번 되묻는다 (그룹핑을 쓴 다중-context repo 에서만 드물게 발생).
+   - **인자가 카테고리 키** (예: `auth`, `identity/login`) → `docs/adr/.mapping.json` 의 **카테고리 키**를 대조해 매칭한다. 카테고리 키는 기능 이름에서 canonical 하게 파생된다(`identity/login`). feature 이름이 없어 순수 숫자 워크숍 id 를 fallback 키로 쓴 경우의 `f1` 같은 키도 그대로 해석된다 — 이건 Feature ID 조회가 아니라 리터럴 카테고리 키 매칭이다 (매핑에는 Feature ID 를 담는 필드가 없다). 사용자가 context prefix 없이 피쳐 세그먼트만 줬는데(`login`) 여러 context 에 같은 피쳐명이 있어 모호하면 어느 context 인지 한 번 되묻는다 (그룹핑을 쓴 다중-context repo 에서만 드물게 발생).
    - **인자가 비어 있거나 매칭이 모호하거나 매핑/매핑 파일이 없을 때** — `Proposed` 상태(미구현)인 ADR 목록을 한 번에 보여주고 사용자에게 어떤 ADR 을 구현할지 묻는다 (아래 "Proposed 목록 출력" 절차).
 
    **Proposed 목록 출력 절차**:
@@ -31,11 +31,11 @@ disable-model-invocation: true
       ```
       아직 구현되지 않은 ADR 이 N개 있습니다. 어떤 ADR 을 구현할까요?
 
-      1. identity/login — 이메일 가입 (docs/adr/identity/login/0001-email-signup.md, F1)
-      2. identity/password-reset — 비밀번호 재설정 (docs/adr/identity/password-reset/0001-password-reset.md, F2)
+      1. identity/login — 이메일 가입 (docs/adr/identity/login/0001-email-signup.md)
+      2. identity/password-reset — 비밀번호 재설정 (docs/adr/identity/password-reset/0001-password-reset.md)
       3. cart — 장바구니 합산 (docs/adr/cart/0003-cart-totals.md)
 
-      번호 또는 카테고리 키/Feature ID 로 답해주세요 (예: `identity/login` 또는 `F1`). 한 번에 여러 개를 구현하려면 "1,2" 또는 "identity/login, cart" 처럼 답하세요.
+      번호 또는 카테고리 키로 답해주세요 (예: `identity/login`). 한 번에 여러 개를 구현하려면 "1,2" 또는 "identity/login, cart" 처럼 답하세요.
       ```
 
    4. 사용자가 답하면 그 선택을 카테고리 인자로 받아 다시 1단계 시작 부분으로 돌아간다.
@@ -48,7 +48,7 @@ disable-model-invocation: true
 
 2. **의존성 확인 (선행 ADR 게이트) — 건너뛸 수 없는 필수 단계**
 
-   feature 는 서로 의존한다 — 예를 들어 "결제(`checkout`)" 는 "장바구니(`cart`)" 가 먼저 동작해야 구현이 의미가 있다. 이 의존을 무시하고 요청받은 ADR 부터 구현하면 선행이 없는 위에 코드를 쌓게 되어 실제 동작 순서와 어긋난다. 그래서 **구현·계획에 앞서 의존부터 본다 — 이 단계는 생략하거나 뒤로 미룰 수 없다.** (아래 예시의 카테고리 키는 이름 기반 canonical 키다 — `f1` 같은 Feature ID 로 호출하면 1단계가 `alpsFeatureId` 로 매칭해 이 canonical 카테고리를 찾는다.)
+   feature 는 서로 의존한다 — 예를 들어 "결제(`checkout`)" 는 "장바구니(`cart`)" 가 먼저 동작해야 구현이 의미가 있다. 이 의존을 무시하고 요청받은 ADR 부터 구현하면 선행이 없는 위에 코드를 쌓게 되어 실제 동작 순서와 어긋난다. 그래서 **구현·계획에 앞서 의존부터 본다 — 이 단계는 생략하거나 뒤로 미룰 수 없다.** (아래 예시의 카테고리 키는 이름 기반 canonical 키이고, 대상은 이 키로 지정한다.)
    - 대상 카테고리의 `docs/adr/.mapping.json` entry 에서 `dependsOn` 을 읽는다 (이 값은 `/feature-to-adr` 가 ALPS Section 6.3 Feature Dependency Diagram 에서 옮겨오거나, `/adr-new` 가 작성 시 선행 조건으로 직접 기록한 것이다).
      - entry 는 있는데 **`dependsOn` 키 자체가 없으면** — 의존이 선언되지 않은 것이다. 한 줄로 "이 ADR 에 `dependsOn` 이 선언돼 있지 않아 선행 점검 없이 진행합니다 — 선행 ADR 이 있으면 `.mapping.json` 의 `dependsOn` 또는 `/feature-to-adr` 로 보강하세요" 라고 알린 뒤 3단계로 진행한다 ("의존 없음" 과 "의존 미선언" 을 조용히 같게 취급하지 않는다).
      - `dependsOn` 이 **빈 배열(`[]`)** 이면 의존 없음을 명시적으로 점검 완료한 것이므로 안내 없이 3단계로 진행한다.
@@ -91,18 +91,18 @@ disable-model-invocation: true
 
    상세 정책은 `README.md` "자동 전환 규칙" 참조. 본 단계가 트리거하는 동작:
    - 5단계 테스트 통과 직후, **사용자 확인 없이** 대상 ADR 본문의 Status 줄을 `Accepted (YYYY-MM-DD)` 로 수정
-   - `docs/adr/README.md` 카테고리별 ADR 목록의 한 줄 요약 라벨도 동시 갱신
+   - `.mapping.json` 의 해당 `adrs[]` 레코드 `status` 를 `Accepted (YYYY-MM-DD)` 로 동시 갱신 (`status` 는 본문과 lockstep — summary 도 결정이 바뀌었으면 함께)
    - 한 카테고리에 여러 ADR이 함께 구현되었으면 모두 갱신
    - 변경 사항을 사용자에게 한 줄로 알린다 ("ADR auth/0003 Status를 Accepted로 갱신했습니다")
 
 7. **마무리**
-   - Status 승격(6단계) 직후 결정론적 하네스로 ADR·매핑·인덱스 구조를 빠르게 재확인한다:
+   - Status 승격(6단계) 직후 결정론적 하네스로 ADR·매핑(=ADR 인덱스) 구조를 빠르게 재확인한다:
 
      ```bash
      node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <구현한 카테고리 키>
      ```
 
-     이 검사는 Status 를 `Accepted (YYYY-MM-DD)` 로 바꾼 편집이 형식에 맞는지(R1), README 인덱스 한 줄 요약과 `.mapping.json` 이 정합한지(R8), 코드에 ADR 역참조가 새로 남지 않았는지(R17, 내부 `adr-invariants.sh --code-only`)를 기계적으로 잡아준다. `error` 가 나오면 커밋 전에 고친다.
+     이 검사는 Status 를 `Accepted (YYYY-MM-DD)` 로 바꾼 편집이 형식에 맞는지(R1), `.mapping.json` `adrs[]` 의 `status` 가 방금 바꾼 본문 `## Status` 와 정합한지(R8 status-index-mismatch), 코드에 ADR 역참조가 새로 남지 않았는지(R17, 내부 `adr-invariants.sh --code-only`)를 기계적으로 잡아준다. `error` 가 나오면 커밋 전에 고친다.
 
    - 그런 다음 변경된 코드와 ADR 의 **의미적** 정합(회색지대 결정 ↔ 코드 동작)을 `/adr-sync <category>` 로 확인한다 — 하네스는 형식·정합을, sync 는 결정 drift 를 본다.
 

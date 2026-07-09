@@ -2,7 +2,7 @@
 
 ADR-driven development cycle for Claude Code. Author Architecture Decision Records, implement them in code, and keep the two in sync — with an ADR-first hook that re-injects the ADR map every turn.
 
-**Standalone**: adr-writer requires no ALPS PRD and never references the `alps-writer` plugin. ADRs are its first-class artifact; code is implemented from ADRs. The ADR ↔ code link is not stored anywhere — an agent finds the code an ADR governs by reading the ADR and searching the repo, so refactors never churn a stored mapping.
+**Standalone**: adr-writer requires no ALPS PRD and never references the `alps-writer` plugin. ADRs are its first-class artifact; code is implemented from ADRs. `docs/adr/.mapping.json` (the ADR index) stores no PRD reference. The ADR ↔ code link is not stored anywhere — an agent finds the code an ADR governs by reading the ADR and searching the repo, so refactors never churn a stored mapping.
 
 ## Install
 
@@ -26,10 +26,10 @@ The shared authoring rules and procedures (category-split, Status transitions, f
 
 Two dependency-free scripts let the cycle **self-test** that ADRs are well-formed without an LLM judgment call — the skills invoke them so the LLM reviewer only spends tokens on rules that genuinely need judgment.
 
-| Script                           | Scope                                                                 | Checks                                                                                                                                                                                                                                                                                                                           |
-| -------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/adr-invariants.sh`      | repo-wide, one-way dependency oracle                                  | code→ADR (a) and ADR→PRD (b) reverse references; rollup stale citations (c)/(d). Exit 0/1/2, fail-closed on grep error. A consuming repo can wire it into pre-commit/CI.                                                                                                                                                         |
-| `scripts/adr-structure-lint.mjs` | per-ADR body + `.mapping.json` + README index + disk state (Node ESM) | Status enum/date (R1), required sections, filename `NNNN-kebab` (no `fN-`), path depth ≤2, anti-pattern key segments (R5a), Decision Drivers count (R13), alternatives ≥2 (R14), Related-link existence (R10), `dependsOn` integrity (R16), index↔mapping↔disk consistency (R8). Invokes `adr-invariants.sh` and folds its exit. |
+| Script                           | Scope                                                  | Checks                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/adr-invariants.sh`      | repo-wide, one-way dependency oracle                   | code→ADR (a) and ADR→PRD (b) reverse references; rollup stale citations (c)/(d). Exit 0/1/2, fail-closed on grep error. A consuming repo can wire it into pre-commit/CI.                                                                                                                                                                 |
+| `scripts/adr-structure-lint.mjs` | per-ADR body + `.mapping.json` + disk state (Node ESM) | Status enum/date (R1), required sections, filename `NNNN-kebab` (no `fN-`), path depth ≤2, anti-pattern key segments (R5a), Decision Drivers count (R13), alternatives ≥2 (R14), Related-link existence (R10), `dependsOn` integrity (R16), mapping↔disk + status↔body consistency (R8). Invokes `adr-invariants.sh` and folds its exit. |
 
 Run over a project's live ADRs:
 

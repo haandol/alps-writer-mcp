@@ -183,17 +183,23 @@ function main() {
   const relFromRepo = (p) => path.relative(process.cwd(), p).split(path.sep).join("/");
   const diskAdrs = new Set(files.map(relFromRepo));
 
-  // mapping's declared ADR set
+  // mapping's declared ADR set + the Status it records per path. The adrs[]
+  // records are the ADR index (path + Status + summary); the README carries no
+  // separate list, so the harness reconciles disk ↔ mapping only, and cross-
+  // checks each record's status against the ADR body below.
   const mappedAdrs = new Set();
+  const mappedStatusByPath = new Map();
   if (mapping?.categories) {
     for (const entry of Object.values(mapping.categories))
-      for (const a of entry?.adrs || []) mappedAdrs.add(a);
+      for (const rec of entry?.adrs || []) {
+        const p = rec && typeof rec === "object" ? rec.path : rec;
+        if (typeof p === "string" && p) {
+          mappedAdrs.add(p);
+          if (rec && typeof rec === "object" && "status" in rec)
+            mappedStatusByPath.set(p, rec.status);
+        }
+      }
   }
-
-  // README index text (for R8 presence check)
-  const readmePath = path.join(adrRoot, "README.md");
-  const readme = existsSync(readmePath) ? readSafe(readmePath) : null;
-  if (!readme) rep.warn("readme-missing", readmePath, "docs/adr/README.md 인덱스가 없습니다");
 
   // ── category filter ───────────────────────────────────────────────────
   const inScope = (relPath) => {
@@ -257,7 +263,10 @@ function main() {
         );
     }
 
-    // R1: Status enum/format
+    // R1: Status enum/format + mapping-index agreement. The adrs[] record's
+    // status is the single ADR-status index (README has none), so it must
+    // mirror the body's ## Status line — adr-impl/adr-sync update both in
+    // lockstep. A mismatch means the index went stale.
     const statusSec = sectionRange(body, (h) => h.text.trim() === "Status");
     if (!statusSec) rep.error("status-missing", where, "## Status 섹션이 없습니다");
     else {
@@ -265,6 +274,15 @@ function main() {
       const st = classifyStatus(val);
       if (!st.ok)
         rep.error("status-enum", where, `Status "${val ?? ""}" — ${statusReason(st.reason)}`);
+      else if (mapping?.categories && mappedStatusByPath.has(rel)) {
+        const mapped = String(mappedStatusByPath.get(rel) || "").trim();
+        if (mapped !== val)
+          rep.error(
+            "status-index-mismatch",
+            where,
+            `.mapping.json 의 status "${mapped}" 가 본문 ## Status "${val}" 와 불일치`,
+          );
+      }
     }
 
     // required sections
@@ -297,19 +315,19 @@ function main() {
     for (const hit of codeRefHits(body))
       rep.warn("code-ref-depth", `${where}:${hit.line}`, `파일 단위 코드 참조 의심: ${hit.text}`);
 
-    // R8 (disk→mapping): this file must be listed in .mapping.json adrs[]
+    // R8 (disk→mapping): this file must be listed in .mapping.json adrs[].
+    // .mapping.json is the single ADR index (README has no ADR list), so an
+    // on-disk ADR missing from it is a hard orphan.
     if (mapping?.categories && !mappedAdrs.has(rel))
       rep.error("index-orphan-mapping", where, ".mapping.json 의 어느 adrs[] 에도 없음");
-
-    // R8 (disk→README): a link to this file must exist in the README index
-    if (readme && !readmeLinksTo(readme, relFromAdr, base))
-      rep.warn("index-orphan-readme", where, "README 인덱스에 링크가 없습니다");
   }
 
   // ── mapping→disk: every adrs[] path exists ────────────────────────────
   if (mapping?.categories) {
     for (const [key, entry] of Object.entries(mapping.categories)) {
-      for (const a of entry?.adrs || []) {
+      for (const rec of entry?.adrs || []) {
+        const a = rec && typeof rec === "object" ? rec.path : rec;
+        if (typeof a !== "string" || !a) continue; // shape errors already reported
         if (opts.category && !(key === opts.category || key.startsWith(opts.category + "/")))
           continue;
         if (!diskAdrs.has(a))
@@ -385,7 +403,7 @@ function firstNonEmpty(lines, start, end) {
 function filenameMsg(fn) {
   const map = {
     "stale-fN-prefix":
-      "파일명에 stale fN- 접두사 (Feature ID 는 파일명에 넣지 않음 — .mapping.json alpsFeatureId 로)",
+      "파일명에 stale fN- 접두사 (Feature ID 는 파일명·카테고리 키에 넣지 않음 — canonical NNNN-kebab-title.md)",
     uppercase: "파일명에 대문자 (kebab-case 만 허용)",
     "not-canonical": "canonical 형식 아님 (NNNN-kebab-case-title.md)",
   };
@@ -399,30 +417,13 @@ function statusReason(reason) {
       "informal-status": "비공식 상태 (Implemented/Done/Completed 금지)",
       "proposed-should-not-carry-date": "Proposed 에는 날짜를 붙이지 않음",
       "missing-date": "날짜 누락 (Accepted/Deprecated 는 (YYYY-MM-DD) 필요)",
+      "date-only":
+        "괄호 안에는 날짜만 (Accepted/Deprecated (YYYY-MM-DD) — 날짜 뒤 참조·설명·feature-id 등 부가 텍스트 금지)",
       "superseded-needs-adr-link":
         "Superseded 는 후속 ADR 링크 필요 (Superseded by [ADR ...](link))",
       unrecognized: "허용된 Status 값이 아님 (Proposed/Accepted/Deprecated/Superseded)",
     }[reason] || reason
   );
-}
-
-// A README index link resolves to this ADR when the link href ends with the
-// ADR's path-relative-to-root or its basename. README links use ./ or ../
-// relative forms, so match on the suffix. HTML comment blocks (<!-- ... -->)
-// are stripped first: the seeded README template carries a commented-out
-// EXAMPLE index (with links like ./identity/login/0001-password-policy.md), and
-// a real project reusing an example slug must not have its missing index line
-// masked by that example.
-function readmeLinksTo(readme, relFromAdr, base) {
-  const visible = readme.replace(/<!--[\s\S]*?-->/g, "");
-  const re = /\]\(([^)]+)\)/g;
-  let m;
-  while ((m = re.exec(visible))) {
-    const href = m[1].split("#")[0].trim();
-    if (!href) continue;
-    if (href.endsWith(relFromAdr) || href.endsWith("/" + base) || href === base) return true;
-  }
-  return false;
 }
 
 function finish(rep, opts, note) {
