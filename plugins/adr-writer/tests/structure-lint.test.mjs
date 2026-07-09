@@ -36,6 +36,16 @@ test("classifyStatus rejects informal / mis-dated statuses with a reason", () =>
   assert.equal(classifyStatus("").reason, "empty");
 });
 
+test("classifyStatus coerces a non-string without throwing (forgotten-quotes status)", () => {
+  // a hand-edited mapping can carry `"status": 2026` (number) or true (boolean);
+  // classifyStatus must return a reason, never throw on .trim of a non-string
+  assert.doesNotThrow(() => classifyStatus(2026));
+  assert.equal(classifyStatus(2026).ok, false);
+  assert.equal(classifyStatus(true).ok, false);
+  assert.equal(classifyStatus(null).reason, "empty");
+  assert.equal(classifyStatus(undefined).reason, "empty");
+});
+
 test("classifyStatus rejects extra text after the Accepted/Deprecated date (date-only)", () => {
   // the parentheses must hold ONLY the date — no reference / feature-id / note
   assert.equal(classifyStatus("Accepted (2026-07-09) — F1 구현").reason, "date-only");

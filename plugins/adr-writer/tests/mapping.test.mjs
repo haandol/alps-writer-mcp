@@ -174,3 +174,39 @@ test("validateMappingShape detects a path double-indexed across categories", () 
   };
   assert.ok(validateMappingShape(m).some((i) => i.code === "adr-double-indexed"));
 });
+
+test("validateMappingShape does NOT throw on a non-string status (forgotten quotes)", () => {
+  // .mapping.json is hand/LLM-edited: `"status": 2026` (missing quotes) or a
+  // boolean must be reported as adrs-item-status-enum, never crash the harness.
+  for (const bad of [2026, true, ["Proposed"], { s: 1 }]) {
+    const m = { categories: { x: { adrs: [{ path: "docs/adr/x/0001-x.md", status: bad }] } } };
+    let codes;
+    assert.doesNotThrow(
+      () => {
+        codes = validateMappingShape(m).map((i) => i.code);
+      },
+      `non-string status ${JSON.stringify(bad)} must not throw`,
+    );
+    assert.ok(
+      codes.includes("adrs-item-status-enum"),
+      `status ${JSON.stringify(bad)} → enum error`,
+    );
+  }
+});
+
+test("validateMappingShape flags a leftover top-level field (legacy alpsDocument)", () => {
+  const m = {
+    alpsDocument: "prd/legacy.alps.xml", // must not silently survive migration
+    categories: { x: { adrs: [{ path: "docs/adr/x/0001-x.md", status: "Proposed" }] } },
+  };
+  assert.ok(validateMappingShape(m).some((i) => i.code === "unknown-top-level-field"));
+});
+
+test("validateMappingShape flags an unknown adrs-item field (typo)", () => {
+  const m = {
+    categories: {
+      x: { adrs: [{ path: "docs/adr/x/0001-x.md", status: "Proposed", sumary: "typo" }] },
+    },
+  };
+  assert.ok(validateMappingShape(m).some((i) => i.code === "adrs-item-unknown-field"));
+});

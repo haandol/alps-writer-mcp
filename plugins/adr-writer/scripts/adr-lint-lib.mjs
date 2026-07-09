@@ -127,7 +127,15 @@ const STATUS_MATCHERS = [
 ];
 
 export function classifyStatus(statusValue) {
-  const v = (statusValue || "").trim();
+  // Coerce defensively: .mapping.json is hand/LLM-edited, so a forgotten-quotes
+  // status ("status": 2026) or a boolean arrives as a non-string. A bare
+  // (statusValue || "").trim() would throw on any truthy non-string and abort
+  // the whole harness; instead stringify so it falls through to a reportable
+  // enum error (validateMappingShape → adrs-item-status-enum). null/undefined
+  // → "" (empty). The body-Status call site only ever passes string|null.
+  const v = (
+    typeof statusValue === "string" ? statusValue : statusValue == null ? "" : String(statusValue)
+  ).trim();
   if (!v) return { ok: false, reason: "empty" };
   if (STATUS_MATCHERS.some((re) => re.test(v))) return { ok: true, value: v };
   // Diagnose the common near-misses so the report is actionable.
@@ -328,6 +336,17 @@ export function validateMappingShape(mapping) {
     err("no-categories", "missing or non-object `categories`");
     return issues;
   }
+  // Only $schema + categories are allowed at the top level (schema:
+  // additionalProperties:false). Flag a leftover ALPS/PRD field — the common
+  // case is a legacy mapping that still carries top-level `alpsDocument`, which
+  // must not silently survive migration to the standalone (no-PRD-link) shape.
+  for (const k of Object.keys(mapping))
+    if (k !== "$schema" && k !== "categories")
+      err(
+        "unknown-top-level-field",
+        `unknown top-level field "${k}" (only $schema + categories allowed)`,
+      );
+
   const seenAdrs = new Map(); // path → keys, to detect a file indexed twice
   for (const [key, entry] of Object.entries(cats)) {
     for (const iss of checkCategoryKey(key))
@@ -359,12 +378,22 @@ export function validateMappingShape(mapping) {
         }
         if (!("status" in rec)) {
           err("adrs-item-status-missing", `category "${key}": adrs "${rec.path}" missing "status"`);
+        } else if (typeof rec.status !== "string") {
+          // A non-string status (forgotten quotes: 2026, true, an array/object)
+          // is a shape violation — flag it directly rather than relying on
+          // classifyStatus coercion, which could e.g. stringify ["Proposed"] to
+          // a valid-looking value and let it slip through. classifyStatus is
+          // still hardened against non-strings as defense-in-depth.
+          err(
+            "adrs-item-status-enum",
+            `category "${key}": adrs "${rec.path}" status must be a string (got ${typeof rec.status})`,
+          );
         } else {
           const st = classifyStatus(rec.status);
           if (!st.ok)
             err(
               "adrs-item-status-enum",
-              `category "${key}": adrs "${rec.path}" status "${rec.status ?? ""}" is not a valid Status`,
+              `category "${key}": adrs "${rec.path}" status "${rec.status}" is not a valid Status`,
             );
         }
         if (!("summary" in rec) || !String(rec.summary || "").trim())

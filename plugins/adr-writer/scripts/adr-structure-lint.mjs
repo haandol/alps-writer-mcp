@@ -3,13 +3,14 @@
 //
 // The companion to scripts/adr-invariants.sh. That script is the repo-wide
 // one-way-dependency oracle (code→ADR, ADR→PRD reverse references, rollup
-// stale citations). THIS harness is the per-ADR + mapping + index structure
-// checker: it parses each ADR body and docs/adr/.mapping.json + README index
-// and asserts the shape rules the LLM adr-reviewer would otherwise eyeball —
-// the deterministic half of R1/R5a/R8/R10/R13/R14/R16 plus filename,
-// path-depth, and required-section checks. Judgment-only rules (R4 two-stage
-// filter, R12 gray-zone fidelity, R14 strawman nuance, R3 impl-detail) are NOT
-// attempted here — they stay with the reviewer.
+// stale citations). THIS harness is the per-ADR + mapping index structure
+// checker: it parses each ADR body and docs/adr/.mapping.json (the single ADR
+// index — the README carries no ADR list) and asserts the shape rules the LLM
+// adr-reviewer would otherwise eyeball — the deterministic half of
+// R1/R5a/R8/R10/R13/R14/R16 plus filename, path-depth, required-section, and
+// mapping-status↔body checks. Judgment-only rules (R4 two-stage filter, R12
+// gray-zone fidelity, R14 strawman nuance, R3 impl-detail) are NOT attempted
+// here — they stay with the reviewer.
 //
 // It shells out to adr-invariants.sh (unless --no-invariants) so a single run
 // covers reverse references too, folding that exit code into the aggregate.

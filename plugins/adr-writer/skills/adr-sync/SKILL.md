@@ -1,6 +1,6 @@
 ---
 name: adr-sync
-description: Verify that ADRs in docs/adr/ accurately describe the current codebase and fix any drift. Uses the ALPS-feature↔ADR mapping at docs/adr/.mapping.json (no code paths — the code an ADR governs is found by reading the ADR and searching the repo). Use when the user invokes /adr-sync or asks to audit ADRs against shipping code. Keywords - "/adr-sync", "ADR sync", "ADR drift check", "ADR 동기화", "ADR drift 검사".
+description: Verify that ADRs in docs/adr/ accurately describe the current codebase and fix any drift. Uses the ADR index at docs/adr/.mapping.json (categories → adrs with path/status/summary + dependsOn; no code paths and no PRD reference — the code an ADR governs is found by reading the ADR and searching the repo). Use when the user invokes /adr-sync or asks to audit ADRs against shipping code. Keywords - "/adr-sync", "ADR sync", "ADR drift check", "ADR 동기화", "ADR drift 검사".
 argument-hint: "[category?] [--quick]"
 ---
 
