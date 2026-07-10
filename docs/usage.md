@@ -54,6 +54,7 @@ flowchart TD
 
     subgraph maint["Ongoing maintenance"]
         direction TB
+        Review(["/adr-impl-review [category]<br/>did the code honor the ADR's decisions?<br/>· best-practice · refactors (report-only)"])
         Sync(["/adr-sync [category]<br/>drift repair · category integrity<br/>· stale fN → canonical (confirm)"])
         Rollup(["/adr-rollup [category]<br/>merge evolution chain of<br/>one logical decision"])
     end
@@ -62,7 +63,9 @@ flowchart TD
 
     S7 -.->|"reads Section 7 + 6.3<br/>(alps-writer → adr-writer, one-way)"| F2A
     Start(["ADR-only entry:<br/>no PRD"]) --> New
-    Accepted --> Sync
+    Accepted --> Review
+    Review -->|decision fidelity checked| Sync
+    Review -.->|impl-fact drift found| Sync
     Sync -->|next cycle| Impl
     Sync -.->|evolution history scattered?| Rollup
     Rollup -.-> Sync
@@ -70,7 +73,7 @@ flowchart TD
 
     classDef cmd fill:#e8f0fe,stroke:#4285f4,color:#111;
     classDef gate fill:#fef7e0,stroke:#f9ab00,color:#111;
-    class Init,F2A,New,Impl,Sync,Rollup,Start cmd;
+    class Init,F2A,New,Impl,Review,Sync,Rollup,Start cmd;
     class Gate gate;
 ```
 
@@ -79,6 +82,7 @@ flowchart TD
 - **Two entry points.** PRD-first starts at `/alps-init` and crosses into the ADR layer via `/feature-to-adr` (the only place `alps-writer` hands off to `adr-writer` — a one-way dependency; `adr-writer` never reads ALPS back). ADR-only skips the PRD box entirely and starts at `/adr-new`.
 - **`/feature-to-adr` is a thin importer.** It reads Section 7 features and the 6.3 dependency graph, derives a canonical category key from each feature _name_ (the Feature ID is not stored — adr-writer keeps no PRD reference; the key is name-derived and `/adr-impl` resolves by key), and delegates the actual authoring to `/adr-new`. It runs once per feature; later PRD changes are absorbed by editing the ADR, not re-importing.
 - **The gate is mandatory.** `/adr-impl` never skips straight to coding — it reads `dependsOn`, walks prerequisites transitively, and refuses to build on a `Proposed` or dangling prerequisite until you implement it first (in topological order). Status flips to `Accepted` only after tests pass — it records a fact, not an intent.
+- **Post-implementation review runs the opposite way.** Right after `/adr-impl`, `/adr-impl-review` treats the **ADR as the spec** and checks whether the code honored its decisions (report-only — it edits neither code nor ADR). `/adr-sync` treats the **code as authoritative** and repairs impl-fact drift in the ADR. When the former finds an `[Impl-fact mismatch]` (a fact where code is authoritative), it routes to the latter.
 - **Maintenance is a separate, repeating phase.** `/adr-sync` reconciles ADRs with shipping code, repairs drift, checks category/`dependsOn` integrity, and proposes canonicalizing any legacy `fN` naming (applied only after you confirm). `/adr-rollup` is reached from sync only when one decision's evolution history is scattered across several ADRs.
 - **The hook runs underneath all of it.** Every user turn, `UserPromptSubmit` re-injects the mapping snapshot and the ADR-first directive so the agent checks ADRs before changing behavior — this is what keeps the cycle intact across a long, compacted session.
 
@@ -112,12 +116,13 @@ In both flows the hook runs automatically once adr-writer is installed — every
 
 ### adr-writer
 
-| Command                          | Role                                                                                                  |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `/adr-new <category>`            | Author a new ADR directly — the default path, no ALPS PRD required                                    |
-| `/adr-impl [id]`                 | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build |
-| `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                    |
-| `/adr-rollup [category]`         | Consolidate only ADR groups whose evolution history of one logical decision is split (no arg → all)   |
+| Command                          | Role                                                                                                              |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `/adr-new <category>`            | Author a new ADR directly — the default path, no ALPS PRD required                                                |
+| `/adr-impl [id]`                 | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build             |
+| `/adr-impl-review [id]`          | Review just-implemented code against its ADR — decision fidelity, best-practice patterns, refactors (report-only) |
+| `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                |
+| `/adr-rollup [category]`         | Consolidate only ADR groups whose evolution history of one logical decision is split (no arg → all)               |
 
 ## Hook behavior
 

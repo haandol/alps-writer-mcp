@@ -45,6 +45,7 @@ flowchart TD
 
     subgraph maint["유지보수 — 반복"]
         direction TB
+        Review(["/adr-impl-review [category]<br/>구현 코드가 ADR 결정을 지켰는지<br/>· 베스트 프랙티스 · 리팩토링 (보고만)"])
         Sync(["/adr-sync [category] [--quick]<br/>drift 수리 · 카테고리 무결성<br/>· stale fN canonical화 · status↔본문 정합"])
         Rollup(["/adr-rollup [category]<br/>한 결정의 진화 체인 통합"])
     end
@@ -55,7 +56,9 @@ flowchart TD
     S7 -.->|"Section 7 + 6.3 읽기<br/>(alps-writer → adr-writer, 단방향·1회)"| F2A
     ADROnly --> New
     Proposed --> Impl
-    Accepted --> Sync
+    Accepted --> Review
+    Review -->|"결정 충실도 확인 후"| Sync
+    Review -.->|"구현 사실 drift 발견"| Sync
     Sync -->|"다음 사이클"| Impl
     Sync -.->|"진화 이력이 여러 ADR 로 분산?"| Rollup
     Rollup -.-> Sync
@@ -67,7 +70,7 @@ flowchart TD
 
     classDef cmd fill:#e8f0fe,stroke:#4285f4,color:#111;
     classDef gate fill:#fef7e0,stroke:#f9ab00,color:#111;
-    class AlpsInit,F2A,New,Impl,Sync,Rollup,ADROnly cmd;
+    class AlpsInit,F2A,New,Impl,Review,Sync,Rollup,ADROnly cmd;
     class Gate gate;
 ```
 
@@ -76,6 +79,7 @@ flowchart TD
 - **두 진입점.** PRD-first 는 `/alps-init` 에서 시작해 `/feature-to-adr` 로 ADR 레이어에 넘어간다(alps-writer 가 adr-writer 에 넘기는 유일한 지점 — 단방향). ADR-only 는 PRD 없이 `/adr-new` 에서 바로 시작한다.
 - **`/feature-to-adr` 는 얇은 일회성 importer** 다. Section 7 + 6.3 을 읽어 이름 기반 canonical 카테고리 키를 만들고 작성은 `/adr-new` 에 위임하며, 매핑에는 `dependsOn` 만 보강한다. PRD 가 나중에 바뀌면 재import 하지 않고 해당 ADR 을 직접 편집(또는 supersede)한다.
 - **의존성 게이트는 필수.** `/adr-impl` 은 곧장 코딩으로 가지 않고 `dependsOn` 을 전이적으로 따라가, 선행이 `Proposed`/dangling 이면 그것부터 위상 순서로 구현한다. Status 는 테스트 통과 후에만 `Accepted` 로 바뀐다(의도가 아니라 사실의 기록).
+- **구현 후 검토는 방향이 반대다.** `/adr-impl-review` 는 구현 직후 **ADR 을 스펙**으로 삼아 코드가 결정을 지켰는지 본다(보고만, 코드·ADR 미수정). `/adr-sync` 는 **코드를 권위**로 삼아 ADR 의 구현 사실 drift 를 정정한다. 전자가 `[Impl-fact mismatch]`(코드가 권위인 사실 불일치)를 찾으면 후자로 라우팅한다.
 - **`/adr-impl` 은 카테고리 키로 대상을 찾는다.** Feature ID 는 어디에도 저장하지 않으며, 번호뿐인 fallback 키(`f1`)도 평범한 리터럴 카테고리 키로 해석된다.
 - **hook 이 사이클을 지탱한다.** 매 턴 `.mapping.json` 인덱스 스냅샷과 ADR-first 지시를 재주입해 긴 세션(compaction)에서도 흐름이 유지된다.
 

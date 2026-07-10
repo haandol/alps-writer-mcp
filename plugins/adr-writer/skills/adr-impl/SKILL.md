@@ -104,7 +104,7 @@ disable-model-invocation: true
 
      이 검사는 Status 를 `Accepted (YYYY-MM-DD)` 로 바꾼 편집이 형식에 맞는지(R1), `.mapping.json` `adrs[]` 의 `status` 가 방금 바꾼 본문 `## Status` 와 정합한지(R8 status-index-mismatch), 코드에 ADR 역참조가 새로 남지 않았는지(R17, 내부 `adr-invariants.sh --code-only`)를 기계적으로 잡아준다. `error` 가 나오면 커밋 전에 고친다.
 
-   - 그런 다음 변경된 코드와 ADR 의 **의미적** 정합(회색지대 결정 ↔ 코드 동작)을 `/adr-sync <category>` 로 확인한다 — 하네스는 형식·정합을, sync 는 결정 drift 를 본다.
+   - 그런 다음 **구현이 ADR 의 결정을 충실히 따랐는지** `/adr-impl-review <category>` 로 검토한다 (보고만 — 코드·ADR 미수정). 회색지대 결정이 코드에 실제로 반영됐는지·베스트 프랙티스 패턴·리팩토링 기회를 격리 컨텍스트에서 본다. 여기서 `[Impl-fact mismatch]`(ADR 의 구현 사실이 코드와 다름 — 코드가 권위) 가 나오면 이어서 `/adr-sync <category>` 로 ADR 을 코드에 맞춰 정정한다 — impl-review 는 ADR 을 스펙으로, sync 는 코드를 권위로 보는 반대 방향의 점검이다.
 
 **금지**:
 
