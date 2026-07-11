@@ -7,6 +7,7 @@
 - **`.mapping.json` 은 단일 ADR 인덱스**다 — 카테고리별로 각 ADR 을 `{path, status, summary}` 로 한 번씩 담고 `dependsOn` 을 기록한다. README 는 ADR 목록을 두지 않으며(개념 인덱스만), UserPromptSubmit hook 이 이 인덱스를 매 턴 렌더한다.
 - **adr-writer 는 standalone** 이다 — 매핑은 코드 경로도 PRD 참조도 저장하지 않는다. `/feature-to-adr` 가 ALPS 를 읽는 것은 **최초 1회 import** 뿐이고, 그 뒤 결정은 ADR 레벨에서 관리된다.
 - **의존은 단방향(PRD → ADR → 코드)** 이고, 어느 산출물도 다른 산출물을 본문에서 직접 가리키지 않는다.
+- **ADR 본문 = 현재 상태, decision-log.md = 주요 변경 이력.** ADR 은 현재 코드를 설명하는 요구사항 문서이고, 진화의 시간축은 카테고리별 `decision-log.md`(컨벤션 파일, 미인덱스)가 보존한다. 진화는 edit-in-place + 로그가 기본이며 supersede 는 결정 주제 분기에만 예약된다.
 
 ## 1. 전체 라이프사이클
 
@@ -80,6 +81,7 @@ flowchart TD
 - **`/feature-to-adr` 는 얇은 일회성 importer** 다. Section 7 + 6.3 을 읽어 이름 기반 canonical 카테고리 키를 만들고 작성은 `/adr-new` 에 위임하며, 매핑에는 `dependsOn` 만 보강한다. PRD 가 나중에 바뀌면 재import 하지 않고 해당 ADR 을 직접 편집(또는 supersede)한다.
 - **의존성 게이트는 필수.** `/adr-impl` 은 곧장 코딩으로 가지 않고 `dependsOn` 을 전이적으로 따라가, 선행이 `Proposed`/dangling 이면 그것부터 위상 순서로 구현한다. Status 는 테스트 통과 후에만 `Accepted` 로 바뀐다(의도가 아니라 사실의 기록).
 - **구현 후 검토는 방향이 반대다.** `/adr-impl-review` 는 구현 직후 **ADR 을 스펙**으로 삼아 코드가 결정을 지켰는지 본다(보고만, 코드·ADR 미수정). `/adr-sync` 는 **코드를 권위**로 삼아 ADR 의 구현 사실 drift 를 정정한다. 전자가 `[Impl-fact mismatch]`(코드가 권위인 사실 불일치)를 찾으면 후자로 라우팅한다.
+- **진화 이력은 ADR 본문이 아니라 decision-log 에 산다.** ADR 본문은 현재 상태만 서술하고, 같은 결정이 진화하면 edit-in-place 로 덮어쓴다. major 전환(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전)은 카테고리별 `decision-log.md` 에 역순 한 줄로 남긴다 — `/adr-impl`·`/adr-sync` 가 append/harvest 하고, `/adr-rollup` 은 통합 시 체인의 major 전환을 로그로 harvest 한 뒤 현재 상태 통합본만 남긴다. 로그는 컨벤션 파일이라 `.mapping.json` 에 등록하지 않고 하네스가 검사하지 않는다. supersede(새 ADR)는 결정 주제가 분기할 때만 — evolution chain 을 기본으로 쌓지 않는다.
 - **`/adr-impl` 은 카테고리 키로 대상을 찾는다.** Feature ID 는 어디에도 저장하지 않으며, 번호뿐인 fallback 키(`f1`)도 평범한 리터럴 카테고리 키로 해석된다.
 - **hook 이 사이클을 지탱한다.** 매 턴 `.mapping.json` 인덱스 스냅샷과 ADR-first 지시를 재주입해 긴 세션(compaction)에서도 흐름이 유지된다.
 

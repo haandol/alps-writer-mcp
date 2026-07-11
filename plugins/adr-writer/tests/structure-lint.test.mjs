@@ -395,6 +395,44 @@ test("CLI: an on-disk ADR absent from mapping is an index orphan", () => {
   });
 });
 
+test("CLI: a decision-log.md in a category folder is invisible to the harness (not an ADR)", () => {
+  // decision-log.md is a convention file, not an ADR: it is NOT registered in
+  // .mapping.json and must not trip index-orphan-mapping, filename, or any
+  // per-ADR check. findAdrFiles only enumerates ^NNNN-*.md, so the log — which
+  // starts with 'd' — is never seen as an ADR. This locks in that guarantee.
+  withTmp((dir) => {
+    seedClean(dir);
+    write(
+      dir,
+      "docs/adr/identity/login/decision-log.md",
+      `# Decision Log: identity/login
+
+이 문서는 identity/login 카테고리의 주요 결정 변경 이력이다.
+
+## 2026-07-02 — 비밀번호 해시를 argon2 에서 bcrypt 로 교체
+
+- **현재 ADR**: [password-policy](./0001-password-policy.md)
+- **변경 유형**: 채택 대안 교체
+- **무엇이**: argon2id → bcrypt(최소 12자)
+- **왜**: 운영 표준 라이브러리 가용성
+`,
+    );
+    // structural lint (no invariants): still clean — log is not enumerated.
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, JSON.stringify(r.errors));
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.errors, []);
+    // full run (with adr-invariants.sh check (a)): the log's ADR link lives
+    // under docs/adr/ so the (a) post-filter drops it — no code→ADR violation.
+    const full = parseLint(dir, [], { full: true });
+    assert.equal(full.code, 0, JSON.stringify(full.errors));
+    assert.deepEqual(
+      full.errors.filter((e) => e.rule === "invariants"),
+      [],
+    );
+  });
+});
+
 test("CLI: no docs/adr dir → clean exit 0 (nothing to lint)", () => {
   withTmp((dir) => {
     const { code } = runStructureLint(dir, ["--no-invariants"]);

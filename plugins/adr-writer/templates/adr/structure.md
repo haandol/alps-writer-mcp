@@ -17,6 +17,7 @@ docs/adr/
 ├── .mapping.json     # ADR 레지스트리/인덱스 (adrs·dependsOn·subdomainType. 코드 경로도 PRD 참조도 저장 안 함)
 ├── identity/                       # BOUNDED CONTEXT (core subdomain)
 │   ├── 0001-token-rotation.md      # context 전반 cross-cutting 결정 (부모 폴더 직속)
+│   ├── decision-log.md             # (선택) 이 카테고리의 major 결정 변경 이력 — 컨벤션 파일, 매핑 미등록
 │   ├── login/                      # 피쳐 (vertical slice — UI/API/Data 모두 포함)
 │   │   └── NNNN-kebab-title.md
 │   └── signup/                     # 피쳐
@@ -69,7 +70,8 @@ docs/adr/
 │   ├── 0001-token-rotation.md   # identity 전반에 걸친 cross-cutting 결정 (부모에 그대로)
 │   ├── login/                   # 피쳐 (vertical slice)
 │   │   ├── 0001-password-policy.md
-│   │   └── 0002-rate-limit.md
+│   │   ├── 0002-rate-limit.md
+│   │   └── decision-log.md      # (선택) login 피쳐의 major 결정 변경 이력
 │   └── signup/
 │       └── 0001-email-verification.md
 └── ordering/
@@ -201,6 +203,15 @@ bounded context(도메인) 폴더가 기본이고, 그 안의 피쳐가 UI → A
 - `adrs` — 이 카테고리에 속한 ADR 레코드 배열. 각 항목은 `{ path, status, summary }` 객체다: `path` 는 repo-relative ADR 경로, `status` 는 ADR 본문의 `## Status` 줄을 그대로 미러링(`Proposed` | `Accepted (YYYY-MM-DD)` | `Deprecated (YYYY-MM-DD)` | `Superseded by [ADR ...](...)`), `summary` 는 Key Decision 한 줄 요약이다. **이 배열이 곧 ADR 인덱스다** — README 는 별도 목록을 두지 않고, UserPromptSubmit hook 이 이 레코드를 매 턴 렌더링한다. `status`·`summary` 는 본문이 바뀔 때 함께 갱신한다 (status 는 `/adr-impl`·`/adr-sync` 가 본문 `## Status` 와 lockstep 으로 유지).
 - `subdomainType` — context 의 DDD subdomain 분류(`core`/`supporting`/`generic`). **선택적·advisory 메타데이터**다: 강제되지 않고, `/adr-new` 가 매번 묻지 않으며, 있으면 `/adr-sync`·hook 스냅샷이 도메인별 그룹핑/주석으로 표시한다. context 수준 entry(최상위 세그먼트, 또는 단일-피쳐 평면 entry)에 둔다 — 피쳐 sub-folder entry 는 개념적으로 부모 context 의 분류를 상속하므로 생략해도 된다. 알 수 없으면 생략한다 (없어도 매핑은 유효하다).
 - `dependsOn` — 이 카테고리가 의존하는 선행 카테고리 키 배열. `/adr-impl` 의 선행 게이트가 읽어 선행 ADR 을 먼저 구현하도록 정렬한다. ALPS 가 있으면 `/feature-to-adr` 가 Section 6.3 에서 옮겨오고, ALPS 없이 `/adr-new` 로 직접 작성하면 작성자가 지목한 선행을 기록한다. **기존 카테고리 키만 참조하고 비순환(self-edge 금지)을 유지**한다 — `/adr-sync` 6단계가 dangling·순환을 점검한다. 엣지는 **context 경계를 가로질러도 된다** (예: `catalog/search` 가 `identity/login` 에 의존 — DDD context 사이 관계가 ADR 의존으로 나타난 정상 케이스).
+
+### 결정 로그 (decision-log.md) — 매핑에 등록하지 않는 컨벤션 파일
+
+각 카테고리 폴더(`docs/adr/<category>/`)는 선택적으로 `decision-log.md` 하나를 둘 수 있다 — 그 카테고리의 **major 결정 변경 이력**(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전·폐기)을 역순으로 담는 파일이다. ADR 본문은 현재 상태만 서술하므로, "무엇이 왜 바뀌었나" 의 시간축은 이 로그가 보존한다. 기록 기준·포맷은 `authoring-rules.md` "결정 로그 (decision-log.md)".
+
+- **`.mapping.json` 에 등록하지 않는다** — 로그는 ADR 이 아니라 컨벤션 파일이다. 매핑 스키마에 `decisionLog` 같은 필드를 두지 않으며(엔트리는 `additionalProperties:false`), 스킬은 카테고리 폴더에서 존재 여부만 확인한다.
+- **결정론적 하네스가 검사하지 않는다** — `adr-structure-lint` 는 `NNNN-` 로 시작하는 파일만 ADR 로 열거하므로 `decision-log.md` 는 per-ADR 검사·인덱스 정합·orphan 검사 어디에도 걸리지 않는다. `/adr-sync` 의 디스크 ADR 전수 조회도 이 파일을 제외한다.
+- **참조 방향은 log → ADR 단방향** — 로그는 `현재 ADR` 링크만 담고 코드·PRD 를 참조하지 않는다. ADR 본문(Related 포함)은 로그를 역으로 링크하지 않는다.
+- 생성·갱신 주체: `/adr-impl`·`/adr-sync`(major 결정 변경 시 append/harvest), `/adr-rollup`(체인의 major 전환 harvest). 자세한 흐름은 각 스킬 참조.
 
 ### 관련 코드 찾기
 

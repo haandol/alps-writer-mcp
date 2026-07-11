@@ -1,20 +1,21 @@
 ---
 name: adr-rollup
-description: Roll up ADRs so each logical decision lives in exactly one current-state ADR, aligned to the shipping code. Default scope is **every category** when no argument is given; an argument narrows to one category or an explicit ADR bundle. Within each category, merge the evolution chain of the same logical decision (refine / supersede / replace) into its lowest-numbered ADR and delete the rest — distinct decisions and separate categories stay untouched. Keywords - "adr rollup", "ADR 정리", "ADR 개수 줄이기", "같은 결정 합치기", "evolution chain merge", "Superseded chain 정리".
+description: Roll up ADRs so each logical decision lives in exactly one current-state ADR, aligned to the shipping code. Default scope is **every category** when no argument is given; an argument narrows to one category or an explicit ADR bundle. Within each category, merge the evolution chain of the same logical decision (refine / supersede / replace) into its lowest-numbered ADR, harvest the chain's major transitions into the category's decision-log.md, and delete the rest — distinct decisions and separate categories stay untouched. Keywords - "adr rollup", "ADR 정리", "ADR 개수 줄이기", "같은 결정 합치기", "evolution chain merge", "Superseded chain 정리".
 argument-hint: "[category-or-adr-bundle?]"
 disable-model-invocation: true
 ---
 
 # adr-rollup
 
-목표는 **하나의 logical decision = 하나의 현재 상태 ADR**이다. 같은 결정이 v1 → v2 → v3로 여러 ADR에 진화 히스토리로 흩어져 있으면, 최신 코드가 실제로 하는 결정만 남도록 그 체인을 하나로 합친다. evolution history를 여러 ADR에 분산해 들고 있을 이유가 없다 — 최종 상태 하나만 보면 최신 코드의 비즈니스·기술 결정을 읽을 수 있고, 옛 버전은 Git 히스토리가 보존한다.
+목표는 **하나의 logical decision = 하나의 현재 상태 ADR**이다. 같은 결정이 v1 → v2 → v3로 여러 ADR에 진화 히스토리로 흩어져 있으면(과거 evolution-chain 모델의 잔재), 최신 코드가 실제로 하는 결정만 남도록 그 체인을 하나로 합친다. evolution history를 여러 ADR에 분산해 들고 있을 이유가 없다 — 최종 상태 하나만 보면 최신 코드의 비즈니스·기술 결정을 읽을 수 있다. 단 체인이 담고 있던 **주요 전환**(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전 등)은 지우지 않고 카테고리의 `decision-log.md` 로 **harvest** 한다 — 개별 diff 는 Git 히스토리가 보존하지만, "왜 갈아치웠나" 의 추적 가능한 시간축은 로그에 남긴다 (`authoring-rules.md` "결정 로그 기록 기준").
 
 **ADR 개수를 줄이는 게 목적이 아니다.** 목적은 "흩어진 진화 히스토리를 결정 단위로 정돈"하는 것이고, 개수 감소는 그 결과일 뿐이다. 적정 ADR 수는 그 카테고리에 실제로 존재하는 서로 다른 logical decision의 수다 — 서로 다른 결정을 개수를 줄이려고 한 ADR에 욱여넣지 않는다. 합칠 체인이 없으면 한 건도 합치지 않는 게 정답이다.
 
-두 가지를 동시에 한다:
+세 가지를 동시에 한다:
 
 1. **코드 정합(code-first)**: 통합본의 내용은 "옛 ADR들이 뭐라고 적었나"가 아니라 **현재 코드가 실제로 무엇을 하는가**를 기준으로 쓴다. 단 코드가 source of truth 인 범위는 **구현 사실·Status 에 한정**된다 — 회색지대 결정(채택 근거·대안·도메인 규칙·상태 전이·fallback·키 디자인의 의도)은 코드가 아니라 체인의 ADR 에서 살려 적는다. 코드가 그 결정과 모순되면 통합본을 코드에 맞춰 덮어쓰지 말고 5단계 3번의 분기를 따른다 (그러지 않으면 코드 변경이 ADR 을 끌고 다녀 PRD → ADR → 코드 단방향이 깨진다).
-2. **관리 가능한 개수로(merge)**: 같은 결정의 체인을 가장 낮은 번호 ADR로 합치고 나머지는 삭제해, 분산된 진화 히스토리를 관리 가능한 개수의 ADR로 줄인다.
+2. **주요 이력 harvest(log)**: 체인이 담고 있던 major 전환을 카테고리 `decision-log.md` 로 옮긴다 — 통합본 본문은 현재 상태만 서술하되, "이 결정이 어떤 전환을 거쳐 지금에 이르렀나" 의 시간축은 로그에 역순으로 남긴다 (9단계).
+3. **관리 가능한 개수로(merge)**: 같은 결정의 체인을 가장 낮은 번호 ADR로 합치고 나머지는 삭제해, 분산된 진화 히스토리를 관리 가능한 개수의 ADR로 줄인다.
 
 ## 범위 (Scope)
 
@@ -108,7 +109,7 @@ Date: <오늘>
 **규칙**:
 
 0. **Status는 "현재 코드 상태"를 따른다**: 통합 대상이 구현·운영 중이면 `Accepted (오늘 날짜)`. 통합본의 일부가 아직 코드에 없다면 그 부분은 별도 ADR로 분리하거나 통합본을 `Proposed`로 두고 `/adr-impl`에서 자동 승격되게 한다 — 사용자에게 묻지 않는다.
-1. **Seamless merge**: 결과물에 rollup 흔적을 남기지 않는다. 파일명·제목·README 링크에 `(Roll-up)` 표기 금지. Evolution History 섹션도 만들지 않는다 — Git이 source of truth.
+1. **Seamless merge**: 결과물에 rollup 흔적을 남기지 않는다. 파일명·제목·README 링크에 `(Roll-up)` 표기 금지. **ADR 본문에 Evolution History 섹션을 만들지 않는다** — 본문은 현재 상태만 서술한다. 체인이 담고 있던 major 전환의 근거는 버리지 않고 9단계에서 `decision-log.md` 로 harvest 하며, 개별 diff 는 Git 이 보존한다.
 2. **현재 상태만 서술**: "~를 추가했다" 대신 "~로 구성된다".
 3. **Decision Drivers / 대안 ≥2 유지**: 통합본도 일반 ADR 작성 규칙(`authoring-rules.md`)을 그대로 따른다. 체인 어딘가에 있던 진짜 대안을 살려 적는다.
 4. **중요 결정 유지**: 상태 전이, 행동 규칙, 엔티티 관계, 연동 방식, 비즈니스 로직.
@@ -124,12 +125,12 @@ Date: <오늘>
 2. 각 주장을, ADR Decision 키워드로 찾은 관련 코드에서 grep으로 검증.
 3. **불일치 발견 시 — `adr-sync` "source of truth 의 범위"와 동일하게 분기한다** (코드가 권위인 범위는 구현 사실·Status 에 한정된다. 회색지대 결정까지 코드에 맞춰 덮으면 코드 변경이 ADR 을 끌고 다녀 PRD → ADR → 코드 단방향이 깨진다):
    - **구현 사실·Status (코드가 권위)** — API 표·error code·enum·필드 이름·키 패턴·Status 실재 여부가 코드와 다르면 통합 ADR 을 코드에 맞춰 정정한다. (이건 코드가 자연히 앞서는 정상 방향이다.)
-   - **회색지대 결정 (ADR 이 권위)** — 채택 근거·대안·도메인 규칙·상태 전이·외부 의존 fallback·키 디자인의 _의도_ 가 코드와 **모순**되면 통합본을 코드에 맞춰 조용히 고치지 **않는다**. 이건 누군가 ADR-first 사이클을 건너뛰고 결정을 바꾼 신호다 — 8단계 보고의 `[Code re-alignment needed] <category>` 버킷에 기록하고 "의도된 결정 변경인가 위반인가"를 사용자에게 묻는다 (결정 변경이면 ADR 먼저 갱신, 위반이면 코드 정정 대상). rollup 이 단독으로 판정해 ADR 을 덮어쓰지 않는다.
+   - **회색지대 결정 (ADR 이 권위)** — 채택 근거·대안·도메인 규칙·상태 전이·외부 의존 fallback·키 디자인의 _의도_ 가 코드와 **모순**되면 통합본을 코드에 맞춰 조용히 고치지 **않는다**. 이건 누군가 ADR-first 사이클을 건너뛰고 결정을 바꾼 신호다 — 10단계 보고의 `[Code re-alignment needed] <category>` 버킷에 기록하고 "의도된 결정 변경인가 위반인가"를 사용자에게 묻는다 (결정 변경이면 ADR 먼저 갱신, 위반이면 코드 정정 대상). rollup 이 단독으로 판정해 ADR 을 덮어쓰지 않는다.
 4. **검증 범위**: 아키텍처 수준의 결정만. 구현 상수·튜닝값·파일 경로는 검증 대상이 아니다.
 
 ### 6. 체인의 나머지 ADR 삭제
 
-체인 안의 더 높은 번호 ADR 파일을 삭제한다 (Deprecated로 남기지 않음). Git 히스토리에 원본이 보존된다. 이 시점엔 결번이 생기지만 그대로 두고, 마지막 9단계(번호 정리)에서 한 번에 메운다.
+체인 안의 더 높은 번호 ADR 파일을 삭제한다 (Deprecated로 남기지 않음). 삭제 전에 그 파일들이 담은 major 전환은 9단계 harvest 로 `decision-log.md` 에 보존되고, 개별 diff 는 Git 히스토리에 남는다. 이 시점엔 결번이 생기지만 그대로 두고, 7단계(번호 정리)에서 한 번에 메운다.
 
 같은 카테고리에 있더라도 **다른 logical decision을 다루는 ADR은 절대 삭제하지 않는다.** 삭제는 항상 묶음 단위.
 
@@ -167,7 +168,25 @@ renumber 로 경로가 바뀐 ADR 은 8단계의 cross-reference 갱신에서 �
   - 두 플래그를 분리해 넘기므로 스크립트가 `(c)`/`(d)` 로 구분 출력하고, "통합본으로" vs "새 번호로" repoint 를 혼동하지 않는다. 이 grep 은 코드→ADR·ADR→PRD 검사와 같은 source of truth 다.
   - **이 finder 는 repoint 전(前) 대상 locator 이지 사후 검증 게이트가 아니다.** renumber 가 번호를 재사용하므로(0003→0002 등), repoint 를 끝낸 뒤 같은 인자로 다시 돌리면 **새로 올바르게 배치된 파일을 오탐**한다 — 예: `--removed payment/0002` 는 방금 renumber 된 새 `0002-...md` 를, `--renumbered payment/0003:...` 는 새 `0003-...md` 를 다시 잡는다(finder 는 kebab 무시하고 `<cat>/NNNN` 번호 토큰만 매칭). repoint 를 마쳤는지 확인하는 **사후 오라클은 `adr-structure-lint` 의 `related-broken`(0 이어야 함) + 삭제/옛 kebab 파일명 grep(0 이어야 함)** 이다. 이 finder 는 repoint 를 시작하기 전 한 번만 쓴다.
 
-### 9. 사용자 확인
+### 9. 주요 이력 harvest → decision-log.md (맨 마지막)
+
+체인이 담고 있던 **major 전환**을 카테고리 `docs/adr/<category>/decision-log.md` 로 옮긴다. 이 단계는 8단계 이후 **맨 마지막**에 수행한다 — 8단계의 stale-citation finder(`--removed/--renumbered`)는 **로그를 쓰기 전** 기존 트리를 스캔하는 사전 locator 이므로, 로그를 먼저 만들면 finder 가 방금 쓴 로그 엔트리를 오탐한다 (그래서 harvest 는 finder·repoint 가 끝난 뒤에 온다).
+
+무엇을 남기는가 (`authoring-rules.md` "결정 로그 기록 기준" — major 만):
+
+- 채택 대안 교체, Decision Driver 반전, 핵심 알고리즘·아키텍처 변경, 동작을 바꾸는 핵심 버그 수정, `Superseded` 멤버가 대체했던 옛 결정 방향, 대체 없이 폐기된 결정.
+- 체인의 각 전환마다 로그 엔트리 하나. 날짜는 그 전환이 실제로 일어난 시점을 알 수 있으면(옛 ADR 의 `Date:`·Status 전환일·git 로그) 그것을, 모르면 오늘로 둔다.
+- **minor 는 harvest 하지 않는다** — 임계값 미세 조정·표현·구현 사실 정정은 로그에 넣지 않는다 (Git 이 보존). 로그를 노이즈로 채우지 않는다.
+
+포맷·규칙은 `authoring-rules.md` "결정 로그 (decision-log.md)" 를 그대로 따른다. rollup 이 특히 지켜야 할 것:
+
+- **프로즈에 옛 ADR 번호를 박지 않는다.** 각 엔트리는 `현재 ADR` 링크 한 줄로만 **통합(survivor) ADR 의 최종 경로**(7단계 renumber 후 번호)를 가리킨다. 옛 번호(0002, 0003…)를 본문 텍스트에 적으면, 이후 rollup 의 `scan_citation` 이 로그를 stale 인용으로 오탐한다.
+- 로그가 없으면 새로 만들고, 있으면 역순(최신 먼저) 맨 위에 엔트리를 추가한다.
+- **삭제하는 `Superseded`/체인 멤버의 회색지대 근거는 harvest 로 보존된다** — 통합본(현재 상태) + 로그(전환 이력)가 함께 옛 결정을 담으므로, 삭제로 결정이 유실되지 않는다.
+
+harvest 는 `.mapping.json` 을 건드리지 않는다 (로그는 컨벤션 파일, 미인덱스 — `structure.md`).
+
+### 10. 사용자 확인
 
 저장(삭제 포함) 전까지 변경 요약을 제시하고 승인을 받는다. 전체 범위 실행이면 카테고리별로 묶어 보고한다.
 
@@ -180,6 +199,7 @@ renumber 로 경로가 바뀐 ADR 은 8단계의 cross-reference 갱신에서 �
 - 핵심 결정: <1-2문장, 현재 코드 기준>
 - 코드 정합: <검증한 주장과 코드에 맞춰 고친 부분>
 - 제거된 내용: <이미 해결된 리스크, 폐기된 접근 등>
+- decision-log 반영: <harvest 한 major 전환 개수와 요약, 예: 채택 대안 교체 1건·아키텍처 변경 1건> (harvest 한 게 없으면 생략)
 - 번호 정리: <renumber 된 파일 옛→새, 예: 0004→0002, 0005→0003> (바뀐 게 없으면 생략)
 
 ### 통합되지 않은 같은 카테고리 ADR
@@ -202,7 +222,7 @@ renumber 로 경로가 바뀐 ADR 은 8단계의 cross-reference 갱신에서 �
 
 ## Notes
 
-- Roll-up은 **정보 손실이 아니라 정보 압축**이다. 중요한 결정 누락 금지.
+- Roll-up은 **정보 손실이 아니라 정보 압축**이다. 중요한 결정 누락 금지 — 통합본(현재 상태) + `decision-log.md`(major 전환 이력)가 함께 체인의 결정을 보존한다.
 - 의심스러우면 합치지 않는다. 분리 상태가 안전하다.
 - 코드가 source of truth 인 것은 **구현 사실·Status 에 한정**된다 — 이것들이 코드와 충돌하면 통합본을 코드에 맞춰 정정한다. 반면 **회색지대 결정(채택 근거·도메인 규칙·상태 전이·fallback·키 디자인의 의도)은 ADR 이 권위**다. 코드가 이 결정과 모순되면 통합본을 코드에 맞춰 덮어쓰지 말고 5단계 3번처럼 "결정 변경 vs 위반"으로 분기해 사용자에게 묻는다. 회색지대 결정까지 코드에 맞추면 코드 변경이 ADR 을 끌고 다녀 PRD → ADR → 코드 단방향이 깨진다 (`adr-sync` "source of truth 의 범위"와 같은 프레이밍).
 
@@ -210,6 +230,6 @@ renumber 로 경로가 바뀐 ADR 은 8단계의 cross-reference 갱신에서 �
 
 7단계 renumber 는 repo 안의 참조를 8단계에서 모두 정정하지만, repo 밖·이력 도구에는 영향이 남는다. 손실이 아니라 trade-off 이므로 인지하고 진행한다:
 
-- **외부 링크는 깨진다**: 옛 경로(`docs/adr/<cat>/0004-...md`)를 가리키던 PR·이슈·위키·북마크의 URL 은 renumber 후 404 가 된다 (GitHub 은 파일 rename 에 리다이렉트를 주지 않는다). 자주 인용되는 ADR 을 renumber 한다면 8단계 보고에 "옛 경로 → 새 경로" 표를 남겨 사용자가 외부 참조를 갱신할 수 있게 한다.
+- **외부 링크는 깨진다**: 옛 경로(`docs/adr/<cat>/0004-...md`)를 가리키던 PR·이슈·위키·북마크의 URL 은 renumber 후 404 가 된다 (GitHub 은 파일 rename 에 리다이렉트를 주지 않는다). 자주 인용되는 ADR 을 renumber 한다면 10단계 보고에 "옛 경로 → 새 경로" 표를 남겨 사용자가 외부 참조를 갱신할 수 있게 한다.
 - **git blame 해석**: `git mv` 로 옮겼으므로 라인 이력은 따라오지만, renumber 커밋 직후 `git blame` 은 모든 라인을 그 커밋의 rename 으로 표시할 수 있다. 실제 결정 변경 이력을 보려면 rename 을 건너뛰는 `git log --follow` 또는 rollup 커밋의 `git show` 로 본다.
 - 이 두 비용이 부담스러운 카테고리(예: 외부에서 영구 링크로 많이 참조됨)면, renumber 를 건너뛰고 결번을 유지하는 선택지를 사용자에게 제시할 수 있다 — 단 그건 split·sync 의 기본 동작(결번 유지)으로 돌아가는 것이고, rollup 의 "흔적 없음" 철학과는 trade-off 다.

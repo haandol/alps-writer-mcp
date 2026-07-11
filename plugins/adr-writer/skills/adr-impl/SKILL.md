@@ -42,7 +42,7 @@ disable-model-invocation: true
    5. **Proposed ADR 이 0 개** 면 _"모든 ADR 이 이미 구현되어 있습니다. 새 결정을 남기려면 `/adr-new <category>` 로 ADR 을 먼저 작성하세요. ALPS Section 7 feature 를 일괄 변환하려면 `/feature-to-adr` 를 사용해도 됩니다."_ 라고 안내하고 종료한다.
    6. **ADR 자체가 디스크에 한 개도 없으면** _"ADR 이 아직 없습니다. `/adr-new <category>` 로 직접 작성하거나, ALPS Section 7 feature 가 있다면 `/feature-to-adr` 로 변환한 뒤 다시 호출해주세요."_ 라고 안내하고 종료한다.
 
-   대상 ADR 이 식별되면 현재 Status 를 확인한다 — 이 명령은 `Proposed → Accepted` 전환을 자동 처리한다. 이미 `Accepted` 인 ADR 을 다시 구현 대상으로 받은 경우 부분 변경/보강 의도인지 사용자에게 한 번 확인하고 진행. 이때 **요구사항 변경으로 결정 자체가 바뀐 것**이면(단순 구현 정정이 아니라 — 판정은 `authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때" 참조), 새 결정을 코드에 반영하기 전에 Status 를 `Proposed` 로 되돌린 뒤 이 구현을 진행한다 (5단계 테스트 통과 후 6단계가 다시 `Accepted` 로 자동 승격한다 — `README.md` "자동 전환 규칙"). supersede 로 판정되면 `/adr-new` 로 새 ADR 을 만들어 옛 것을 `Superseded` 로 남기고 그 새 ADR 을 구현 대상으로 삼는다.
+   대상 ADR 이 식별되면 현재 Status 를 확인한다 — 이 명령은 `Proposed → Accepted` 전환을 자동 처리한다. 이미 `Accepted` 인 ADR 을 다시 구현 대상으로 받은 경우 부분 변경/보강 의도인지 사용자에게 한 번 확인하고 진행. 이때 **요구사항 변경으로 결정 자체가 바뀐 것**이면(단순 구현 정정이 아니라 — 판정은 `authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때" 참조), 새 결정을 ADR 본문에 현재 상태로 반영(edit-in-place)한 뒤 Status 를 `Proposed` 로 되돌리고 이 구현을 진행한다 (5단계 테스트 통과 후 6단계가 다시 `Accepted` 로 자동 승격한다 — `README.md` "자동 전환 규칙"). 그 결정 변경이 **major**(채택 대안 교체·Driver 반전·핵심 알고리즘/아키텍처 변경·동작 바꾸는 버그 수정 — `authoring-rules.md` "결정 로그 기록 기준")면 카테고리 `decision-log.md` 에 한 줄 남긴다. **결정 주제가 분기해 옛 결정을 별개 레코드로 공존**시켜야 할 때만 supersede 로 판정하고, 그때는 `/adr-new` 로 새 ADR 을 만들어 옛 것을 `Superseded` 로 남기고 그 새 ADR 을 구현 대상으로 삼는다 (supersede 도 major 이므로 로그에 남긴다).
 
    **대상이 식별되면 어떤 경우에도 곧바로 3단계(계획)로 가지 않는다. 반드시 2단계 의존성 확인을 먼저 수행한다.** 단일 ADR 이든, 사용자가 `1,2` / `f1, f2` 처럼 여러 개를 한 번에 고른 경우든 예외 없이 2단계를 거친다.
 
@@ -80,7 +80,7 @@ disable-model-invocation: true
 4. **구현**
    - 작은 단위로 Edit/Write.
    - ADR에 명시된 행동 규칙·상태 전이·연동 방식을 그대로 따른다. ADR과 다르게 구현하려면 먼저 ADR을 수정한다.
-   - 구현 도중 ADR의 회색지대 결정(채택 근거·도메인 규칙·상태 전이·fallback)을 바꿔야겠다고 판단되면, 코드부터 고치지 말고 멈춰서 "의도된 결정 변경인가, 아니면 ADR을 지키는 게 맞는가"를 사용자와 분기한다 — 결정 변경이면 ADR을 먼저 갱신(또는 새 ADR로 supersede)한 뒤 같은 커밋에 담고, 아니면 ADR대로 구현한다. 코드가 회색지대 결정을 조용히 끌고 가면 PRD → ADR → 코드 단방향이 깨진다 (`adr-sync` "source of truth 의 범위"와 같은 프레이밍).
+   - 구현 도중 ADR의 회색지대 결정(채택 근거·도메인 규칙·상태 전이·fallback)을 바꿔야겠다고 판단되면, 코드부터 고치지 말고 멈춰서 "의도된 결정 변경인가, 아니면 ADR을 지키는 게 맞는가"를 사용자와 분기한다 — 결정 변경이면 ADR을 현재 결정으로 먼저 갱신(edit-in-place; 결정 주제가 분기하면 새 ADR로 supersede)한 뒤 같은 커밋에 담고, 아니면 ADR대로 구현한다. 그 변경이 **major**면(`authoring-rules.md` "결정 로그 기록 기준") 카테고리 `decision-log.md` 에도 한 줄 남긴다 — 로그 엔트리는 **결정을 바꾸는 이 시점**에 추가한다(6단계의 Status 자동 전환과는 별개다 — 로그는 결정을, Status 는 구현 사실을 기록). 코드가 회색지대 결정을 조용히 끌고 가면 PRD → ADR → 코드 단방향이 깨진다 (`adr-sync` "source of truth 의 범위"와 같은 프레이밍).
 
 5. **테스트**
    - 프로젝트의 테스트 명령(`AGENTS.md` 또는 `package.json` 참조)을 실행한다.

@@ -140,6 +140,12 @@ Proposed → Accepted → Deprecated
 - 상태 전환 시 날짜를 함께 기록한다: `Accepted (YYYY-MM-DD)`, `Deprecated (YYYY-MM-DD)`. **괄호 안에는 날짜만 넣는다** — `Accepted (2026-07-09)` 처럼 날짜 하나뿐이며, 그 뒤에 참조·feature-id·구현 설명 같은 부가 텍스트를 붙이지 않는다 (`Accepted (2026-07-09) — F1 구현`, `Accepted (2026-07-09, ref)` 모두 금지 — `adr-structure-lint` 가 `date-only` 로 잡는다). `Superseded`는 날짜 대신 후속 ADR 링크로 표기한다 (`Superseded by [ADR XXXX](link)`). `Proposed`에는 날짜를 붙이지 않는다 — 작성일은 본문 최상단 `Date:`(작성 시점, Status 전환일과 별개)에 두고, Status 줄의 날짜는 전환 시에만 기록한다.
 - `Implemented`, `Done`, `Completed` 같은 비공식 상태는 사용하지 않는다.
 
+### 진화 이력은 어디에 사는가 — decision-log.md
+
+ADR 본문은 **현재 코드 상태를 설명하는 요구사항 문서**다 — "처음엔 ~였다가 ~로 바꿨다" 같은 시간축 서술을 본문에 남기지 않는다. 같은 결정이 진화하면 **기존 ADR 을 현재 상태로 덮어쓰는 것(edit-in-place)이 기본**이고, 그 전환이 major(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전·폐기)면 카테고리별 `docs/adr/<category>/decision-log.md` 에 역순 한 줄로 남긴다. 새 ADR(supersede)은 결정 주제가 분기해 옛 결정을 별개 레코드로 공존시켜야 할 때만 만든다 (판정: [`authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때"](./authoring-rules.md#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정)).
+
+**세 층이 각자 다른 것을 보존한다**: ADR 본문 = 현재 상태 / `decision-log.md` = 주요 변경의 시간축 / Git = verbatim diff. 로그는 ADR 이 아닌 **컨벤션 파일**이라 `.mapping.json` 에 등록하지 않고 결정론적 하네스도 검사하지 않는다 — 기록 기준·포맷은 [`authoring-rules.md` "결정 로그 (decision-log.md)"](./authoring-rules.md#결정-로그-decision-logmd), 디렉토리·미인덱스 정책은 [`structure.md`](./structure.md#결정-로그-decision-logmd--매핑에-등록하지-않는-컨벤션-파일).
+
 ## ADR 템플릿
 
 ```markdown

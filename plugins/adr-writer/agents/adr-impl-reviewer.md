@@ -158,7 +158,7 @@ Verdict 기준:
 
 - `PASS`: **결정 원장의 모든 행이 `구현됨` 으로 닫힘**(따라서 `[Spec violation]` 0건 — 누락·다르게 구현·미확인이 모두 여기로 모이므로 이 한 조건이 원장이 닫혔음을 뜻한다), 기술 요구 충족, 규약 위반 없음. `[Refactor]`·`[Test gap]` 같은 advisory 만 있으면 여전히 PASS 로 두되 Findings 에 남긴다. 스코프를 못 좁혀 미확인으로 남은 행이 있으면 "위반 없음"이 아니라 "덜 봤음"이므로 PASS 를 내지 않는다.
 - `FIX_REQUIRED`: 후속 조치가 필요한 것이 하나라도 있음. verdict 는 하나지만 성격은 셋으로 갈리니 Findings 에서 구분된다 — **코드 수정**(`[Spec violation]`·`[Undecided behavior]`·`[Best practice]` 중 무게 `now`), **ADR 정정**(`[Impl-fact mismatch]` → sync), **사람 판정**(`[Decision changed in code]`·`[Undecided behavior]`). `[Best practice]` 무게 `next-cycle` 만 남았고 다른 must-fix 가 없으면 advisory 로 보고 PASS 로 둔다 (사소한 규약 위반이 verdict 를 부풀리지 않게).
-- `BLOCK`: ADR 이 정한 vertical slice 가 코드에서 레이어별로 조각나 결정 추적이 불가능하거나(재카테고리화·재구조화 필요), 카테고리 자체가 안티패턴이거나, `[Decision changed in code]` 가 결정 방향을 뒤집을 만큼 커서 새 ADR(supersede) 없이는 코드를 정당화할 수 없는 경우 — 메인 세션에 구조 조정을 알린다.
+- `BLOCK`: ADR 이 정한 vertical slice 가 코드에서 레이어별로 조각나 결정 추적이 불가능하거나(재카테고리화·재구조화 필요), 카테고리 자체가 안티패턴이거나, `[Decision changed in code]` 가 **결정 주제 자체를 분기시켜**(옛 결정과 새 결정이 각자 "현재 상태" 로 공존해야 함) 새 ADR(supersede) 없이는 코드를 정당화할 수 없는 경우 — 메인 세션에 구조 조정을 알린다. 반면 결정 방향만 뒤집힌 경우(채택 대안 교체·Driver 반전 등, 옛 결정이 더는 유효하지 않음)는 BLOCK 이 아니다 — ADR 본문을 현재 상태로 edit-in-place 하고 major 면 decision-log 에 남기는 것으로 흡수된다 (판정: `authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때").
 
 ## 금지 사항
 

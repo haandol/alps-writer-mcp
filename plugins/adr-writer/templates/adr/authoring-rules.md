@@ -142,31 +142,81 @@ API 엔드포인트 목록(Method, Path, 설명)은 아키텍처 결정의 일�
 
 비즈니스 요구사항이 바뀌어 기존 결정에 손을 대야 할 때, **제자리 수정(edit-in-place)** 과 **새 ADR로 대체(supersede)** 중 무엇을 할지 정하는 단일 기준이다. 자주 반복되는 판단이므로 즉흥적으로 정하지 않고 아래 체크리스트를 따른다. 이 절이 그 판정의 source of truth이며, 다른 스킬·문서는 이 절을 링크한다.
 
-판정 기준은 **"왜 이 선택이었나"(Context · Decision Drivers · 채택 근거)가 바뀌는가**이다.
+판정 기준은 **"왜 이 선택이었나"(Context · Decision Drivers · 채택 근거)가 바뀌는가**이다. 대부분의 변경은 **edit-in-place** — ADR 본문을 현재 코드 상태로 덮어쓴다. **새 ADR(supersede)은 예외**이고, edit-in-place 중 major 전환만 추가로 [결정 로그](#결정-로그-decision-logmd)에 한 줄 남긴다. 세 갈래다.
 
-**edit-in-place — 기존 ADR을 그 자리에서 고친다** (아래 중 하나라도 해당하고 "왜"가 그대로면):
+**① edit-in-place, 로그 없음 (minor)** — "왜"가 그대로이고 세부만 조정될 때:
 
 - Context / Decision Drivers / 채택 근거가 **그대로**이고, 세부만 조정된다.
-- 구현 사실을 정정한다 — Status, 엔티티명, API 표, 상태값 등 코드 직독으로 확인되는 것. (이건 `/adr-sync`의 "source of truth 범위: 구현 사실은 코드가 권위"와 같은 방향이다.)
+- 구현 사실을 정정한다 — Status, 엔티티명, API 표, enum, 상태값 등 코드 직독으로 확인되는 것. (이건 `/adr-sync`의 "source of truth 범위: 구현 사실은 코드가 권위"와 같은 방향이다.)
 - 회색지대 결정의 **미세 조정** — 방향은 유지한 채 임계·경계·예외를 다듬는 정도.
+- 표현·구조 정리.
 
-**supersede — 새 ADR을 만들고 옛 것을 `Status: Superseded by [ADR XXXX](link)`로 남긴다** (아래 중 하나라도 해당하면):
+**② edit-in-place, + 결정 로그 한 줄 (major)** — 결정의 방향은 유지하되(같은 주제를 여전히 하나의 현재-상태 레코드로 서술할 수 있음) "왜/무엇"이 실질적으로 바뀌어, 나중에도 참조할 가치가 있는 전환일 때. ADR 본문은 현재 상태로 재작성하고, 그 전환을 [결정 로그](#결정-로그-decision-logmd)에 남긴다:
 
-- **채택한 대안 자체가 바뀐다** (예: "낙관적 락" → "비관적 락"). 옛 근거를 history로 보존해야 한다.
-- **Decision Drivers가 뒤집힌다** — 결정을 좁히던 압력·제약이 달라졌다 (예: "PII 외부 반출 금지" 제약이 사라짐).
-- **결정 방향이 반대가 된다** — 하던 것을 안 하기로, 또는 그 역.
+- **채택한 대안 교체** (예: "낙관적 락" → "비관적 락"). 옛 접근의 근거는 로그가 보존한다 — 옛 ADR을 통째로 남기지 않는다.
+- **Decision Drivers 반전** — 결정을 좁히던 압력·제약이 달라졌다 (예: "PII 외부 반출 금지" 제약이 사라짐).
+- **핵심 알고리즘·아키텍처 변경**, 또는 **동작을 바꾸는 핵심 버그 수정**.
 
-즉 "왜"가 안 바뀌면 edit-in-place, "왜"가 달라져 옛 근거를 남겨야 하면 supersede다. 판단이 애매하면 supersede가 안전하다 — 근거를 지우지 않기 때문이다.
+**③ supersede — 새 ADR을 만들고 옛 것을 `Status: Superseded by [ADR XXXX](link)`로 남긴다** — ②로 담을 수 없을 때만. 좁게 예약한다:
 
-> **한 ADR = 한 결정 힌트**: 고치려는 변경이 위 "[한 ADR = 한 결정](#한-adr--한-결정)"의 분리 신호(250줄 초과, 서로 다른 엔티티 결정 혼재)를 함께 만든다면, edit-in-place가 아니라 **분리 후 supersede** 신호일 가능성이 높다.
+- **결정 주제 자체가 분기한다** — 하나의 결정이 서로 독립적으로 살아 움직이는 둘 이상의 결정으로 갈라져, 옛 것을 **별개의 참조 가능한 레코드**로 공존시켜야 할 때. (변경이 "[한 ADR = 한 결정](#한-adr--한-결정)"의 분리 신호 — 250줄 초과, 서로 다른 엔티티 결정 혼재 — 를 함께 만들면 이 경우다.)
+- 즉 옛 ADR과 새 ADR이 **동시에 각자 "현재 상태"로 유효**해야 하는 경우. 한 결정이 다른 결정으로 **대체**될 뿐이면(옛 것이 더는 유효하지 않음) ②의 edit-in-place로 충분하다 — 로그가 전환을 남기므로 근거를 잃지 않는다.
 
-supersede를 택하면 옛 ADR Status 전환 · 새/옛 ADR 양방향 Related 링크 · `.mapping.json` 인덱스(`adrs[]` 의 path·status·summary) 갱신 · 옛 번호를 인용하던 다른 ADR의 repoint를 **한 변경 단위로** 처리한다 (Related는 ADR↔ADR 참조라 정상이다). 새 ADR은 `Proposed`로 저장하고, 구현·테스트가 끝나면 `/adr-impl`이 `Accepted`로 자동 승격한다.
+**단일 기준**: 변경 후에도 결정이 **하나의 현재-상태 레코드로 표현 가능**하면 edit-in-place(minor면 ①, major면 ②), 옛 결정을 **별도 레코드로 공존**시켜야 하면 supersede(③). 애매하면 **edit-in-place + 로그가 기본**이다 — ADR 본문을 현재 상태로 유지하면서 근거는 로그로 보존하기 때문이다. (옛 모델은 진화 때마다 새 ADR을 만들어 chain을 쌓고 나중에 rollup으로 통합했지만, 이제는 진화를 edit-in-place + 로그로 흡수해 chain 자체가 잘 생기지 않는다.)
 
-## 같은 결정이 진화하면 새 ADR을 만든다
+supersede를 택하면 옛 ADR Status 전환 · 새/옛 ADR 양방향 Related 링크 · `.mapping.json` 인덱스(`adrs[]` 의 path·status·summary) 갱신 · 옛 번호를 인용하던 다른 ADR의 repoint를 **한 변경 단위로** 처리한다 (Related는 ADR↔ADR 참조라 정상이다). 새 ADR은 `Proposed`로 저장하고, 구현·테스트가 끝나면 `/adr-impl`이 `Accepted`로 자동 승격한다. supersede 도 major 전환이므로 [결정 로그](#결정-로그-decision-logmd)에 한 줄 남긴다.
 
-같은 logical decision이 시간이 지나며 바뀌면 기존 ADR을 덮어쓰지 않고 **새 ADR을 만들어 history를 남긴다** — 옛 ADR은 `Status: Superseded by [ADR XXXX](link)`로 표시한다 (제자리 수정으로 족한지 supersede가 필요한지는 위 "[요구사항 변경으로 ADR을 고칠 때](#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정)" 판정을 따른다). 한 카테고리 안에 ADR이 여럿 있는 것은 정상이며, 통합 대상이 아니다.
+## 결정 로그 (decision-log.md)
 
-같은 결정의 진화 history가 너무 분산되어 현재 상태를 한눈에 보기 어려워졌을 때만 `/adr-rollup`으로 그 묶음을 통합한다 (전체 카테고리가 아니라 묶음 단위). roll-up 절차와 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/skills/adr-rollup/SKILL.md` 참조.
+ADR 본문은 **현재 코드 상태를 설명하는 요구사항 문서**다 — "처음엔 ~였다가 ~로 바꿨다" 같은 시간축 서술을 본문에 남기지 않는다. 그렇다고 주요 전환의 근거까지 Git 커밋에만 묻어버리면 나중에 "이 알고리즘을 왜 갈아치웠나" 를 추적하기 어렵다. 그래서 **major 결정 변경만** 카테고리별 `docs/adr/<category>/decision-log.md` 에 역순 한 줄로 남긴다. **ADR 본문 = 현재 상태, 로그 = 주요 변경의 시간축, Git = verbatim diff** — 세 층이 각자 다른 것을 보존한다.
+
+### 결정 로그 기록 기준 — minor vs major
+
+위 [edit-in-place vs supersede 판정](#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정)의 ②/③에서 이 절로 온다.
+
+- **로그에 남긴다 (major)** — 채택 대안 교체, Decision Driver 반전, 핵심 알고리즘·아키텍처 변경, 동작을 바꾸는 핵심 버그 수정, supersede. **대체 ADR 없이 결정을 폐기(`Deprecated`)** 하는 것도 major 로그 엔트리다.
+- **로그에 남기지 않는다 (minor)** — 구현 사실 정정(API·enum·필드명·Status), 임계·경계 미세 조정, 표현 수정. 이런 것까지 남기면 로그가 노이즈로 차 신호를 잃는다. Git 이 보존한다.
+- 로그 엔트리는 **결정이 바뀌는 시점**에 추가한다 — ADR Status 의 `Accepted`/`Proposed` 자동 전환과는 별개다. 로그는 _결정_ 을 기록하고, Status 는 _구현 사실_ 을 기록한다.
+
+### 결정 로그 위치·성격
+
+- 카테고리(피쳐 leaf 또는 flat context) 하나당 `decision-log.md` 하나. `docs/adr/<category>/` 안에 ADR 파일들과 나란히 둔다.
+- **컨벤션 파일이다 — ADR 이 아니고 `.mapping.json` 에 등록하지 않는다.** 스킬은 존재 여부만 확인하고, 결정론적 하네스(`adr-structure-lint`)는 `NNNN-` 로 시작하지 않는 이 파일을 ADR 로 열거하지 않으므로 검사·인덱스 대상이 아니다.
+- 로그는 **현재 ADR 을 가리키는 링크만** 담고 그 반대(코드·PRD)를 참조하지 않는다 — log → ADR 단방향. ADR 본문(Related 포함)은 로그를 역으로 링크하지 않는다.
+
+### 결정 로그 포맷 (역순 — 최신 먼저)
+
+```markdown
+# Decision Log: <category>
+
+이 문서는 <category> 카테고리의 **주요 결정 변경 이력**이다. 각 ADR 본문은 현재
+상태만 서술하고, "무엇이 왜 바뀌었나"의 시간축은 여기에 역순으로 쌓는다. 개별
+diff 는 Git 이 보존한다.
+
+<!-- 규칙:
+  - 역순(최신 먼저). major 변경만 — 판정 기준은 위 "결정 로그 기록 기준".
+  - 현재 상태를 중복 서술하지 않는다(ADR 본문의 몫). 값·구현 상수·필드 표 금지.
+  - PRD(ALPS) 를 참조하지 않는다.
+  - ADR 번호를 프로즈에 박지 않는다 — "현재 ADR" 링크 한 줄로만 가리킨다. -->
+
+## YYYY-MM-DD — <한 줄 변경 요약>
+
+- **현재 ADR**: [<kebab-title>](./NNNN-kebab-title.md)
+- **변경 유형**: 알고리즘 | 아키텍처 | 채택 대안 교체 | Driver 반전 | 동작 바꾸는 버그 수정 | 폐기
+- **무엇이**: <이전 접근 → 현재 접근, 결정 수준 한두 문장>
+- **왜**: <이 변경을 부른 driver/제약의 변화>
+- **무효가 된 것** (선택): <이전 결정이 남겼던 Consequence 중 이제 사라진 것>
+```
+
+`현재 ADR` 포인터가 **유일한** ADR 참조이고 항상 현재 살아 있는 ADR 경로를 가리킨다 — 프로즈에 옛 번호를 넣지 않으므로, 이후 `/adr-rollup` 이 그 ADR 을 renumber 해도 이 한 줄만 새 경로로 고치면 되고, rollup 의 stale-citation finder 가 로그를 오탐하지 않는다.
+
+## 같은 결정이 진화할 때 — edit-in-place + 로그가 기본
+
+같은 logical decision 이 시간이 지나며 바뀌면, **기존 ADR 을 현재 상태로 덮어쓰고 major 전환이면 [결정 로그](#결정-로그-decision-logmd)에 한 줄 남긴다** — 진화할 때마다 새 ADR 을 쌓지 않는다. ADR 본문에는 진화 서술("v2 에서 ~ 추가", "기존 대비 ~로 변경")을 남기지 않는다. 이렇게 하면 한 카테고리의 ADR 수가 "실제로 존재하는 서로 다른 결정 수" 로 유지되고, 옛 evolution-chain 모델이 만들던 supersede 더미가 생기지 않는다.
+
+**새 ADR(supersede)은 결정 주제가 분기할 때만** — 위 [edit-in-place vs supersede 판정](#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정)의 ③. 옛 결정과 새 결정이 각자 "현재 상태" 로 공존해야 하는 경우다.
+
+과거 모델의 잔재로 한 결정의 진화 이력이 supersede chain 으로 여러 ADR 에 흩어져 있으면, `/adr-rollup` 이 그 묶음의 major 이력을 `decision-log.md` 로 harvest 한 뒤 현재 상태 통합본 하나로 합치고 나머지를 삭제한다 (전체 카테고리가 아니라 묶음 단위). roll-up 절차와 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/skills/adr-rollup/SKILL.md` 참조.
 
 ## 길이 가이드
 
@@ -205,6 +255,7 @@ PR 리뷰어 또는 작성자 본인이 머지 전에 확인한다.
 - [ ] **Status가 유효한 값**인가 (`Proposed`/`Accepted`/`Deprecated`/`Superseded by [...]`)
 - [ ] **결정 한 줄 요약**이 `.mapping.json` 의 해당 `adrs[]` 레코드(summary)에 갱신되었는가
 - [ ] **코드 직독 테스트** — 본문의 모든 단락에 대해 "이 사실이 이 ADR 이 다스리는 코드를 읽으면 자명한가?" 를 물었을 때, 자명한 항목이 본문에 남아 있지 않은가 (자명한 것은 코드가 source of truth)
+- [ ] **현재 상태 서술** — 본문에 진화 서술("처음엔 ~였다가", "v2 에서 ~ 추가", "기존 대비 ~로 변경")이 남아 있지 않은가 (evolution history 는 본문이 아니라 [`decision-log.md`](#결정-로그-decision-logmd) 에 — major 변경이면 로그에 한 줄 남기고 본문은 현재 상태만)
 - [ ] **회색지대 점검** — 본문에 (a) 채택 근거 / 대안 비교, (b) 비즈니스 규칙의 시스템 번역, (c) 도메인 규칙·상태 전이, (d) 외부 의존 fallback 중 **하나 이상**이 실제로 들어 있는가 (없으면 ADR 의 가치가 약함)
 - [ ] **폴더 단위 이하 코드 참조**가 본문/표/다이어그램 어디에도 남아 있지 않은가
 - [ ] **코드 측 역참조 없음** — 이 ADR 이 다스리는 코드(주석·상수·import)에 ADR ID·경로가 남아 있지 않은가 (코드↔ADR 연결은 코드에도 매핑에도 두지 않는다). 코드가 이미 있으면 adr-reviewer R17 또는 `/adr-sync` 5단계 (a) grep 으로 점검하고, 코드가 아직 없는 신규 `Proposed` 면 구현 후 `/adr-sync` 가 점검한다

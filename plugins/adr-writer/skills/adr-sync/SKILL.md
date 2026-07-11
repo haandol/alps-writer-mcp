@@ -8,7 +8,7 @@ argument-hint: "[category?] [--quick]"
 
 `docs/adr/`의 모든 ADR이 shipping 코드와 일치하는지 검증한다. drift된 ADR을 수정하고, 관련 ADR 사이의 모순을 잡고, `.mapping.json` 인덱스(adrs[] path/status/summary)를 동기화한다.
 
-검증·정정과 함께 **각 ADR을 "현재 코드를 설명하는 하나의 온전한(self-contained) 문서"로 다듬는다.** 시간이 지나며 본문 중간중간에 누적된 evolution narration("처음엔 ~였다가 ~로 바꿨다", "v2 에서 ~를 추가", "기존 방식 대비 ~로 변경" 류)을 현재 상태 단일 서술로 재구성해, 한 ADR만 읽어도 최신 코드의 비즈니스·기술 결정이 끊김 없이 읽히게 한다. 옛 버전 히스토리는 Git 이 보존하므로 ADR 본문에 진화 이력을 들고 있지 않는다 (이것은 단일 ADR 안에서의 정리이고, 여러 ADR 에 분산된 진화 _체인_ 을 한 ADR 로 합치는 것은 `adr-rollup` 의 일이다).
+검증·정정과 함께 **각 ADR을 "현재 코드를 설명하는 하나의 온전한(self-contained) 문서"로 다듬는다.** 시간이 지나며 본문 중간중간에 누적된 evolution narration("처음엔 ~였다가 ~로 바꿨다", "v2 에서 ~를 추가", "기존 방식 대비 ~로 변경" 류)을 현재 상태 단일 서술로 재구성해, 한 ADR만 읽어도 최신 코드의 비즈니스·기술 결정이 끊김 없이 읽히게 한다. 걷어낸 것 중 **major 전환**은 카테고리 `decision-log.md` 로 harvest 하고(Pass 2 의 3-E), **minor** 진화와 개별 diff 는 Git 이 보존하므로 ADR 본문에 진화 이력을 들고 있지 않는다 (이것은 단일 ADR 안에서의 정리이고, 여러 ADR 에 분산된 진화 _체인_ 을 한 ADR 로 합치는 것은 `adr-rollup` 의 일이다).
 
 기본은 **deep mode**: 범위 내 모든 ADR 본문을 읽고 모든 주장(API, error code, enum, 엔티티 필드, Status, Related 링크)을 코드와 대조한다. `--quick` 이면 `.mapping.json` 의 adrs[] summary(한 줄 Key Decision)만 빠르게 점검.
 
@@ -27,7 +27,7 @@ argument-hint: "[category?] [--quick]"
 
 - `docs/adr/README.md` (개념 인덱스 — 회색지대/의존성 모델·ADR 템플릿, ADR 목록은 없음), `docs/adr/authoring-rules.md` (작성 규칙·리뷰 체크리스트), `docs/adr/structure.md` (디렉토리·매핑 정책) 읽기
 - `docs/adr/.mapping.json` 읽기 (단일 ADR 인덱스 — 카테고리 → adrs[] 의 path·status·summary + `dependsOn`). 매핑은 ADR↔코드 경로도 PRD 참조도 저장하지 않는다 — 한 ADR이 다스리는 코드 위치는 **ADR Decision 본문을 읽고 그때그때 repo 를 탐색**해 찾는다 (아래 "관련 코드 찾기").
-- 디스크의 ADR 파일 전수 조회: `docs/adr/<category>/*.md`. `.mapping.json` 의 adrs[] 에 없는 디스크 파일이 있거나, adrs[] path 가 가리키는데 파일이 없으면 그 자체가 drift (디스크↔매핑 2자 정합).
+- 디스크의 ADR 파일 전수 조회: `docs/adr/<category>/` 의 **`NNNN-*.md` (번호로 시작하는 ADR 파일만)**. `.mapping.json` 의 adrs[] 에 없는 디스크 ADR 파일이 있거나, adrs[] path 가 가리키는데 파일이 없으면 그 자체가 drift (디스크↔매핑 2자 정합). **`decision-log.md` 는 ADR 이 아니라 컨벤션 파일이므로 이 전수 조회에서 제외한다** — 매핑에 등록하지 않으며(`structure.md` "결정 로그"), orphan drift 로 보고하지 않는다. (결정론적 하네스도 `NNNN-` 로 시작하지 않는 이 파일을 ADR 로 열거하지 않는다.)
 
 #### 관련 코드 찾기
 
@@ -69,8 +69,8 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs [category]   # 인자 
 3. 구현 세부사항 bloat 식별 — 다음 두 기준으로 본문을 훑고 점진적으로 제거한다:
    - **코드 직독 테스트** (`README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대"): 본문 단락이 관련 코드를 읽으면 자명한가? 자명하면 ADR 에서 뺀다 (함수 책임 분담, 모듈 의존 그래프, 필드 타입표, 에러 메시지·UI 라벨, 환경 변수 이름, 의사코드 등).
    - **금지 항목 표** (`authoring-rules.md` "ADR에 포함하지 않는 것"): 파일 경로(폴더 이하), 코드 스니펫, 구현 상수·튜닝값, 엔티티 필드 상세 표, 마이그레이션 명령어, 전체 JSON.
-     3.5. **evolution narration 정리 — 온전한 현재-상태 문서로 재구성**. 한 ADR 안에 시간이 지나며 끼어든 진화 서술을 현재 상태 단일 서술로 다듬어, 그 ADR 하나만 읽어도 최신 코드의 결정이 끊김 없이 읽히게 한다. 다음을 찾아 고친다:
-   - **진화 어법 → 현재형 단언**: "처음엔 X 였다가 Y 로 바꿨다", "v2 에서 Z 추가", "기존 A 대비 B 로 변경", "as of 2024-...", "deprecated 됐던 ~" 류 시간순 서술을, 현재 코드가 하는 것만 남긴 단언("시스템은 Y 로 동작한다")으로 바꾼다. 더 이상 코드에 없는 옛 단계는 삭제한다 (Git 이 이력 보존).
+     3-E. **evolution narration 정리 — 온전한 현재-상태 문서로 재구성** (Pass 2 의 서브스텝 — 아래 별도 섹션 `### 3.5 카테고리 슬라이스 무결성` 과 다르다). 한 ADR 안에 시간이 지나며 끼어든 진화 서술을 현재 상태 단일 서술로 다듬어, 그 ADR 하나만 읽어도 최신 코드의 결정이 끊김 없이 읽히게 한다. 다음을 찾아 고친다:
+   - **진화 어법 → 현재형 단언**: "처음엔 X 였다가 Y 로 바꿨다", "v2 에서 Z 추가", "기존 A 대비 B 로 변경", "as of 2024-...", "deprecated 됐던 ~" 류 시간순 서술을, 현재 코드가 하는 것만 남긴 단언("시스템은 Y 로 동작한다")으로 바꾼다. 옛 단계를 본문에서 걷어내되, **그것이 major 전환**(채택 대안 교체·Driver 반전·핵심 알고리즘/아키텍처 변경·동작 바꾸는 버그 수정 — `authoring-rules.md` "결정 로그 기록 기준")이면 **삭제 전에 그 카테고리의 `decision-log.md` 로 harvest** 한다 (역순 맨 위 한 줄, 포맷은 authoring-rules "결정 로그 (decision-log.md)"; 프로즈에 옛 ADR 번호를 넣지 않고 `현재 ADR` 링크만). **minor 진화**(임계값 미세 조정·표현·구현 사실 정정)면 그냥 삭제한다 (Git 이 이력 보존) — 로그에 넣지 않는다.
    - **본문 중간에 박힌 Changelog/History/Revision/Update 류 단락·소제목 제거**: 이런 절은 ADR 본문이 아니라 Git 의 몫이다. 단 다른 ADR 을 supersede/replace 한 사실 자체는 `Status`·`Related` 에 한 줄로만 남기고 본문 서사로 풀지 않는다.
    - **중복·모순된 결정 서술 통합**: 같은 결정을 본문 여러 곳에서 서로 다른 시점으로 서술하면, 현재 코드 기준 한 번만 서술하도록 합친다.
    - 재구성은 `README.md` `## ADR 템플릿` 의 표준 섹션 순서(Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / Related)와 `authoring-rules.md` 의 섹션별 작성 규칙에 맞춰 문단을 재배치하되, **회색지대 결정(채택 근거·대안·도메인 규칙·상태 전이·fallback)은 절대 누락하지 않는다** — 진화 서술 안에 묻혀 있던 진짜 근거·대안을 현재형으로 살려 옮긴다. 정보 _압축_ 이지 _손실_ 이 아니다.
@@ -89,7 +89,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs [category]   # 인자 
 
 - **구현 사실·Status (코드가 권위)** — API 표·error code·enum·필드 이름·키 패턴·Status 실재 여부. 코드와 다르면 **ADR 을 코드에 맞춰 정정**한다. 이건 코드가 자연히 앞서는 정상 방향이다.
 - **회색지대 결정 (ADR 이 권위)** — 채택 근거·대안 비교·도메인 규칙·상태 전이·외부 의존 fallback·키 디자인의 _의도_. 코드가 이 결정과 **모순**되면 (예: ADR 은 "낙관적 락" 인데 코드가 비관적 락으로 바뀜), ADR 을 코드에 맞춰 조용히 고치지 **않는다** — 이건 누군가 ADR-first 사이클을 건너뛰고 결정을 바꾼 신호다. 다음 둘 중 하나로 분기해 사용자에게 묻는다:
-  - **의도된 결정 변경** → ADR 을 먼저 갱신(또는 새 ADR 로 supersede)해 코드를 정당화한다. `Suggestions` 에 `[Decision changed in code] <category> — 코드가 ADR 결정과 모순. ADR 갱신/supersede 후 정렬 필요` 로 기록.
+  - **의도된 결정 변경** → ADR 을 현재 결정에 맞게 갱신해 코드를 정당화한다. edit-in-place 로 본문을 현재 상태로 고치는 것이 기본이고, 그 전환이 **major** 면(채택 대안 교체·Driver 반전·핵심 알고리즘/아키텍처 변경) 카테고리 `decision-log.md` 에 한 줄 남긴다. 결정 주제가 분기해 옛 결정을 별개 레코드로 공존시켜야 할 때만 새 ADR 로 supersede 한다 (판정: `authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때"). `Suggestions` 에 `[Decision changed in code] <category> — 코드가 ADR 결정과 모순. ADR 갱신(major 면 decision-log 기록) 후 정렬 필요` 로 기록.
   - **의도치 않은 위반** → 코드가 결정을 어긴 것이므로 코드 수정 대상이다. ADR 은 그대로 두고 `Suggestions` 에 `[Code violates ADR] <category> — 코드가 ADR 결정과 어긋남. 코드 정정 검토` 로 기록.
   - 어느 쪽인지 sync 가 단독으로 판정하지 않는다 — 회색지대 결정의 권위는 ADR 에 있으므로, 코드에 맞춰 ADR 을 덮어쓰는 것이 기본 동작이 되어선 안 된다.
 
@@ -148,6 +148,7 @@ ADR이 의존하는 비-ADR 문서도 함께 본다:
 
 - `docs/tables/**` 또는 동등한 스키마 문서 — 엔티티 관계가 ADR에서 바뀌었으면 같은 변경이 테이블 문서에도 반영되어야 한다. 양방향 Related 링크가 살아 있는지 확인.
 - `docs/adr/<category>/*-data-flow.md` 같은 보조 문서 — API 표·예시 레코드·키 명세가 코드와 정렬돼 있는지.
+- `docs/adr/<category>/decision-log.md` (있으면) 경량 점검 — 컨벤션 파일이므로 하네스가 검사하지 않는다. 다음만 본다: (a) 각 엔트리의 `현재 ADR` 링크가 디스크에 실재하는 ADR 을 가리키는지 (rollup·split 후 stale 이면 새 경로로 정정), (b) 프로즈에 옛 ADR 번호가 박혀 있지 않은지(있으면 `현재 ADR` 링크로 대체), (c) PRD 인용(`*.alps.xml`·`ALPS Section`·feature-id)이 없는지 — 있으면 제거(ADR 본문과 같은 단방향 규칙, 아래 PRD 역참조 항목과 동일 취급. 단 로그는 검사 (b) grep 스코프 밖이라 기계 강제되지 않으므로 여기서 눈으로 점검). (d) 현재 상태를 중복 서술하거나 구현 상수·필드 표를 담고 있으면 걷어낸다 — 로그는 "무엇이 왜 바뀌었나" 만.
 - 코드 주석·상수·import 에 남은 ADR 인용 (`// See ADR auth/0002 §1`, `ADR_REF = "auth/0002"`) — **코드 → ADR 역참조는 원칙상 금지**다 (`README.md` "의존성은 단방향, 참조는 어느 방향으로도 직접 적지 않는다"). 정정이 아니라 **제거**한다. ADR 번호는 split/rollup/supersede 로 이동하므로 코드가 ADR ID 를 들고 있으면 결정이 안 바뀌었는데도 구조 변경이 코드 수정을 줄줄이 강제한다. (코드↔ADR 연결은 매핑에도 저장하지 않는다 — 관련 코드는 ADR 을 읽고 그때그때 찾는다.)
 - ADR 본문(Context·Related 포함)에 남은 PRD 인용 (`prd/foo.alps.xml`, `ALPS Section 7 #F-AUTH-01`, `Section 6.3`) — **ADR → PRD 역참조도 원칙상 금지**다 (같은 의존성 모델). 코드↔ADR 과 대칭으로, 정정이 아니라 **제거**한다. adr-writer 는 standalone 이라 PRD 를 참조하지 않으므로, 이 인용을 옮길 곳이 없고 보존할 것도 없다 — ADR 은 import 시점에 PRD 의 동기를 한 번 흡수한 뒤로는 PRD 를 다시 가리키지 않으며, 매핑도 PRD 링크를 저장하지 않는다. (제거 결과는 7단계 보고 **Fixed** 에 기재.)
 
@@ -192,6 +193,7 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 ### Fixed
 - [ADR <category>/NNNN: ...] — X 섹션이 이제 Y라고 함 (이유: <근거>)
 - [ADR <category>/NNNN: 문서 정리] — evolution narration 제거/현재형 재구성: <무엇을 어떻게>. 살린 회색지대 결정: <근거·대안>. (해당 ADR 에 한함)
+- [decision-log <category>] — harvest 한 major 전환: <무엇을>. (major narration 을 로그로 옮겼을 때만)
 
 ### Contradictions Resolved
 - [ADR A ↔ ADR B] — 무엇이 충돌했고 어떻게 화해시켰는지
@@ -201,10 +203,12 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 
 ### Index Hygiene
 - .mapping.json(path/status/summary) 변경 사항
+- decision-log: <경량 검증 결과 — 역순/현재-ADR 링크 유효/PRD·옛번호 없음, 정정 사항>
+
 
 ### Suggestions
 - [New ADR needed?] — ADR 없는 결정 발견
-- [Supersede recommended?] — 패치 범위를 넘은 drift
+- [Supersede recommended?] — 결정 주제가 분기해 옛 결정을 별개 레코드로 공존시켜야 하는 경우만 (edit-in-place + decision-log 로 담을 수 없을 때 — `authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때"). 단순 결정 전환은 supersede 가 아니라 edit-in-place + decision-log 로 흡수한다
 - [Sub-folder split recommended] — <category>: ADR <n>개, 후보 sub-feature ...
 - [Feature-ID naming] — <category>: 옛 fN 네이밍, canonical화 보류 (사용자가 거절 시)
 ```
@@ -215,3 +219,4 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 - 카테고리 내 번호는 순차 증가. split으로 내용이 빠진 번호는 결번으로 둔다 (renumber 금지). sync 는 번호를 재배치하지 않는다 — 결번 메우기(renumber)는 `adr-rollup` 이 체인을 합쳐 삭제할 때만 수행하는 단계다. **3.7 의 canonical화는 renumber 가 아니다** — 파일명의 `fN-` 접두사 제거·폴더 re-key 는 번호(`NNNN`)를 그대로 두므로 위 renumber 금지와 충돌하지 않는다.
 - 3.7 의 Feature-ID 네이밍 canonical화는 `--quick` 에서도 감지·제안만 한다 (`.mapping.json` 의 adrs[] path 만 봐도 stale 네이밍이 드러난다) — 실제 이동은 두 모드 모두 사용자 확인 뒤에만 수행한다.
 - 코드가 source of truth 인 것은 **구현 사실·Status 에 한정**된다 — 이것들이 코드와 충돌하면 ADR 을 코드에 맞춰 정정한다. 반면 **회색지대 결정(채택 근거·도메인 규칙·상태 전이·fallback)은 ADR 이 권위**다. 코드가 이 결정과 모순되면 ADR 을 코드에 맞춰 덮어쓰지 말고 "결정 변경 vs 위반" 으로 분기한다 (위 3단계 6번 "source of truth 의 범위" 참조). 회색지대 결정까지 코드에 맞추면 코드 변경이 ADR 을 끌고 다녀 단방향이 깨진다.
+- **decision-log.md 는 컨벤션 파일**이다 — `.mapping.json` 에 등록하지 않고 하네스가 검사하지 않는다. sync 는 1단계 디스크 전수 조회에서 제외하고, Pass 2 의 3-E 에서 major narration 을 이 로그로 harvest 하며, 5단계에서 경량 점검만 한다. 로그 자체가 없거나 비대해도 하네스로는 못 잡으므로(플러그인의 "판단은 LLM" 기조), 눈으로 신호 위주인지 확인한다.
