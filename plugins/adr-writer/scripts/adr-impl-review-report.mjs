@@ -175,6 +175,19 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
+function inlineScriptJson(value) {
+  return JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (char) => {
+    const escapes = {
+      "<": "\\u003c",
+      ">": "\\u003e",
+      "&": "\\u0026",
+      "\u2028": "\\u2028",
+      "\u2029": "\\u2029",
+    };
+    return escapes[char];
+  });
+}
+
 // Remediation priority — lower sorts first. Code must-fix (Spec violation,
 // Undecided behavior, Best practice) rises above ADR-side actions (Decision
 // changed, Impl-fact mismatch) and advisory (Refactor, Test gap), so the docket
@@ -317,8 +330,8 @@ function findingCard(f, i, total) {
       ? `<span class="conf conf--${conf}" title="증거 강도">${conf}</span>`
       : "";
   const opt = (val, label) => {
-    const id = `r-${esc(f.id)}-${val}`;
-    return `<input type="radio" class="seg__input" id="${id}" name="dec-${esc(f.id)}" value="${val}"${
+    const id = `r-${i}-${val}`;
+    return `<input type="radio" class="seg__input" id="${id}" name="dec-${i}" value="${val}"${
       dec === val ? " checked" : ""
     }><label class="seg__label" for="${id}">${label}</label>`;
   };
@@ -340,7 +353,7 @@ function findingCard(f, i, total) {
         ${opt("skip", "무시")}
         ${opt("defer", "보류")}
       </div>
-      <textarea class="ruling__note" data-fid="${esc(f.id)}" rows="2" placeholder="note (선택) — 판정 근거나 수정 방향"></textarea>
+      <textarea class="ruling__note" data-finding-index="${i}" rows="2" placeholder="note (선택) — 판정 근거나 수정 방향"></textarea>
     </footer>
   </article>`;
 }
@@ -366,7 +379,7 @@ function buildHtml(data) {
 
   // Embed the findings so the download echoes the original context back
   // alongside the reviewer's rulings — the main session gets both in one file.
-  const embedded = JSON.stringify({ adr: data.adr || "", verdict: verdictKey, findings }, null, 0);
+  const embedded = inlineScriptJson({ adr: data.adr || "", verdict: verdictKey, findings });
 
   return `<!doctype html>
 <html lang="ko">
@@ -627,9 +640,9 @@ function buildHtml(data) {
 <script>
   const EMBED = ${embedded};
   document.getElementById("export").addEventListener("click", () => {
-    const reviews = EMBED.findings.map((f) => {
-      const picked = document.querySelector('input[name="dec-' + f.id + '"]:checked');
-      const note = document.querySelector('textarea.ruling__note[data-fid="' + f.id + '"]');
+    const reviews = EMBED.findings.map((f, index) => {
+      const picked = document.querySelector('input[name="dec-' + index + '"]:checked');
+      const note = document.querySelector('textarea.ruling__note[data-finding-index="' + index + '"]');
       // Echo the whole finding back (route/fix/adrQuote/code/basis/weight/…)
       // and add the ruling, so feedback.json is a self-contained handoff: the
       // main session can route follow-ups from the file alone even after a

@@ -11,6 +11,7 @@
     "build": "pnpm typecheck && pnpm bundle && cp -r src/templates dist/ && cp -r src/guides dist/",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
+    "test": "tsx --test tests/**/*.test.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
   },

@@ -109,7 +109,13 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <이번에 작성한 A
 
 `error` 가 있으면 저장(7단계)으로 가기 전에 본 세션에서 고친다 (대개 ADR 본문·매핑 편집으로 해결). `warning`(대안/드라이버 개수, 코드참조 의심 등)은 adr-reviewer 판단과 함께 다룬다.
 
-**(b) adr-reviewer 위임 — 판단이 필요한 룰**: 하네스가 통과(또는 warning 만)하면 `adr-reviewer` subagent 를 호출한다. reviewer 는 하네스가 못 잡는 **판단 룰에 집중**한다 — 코드 직독/리트머스 필터(R4), 회색지대 충실도(R12), 대안이 strawman 인지(R14 질), Decision Drivers 가 의견이 아닌 변별 사실인지(R13 질), 구현 세부 침투(R3), vertical slice 응집(R5 뒷부분).
+**(b) adr-reviewer 위임 — 판단이 필요한 룰**: 하네스가 통과(또는 warning 만)하면 reviewer subagent 를 다음 순서로 실행한다.
+
+1. 현재 클라이언트가 `adr-reviewer` named subagent 를 발견할 수 있으면 그것을 호출한다.
+2. named subagent 가 없으면 `${CLAUDE_PLUGIN_ROOT}/agents/adr-reviewer.md` 를 읽고, 그 전문을 reviewer 지침으로 전달한 **일반 read-only subagent** 하나를 실행한다. Codex 플러그인은 `agents/*.md`를 컴포넌트로 등록하지 않으므로 이 fallback이 기본 경로다.
+3. subagent 기능 자체를 사용할 수 없는 클라이언트에서만 메인 세션이 같은 reviewer 지침을 직접 수행하고, 격리 검토를 사용할 수 없었다고 결과에 한 줄 밝힌다.
+
+reviewer 는 하네스가 못 잡는 **판단 룰에 집중**한다 — 코드 직독/리트머스 필터(R4), 회색지대 충실도(R12), 대안이 strawman 인지(R14 질), Decision Drivers 가 의견이 아닌 변별 사실인지(R13 질), 구현 세부 침투(R3), vertical slice 응집(R5 뒷부분).
 
 - 입력: 작성된 ADR 파일 경로, 매핑 entry 변경 전/후, (있다면) ALPS Section 7 발췌, **하네스 결과 요약(통과/남은 warning)**
 - 출력: `PASS` / `FIX_REQUIRED` / `BLOCK` punch list

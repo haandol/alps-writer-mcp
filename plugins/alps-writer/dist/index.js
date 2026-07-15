@@ -3229,8 +3229,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path4) {
-      let input = path4;
+    function removeDotSegments(path5) {
+      let input = path5;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3482,8 +3482,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path4, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path4 && path4 !== "/" ? path4 : void 0;
+        const [path5, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path5 && path5 !== "/" ? path5 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6876,12 +6876,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs3, exportName) {
+    function addFormats(ajv, list, fs4, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs3[f]);
+        ajv.addFormat(f, fs4[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -7248,8 +7248,8 @@ function getErrorMap() {
 
 // ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path4, errorMaps, issueData } = params;
-  const fullPath = [...path4, ...issueData.path || []];
+  const { data, path: path5, errorMaps, issueData } = params;
+  const fullPath = [...path5, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7364,11 +7364,11 @@ var errorUtil;
 
 // ../../node_modules/.pnpm/zod@4.4.3/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path4, key) {
+  constructor(parent, value, path5, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path4;
+    this._path = path5;
     this._key = key;
   }
   get path() {
@@ -11288,10 +11288,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path4) {
-  if (!path4)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path4.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11700,11 +11700,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path4, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path4);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -11851,16 +11851,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path5 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -11887,17 +11887,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path4 = []) => {
+  const processError = (error52, path5 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path4, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path5, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path4, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path5, ...issue2.path]);
       } else {
-        const fullpath = [...path4, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11929,8 +11929,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path4 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path4) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -25055,13 +25055,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path4 = ref.slice(1).split("/").filter(Boolean);
-  if (path4.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path4[0] === defsKey) {
-    const key = path4[1];
+  if (path5[0] === defsKey) {
+    const key = path5[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -31104,52 +31104,131 @@ Do NOT write any section without going through the guide's Q&A process first.`;
 };
 
 // src/tools/documents/service.ts
+import fs3 from "fs";
+import path4 from "path";
+import os from "os";
+
+// src/tools/templates/registry.ts
 import fs2 from "fs";
 import path3 from "path";
-import os from "os";
+var TemplateRegistry = class {
+  definitions = /* @__PURE__ */ new Map();
+  constructor(chaptersDir = CHAPTERS_DIR) {
+    for (const filename of fs2.readdirSync(chaptersDir).filter((name) => name.endsWith(".xml"))) {
+      const section = Number.parseInt(filename.split("-")[0], 10);
+      if (!Number.isInteger(section)) continue;
+      const xml = fs2.readFileSync(path3.join(chaptersDir, filename), "utf8");
+      const subsections = /* @__PURE__ */ new Map();
+      const subsectionRe = /<subsection\b([^>]*)>/g;
+      let match;
+      while ((match = subsectionRe.exec(xml)) !== null) {
+        const id = this.attribute(match[1], "id");
+        const title = this.attribute(match[1], "title");
+        if (id && title) subsections.set(id, { id, title });
+      }
+      this.definitions.set(section, subsections);
+    }
+  }
+  expectedSubsections(section) {
+    if (section === 7) return [];
+    return [...this.definitions.get(section)?.values() ?? []];
+  }
+  validateSubsection(section, subsectionId, title) {
+    const normalizedId = subsectionId.trim();
+    const normalizedTitle = title.trim();
+    if (section === 7) {
+      if (!/^[1-9]\d*$/.test(normalizedId)) {
+        return {
+          ok: false,
+          message: 'Section 7 subsection_id must be a positive feature number such as "1" or "2".'
+        };
+      }
+      if (!normalizedTitle) {
+        return { ok: false, message: "Section 7 feature title must not be empty." };
+      }
+      return { ok: true, fullId: `7.${normalizedId}` };
+    }
+    const fullId = `${section}.${normalizedId}`;
+    const expected = this.definitions.get(section)?.get(fullId);
+    if (!expected) {
+      const allowed = this.expectedSubsections(section).map((definition) => definition.id.slice(String(section).length + 1)).join(", ");
+      return {
+        ok: false,
+        message: `Unknown subsection ${fullId}. Allowed subsection_id values: ${allowed || "none"}.`
+      };
+    }
+    if (normalizedTitle !== expected.title) {
+      return {
+        ok: false,
+        message: `Title for ${fullId} must be "${expected.title}".`
+      };
+    }
+    return { ok: true, fullId };
+  }
+  attribute(attributes, name) {
+    const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`));
+    return match?.[1] ?? null;
+  }
+};
+
+// src/tools/documents/service.ts
 var DocumentService = class {
   workingDoc = null;
+  templates;
+  constructor(templates = new TemplateRegistry()) {
+    this.templates = templates;
+  }
+  decodeXml(value) {
+    return value.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
+  }
+  escapeXmlAttribute(value) {
+    return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&apos;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  escapeXmlText(value) {
+    return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  attribute(attributes, name) {
+    const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`));
+    return match ? this.decodeXml(match[1]) : null;
+  }
   parseSections(content) {
     const sections = /* @__PURE__ */ new Map();
-    const re = /<section id="(\d+)" title="[^"]*">\s*([\s\S]*?)<\/section>/g;
+    const re = /<section\b([^>]*)>\s*([\s\S]*?)<\/section>/g;
     let m;
     while ((m = re.exec(content)) !== null) {
-      sections.set(parseInt(m[1], 10), m[2].trim());
-    }
-    if (sections.size === 0) {
-      const re2 = /<section id="(\d+)">\s*## Section \d+\.[^\n]*\n+([\s\S]*?)<\/section>/g;
-      while ((m = re2.exec(content)) !== null) {
-        sections.set(parseInt(m[1], 10), m[2].trim());
-      }
+      const id = this.attribute(m[1], "id");
+      if (id && /^\d+$/.test(id)) sections.set(Number.parseInt(id, 10), m[2].trim());
     }
     return sections;
   }
   parseSubsections(sectionContent, sectionId) {
     const subs = /* @__PURE__ */ new Map();
-    const re = new RegExp(
-      `<subsection id="${sectionId}\\.([^"]+)" title="([^"]*)">
-([\\s\\S]*?)
-</subsection>`,
-      "g"
-    );
+    const re = /<subsection\b([^>]*)>\s*([\s\S]*?)\s*<\/subsection>/g;
     let m;
     while ((m = re.exec(sectionContent)) !== null) {
-      subs.set(`${sectionId}.${m[1]}`, { title: m[2], content: m[3].trim() });
+      const id = this.attribute(m[1], "id");
+      const title = this.attribute(m[1], "title");
+      if (!id || title == null || !id.startsWith(`${sectionId}.`)) continue;
+      subs.set(id, { title, content: this.decodeXml(m[2].trim()) });
     }
     return subs;
   }
+  hasUnparsedContent(sectionContent) {
+    const remainder = sectionContent.replace(/<subsection\b[^>]*>\s*[\s\S]*?\s*<\/subsection>/g, "").replace(/<!--\s*Not started\s*-->/g, "").trim();
+    return remainder.length > 0;
+  }
   buildSubsection(subId, title, content) {
-    return `<subsection id="${subId}" title="${title}">
-${content}
+    return `<subsection id="${this.escapeXmlAttribute(subId)}" title="${this.escapeXmlAttribute(title)}">
+${this.escapeXmlText(content)}
 </subsection>`;
   }
   buildSection(sectionId, content) {
-    return `<section id="${sectionId}" title="${SECTION_TITLES[sectionId]}">
+    return `<section id="${sectionId}" title="${this.escapeXmlAttribute(SECTION_TITLES[sectionId])}">
 ${content}
 </section>`;
   }
   buildDocument(projectName, sections) {
-    const lines = [`<alps-document project="${projectName}">`];
+    const lines = [`<alps-document project="${this.escapeXmlAttribute(projectName)}">`];
     for (let i = 1; i <= 9; i++) {
       lines.push(this.buildSection(i, sections.get(i) || "<!-- Not started -->"));
     }
@@ -31157,40 +31236,99 @@ ${content}
     return lines.join("\n\n");
   }
   extractProjectName(content) {
-    let m = content.match(/<alps-document project="([^"]+)">/);
-    if (m) return m[1];
-    m = content.match(/<prd-document project="([^"]+)">/);
-    if (m) return m[1];
-    m = content.match(/^# (.+?) (?:ALPS|PRD)/m);
+    const root = content.match(/<(?:alps-document|prd-document)\b([^>]*)>/);
+    if (root) {
+      const project = this.attribute(root[1], "project");
+      if (project) return project;
+    }
+    const m = content.match(/^# (.+?) (?:ALPS|PRD)/m);
     return m ? m[1] : "Untitled";
   }
+  validateDocument(content) {
+    const root = content.match(/^\s*<(alps-document|prd-document)\b[^>]*>/);
+    if (!root) return "Missing <alps-document> root element.";
+    if (!new RegExp(`</${root[1]}>\\s*$`).test(content)) {
+      return `Missing closing </${root[1]}> element.`;
+    }
+    if (this.parseSections(content).size === 0) return "Document contains no valid sections.";
+    return null;
+  }
+  readWorkingDocument() {
+    if (!this.workingDoc) {
+      return {
+        error: "No document loaded. Call init_alps_document() or load_alps_document() first."
+      };
+    }
+    let content;
+    try {
+      content = fs3.readFileSync(this.workingDoc, "utf-8");
+    } catch (error51) {
+      return { error: `Unable to read ${this.workingDoc}: ${error51.message}` };
+    }
+    const validationError = this.validateDocument(content);
+    return validationError ? { error: `Invalid ALPS document at ${this.workingDoc}: ${validationError}` } : { content };
+  }
+  writeAtomic(filepath, content) {
+    const temporary = `${filepath}.tmp-${process.pid}-${Date.now()}`;
+    try {
+      fs3.writeFileSync(temporary, content, "utf-8");
+      fs3.renameSync(temporary, filepath);
+    } finally {
+      if (fs3.existsSync(temporary)) fs3.unlinkSync(temporary);
+    }
+  }
   expandHome(p) {
-    return p.startsWith("~") ? path3.join(os.homedir(), p.slice(1)) : p;
+    return p.startsWith("~") ? path4.join(os.homedir(), p.slice(1)) : p;
   }
   get outputDir() {
-    const dir = process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path3.join(process.cwd(), "prd");
+    const dir = process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path4.join(process.cwd(), "prd");
     return this.expandHome(dir);
   }
   expandPath(p) {
     if (p.startsWith("~")) return this.expandHome(p);
-    if (path3.isAbsolute(p)) return p;
-    return path3.resolve(this.outputDir, p);
+    if (path4.isAbsolute(p)) return p;
+    return path4.resolve(this.outputDir, p);
   }
   initDocument(projectName, outputPath) {
+    this.workingDoc = null;
     let filepath = this.expandPath(outputPath);
-    if (!path3.extname(filepath)) filepath += ".alps.xml";
-    if (fs2.existsSync(filepath)) {
-      this.workingDoc = filepath;
+    if (!path4.extname(filepath)) filepath += ".alps.xml";
+    if (!filepath.toLowerCase().endsWith(".alps.xml")) {
+      return `Invalid document path: ${filepath}. ALPS documents must use the .alps.xml extension.`;
+    }
+    if (fs3.existsSync(filepath)) {
       return `Document already exists at ${filepath}. Use load_alps_document() to resume.`;
     }
-    fs2.mkdirSync(path3.dirname(filepath), { recursive: true });
-    fs2.writeFileSync(filepath, this.buildDocument(projectName, /* @__PURE__ */ new Map()), "utf-8");
+    fs3.mkdirSync(path4.dirname(filepath), { recursive: true });
+    try {
+      fs3.writeFileSync(filepath, this.buildDocument(projectName, /* @__PURE__ */ new Map()), {
+        encoding: "utf-8",
+        flag: "wx"
+      });
+    } catch (error51) {
+      if (error51.code === "EEXIST") {
+        return `Document already exists at ${filepath}. Use load_alps_document() to resume.`;
+      }
+      throw error51;
+    }
     this.workingDoc = filepath;
     return `Created ALPS document at ${filepath}`;
   }
   loadDocument(docPath) {
+    this.workingDoc = null;
     const filepath = this.expandPath(docPath);
-    if (!fs2.existsSync(filepath)) return `Document not found at ${filepath}`;
+    if (!filepath.toLowerCase().endsWith(".alps.xml")) {
+      return `Invalid document path: ${filepath}. ALPS documents must use the .alps.xml extension.`;
+    }
+    if (!fs3.existsSync(filepath)) return `Document not found at ${filepath}`;
+    let content;
+    try {
+      content = fs3.readFileSync(filepath, "utf-8");
+    } catch (error51) {
+      return `Unable to read ${filepath}: ${error51.message}`;
+    }
+    const validationError = this.validateDocument(content);
+    if (validationError) return `Invalid ALPS document at ${filepath}: ${validationError}`;
     this.workingDoc = filepath;
     return `${this.getStatus()}
 
@@ -31203,21 +31341,26 @@ ${content}
 NEVER auto-fill sections without user Q&A, even if content already exists.`;
   }
   saveSection(section, subsectionId, title, content) {
-    if (!this.workingDoc) {
-      return "No document loaded. Call init_alps_document() or load_alps_document() first.";
-    }
     if (!(section in SECTION_TITLES)) {
       return `Invalid section number: ${section}. Must be 1-9.`;
     }
-    const docContent = fs2.readFileSync(this.workingDoc, "utf-8");
+    const subsection = this.templates.validateSubsection(section, subsectionId, title);
+    if (!subsection.ok) return `Invalid subsection: ${subsection.message}`;
+    const document = this.readWorkingDocument();
+    if ("error" in document) return document.error;
+    const docContent = document.content;
     const projectName = this.extractProjectName(docContent);
     const sections = this.parseSections(docContent);
-    const subId = `${section}.${subsectionId}`;
-    const existing = this.parseSubsections(sections.get(section) || "", section);
+    const sectionContent = sections.get(section) || "";
+    if (this.hasUnparsedContent(sectionContent)) {
+      return `Cannot safely update Section ${section}: it contains unrecognized content. Export or migrate it before saving a subsection.`;
+    }
+    const subId = subsection.fullId;
+    const existing = this.parseSubsections(sectionContent, section);
     existing.set(subId, { title, content });
     const parts = [...existing.entries()].sort(([a], [b]) => a.localeCompare(b, void 0, { numeric: true })).map(([k, v]) => this.buildSubsection(k, v.title, v.content));
     sections.set(section, parts.join("\n"));
-    fs2.writeFileSync(this.workingDoc, this.buildDocument(projectName, sections), "utf-8");
+    this.writeAtomic(this.workingDoc, this.buildDocument(projectName, sections));
     return `\u2705 Saved ${subId}. ${title}
 
 ---
@@ -31227,11 +31370,10 @@ ${content}
 ---`;
   }
   readSection(section, subsectionId) {
-    if (!this.workingDoc) {
-      return "No document loaded. Call init_alps_document() or load_alps_document() first.";
-    }
     if (!(section in SECTION_TITLES)) return `Section ${section} not found.`;
-    const sections = this.parseSections(fs2.readFileSync(this.workingDoc, "utf-8"));
+    const document = this.readWorkingDocument();
+    if ("error" in document) return document.error;
+    const sections = this.parseSections(document.content);
     const content = sections.get(section) || "";
     if (subsectionId != null) {
       const subId = `${section}.${subsectionId}`;
@@ -31242,32 +31384,48 @@ ${content}
 ${sub.content}`;
       return `Subsection ${subId} not found.`;
     }
-    const display = !content || content.includes("<!-- Not started -->") ? "*Not yet written*" : content;
+    const display = !content || content.includes("<!-- Not started -->") ? "*Not yet written*" : this.contentToMarkdown(content, section);
     return `## Section ${section}. ${SECTION_TITLES[section]}
 
 ${display}`;
   }
   getStatus() {
-    if (!this.workingDoc) {
-      return "No document loaded. Call init_alps_document() or load_alps_document() first.";
-    }
-    const docContent = fs2.readFileSync(this.workingDoc, "utf-8");
+    const document = this.readWorkingDocument();
+    if ("error" in document) return document.error;
+    const docContent = document.content;
     const projectName = this.extractProjectName(docContent);
     const sections = this.parseSections(docContent);
     const lines = [`ALPS Document: ${projectName}`, `Location: ${this.workingDoc}`, ""];
     for (const [num, title] of Object.entries(SECTION_TITLES)) {
-      const content = sections.get(parseInt(num, 10)) || "";
+      const section = Number.parseInt(num, 10);
+      const content = sections.get(section) || "";
+      const subsections = this.parseSubsections(content, section);
       let status;
-      if (!content || content.includes("<!-- Not started -->")) {
+      if (subsections.size === 0 && (!content || content.includes("<!-- Not started -->"))) {
         status = "\u2B1C Not started";
-      } else if (content.trim().length > 50) {
-        status = "\u2705 Written";
+      } else if (section === 7) {
+        const expectedFeatures = this.countFeatureIds(sections.get(6) || "");
+        if (expectedFeatures > 0 && subsections.size >= expectedFeatures) {
+          status = `\u2705 Written (${subsections.size}/${expectedFeatures} features)`;
+        } else if (expectedFeatures > 0) {
+          status = `\u{1F7E1} In progress (${subsections.size}/${expectedFeatures} features)`;
+        } else {
+          status = `\u{1F7E1} In progress (${subsections.size} dynamic feature${subsections.size === 1 ? "" : "s"} saved)`;
+        }
       } else {
-        status = "\u{1F7E1} In progress";
+        const expected = this.templates.expectedSubsections(section);
+        const written = expected.filter((definition) => subsections.has(definition.id)).length;
+        status = expected.length > 0 && written === expected.length ? `\u2705 Written (${written}/${expected.length} subsections)` : `\u{1F7E1} In progress (${written}/${expected.length} subsections)`;
       }
       lines.push(`Section ${num} (${title}): ${status}`);
     }
     return lines.join("\n");
+  }
+  countFeatureIds(sectionSixContent) {
+    const subsection = this.parseSubsections(sectionSixContent, 6).get("6.1");
+    if (!subsection) return 0;
+    const ids = subsection.content.match(/\bF(?:\d+|(?:-[A-Z0-9]+)+)\b/gi) ?? [];
+    return new Set(ids.map((id) => id.toUpperCase())).size;
   }
   contentToMarkdown(content, section) {
     const subs = this.parseSubsections(content, section);
@@ -31277,10 +31435,9 @@ ${display}`;
 ${data.content}`).join("\n\n");
   }
   exportMarkdown(outputPath) {
-    if (!this.workingDoc) {
-      return "No document loaded. Call init_alps_document() or load_alps_document() first.";
-    }
-    const docContent = fs2.readFileSync(this.workingDoc, "utf-8");
+    const document = this.readWorkingDocument();
+    if ("error" in document) return document.error;
+    const docContent = document.content;
     const projectName = this.extractProjectName(docContent);
     const sections = this.parseSections(docContent);
     const lines = [`# ${projectName} ALPS
@@ -31298,7 +31455,8 @@ ${md}
     const result = lines.join("\n");
     if (outputPath) {
       const out = this.expandPath(outputPath);
-      fs2.writeFileSync(out, result, "utf-8");
+      fs3.mkdirSync(path4.dirname(out), { recursive: true });
+      this.writeAtomic(out, result);
       return `Exported to ${out}`;
     }
     return result;
@@ -31420,8 +31578,8 @@ server.tool(
   "init_alps_document",
   "Initialize a new ALPS document file.",
   {
-    project_name: external_exports.string().describe("Name of the project"),
-    output_path: external_exports.string().describe("File path for the document (e.g., ~/Documents/my-project.alps.xml)")
+    project_name: external_exports.string().min(1).describe("Name of the project"),
+    output_path: external_exports.string().min(1).describe("File path for the document (e.g., ~/Documents/my-project.alps.xml)")
   },
   ({ project_name, output_path }) => ({
     content: [{ type: "text", text: dc.initAlpsDocument(project_name, output_path) }]
@@ -31435,7 +31593,7 @@ server.tool(
 2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
 3. Wait for user response before proceeding
 4. Get explicit confirmation before saving each section`,
-  { doc_path: external_exports.string().describe("Path to the .alps.xml file") },
+  { doc_path: external_exports.string().min(1).describe("Path to the .alps.xml file") },
   ({ doc_path }) => ({
     content: [{ type: "text", text: dc.loadAlpsDocument(doc_path) }]
   })
@@ -31449,11 +31607,11 @@ server.tool(
 3. \uC0AC\uC6A9\uC790\uAC00 \uD655\uC778\uD55C \uD6C4\uC5D0\uB9CC \uC774 \uB3C4\uAD6C\uB97C \uD638\uCD9C\uD558\uC138\uC694`,
   {
     section: external_exports.number().min(1).max(9).describe("Section number (1-9)"),
-    subsection_id: external_exports.string().describe(
-      `Subsection ID \u2014 the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Must match a <subsection id="N.x"> in the section's XML template.`
+    subsection_id: external_exports.string().min(1).describe(
+      'Subsection ID \u2014 the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. For Sections 1-6 and 8-9 it must match the XML template. For dynamic Section 7, pass the positive feature number ("1" for 7.1).'
     ),
-    title: external_exports.string().describe(
-      "Title of the subsection. MUST equal the title= attribute of the matching <subsection> in the section's XML template (the single source of truth for headings)."
+    title: external_exports.string().min(1).describe(
+      "Title of the subsection. For Sections 1-6 and 8-9 it MUST equal the matching XML template title. For Section 7, use the approved feature name."
     ),
     content: external_exports.string().describe("Content for the subsection (markdown)")
   },

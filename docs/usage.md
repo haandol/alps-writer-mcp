@@ -136,7 +136,7 @@ The directive tells the model: when a request adds or changes behavior, read the
 
 ## Deterministic self-test
 
-Two dependency-free scripts under the adr-writer plugin verify ADR well-formedness without an LLM judgment call, so the `adr-reviewer` subagent only spends tokens on judgment rules. The skills invoke them at their verification steps: `/adr-new` before the reviewer, `/adr-impl` after Status promotion, `/adr-sync` at the start of deep verification.
+Two dependency-free scripts under the adr-writer plugin verify ADR well-formedness without an LLM judgment call, so the reviewer subagent only spends tokens on judgment rules. Claude Code uses the named reviewer definitions when available; Codex loads the same definition into a generic read-only subagent because Codex plugin manifests do not package `agents/*.md` as named components. The skills invoke the scripts at their verification steps: `/adr-new` before the reviewer, `/adr-impl` after Status promotion, `/adr-sync` at the start of deep verification.
 
 ```bash
 node <adr-writer-plugin>/scripts/adr-structure-lint.mjs [category]   # structure + invariants

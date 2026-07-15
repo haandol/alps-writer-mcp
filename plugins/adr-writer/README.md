@@ -48,7 +48,7 @@ node <plugin>/scripts/adr-structure-lint.mjs [category]   # deterministic struct
 bash <plugin>/scripts/adr-invariants.sh                   # reverse-reference oracle only
 ```
 
-`adr-structure-lint` handles the **deterministic half** of the reviewer's R-rules (enum/format, presence, counts, cross-reference consistency); the `adr-reviewer` subagent focuses on the **judgment half** (two-stage filter R4, gray-zone fidelity R12, strawman R14, slice coherence R5b/c). `/adr-new`, `/adr-impl`, and `/adr-sync` each call the harness at their verification step — see their SKILL.md.
+`adr-structure-lint` handles the **deterministic half** of the reviewer's R-rules (enum/format, presence, counts, cross-reference consistency); the reviewer subagent focuses on the **judgment half** (two-stage filter R4, gray-zone fidelity R12, strawman R14, slice coherence R5b/c). Claude Code can use the named reviewer definitions under `agents/`; Codex reads the same definition and passes it to a generic read-only subagent. `/adr-new`, `/adr-impl`, and `/adr-sync` each call the harness at their verification step — see their SKILL.md.
 
 ## Hook
 

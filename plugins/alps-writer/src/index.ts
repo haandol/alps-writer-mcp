@@ -105,9 +105,10 @@ server.tool(
   "init_alps_document",
   "Initialize a new ALPS document file.",
   {
-    project_name: z.string().describe("Name of the project"),
+    project_name: z.string().min(1).describe("Name of the project"),
     output_path: z
       .string()
+      .min(1)
       .describe("File path for the document (e.g., ~/Documents/my-project.alps.xml)"),
   },
   ({ project_name, output_path }) => ({
@@ -123,7 +124,7 @@ server.tool(
 2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
 3. Wait for user response before proceeding
 4. Get explicit confirmation before saving each section`,
-  { doc_path: z.string().describe("Path to the .alps.xml file") },
+  { doc_path: z.string().min(1).describe("Path to the .alps.xml file") },
   ({ doc_path }) => ({
     content: [{ type: "text", text: dc.loadAlpsDocument(doc_path) }],
   }),
@@ -140,13 +141,15 @@ server.tool(
     section: z.number().min(1).max(9).describe("Section number (1-9)"),
     subsection_id: z
       .string()
+      .min(1)
       .describe(
-        'Subsection ID — the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Must match a <subsection id="N.x"> in the section\'s XML template.',
+        'Subsection ID — the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. For Sections 1-6 and 8-9 it must match the XML template. For dynamic Section 7, pass the positive feature number ("1" for 7.1).',
       ),
     title: z
       .string()
+      .min(1)
       .describe(
-        "Title of the subsection. MUST equal the title= attribute of the matching <subsection> in the section's XML template (the single source of truth for headings).",
+        "Title of the subsection. For Sections 1-6 and 8-9 it MUST equal the matching XML template title. For Section 7, use the approved feature name.",
       ),
     content: z.string().describe("Content for the subsection (markdown)"),
   },

@@ -68,3 +68,11 @@ Config example with `ALPS_OUTPUT_DIR`:
 | `read_alps_section`        | Read the current content of a section       |
 | `get_alps_document_status` | Get the status of all sections              |
 | `export_alps_markdown`     | Export as clean Markdown                    |
+
+Document writes are guarded:
+
+- Source documents must use the `.alps.xml` extension and contain a valid ALPS root. A failed `init` or `load` leaves no document selected.
+- Existing files are never selected implicitly by `init_alps_document`; resume them explicitly with `load_alps_document`.
+- Static subsection IDs and titles are validated against the XML templates. Section 7 accepts dynamic feature entries (`7.1`, `7.2`, ...) with the approved feature name.
+- Markdown content is XML-escaped on disk and decoded when read or exported. Saves use an atomic replacement so interrupted writes do not leave a partially written document.
+- Section status is based on required template subsection coverage, not content length. Dynamic Section 7 compares saved entries with feature IDs found in Section 6.1 when available.

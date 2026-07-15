@@ -7,7 +7,7 @@
   "scripts": {
     "build": "pnpm --filter alps-writer build",
     "lint": "pnpm --filter alps-writer lint",
-    "test": "node --test \"plugins/adr-writer/tests/**/*.test.mjs\"",
+    "test": "pnpm --filter alps-writer test && node --test \"plugins/adr-writer/tests/**/*.test.mjs\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"

@@ -56,6 +56,7 @@ export const KNOWN_ENTRY_FIELDS = new Set([
 export const KNOWN_ADR_ITEM_FIELDS = new Set(["path", "status", "summary"]);
 
 export const SUBDOMAIN_TYPES = new Set(["core", "supporting", "generic"]);
+const CONTROL_CHAR_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 
 // Sections the README ADR template marks as the load-bearing spine. HARD =
 // must be present (structural well-formedness). SOFT = expected but their
@@ -358,6 +359,15 @@ export function validateMappingShape(mapping) {
       err("entry-not-object", `category "${key}" entry is not an object`);
       continue;
     }
+    if ("feature" in entry) {
+      if (typeof entry.feature !== "string")
+        err("feature-type", `category "${key}": feature must be a string`);
+      else if (entry.feature.length > 240 || CONTROL_CHAR_RE.test(entry.feature))
+        err(
+          "feature-unsafe",
+          `category "${key}": feature must be one line and at most 240 characters`,
+        );
+    }
     // adrs: required (key present), array of index records, unique. Empty
     // allowed — a context-grouping entry may hold no context-direct ADR (its
     // ADRs live in feature sub-folder entries). Each record is an object with a
@@ -375,6 +385,16 @@ export function validateMappingShape(mapping) {
         if (typeof rec.path !== "string" || !rec.path) {
           err("adrs-item-path", `category "${key}": adrs item missing string "path"`);
           continue;
+        }
+        if (
+          rec.path.length > 320 ||
+          CONTROL_CHAR_RE.test(rec.path) ||
+          pathIsAbsoluteOrTraverses(rec.path)
+        ) {
+          err(
+            "adrs-item-path-unsafe",
+            `category "${key}": adrs path must be a project-relative, single-line path`,
+          );
         }
         if (!("status" in rec)) {
           err("adrs-item-status-missing", `category "${key}": adrs "${rec.path}" missing "status"`);
@@ -395,9 +415,23 @@ export function validateMappingShape(mapping) {
               "adrs-item-status-enum",
               `category "${key}": adrs "${rec.path}" status "${rec.status}" is not a valid Status`,
             );
+          if (rec.status.length > 100 || CONTROL_CHAR_RE.test(rec.status))
+            err(
+              "adrs-item-status-unsafe",
+              `category "${key}": adrs "${rec.path}" status must be one line and at most 100 characters`,
+            );
         }
         if (!("summary" in rec) || !String(rec.summary || "").trim())
           warn("adrs-item-summary-missing", `category "${key}": adrs "${rec.path}" has no summary`);
+        else if (
+          typeof rec.summary !== "string" ||
+          rec.summary.length > 240 ||
+          CONTROL_CHAR_RE.test(rec.summary)
+        )
+          err(
+            "adrs-item-summary-unsafe",
+            `category "${key}": adrs "${rec.path}" summary must be a one-line string of at most 240 characters`,
+          );
         for (const f of Object.keys(rec))
           if (!KNOWN_ADR_ITEM_FIELDS.has(f))
             warn(
@@ -439,4 +473,12 @@ export function validateMappingShape(mapping) {
   if (hasCycle(mapping)) err("dependson-cycle", "dependsOn graph has a cycle (not a DAG)");
 
   return issues;
+}
+
+function pathIsAbsoluteOrTraverses(value) {
+  return (
+    value.startsWith("/") ||
+    /^[A-Za-z]:[\\/]/.test(value) ||
+    value.split(/[\\/]/).some((segment) => segment === "..")
+  );
 }

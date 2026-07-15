@@ -1,6 +1,6 @@
 ---
 name: adr-impl-review
-description: Review code that was just implemented from an ADR — verify the ADR's business + technical decisions were actually honored in the code, that the code and structure follow best-practice patterns (project conventions first), and surface refactoring opportunities. Report-only (never edits code or the ADR); delegates to the adr-impl-reviewer subagent. Use right after /adr-impl, or when the user invokes /adr-impl-review or asks whether a freshly implemented feature matches its ADR. Keywords - "/adr-impl-review", "ADR 구현 검토", "구현이 ADR 대로 됐는지", "결정 충실도 리뷰", "post-implementation review".
+description: Review code that was just implemented from an ADR — verify the ADR's business + technical decisions were actually honored in the code, that the code and structure follow best-practice patterns (project conventions first), and surface refactoring opportunities. Report-only (never edits code or the ADR); delegates to a reviewer subagent, using the named adr-impl-reviewer when available and a generic read-only subagent otherwise. Use right after /adr-impl, or when the user invokes /adr-impl-review or asks whether a freshly implemented feature matches its ADR. Keywords - "/adr-impl-review", "ADR 구현 검토", "구현이 ADR 대로 됐는지", "결정 충실도 리뷰", "post-implementation review".
 argument-hint: "[adr-path-or-category]"
 disable-model-invocation: true
 ---
@@ -56,7 +56,13 @@ subagent 가 자체적으로 코드를 좁힐 수 있지만, 메인 세션이 �
 
 ### 3. adr-impl-reviewer 위임
 
-`adr-impl-reviewer` subagent 를 호출하고 다음을 prompt 로 넘긴다:
+reviewer subagent 를 다음 순서로 실행한다:
+
+1. 현재 클라이언트가 `adr-impl-reviewer` named subagent 를 발견할 수 있으면 그것을 호출한다.
+2. named subagent 가 없으면 `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-reviewer.md` 를 읽고, 그 전문을 reviewer 지침으로 전달한 **일반 read-only subagent** 하나를 실행한다. Codex 플러그인은 `agents/*.md`를 컴포넌트로 등록하지 않으므로 이 fallback이 기본 경로다.
+3. subagent 기능 자체를 사용할 수 없는 클라이언트에서만 메인 세션이 같은 reviewer 지침을 직접 수행하고, 격리 검토를 사용할 수 없었다고 결과에 한 줄 밝힌다.
+
+reviewer 에 다음을 prompt 로 넘긴다:
 
 - 검토 대상 ADR 파일 경로
 - 2단계에서 좁힌 코드 범위 (폴더/파일 목록)

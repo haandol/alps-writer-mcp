@@ -20,7 +20,7 @@ pnpm --filter alps-writer start   # Run built bundle (node dist/index.js)
 
 Build (inside `plugins/alps-writer/`) runs `tsc --noEmit` (typecheck), then esbuild bundles `src/index.ts` → `dist/index.js` with deps inlined (ESM, node20 target), then copies static assets `cp -r src/templates dist/ && cp -r src/guides dist/`. The asset copy is required because the server reads XML templates / MD guides at runtime via `fs.readFileSync` (`import.meta.url`-relative). **`dist/` is committed** — regenerate and commit it whenever `src/` changes.
 
-No test framework configured.
+Tests use Node's built-in test runner. ALPS TypeScript tests run through `tsx`; ADR tests are dependency-free `.mjs` tests. Run all suites with `pnpm test`.
 
 ## Repository Structure
 
