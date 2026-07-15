@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "alps-writer": {
+      "cwd": ".",
+      "command": "node",
+      "args": ["./dist/index.js"]
+    }
+  }
+}

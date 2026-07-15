@@ -1,0 +1,31 @@
+{
+  "name": "alps-writer",
+  "version": "0.4.20",
+  "description": "Author ALPS product requirement documents through a guided MCP workflow and hand features off to ADR authoring.",
+  "author": {
+    "name": "haandol",
+    "url": "https://github.com/haandol"
+  },
+  "homepage": "https://github.com/haandol/alps-writer-plugins",
+  "repository": "https://github.com/haandol/alps-writer-plugins",
+  "license": "MIT",
+  "keywords": ["mcp", "alps", "prd", "product-requirements", "specification", "codex"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "ALPS Writer",
+    "shortDescription": "Write guided, agent-ready product requirements",
+    "longDescription": "Create and resume nine-section ALPS product requirement documents with guided questions, explicit section approval, dependency tracking, Markdown export, and an optional handoff from feature specifications to ADR Writer.",
+    "developerName": "haandol",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "websiteURL": "https://github.com/haandol/alps-writer-plugins",
+    "defaultPrompt": [
+      "Start a new ALPS product requirements document.",
+      "Resume my existing ALPS document.",
+      "Convert the approved ALPS features into ADR drafts."
+    ],
+    "brandColor": "#0F766E",
+    "screenshots": []
+  }
+}

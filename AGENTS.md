@@ -1,6 +1,6 @@
 # AGENTS.md
 
-`alps-writer-plugins` — a Claude Code marketplace shipping two independent plugins: **alps-writer** (ALPS/PRD authoring via an MCP server) and **adr-writer** (ADR-driven development cycle). Both install from the marketplace alone — no npm. The alps-writer MCP server is bundled with esbuild (dependencies inlined) and the bundle is committed at `plugins/alps-writer/dist/`, so the plugin runs straight from a marketplace install.
+`alps-writer-plugins` — a Codex and Claude Code marketplace shipping two independent plugins: **alps-writer** (ALPS/PRD authoring via an MCP server) and **adr-writer** (ADR-driven development cycle). Both install from the marketplace alone — no npm. The alps-writer MCP server is bundled with esbuild (dependencies inlined) and the bundle is committed at `plugins/alps-writer/dist/`, so the plugin runs straight from a marketplace install.
 
 **Tech Stack**: TypeScript 5.9+, Node.js >= 20, pnpm workspace, MCP SDK (`@modelcontextprotocol/sdk`), Zod
 
@@ -27,11 +27,15 @@ No test framework configured.
 ```
 .claude-plugin/
 └── marketplace.json      # Marketplace manifest — registers both plugins
+.agents/plugins/
+└── marketplace.json      # Codex marketplace manifest
 package.json              # Private workspace root (prettier/husky/lint-staged)
 pnpm-workspace.yaml       # packages: plugins/alps-writer
 
 plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 ├── .claude-plugin/plugin.json   # mcpServers only (node dist/index.js); skills/ (alps-init, feature-to-adr) are auto-discovered
+├── .codex-plugin/plugin.json    # Codex metadata; registers skills + .mcp.json
+├── .mcp.json                    # Codex MCP command (node ./dist/index.js)
 ├── package.json          # private; build tooling for the bundle
 ├── tsconfig.json, eslint.config.mjs
 ├── src/
@@ -48,6 +52,7 @@ plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 
 plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 ├── .claude-plugin/plugin.json   # hooks registration (no MCP)
+├── .codex-plugin/plugin.json    # Codex metadata; registers skills + hooks
 ├── README.md
 ├── skills/               # adr-new, adr-impl, adr-sync, adr-rollup
 ├── agents/               # adr-reviewer subagent
@@ -87,7 +92,15 @@ ADR folders are organized along two axes — a DDD **bounded context** (top-leve
 
 ## Plugin distribution
 
-The repo root is a Claude Code **marketplace** (`.claude-plugin/marketplace.json`) registering two plugins by `source`: `./plugins/alps-writer` and `./plugins/adr-writer`. Each plugin has its own `.claude-plugin/plugin.json`. Slash commands are packaged as skills — `commands/*.md` and `skills/<name>/SKILL.md` produce the same `/<name>` invocation per the Claude Code spec. Within each plugin, `${CLAUDE_PLUGIN_ROOT}` resolves to that plugin's directory, so intra-plugin path references stay valid after the split.
+The repo root is a dual-client marketplace. `.agents/plugins/marketplace.json` registers the plugins for Codex and `.claude-plugin/marketplace.json` registers them for Claude Code; both point to `./plugins/alps-writer` and `./plugins/adr-writer`. Each plugin has client-specific manifests under `.codex-plugin/` and `.claude-plugin/`. Skills are shared between both clients. Codex invokes them with `$skill-name` or natural language; Claude Code exposes the same skills as `/skill-name`.
+
+Codex plugin hooks set `PLUGIN_ROOT` and also set `${CLAUDE_PLUGIN_ROOT}` for Claude compatibility, so shared hook commands and skill instructions can retain the existing variable. The alps-writer Codex MCP config uses plugin-relative `cwd` and `./dist/index.js`.
+
+```bash
+codex plugin marketplace add haandol/alps-writer-plugins
+codex plugin add alps-writer@alps-writer
+codex plugin add adr-writer@alps-writer
+```
 
 ```
 /plugin marketplace add haandol/alps-writer-plugins
@@ -95,8 +108,8 @@ The repo root is a Claude Code **marketplace** (`.claude-plugin/marketplace.json
 /plugin install adr-writer@alps-writer    # ADR plugin (skills + hooks)
 ```
 
-- **alps-writer** runs its MCP server from the committed bundle (`command: node`, `args: ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"]`) plus its local `skills/`. No hooks, no npm/npx.
-- **adr-writer** ships local `skills/`, `agents/`, `hooks/`, and `templates/adr/`. No MCP.
+- **alps-writer** runs its MCP server from the committed bundle plus its local `skills/`. No hooks, no npm/npx.
+- **adr-writer** ships local `skills/`, `agents/`, `hooks/`, and `templates/adr/`. Codex requires users to review and trust the bundled hook before it runs. No MCP.
 
 The hook script (in adr-writer) is Node ESM (`.mjs`) and reads NDJSON events from stdin per the Claude Code hooks spec. It uses only Node built-ins (no extra deps), so the plugin requires nothing beyond a Node.js >= 20 runtime.
 

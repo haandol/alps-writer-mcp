@@ -1,8 +1,8 @@
 # Usage guide
 
-This guide covers the full development cycle, the two entry flows (PRD-first and ADR-only), the slash commands, the ADR-first hook, and the mapping file.
+This guide covers the full development cycle, the two entry flows (PRD-first and ADR-only), the shared skills, the ADR-first hook, and the mapping file. Invoke a skill as `$skill-name` in Codex or `/skill-name` in Claude Code.
 
-For installation see the [README Quick Start](../README.md#quick-start-claude-code-plugins). For the MCP server in non-Claude-Code clients see [MCP server](./mcp-server.md).
+For installation see the [README Quick Start](../README.md#quick-start). For the MCP server in other MCP clients see [MCP server](./mcp-server.md).
 
 ## Development cycle
 

@@ -98,7 +98,8 @@ const CATEGORIES = {
   },
   "Undecided behavior": {
     hue: "#c77b0e",
-    blurb: "코드가 ADR이 결정하지 않은 동작을 더 한다(scope-creep) — ADR에 결정 추가 vs 코드에서 제거, 사용자 판정.",
+    blurb:
+      "코드가 ADR이 결정하지 않은 동작을 더 한다(scope-creep) — ADR에 결정 추가 vs 코드에서 제거, 사용자 판정.",
     authority: "contested",
     defaultDecision: "defer",
   },
@@ -139,7 +140,10 @@ const AUTHORITY = {
 
 const VERDICTS = {
   PASS: { hue: "#2e7d4f", note: "회색지대 결정이 코드에 모두 반영됨 (advisory만 남음)." },
-  FIX_REQUIRED: { hue: "#b4690e", note: "후속 조치 필요 — 코드 수정(Spec violation·Best practice), ADR 정정(Impl-fact mismatch → /adr-sync), 또는 사람 판정(Decision changed·Undecided)." },
+  FIX_REQUIRED: {
+    hue: "#b4690e",
+    note: "후속 조치 필요 — 코드 수정(Spec violation·Best practice), ADR 정정(Impl-fact mismatch → /adr-sync), 또는 사람 판정(Decision changed·Undecided).",
+  },
   BLOCK: { hue: "#c0362c", note: "vertical slice 조각화·안티패턴·결정 역전 — 구조 조정 필요." },
 };
 
@@ -196,7 +200,7 @@ function normalizeFindings(data) {
     const unknownCat = !known(category);
     if (unknownCat) {
       process.stderr.write(
-        `adr-impl-review-report: warning — unrecognized category "${category}" (finding ${f.id || i + 1}); rendered as 미분류.\n`
+        `adr-impl-review-report: warning — unrecognized category "${category}" (finding ${f.id || i + 1}); rendered as 미분류.\n`,
       );
     }
     return {
@@ -220,8 +224,8 @@ function normalizeFindings(data) {
   return mapped
     .map((f, i) => ({ f, i }))
     .sort((a, b) => {
-      const pa = a.f.unknownCat ? -1 : PRIORITY[a.f.category] ?? 99;
-      const pb = b.f.unknownCat ? -1 : PRIORITY[b.f.category] ?? 99;
+      const pa = a.f.unknownCat ? -1 : (PRIORITY[a.f.category] ?? 99);
+      const pb = b.f.unknownCat ? -1 : (PRIORITY[b.f.category] ?? 99);
       return pa - pb || a.i - b.i;
     })
     .map((x) => x.f);
@@ -283,23 +287,23 @@ function findingCard(f, i, total) {
   const meta_rows = [];
   if (f.fix)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">제안</span><span class="meta__v">${esc(f.fix)}</span></div>`
+      `<div class="meta__row"><span class="meta__k">제안</span><span class="meta__v">${esc(f.fix)}</span></div>`,
     );
   if (f.basis)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">근거</span><span class="meta__v">${esc(f.basis)}</span></div>`
+      `<div class="meta__row"><span class="meta__k">근거</span><span class="meta__v">${esc(f.basis)}</span></div>`,
     );
   if (f.route)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">경로</span><span class="meta__v meta__v--mono">${esc(f.route)}</span></div>`
+      `<div class="meta__row"><span class="meta__k">경로</span><span class="meta__v meta__v--mono">${esc(f.route)}</span></div>`,
     );
   if (f.weight)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">무게</span><span class="meta__v">${esc(f.weight)}</span></div>`
+      `<div class="meta__row"><span class="meta__k">무게</span><span class="meta__v">${esc(f.weight)}</span></div>`,
     );
   if (f.impact)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">효과</span><span class="meta__v">${esc(f.impact)}</span></div>`
+      `<div class="meta__row"><span class="meta__k">효과</span><span class="meta__v">${esc(f.impact)}</span></div>`,
     );
   const metaBlock = meta_rows.length ? `<div class="meta">${meta_rows.join("")}</div>` : "";
 
@@ -362,11 +366,7 @@ function buildHtml(data) {
 
   // Embed the findings so the download echoes the original context back
   // alongside the reviewer's rulings — the main session gets both in one file.
-  const embedded = JSON.stringify(
-    { adr: data.adr || "", verdict: verdictKey, findings },
-    null,
-    0
-  );
+  const embedded = JSON.stringify({ adr: data.adr || "", verdict: verdictKey, findings }, null, 0);
 
   return `<!doctype html>
 <html lang="ko">
@@ -665,7 +665,7 @@ function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help || !opts.in) {
     process.stdout.write(
-      "Usage: node adr-impl-review-report.mjs <findings.json|-> [--out PATH] [--stdout]\n"
+      "Usage: node adr-impl-review-report.mjs <findings.json|-> [--out PATH] [--stdout]\n",
     );
     process.exit(opts.help ? 0 : 2);
   }

@@ -1,8 +1,8 @@
 {
   "name": "alps-writer-plugins",
-  "version": "0.4.19",
+  "version": "0.4.20",
   "private": true,
-  "description": "Claude Code marketplace: ALPS (PRD) authoring + ADR-driven development, as two independent plugins.",
+  "description": "Codex and Claude Code marketplace: ALPS authoring and ADR-driven development as two independent plugins.",
   "type": "module",
   "scripts": {
     "build": "pnpm --filter alps-writer build",
@@ -14,6 +14,7 @@
   },
   "keywords": [
     "claude-code",
+    "codex",
     "plugin",
     "marketplace",
     "alps",

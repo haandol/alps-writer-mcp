@@ -1,0 +1,32 @@
+{
+  "name": "alps-writer",
+  "interface": {
+    "displayName": "ALPS Writer Plugins"
+  },
+  "plugins": [
+    {
+      "name": "alps-writer",
+      "source": {
+        "source": "local",
+        "path": "./plugins/alps-writer"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "adr-writer",
+      "source": {
+        "source": "local",
+        "path": "./plugins/adr-writer"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

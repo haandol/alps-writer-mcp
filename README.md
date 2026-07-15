@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-A Claude Code **marketplace** that ships two independent plugins for spec-driven development: **alps-writer** (PRD authoring) and **adr-writer** (ADR-driven cycle). Both install from the marketplace alone — **no npm, no npx, no build step** for end users. The alps-writer MCP server is bundled (dependencies inlined) and committed at `plugins/alps-writer/dist/`.
+A Codex and Claude Code **marketplace** that ships two independent plugins for spec-driven development: **alps-writer** (PRD authoring) and **adr-writer** (ADR-driven cycle). Both install from the marketplace alone — **no npm, no npx, no build step** for end users. The alps-writer MCP server is bundled (dependencies inlined) and committed at `plugins/alps-writer/dist/`.
 
 | Plugin                  | Scope                                                                                                                               | Depends on                       |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
@@ -19,9 +19,21 @@ It fixes the format (9 sections, explicit dependencies, vertical-slice features)
 
 See [`about-alps.md`](./plugins/alps-writer/templates/alps/about-alps.md) for the full design rationale and how ALPS feeds into the ADR-driven cycle.
 
-## Quick Start (Claude Code plugins)
+## Quick Start
 
-Register this repository as a Claude Code marketplace, then install whichever plugins you want. They are independent — install one or both.
+Register this repository as a marketplace, then install whichever plugins you want. They are independent — install one or both.
+
+**Codex**
+
+```bash
+codex plugin marketplace add haandol/alps-writer-plugins
+codex plugin add alps-writer@alps-writer
+codex plugin add adr-writer@alps-writer
+```
+
+Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust the ADR Writer hook when Codex prompts you.
+
+**Claude Code**
 
 ```
 /plugin marketplace add haandol/alps-writer-plugins
@@ -31,7 +43,7 @@ Register this repository as a Claude Code marketplace, then install whichever pl
 
 > `/feature-to-adr` (in alps-writer) delegates ADR authoring to `/adr-new` (in adr-writer), so install **both** if you want the ALPS → ADR bridge. adr-writer on its own works without any ALPS PRD.
 
-Two entry flows, both driven by slash commands:
+Two entry flows, driven by `$skill-name` in Codex or `/skill-name` in Claude Code:
 
 - **PRD-first** — `/alps-init` → `/feature-to-adr` → `/adr-impl` → `/adr-sync`
 - **ADR-only** — `/adr-new` → `/adr-impl` → `/adr-sync`
@@ -67,16 +79,20 @@ See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash c
 
 ```
 alps-writer-plugins/                 # marketplace root (this repo)
-├── .claude-plugin/marketplace.json  # registers both plugins
+├── .agents/plugins/marketplace.json # Codex marketplace
+├── .claude-plugin/marketplace.json  # Claude Code marketplace
 ├── docs/                            # usage, dependency model, MCP server guides
 └── plugins/
     ├── alps-writer/                 # PRD plugin (bundles its own MCP server)
-    │   ├── .claude-plugin/plugin.json   # mcpServers → node dist/index.js
+    │   ├── .codex-plugin/plugin.json    # Codex metadata + MCP registration
+    │   ├── .claude-plugin/plugin.json   # Claude Code metadata + MCP registration
+    │   ├── .mcp.json                    # Codex MCP server command
     │   ├── src/                     # MCP server source (TypeScript)
     │   ├── dist/                    # committed bundle (index.js + assets) — runs as-is
     │   ├── skills/                  # /alps-init, /feature-to-adr
     │   └── templates/alps/
     └── adr-writer/                  # ADR plugin (standalone, ALPS-agnostic)
+        ├── .codex-plugin/plugin.json
         ├── .claude-plugin/plugin.json
         ├── skills/                  # /adr-new, /adr-impl, /adr-sync, /adr-rollup
         ├── agents/                  # adr-reviewer subagent

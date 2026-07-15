@@ -31333,7 +31333,7 @@ var DocumentController = class {
 
 // src/index.ts
 var server = new McpServer(
-  { name: "alps-writer", version: "0.4.3" },
+  { name: "alps-writer", version: "0.4.20" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 

@@ -18,7 +18,9 @@ ALPS Section 7 의 feature 를 ADR 초안으로 일괄 변환하는 helper 입�
 
 ```
 /feature-to-adr 는 ADR 작성을 adr-writer 플러그인의 /adr-new 에 위임합니다.
-adr-writer 를 먼저 설치해 주세요:  /plugin install adr-writer@alps-writer
+adr-writer 를 먼저 설치해 주세요.
+Codex: codex plugin add adr-writer@alps-writer
+Claude Code: /plugin install adr-writer@alps-writer
 ```
 
 이어서 ALPS 를 로드한다:

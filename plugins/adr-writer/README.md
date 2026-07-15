@@ -1,12 +1,21 @@
 # adr-writer
 
-ADR-driven development cycle for Claude Code. Author Architecture Decision Records, implement them in code, and keep the two in sync — with an ADR-first hook that re-injects the ADR map every turn.
+ADR-driven development cycle for Codex and Claude Code. Author Architecture Decision Records, implement them in code, and keep the two in sync — with an ADR-first hook that re-injects the ADR map every turn.
 
 **Standalone**: adr-writer requires no ALPS PRD and never references the `alps-writer` plugin. ADRs are its first-class artifact; code is implemented from ADRs. `docs/adr/.mapping.json` (the ADR index) stores no PRD reference. The ADR ↔ code link is not stored anywhere — an agent finds the code an ADR governs by reading the ADR and searching the repo, so refactors never churn a stored mapping.
 
 ## Install
 
+**Codex**
+
+```bash
+codex plugin marketplace add haandol/alps-writer-plugins
+codex plugin add adr-writer@alps-writer
 ```
+
+**Claude Code**
+
+```text
 /plugin marketplace add haandol/alps-writer-plugins
 /plugin install adr-writer@alps-writer
 ```
