@@ -45,6 +45,7 @@ import {
   codeRefHits,
   validateMappingShape,
   sectionRange,
+  numberingGaps,
 } from "./adr-lint-lib.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -339,6 +340,34 @@ function main() {
           );
       }
     }
+  }
+
+  // ── numbering gaps (rollup advisory, warning-only) ────────────────────
+  // Group in-scope on-disk ADRs by category (directory under the ADR root) and
+  // flag any category whose NNNN sequence has a hole. This is NOT an error:
+  // split/adr-sync intentionally keep gaps ("결번 유지"). It's a heads-up that
+  // if adr-rollup just deleted a chain member, its step 7 renumber may be
+  // pending — the rollup skill reads this warning and asks the user whether to
+  // fill the gap. Skipped when --category narrows to one leaf with no siblings.
+  {
+    const byCategory = new Map();
+    for (const file of files) {
+      const rel = relFromRepo(file);
+      if (!inScope(rel)) continue;
+      const relFromAdr = path.relative(adrRoot, file).split(path.sep).join("/");
+      const cat = relFromAdr.split("/").slice(0, -1).join("/") || "(root)";
+      if (!byCategory.has(cat)) byCategory.set(cat, []);
+      byCategory.get(cat).push(path.basename(file));
+    }
+    for (const g of numberingGaps(byCategory))
+      rep.warn(
+        "numbering-gap",
+        `docs/adr/${g.category}`,
+        `번호 결번: ${g.missing.map((n) => String(n).padStart(4, "0")).join(", ")} 없음 ` +
+          `(존재: ${g.present.map((n) => String(n).padStart(4, "0")).join(", ")}). ` +
+          `방금 adr-rollup 을 실행했다면 7단계 renumber 가 남았을 수 있습니다 — 결번을 메울지 사용자에게 확인하세요. ` +
+          `(split/adr-sync 로 생긴 결번이면 정상이니 그대로 둡니다.)`,
+      );
   }
 
   // ── adr-invariants.sh (a)/(b) sub-run ─────────────────────────────────

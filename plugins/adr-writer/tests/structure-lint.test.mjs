@@ -17,6 +17,7 @@ import {
   codeRefHits,
   validateMappingShape,
   checkCategoryKey,
+  numberingGaps,
 } from "../scripts/adr-lint-lib.mjs";
 
 // ── unit: classifyStatus ────────────────────────────────────────────────
@@ -206,6 +207,41 @@ test("validateMappingShape flags dangling, self-edge, unknown field, double-inde
   assert.ok(codes.includes("dependson-cycle"));
   assert.ok(codes.includes("adr-double-indexed"));
   assert.ok(codes.includes("unknown-field")); // warn level
+});
+
+// ── unit: numberingGaps (rollup advisory) ───────────────────────────────
+test("numberingGaps returns empty for a contiguous-from-0001 category", () => {
+  const gaps = numberingGaps({ auth: ["0001-a.md", "0002-b.md", "0003-c.md"] });
+  assert.deepEqual(gaps, []);
+});
+
+test("numberingGaps flags a hole and reports present + missing numbers", () => {
+  // 0002 deleted by a rollup, 0003 not yet renumbered → gap at 2.
+  const gaps = numberingGaps({ auth: ["0001-a.md", "0003-c.md"] });
+  assert.equal(gaps.length, 1);
+  assert.equal(gaps[0].category, "auth");
+  assert.deepEqual(gaps[0].present, [1, 3]);
+  assert.deepEqual(gaps[0].missing, [2]);
+});
+
+test("numberingGaps flags a missing 0001 (sequence not starting at 1)", () => {
+  const gaps = numberingGaps({ auth: ["0002-b.md", "0003-c.md"] });
+  assert.deepEqual(gaps[0].missing, [1]);
+});
+
+test("numberingGaps is per-category and ignores non-canonical basenames", () => {
+  const gaps = numberingGaps(
+    new Map([
+      ["auth", ["0001-a.md", "0004-d.md"]], // gap 2,3
+      ["billing", ["0001-a.md", "0002-b.md"]], // clean
+      ["misc", ["decision-log.md", "0001-a.md"]], // non-NNNN ignored → clean
+    ]),
+  );
+  assert.deepEqual(
+    gaps.map((g) => g.category),
+    ["auth"],
+  );
+  assert.deepEqual(gaps[0].missing, [2, 3]);
 });
 
 // ── integration: CLI end-to-end ─────────────────────────────────────────
@@ -461,5 +497,47 @@ test("CLI: usage error (unknown flag) exits 2", () => {
     seedClean(dir);
     const { code } = runStructureLint(dir, ["--bogus"]);
     assert.equal(code, 2);
+  });
+});
+
+// ── integration: numbering-gap advisory (rollup renumber pending) ────────
+// A minimal valid ADR body (no mapping → no orphan noise; Related empty so no
+// broken-link error). Two of these with a hole between them = a gap.
+const gapAdr = (n, title) =>
+  `# ADR ${n}: ${title}\n\nDate: 2026-07-01\n\n## Status\nProposed\n\n## Context\nc\n\n## Decision Drivers\n- a\n- b\n- c\n\n## Decision\nd\n\n### 대안 검토\n- a\n- b\n\n## Consequences\nok\n\n## Related\n`;
+
+test("CLI: a numbering gap is a WARNING, not an error (rollup renumber pending)", () => {
+  withTmp((dir) => {
+    // auth/0001 + auth/0003 — 0002 was deleted by a rollup, renumber not done.
+    write(dir, "docs/adr/auth/0001-session-key.md", gapAdr("0001", "세션 키"));
+    write(dir, "docs/adr/auth/0003-sso.md", gapAdr("0003", "SSO"));
+    write(dir, "docs/adr/README.md", `# ADR\n`);
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, "gap alone must not fail the lint");
+    const gap = r.warnings.find((w) => w.rule === "numbering-gap");
+    assert.ok(gap, "numbering-gap warning must be present");
+    assert.match(gap.msg, /0002/, "names the missing number");
+    assert.match(gap.msg, /renumber/, "points the LLM at rollup step 7");
+  });
+});
+
+test("CLI: --warn-as-error escalates a numbering gap so a rollup can gate on it", () => {
+  withTmp((dir) => {
+    write(dir, "docs/adr/auth/0001-session-key.md", gapAdr("0001", "세션 키"));
+    write(dir, "docs/adr/auth/0003-sso.md", gapAdr("0003", "SSO"));
+    write(dir, "docs/adr/README.md", `# ADR\n`);
+    const { code } = runStructureLint(dir, ["--no-invariants", "--warn-as-error"]);
+    assert.equal(code, 1);
+  });
+});
+
+test("CLI: a contiguous-from-0001 category emits no numbering-gap warning", () => {
+  withTmp((dir) => {
+    write(dir, "docs/adr/auth/0001-session-key.md", gapAdr("0001", "세션 키"));
+    write(dir, "docs/adr/auth/0002-sso.md", gapAdr("0002", "SSO"));
+    write(dir, "docs/adr/README.md", `# ADR\n`);
+    const r = parseLint(dir);
+    assert.equal(r.code, 0);
+    assert.equal(r.warnings.filter((w) => w.rule === "numbering-gap").length, 0);
   });
 });

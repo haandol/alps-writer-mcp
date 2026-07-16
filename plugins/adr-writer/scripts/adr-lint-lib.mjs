@@ -169,6 +169,38 @@ export function checkFilename(basename) {
   return { ok: true, basename };
 }
 
+// ── numbering gaps (rollup advisory) ──────────────────────────────────────
+// Given ADR file basenames grouped per category, report categories whose NNNN
+// sequence is non-contiguous (a gap or a missing 0001). This is ADVISORY only:
+// split/adr-sync legitimately leave gaps ("결번 유지, renumber 금지"), so a gap
+// is NOT an error — it's a signal that, if we just ran adr-rollup, step 7
+// (renumber) may have been skipped. The lint surfaces it as a warning and the
+// rollup skill asks the user whether to fill it.
+//   filesByCategory: Map<categoryKey, string[] basenames> (or plain object).
+// Returns [{ category, present:[nums], missing:[nums], expectedMax }] for each
+// category with a gap; empty when every category is contiguous from 0001.
+export function numberingGaps(filesByCategory) {
+  const entries =
+    filesByCategory instanceof Map
+      ? [...filesByCategory.entries()]
+      : Object.entries(filesByCategory || {});
+  const out = [];
+  for (const [category, basenames] of entries) {
+    const nums = [];
+    for (const b of basenames || []) {
+      const m = /^(\d{4})-/.exec(b);
+      if (m) nums.push(parseInt(m[1], 10));
+    }
+    if (nums.length === 0) continue;
+    const uniq = [...new Set(nums)].sort((a, b) => a - b);
+    const max = uniq[uniq.length - 1];
+    const missing = [];
+    for (let n = 1; n <= max; n++) if (!uniq.includes(n)) missing.push(n);
+    if (missing.length > 0) out.push({ category, present: uniq, missing, expectedMax: max });
+  }
+  return out;
+}
+
 // ── path depth ────────────────────────────────────────────────────────────
 // structure.md: at most 2 category segments → at most 2 DIRECTORY levels
 // between the ADR root and the file. e.g. identity/login/0001.md = 2 (ok);
