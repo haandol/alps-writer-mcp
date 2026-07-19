@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADR Implementation Review"
+  short_description: "Adversarial necessity and sufficiency review"
+  default_prompt: "Use $adr-impl-review to independently challenge this ADR implementation and produce a Mermaid-based junior repair guide."

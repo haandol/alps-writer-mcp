@@ -30,6 +30,7 @@
     "defaultPrompt": [
       "Write an ADR for this architectural decision.",
       "Implement the next proposed ADR and verify it.",
+      "Adversarially review this ADR implementation and produce a junior repair guide.",
       "Audit the current ADRs against the shipping code."
     ],
     "brandColor": "#B45309",

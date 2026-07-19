@@ -55,7 +55,7 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 ├── .codex-plugin/plugin.json    # Codex metadata; registers skills + hooks
 ├── README.md
 ├── skills/               # adr-new, adr-impl, adr-sync, adr-rollup
-├── agents/               # adr-reviewer subagent
+├── agents/               # ADR authoring reviewer + isolated impl explainer/review/report roles
 ├── hooks/
 │   ├── hooks.json        # UserPromptSubmit registration
 │   └── surface-adr-context.mjs  # UserPromptSubmit — inject ADR-first directive + mapping snapshot

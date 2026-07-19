@@ -32,6 +32,7 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
   // 리뷰어 모델 다양화 — 같은 계열의 거짓 합의를 깨기 위해 서로 다른 모델로 돌린다.
   assert.match(skill, /서로 다른 모델 계열/);
   assert.match(skill, /다른 계열의 최고 추론 모델/);
+  assert.match(skill, /필요성 reviewer는 `openai\.gpt-5\.6-sol`/);
 });
 
 test("human gate asks a third spec-fitness question that reviewers never inherit", () => {
@@ -90,4 +91,5 @@ test("junior repair report requires grounded Mermaid and executable fix guidance
   assert.match(writer, /건드리지 말아야 할 범위/);
   assert.match(writer, /완료 조건/);
   assert.match(writer, /검증 체크리스트/);
+  assert.match(writer, /## 11\. 리뷰 한계와 질문/);
 });

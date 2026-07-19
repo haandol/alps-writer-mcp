@@ -4,10 +4,10 @@
 
 A Codex and Claude Code **marketplace** that ships two independent plugins for spec-driven development: **alps-writer** (PRD authoring) and **adr-writer** (ADR-driven cycle). Both install from the marketplace alone — **no npm, no npx, no build step** for end users. The alps-writer MCP server is bundled (dependencies inlined) and committed at `plugins/alps-writer/dist/`.
 
-| Plugin                  | Scope                                                                                                                               | Depends on                       |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`.    | adr-writer (only for the bridge) |
-| **`adr-writer`** (ADR)  | ADR-driven development: author with `/adr-new`, implement with `/adr-impl`, sync with `/adr-sync`; an ADR-first hook on every turn. | nothing — fully standalone       |
+| Plugin                  | Scope                                                                                                                            | Depends on                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
+| **`adr-writer`** (ADR)  | ADR-driven development: author, implement, adversarially review, and sync; an ADR-first hook runs on every turn.                 | nothing — fully standalone       |
 
 The two are split so that **adr-writer never references ALPS** — once a feature is imported, the ADR lifecycle is entirely independent of any PRD. The only coupling is one-way (`alps-writer → adr-writer`), via the `/feature-to-adr` bridge.
 
@@ -38,15 +38,15 @@ Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$a
 ```
 /plugin marketplace add haandol/alps-writer-plugins
 /plugin install alps-writer@alps-writer   # PRD authoring (MCP server + /alps-init, /feature-to-adr)
-/plugin install adr-writer@alps-writer    # ADR cycle (/adr-new, /adr-impl, /adr-sync, hooks)
+/plugin install adr-writer@alps-writer    # ADR cycle (/adr-new, /adr-impl, /adr-impl-review, /adr-sync, hooks)
 ```
 
 > `/feature-to-adr` (in alps-writer) delegates ADR authoring to `/adr-new` (in adr-writer), so install **both** if you want the ALPS → ADR bridge. adr-writer on its own works without any ALPS PRD.
 
 Two entry flows, driven by `$skill-name` in Codex or `/skill-name` in Claude Code:
 
-- **PRD-first** — `/alps-init` → `/feature-to-adr` → `/adr-impl` → `/adr-sync`
-- **ADR-only** — `/adr-new` → `/adr-impl` → `/adr-sync`
+- **PRD-first** — `/alps-init` → `/feature-to-adr` → `/adr-impl` → `/adr-impl-review` → `/adr-sync`
+- **ADR-only** — `/adr-new` → `/adr-impl` → `/adr-impl-review` → `/adr-sync`
 
 See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash commands, hook behavior, and the mapping file.
 
@@ -64,6 +64,7 @@ See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash c
 **adr-writer (ADR)**
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
+- **Adversarial implementation review** — explain the diff for a junior, independently challenge change necessity and behavioral sufficiency, run targeted tests, and generate a Mermaid-based repair guide
 - **ADR-first hook** — every user turn re-injects the ADR-first directive + current `docs/adr/.mapping.json` snapshot, so the agent checks ADRs before changing behavior
 - Fully standalone — no ALPS PRD required
 
@@ -94,8 +95,8 @@ alps-writer-plugins/                 # marketplace root (this repo)
     └── adr-writer/                  # ADR plugin (standalone, ALPS-agnostic)
         ├── .codex-plugin/plugin.json
         ├── .claude-plugin/plugin.json
-        ├── skills/                  # /adr-new, /adr-impl, /adr-sync, /adr-rollup
-        ├── agents/                  # adr-reviewer subagent
+        ├── skills/                  # /adr-new, /adr-impl, /adr-impl-review, /adr-sync, /adr-rollup
+        ├── agents/                  # ADR authoring + isolated implementation review roles
         ├── hooks/                   # ADR-first directive hook (UserPromptSubmit)
         └── templates/adr/           # README + authoring-rules + structure + mapping.schema.json
 ```

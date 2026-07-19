@@ -11,7 +11,8 @@ flowchart LR
     A["Check ADRs<br/>(mapping snapshot)"] --> B["Author/edit ADR<br/>(/adr-new — default)<br/>or /feature-to-adr<br/>(ALPS helper)"]
     B --> C["Write code<br/>(/adr-impl)"]
     C --> D["Test<br/>(project commands)"]
-    D --> E["/adr-sync<br/>(reinforce ADR<br/>with what was learned)"]
+    D --> R["/adr-impl-review<br/>(independent adversarial review<br/>+ junior repair guide)"]
+    R --> E["/adr-sync<br/>(reinforce ADR<br/>with what was learned)"]
     E -->|next cycle| A
 ```
 
@@ -54,7 +55,7 @@ flowchart TD
 
     subgraph maint["Ongoing maintenance"]
         direction TB
-        Review(["/adr-impl-review [category]<br/>did the code honor the ADR's decisions?<br/>· best-practice · refactors (report-only)"])
+        Review(["/adr-impl-review [category]<br/>junior explanation + human intent gate<br/>necessity ∥ sufficiency + tests<br/>Mermaid repair guide (report-only)"])
         Sync(["/adr-sync [category]<br/>drift repair · category integrity<br/>· stale fN → canonical (confirm)"])
         Rollup(["/adr-rollup [category]<br/>merge evolution chain of<br/>one logical decision"])
     end
@@ -64,7 +65,7 @@ flowchart TD
     S7 -.->|"reads Section 7 + 6.3<br/>(alps-writer → adr-writer, one-way)"| F2A
     Start(["ADR-only entry:<br/>no PRD"]) --> New
     Accepted --> Review
-    Review -->|decision fidelity checked| Sync
+    Review -->|evidence reviewed| Sync
     Review -.->|impl-fact drift found| Sync
     Sync -->|next cycle| Impl
     Sync -.->|evolution history scattered?| Rollup
@@ -82,7 +83,7 @@ flowchart TD
 - **Two entry points.** PRD-first starts at `/alps-init` and crosses into the ADR layer via `/feature-to-adr` (the only place `alps-writer` hands off to `adr-writer` — a one-way dependency; `adr-writer` never reads ALPS back). ADR-only skips the PRD box entirely and starts at `/adr-new`.
 - **`/feature-to-adr` is a thin importer.** It reads Section 7 features and the 6.3 dependency graph, derives a canonical category key from each feature _name_ (the Feature ID is not stored — adr-writer keeps no PRD reference; the key is name-derived and `/adr-impl` resolves by key), and delegates the actual authoring to `/adr-new`. It runs once per feature; later PRD changes are absorbed by editing the ADR, not re-importing.
 - **The gate is mandatory.** `/adr-impl` never skips straight to coding — it reads `dependsOn`, walks prerequisites transitively, and refuses to build on a `Proposed` or dangling prerequisite until you implement it first (in topological order). Status flips to `Accepted` only after tests pass — it records a fact, not an intent.
-- **Post-implementation review runs the opposite way.** Right after `/adr-impl`, `/adr-impl-review` treats the **ADR as the spec** and checks whether the code honored its decisions (report-only — it edits neither code nor ADR). `/adr-sync` treats the **code as authoritative** and repairs impl-fact drift in the ADR. When the former finds an `[Impl-fact mismatch]` (a fact where code is authoritative), it routes to the latter.
+- **Post-implementation review is adversarial and report-only.** Right after `/adr-impl`, `/adr-impl-review` first explains the actual diff for a junior and pauses for human intent confirmation. It then runs isolated necessity and sufficiency reviewers in parallel: one attacks removable scope, while the other derives the ADR decision ledger, searches for counterexamples, and executes targeted tests. A final Markdown guide uses grounded Mermaid diagrams plus ordered fix and verification steps so a developer new to the code can apply the approved changes. `/adr-sync` remains the route for `[Impl-fact mismatch]`, where code is authoritative for implementation facts.
 - **Maintenance is a separate, repeating phase.** `/adr-sync` reconciles ADRs with shipping code, repairs drift, checks category/`dependsOn` integrity, and proposes canonicalizing any legacy `fN` naming (applied only after you confirm). `/adr-rollup` is reached from sync only when one decision's evolution history is scattered across several ADRs.
 - **The hook runs underneath all of it.** Every user turn, `UserPromptSubmit` re-injects the mapping snapshot and the ADR-first directive so the agent checks ADRs before changing behavior — this is what keeps the cycle intact across a long, compacted session.
 
@@ -93,7 +94,8 @@ flowchart TD
 1. `/alps-init` → answer the focused questions section by section; the agent saves each only after you confirm.
 2. After Section 7 (feature specs), run `/feature-to-adr` → it walks each feature and hands it to `/adr-new`, producing a `Proposed` ADR per feature under `docs/adr/<category>/` and seeding `docs/adr/.mapping.json`.
 3. `/adr-impl <id>` → implement an accepted-in-spirit ADR in code + tests. On success it flips the ADR to `Accepted`.
-4. `/adr-sync` at the end of a cycle → fold what you learned back into the ADRs and repair any drift.
+4. `/adr-impl-review <id>` → confirm the junior-readable explanation, then review necessity and sufficiency independently and inspect the Mermaid repair guide.
+5. `/adr-sync` at the end of a cycle → fold what you learned back into the ADRs and repair any drift.
 
 `/feature-to-adr` is a **one-time import**: it converts each Section 7 feature into an ADR once. After that the decision is managed at the ADR level — if the PRD later changes, edit the affected ADR directly (or supersede it with a new one) rather than re-importing.
 
@@ -101,7 +103,8 @@ flowchart TD
 
 1. `/adr-new <category>` → describe the decision directly (refactor, infra choice, new feature direction). No ALPS document required.
 2. `/adr-impl <id>` → build it in code.
-3. As you keep working, the ADR-first hook re-injects the ADR map every turn so the agent checks ADRs before changing behavior. Run `/adr-sync` to reconcile ADRs with shipping code.
+3. `/adr-impl-review <id>` → run the report-only adversarial review and inspect its junior repair guide.
+4. As you keep working, the ADR-first hook re-injects the ADR map every turn so the agent checks ADRs before changing behavior. Run `/adr-sync` to reconcile ADRs with shipping code.
 
 In both flows the hook runs automatically once adr-writer is installed — every user turn re-injects the ADR map and the ADR-first directive.
 
@@ -116,13 +119,13 @@ In both flows the hook runs automatically once adr-writer is installed — every
 
 ### adr-writer
 
-| Command                          | Role                                                                                                              |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `/adr-new <category>`            | Author a new ADR directly — the default path, no ALPS PRD required                                                |
-| `/adr-impl [id]`                 | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build             |
-| `/adr-impl-review [id]`          | Review just-implemented code against its ADR — decision fidelity, best-practice patterns, refactors (report-only) |
-| `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                |
-| `/adr-rollup [category]`         | Consolidate only ADR groups whose evolution history of one logical decision is split (no arg → all)               |
+| Command                          | Role                                                                                                                                                 |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/adr-new <category>`            | Author a new ADR directly — the default path, no ALPS PRD required                                                                                   |
+| `/adr-impl [id]`                 | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build                                                |
+| `/adr-impl-review [id]`          | Explain the diff, confirm intent, run independent necessity/sufficiency reviews and tests, and emit a Mermaid-rich junior repair guide (report-only) |
+| `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                                                   |
+| `/adr-rollup [category]`         | Consolidate only ADR groups whose evolution history of one logical decision is split (no arg → all)                                                  |
 
 ## Hook behavior
 
@@ -136,7 +139,7 @@ The directive tells the model: when a request adds or changes behavior, read the
 
 ## Deterministic self-test
 
-Two dependency-free scripts under the adr-writer plugin verify ADR well-formedness without an LLM judgment call, so the reviewer subagent only spends tokens on judgment rules. Claude Code uses the named reviewer definitions when available; Codex loads the same definition into a generic read-only subagent because Codex plugin manifests do not package `agents/*.md` as named components. The skills invoke the scripts at their verification steps: `/adr-new` before the reviewer, `/adr-impl` after Status promotion, `/adr-sync` at the start of deep verification.
+Two dependency-free scripts under the adr-writer plugin verify ADR well-formedness without an LLM judgment call, so reviewer subagents only spend tokens on judgment rules. Claude Code uses named reviewer definitions when available; Codex loads the matching definitions into generic subagents because Codex plugin manifests do not package `agents/*.md` as named components. The skills invoke the scripts at their verification steps: `/adr-new` before its reviewer, `/adr-impl` after Status promotion, and `/adr-sync` at the start of deep verification.
 
 ```bash
 node <adr-writer-plugin>/scripts/adr-structure-lint.mjs [category]   # structure + invariants

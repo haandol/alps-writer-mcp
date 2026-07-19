@@ -4,9 +4,9 @@
 // decisions back as feedback.json.
 //
 // This is the "show the report, get feedback as a file" half of
-// /adr-impl-review. The adr-impl-reviewer subagent produces the judgment (a
-// punch list); the main session serializes it to a findings JSON and hands it
-// here. We turn that JSON into ONE standalone HTML file — no server, no
+// /adr-impl-review. Independent necessity and sufficiency reviewers produce
+// evidence-backed findings; the main session serializes them to JSON and hands
+// it here. We turn that JSON into ONE standalone HTML file — no server, no
 // browser automation, no python. The page frames each finding as a docket
 // item: the ADR decision (the intended design) set against the code as built,
 // with a direction indicator that says which side is authoritative — so the
@@ -38,13 +38,16 @@
 //   {
 //     "adr":        "docs/adr/ordering/checkout/0001-checkout.md",  // required
 //     "status":     "Accepted (2026-07-10)",
-//     "verdict":    "PASS" | "FIX_REQUIRED" | "BLOCK",              // required
+//     "verdict":    "PASS" | "FIX_REQUIRED" | "INCONCLUSIVE" | "BLOCK", // required
+//     "explanation":"/tmp/.../explanation.md",
+//     "report":     "/tmp/.../implementation-review.md",
 //     "scope":      ["src/checkout/handler.ts", "..."],   // code the reviewer read
 //     "conventions":"AGENTS.md",                          // or "없음"
 //     "findings": [                                       // required (may be [])
 //       {
 //         "id":       "f1",                               // stable id (auto if absent)
-//         "category": "Spec violation",   // one of the seven tags below (no brackets)
+//         "category": "Spec violation",   // one of the recognized tags below
+//         "perspective": "necessity" | "sufficiency" | "both",
 //         "summary":  "재사용 감지 시 계열 폐기가 구현되지 않음",
 //         "adrQuote": "재사용이 감지되면 그 토큰 계열 전체를 폐기한다",  // ADR decision, 1 line
 //         "code":     "src/auth/refresh.ts: 재사용해도 해당 토큰만 무효화",
@@ -53,15 +56,19 @@
 //         "basis":    "AGENTS.md §error-handling",         // for Best practice — the convention cited
 //         "weight":   "now" | "next-cycle",               // TIMING axis (Refactor / Test gap)
 //         "impact":   "low-effort/high-payoff",           // VALUE axis (Refactor / Test gap)
-//         "confidence": "high" | "medium" | "low"          // evidence strength; low never pre-selects fix
+//         "confidence": "high" | "medium" | "low",         // evidence strength; low never pre-selects fix
+//         "evidence": "why the claim is supported",
+//         "test": "targeted command or proposed reproduction",
+//         "testResult": "PASS/FAIL/NOT RUN plus the observed result"
 //       }
 //     ],
 //     "notes": "…"                                        // optional free text
 //   }
 //
 // Recognized categories (drive color, authority direction, default follow-up):
-//   Spec violation · Decision changed in code · Undecided behavior ·
-//   Impl-fact mismatch · Best practice · Refactor · Test gap
+//   Unnecessary change · Simpler alternative · Spec violation ·
+//   Decision changed in code · Undecided behavior · Impl-fact mismatch ·
+//   Best practice · Refactor · Test gap · Unverified risk · Contradiction
 //
 // The download (feedback.json) echoes every finding field back alongside the
 // reviewer's ruling, so the main session can route follow-ups (fix / /adr-sync /
@@ -77,6 +84,7 @@ import path from "node:path";
 //   authority       which side the confrontation resolves toward — this drives
 //                   the direction indicator AND matches the SKILL routing:
 //                     "adr"        ADR is the spec → fix the code
+//                     "minimality" smaller diff is authoritative
 //                     "code"       code is authoritative on this fact → fix ADR
 //                     "contested"  a real decision change → user must rule
 //                     "convention" measured against project conventions
@@ -84,6 +92,18 @@ import path from "node:path";
 //   defaultDecision seeds the radio so the common follow-up is pre-selected
 //                   while the user stays in control.
 const CATEGORIES = {
+  "Unnecessary change": {
+    hue: "#a92f27",
+    blurb: "ADR 목표를 유지하면서 제거할 수 있는 변경 — 더 작은 diff로 줄일 일.",
+    authority: "minimality",
+    defaultDecision: "fix",
+  },
+  "Simpler alternative": {
+    hue: "#8a4f0f",
+    blurb: "같은 계약을 기존의 더 작은 구조로 충족할 수 있음 — trade-off 확인 후 단순화.",
+    authority: "contested",
+    defaultDecision: "defer",
+  },
   "Spec violation": {
     hue: "#c0362c",
     blurb: "코드가 ADR 결정을 지키지 않았다 — ADR이 스펙이므로 코드를 고칠 일.",
@@ -127,11 +147,24 @@ const CATEGORIES = {
     authority: "advisory",
     defaultDecision: "defer",
   },
+  "Unverified risk": {
+    hue: "#7a5b14",
+    blurb: "구체적 실패 가설은 있으나 실행 또는 call path 증거가 부족함 — 먼저 재현할 일.",
+    authority: "contested",
+    defaultDecision: "defer",
+  },
+  Contradiction: {
+    hue: "#7b3f91",
+    blurb: "독립 리뷰의 전제가 충돌함 — 어느 전제가 맞는지 사람이 확인해야 함.",
+    authority: "contested",
+    defaultDecision: "defer",
+  },
 };
 
 // authority → the center indicator between ADR and code.
 const AUTHORITY = {
   adr: { glyph: "→", label: "ADR 기준", hint: "코드가 결정을 따라야 함" },
+  minimality: { glyph: "−", label: "최소 변경", hint: "계약을 유지하며 코드를 줄임" },
   code: { glyph: "←", label: "코드 기준", hint: "ADR을 코드에 맞춰 정정" },
   contested: { glyph: "⇄", label: "판정 필요", hint: "어느 쪽이 옳은지 결정" },
   convention: { glyph: "▸", label: "규약 기준", hint: "프로젝트 규약과 대조" },
@@ -139,10 +172,17 @@ const AUTHORITY = {
 };
 
 const VERDICTS = {
-  PASS: { hue: "#2e7d4f", note: "회색지대 결정이 코드에 모두 반영됨 (advisory만 남음)." },
+  PASS: {
+    hue: "#2e7d4f",
+    note: "제거 가능한 변경이나 확인된 반례가 없고, 결정 원장과 targeted test가 닫힘.",
+  },
   FIX_REQUIRED: {
     hue: "#b4690e",
-    note: "후속 조치 필요 — 코드 수정(Spec violation·Best practice), ADR 정정(Impl-fact mismatch → /adr-sync), 또는 사람 판정(Decision changed·Undecided).",
+    note: "후속 조치 필요 — 불필요한 변경 제거, 코드 수정, ADR 정정, 테스트 보강 또는 사람 판정.",
+  },
+  INCONCLUSIVE: {
+    hue: "#7a5b14",
+    note: "중요 경로를 실행하거나 범위를 확정하지 못해 PASS/FIX를 판정할 증거가 부족함.",
   },
   BLOCK: { hue: "#c0362c", note: "vertical slice 조각화·안티패턴·결정 역전 — 구조 조정 필요." },
 };
@@ -191,15 +231,19 @@ function inlineScriptJson(value) {
 // Remediation priority — lower sorts first. Code must-fix (Spec violation,
 // Undecided behavior, Best practice) rises above ADR-side actions (Decision
 // changed, Impl-fact mismatch) and advisory (Refactor, Test gap), so the docket
-// reads top-to-bottom as "fix these first". Mirrors SKILL step 5 routing.
+// reads top-to-bottom as "fix these first". Mirrors SKILL step 7 routing.
 const PRIORITY = {
   "Spec violation": 0,
-  "Undecided behavior": 1,
-  "Best practice": 2,
-  "Decision changed in code": 3,
-  "Impl-fact mismatch": 4,
-  Refactor: 5,
-  "Test gap": 6,
+  "Unnecessary change": 1,
+  "Undecided behavior": 2,
+  "Best practice": 3,
+  "Decision changed in code": 4,
+  "Impl-fact mismatch": 5,
+  "Simpler alternative": 6,
+  "Test gap": 7,
+  "Unverified risk": 8,
+  Contradiction: 9,
+  Refactor: 10,
 };
 
 function normalizeFindings(data) {
@@ -229,6 +273,10 @@ function normalizeFindings(data) {
       weight: f.weight || "",
       impact: f.impact || "",
       confidence: f.confidence || "",
+      perspective: f.perspective || "",
+      evidence: f.evidence || "",
+      test: f.test || "",
+      testResult: f.testResult || "",
     };
   });
   // Stable sort by remediation priority; unknown categories float to the top so
@@ -318,6 +366,22 @@ function findingCard(f, i, total) {
     meta_rows.push(
       `<div class="meta__row"><span class="meta__k">효과</span><span class="meta__v">${esc(f.impact)}</span></div>`,
     );
+  if (f.perspective)
+    meta_rows.push(
+      `<div class="meta__row"><span class="meta__k">관점</span><span class="meta__v">${esc(f.perspective)}</span></div>`,
+    );
+  if (f.evidence)
+    meta_rows.push(
+      `<div class="meta__row"><span class="meta__k">증거</span><span class="meta__v">${esc(f.evidence)}</span></div>`,
+    );
+  if (f.test)
+    meta_rows.push(
+      `<div class="meta__row"><span class="meta__k">테스트</span><span class="meta__v meta__v--mono">${esc(f.test)}</span></div>`,
+    );
+  if (f.testResult)
+    meta_rows.push(
+      `<div class="meta__row"><span class="meta__k">결과</span><span class="meta__v">${esc(f.testResult)}</span></div>`,
+    );
   const metaBlock = meta_rows.length ? `<div class="meta">${meta_rows.join("")}</div>` : "";
 
   // Low-confidence findings must NOT pre-select "반영" — weak evidence should
@@ -369,13 +433,19 @@ function buildHtml(data) {
   const count = findings.length;
 
   const empty =
-    count === 0
+    count === 0 && verdictKey === "PASS"
       ? `<div class="conforms">
            <div class="conforms__stamp">적합</div>
-           <p class="conforms__lead">이 ADR의 결정이 코드에 모두 반영되었습니다.</p>
-           <p class="conforms__sub">고칠 항목이 없습니다. advisory가 있었다면 다음 사이클에 반영하세요.</p>
+           <p class="conforms__lead">확인된 불필요 변경이나 반례가 없습니다.</p>
+           <p class="conforms__sub">결정 원장과 targeted test 근거는 상세 수정 가이드에서 확인하세요.</p>
          </div>`
-      : "";
+      : count === 0
+        ? `<div class="conforms">
+             <div class="conforms__stamp">${esc(verdictKey || "미판정")}</div>
+             <p class="conforms__lead">확정 finding은 없지만 검토가 완료되지 않았습니다.</p>
+             <p class="conforms__sub">상단 verdict 설명과 상세 리포트의 확인 필요 항목을 먼저 처리하세요.</p>
+           </div>`
+        : "";
 
   // Embed the findings so the download echoes the original context back
   // alongside the reviewer's rulings — the main session gets both in one file.
@@ -610,6 +680,8 @@ function buildHtml(data) {
             : ""
         }
         ${data.conventions ? `<div>프로젝트 규약 · <code>${esc(data.conventions)}</code></div>` : ""}
+        ${data.explanation ? `<div>쉬운 설명 · <code>${esc(data.explanation)}</code></div>` : ""}
+        ${data.report ? `<div>수정 가이드 · <code>${esc(data.report)}</code></div>` : ""}
       </div>
     </div>
     <div class="stamp">
