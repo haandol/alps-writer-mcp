@@ -1,6 +1,6 @@
 {
   "name": "alps-writer-plugins",
-  "version": "0.4.21",
+  "version": "0.4.22",
   "private": true,
   "description": "Codex and Claude Code marketplace: ALPS authoring and ADR-driven development as two independent plugins.",
   "type": "module",
