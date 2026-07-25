@@ -8,7 +8,9 @@ argument-hint: "<category> [title?]"
 
 ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 — 이 plugin 의 정식 ADR 작성 경로이고, `/feature-to-adr` 는 "ALPS Section 7 feature 가 이미 있을 때 자동 변환해주는 helper" 입니다.
 
-> 사용 시점: 새 기능/리팩토링/인프라 결정 등 코드를 바꾸기 전에 의사결정을 남겨야 할 때. 작성한 ADR 은 곧바로 `/adr-impl` 로 이어 구현할 수 있습니다.
+> 사용 시점: 새 기능·인프라 선택·아키텍처 방향 등 코드를 바꾸기 전에 의사결정을 남겨야 할 때. 작성한 ADR 은 곧바로 `/adr-impl` 로 이어 구현할 수 있습니다.
+>
+> **리팩토링은 대상이 아닙니다** — 동작을 바꾸지 않는 구조 변경은 코딩 에이전트의 플래닝 기능에 맡기고 ADR 을 만들지 않습니다 (`README.md` "ADR이 아닌 것"). 사용자가 리팩터링을 ADR 로 남기려 하면 한 번 되묻습니다 — "이 변경이 동작이나 결정(채택 대안·상태 전이·키 디자인)을 바꾸나요? 순수 구조 정리라면 ADR 없이 플래닝으로 진행하는 편이 낫습니다." 결정이 바뀌는 경우면 그건 리팩터링이 아니므로 그대로 진행합니다.
 
 ## 절차
 
@@ -25,7 +27,7 @@ ADR 을 직접 작성합니다. ALPS PRD 가 없어도 사용 가능합니다 �
 매핑 상태 점검:
 
 - `docs/adr/` 가 없으면 디렉토리를 만든다.
-- `docs/adr/README.md` (와 `authoring-rules.md`, `structure.md`) 가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/` 의 동일 파일 3종을 함께 복사한다.
+- `docs/adr/README.md` (와 `authoring-rules.md`, `structure.md`, `decision-log.template.md`) 가 없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/` 의 동일 파일 4종을 함께 복사한다. `decision-log.template.md` 는 **읽기용 시드**다 — 카테고리에 첫 major 결정 변경이 생길 때 `docs/adr/<category>/decision-log.md` 로 복사해 쓰며, 지금 카테고리 폴더에 미리 만들어 두지 않는다 (로그는 남길 전환이 생긴 뒤에만 존재한다).
 - `docs/adr/.mapping.json` 이 없으면 빈 골격(`{ "categories": {} }`) 으로 만든다.
 
 카테고리 비대화 점검 — 카테고리가 정해지면 `structure.md` "context 가 비대해질 때 — 피쳐 sub-folder 로 분할" 의 점검·제안 절차를 따른다. 대상 폴더(피쳐 sub-folder 또는 context 직속)의 ADR 이 15 개 이상이면 피쳐 sub-folder 분할을 한 번 제안하고, 사용자가 받아들이면 이번 ADR 부터 sub-folder(`docs/adr/<context>/<feature>/`) 안에 작성한다 — 평면 키 `pricing` 이 `pricing/<feature>` 로 자라는 정상 경로다. 거절하거나 15 미만이면 평면 구조 그대로 진행 — 다시 묻지 않는다.

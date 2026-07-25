@@ -13,10 +13,11 @@
 
 ```
 docs/adr/
-├── README.md            # 개념 인덱스 (ADR 목록도 트리도 두지 않음)
-├── authoring-rules.md   # 작성 규칙 · 결정 로그 포맷 · 리뷰 체크리스트
-├── structure.md         # 이 문서 — 디렉토리 레이아웃 · 매핑 정책
-├── .mapping.json        # ADR 레지스트리/인덱스 (adrs·dependsOn·subdomainType. 코드 경로도 PRD 참조도 저장 안 함)
+├── README.md                    # 개념 인덱스 (ADR 목록도 트리도 두지 않음)
+├── authoring-rules.md           # 작성 규칙 · 결정 로그 기준 · 리뷰 체크리스트
+├── structure.md                 # 이 문서 — 디렉토리 레이아웃 · 매핑 정책
+├── decision-log.template.md     # decision-log.md 시드 (읽기용 — 카테고리에 복사해 쓴다)
+├── .mapping.json                # ADR 레지스트리/인덱스 (adrs·dependsOn·subdomainType. 코드 경로도 PRD 참조도 저장 안 함)
 ├── identity/                       # BOUNDED CONTEXT (core subdomain)
 │   ├── 0001-token-rotation.md      # context 전반 cross-cutting 결정 (부모 폴더 직속)
 │   ├── decision-log.md             # (선택) 이 카테고리의 major 결정 변경 이력 — 컨벤션 파일, 매핑 미등록
@@ -208,8 +209,9 @@ bounded context(도메인) 폴더가 기본이고, 그 안의 피쳐가 UI → A
 
 ### 결정 로그 (decision-log.md) — 매핑에 등록하지 않는 컨벤션 파일
 
-각 카테고리 폴더(`docs/adr/<category>/`)는 선택적으로 `decision-log.md` 하나를 둘 수 있다 — 그 카테고리의 **major 결정 변경 이력**(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전·폐기)을 역순으로 담는 파일이다. ADR 본문은 현재 상태만 서술하므로, "무엇이 왜 바뀌었나" 의 시간축은 이 로그가 보존한다. 기록 기준·포맷은 `authoring-rules.md` "결정 로그 (decision-log.md)".
+각 카테고리 폴더(`docs/adr/<category>/`)는 선택적으로 `decision-log.md` 하나를 둘 수 있다 — 그 카테고리의 **major 결정 변경 이력**(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전·폐기)을 역순으로 담는 파일이다. ADR 본문은 현재 상태만 서술하므로, "무엇이 왜 바뀌었나" 의 시간축은 이 로그가 보존한다. 기록 기준은 `authoring-rules.md` "결정 로그 기록 기준".
 
+- **시드에서 복사해 만든다** — 첫 major 전환이 생기면 `docs/adr/decision-log.template.md`(없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/decision-log.template.md`)를 `docs/adr/<category>/decision-log.md` 로 복사하고 `<category>` 와 엔트리를 채운다. 포맷을 기억에서 재작성하지 않는다. **남길 전환이 생기기 전에는 만들지 않는다** — 빈 로그를 미리 두지 않는다.
 - **`.mapping.json` 에 등록하지 않는다** — 로그는 ADR 이 아니라 컨벤션 파일이다. 매핑 스키마에 `decisionLog` 같은 필드를 두지 않으며(엔트리는 `additionalProperties:false`), 스킬은 카테고리 폴더에서 존재 여부만 확인한다.
 - **결정론적 하네스가 검사하지 않는다** — `adr-structure-lint` 는 `NNNN-` 로 시작하는 파일만 ADR 로 열거하므로 `decision-log.md` 는 per-ADR 검사·인덱스 정합·orphan 검사 어디에도 걸리지 않는다. `/adr-sync` 의 디스크 ADR 전수 조회도 이 파일을 제외한다.
 - **참조 방향은 log → ADR 단방향** — 로그는 `현재 ADR` 링크만 담고 코드·PRD 를 참조하지 않는다. ADR 본문(Related 포함)은 로그를 역으로 링크하지 않는다.

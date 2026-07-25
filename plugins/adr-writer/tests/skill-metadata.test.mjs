@@ -147,3 +147,35 @@ test("the ALPS-to-ADR pipeline in about-alps.md is a Mermaid flowchart", () => {
     assert.ok(pipeline.includes(command), `the flowchart must keep the ${command} edge`);
   }
 });
+
+// The seeded doc set. /adr-new copies these into docs/adr/ on first use, and
+// three prompts (adr-new, adr-reviewer, adr-impl-sufficiency-reviewer) fall back
+// to reading them from the plugin root. If a file is added to templates/adr/ but
+// the seeding step is not updated, users never receive it — which is exactly how
+// decision-log.template.md's format stayed prompt-only.
+test("every ADR template on disk is named in the /adr-new seeding step", () => {
+  const templateDir = path.join(ADR_ROOT, "templates", "adr");
+  const onDisk = readdirSync(templateDir).sort();
+  const seedStep = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+
+  // mapping.schema.json is referenced separately (as the schema for the mapping
+  // file), not copied as a rule doc — assert it is still cited somewhere.
+  assert.match(seedStep, /mapping\.schema\.json/);
+
+  for (const file of onDisk.filter((f) => f !== "mapping.schema.json")) {
+    assert.ok(seedStep.includes(file), `templates/adr/${file} is never seeded by /adr-new`);
+  }
+});
+
+// The decision-log seed is the single source for the log format. authoring-rules
+// must point at it rather than carrying a second, drift-prone copy of the header.
+test("the decision-log format has one source: the seed file", () => {
+  const seed = read(path.join(ADR_ROOT, "templates", "adr", "decision-log.template.md"));
+  assert.match(seed, /^# Decision Log: <category>/);
+  assert.match(seed, /\*\*현재 ADR\*\*/);
+
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  assert.match(rules, /decision-log\.template\.md/);
+  // The old inline copy of the file header must be gone, or the two can drift.
+  assert.doesNotMatch(rules, /# Decision Log: <category>/);
+});

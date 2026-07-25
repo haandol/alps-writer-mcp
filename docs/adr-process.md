@@ -84,6 +84,7 @@ flowchart TD
 - **진화 이력은 ADR 본문이 아니라 decision-log 에 산다.** ADR 본문은 현재 상태만 서술하고, 같은 결정이 진화하면 edit-in-place 로 덮어쓴다. major 전환(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전)은 카테고리별 `decision-log.md` 에 역순 한 줄로 남긴다 — `/adr-impl`·`/adr-sync` 가 append/harvest 하고, `/adr-rollup` 은 통합 시 체인의 major 전환을 로그로 harvest 한 뒤 현재 상태 통합본만 남긴다. 로그는 컨벤션 파일이라 `.mapping.json` 에 등록하지 않고 하네스가 검사하지 않는다. supersede(새 ADR)는 결정 주제가 분기할 때만 — evolution chain 을 기본으로 쌓지 않는다.
 - **`/adr-impl` 은 카테고리 키로 대상을 찾는다.** Feature ID 는 어디에도 저장하지 않으며, 번호뿐인 fallback 키(`f1`)도 평범한 리터럴 카테고리 키로 해석된다.
 - **hook 이 사이클을 지탱한다.** 매 턴 `.mapping.json` 인덱스 스냅샷과 ADR-first 지시를 재주입해 긴 세션(compaction)에서도 흐름이 유지된다.
+- **리팩터링은 사이클에서 면제된다.** 동작을 바꾸지 않는 구조 변경은 규모가 크더라도 ADR 을 만들지 않는다 — 코딩 에이전트의 플래닝 기능이 변경 범위와 호출자 영향을 그때그때 계획하므로, 그 계획을 안정 레이어인 ADR 로 굳히면 리팩터링이 ADR 을 끌고 다닌다. 버그픽스·lint/포맷·문서 수정·운영 명령·정보 조회도 같은 이유로 면제다. 단 "리팩터링" 이 결정 자체를 바꾸면(채택 대안 교체·상태 머신·키 디자인·외부 의존 fallback) 그건 동작 변경이므로 해당 ADR 을 갱신한다.
 
 ## 2. ADR Status 전이
 

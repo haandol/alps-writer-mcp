@@ -127,6 +127,29 @@ test("directive always carries the ADR-first cycle framing", () => {
   });
 });
 
+// Refactoring is exempt by policy: a coding agent's planning step already scopes
+// the change and its call-site impact, so writing that plan into an ADR would
+// pin a volatile plan into the stable layer. The exemption must hold regardless
+// of size — the earlier wording ("동작/구조 변경" as the trigger, "단순 리팩터링"
+// as the exemption) invited the model to treat a large interface-level refactor
+// as in-scope.
+test("directive exempts refactoring of any size, but not decision changes", () => {
+  withTmp((dir) => {
+    write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
+    const ctx = runHook(dir);
+
+    assert.match(ctx, /리팩터링도 면제다/);
+    assert.match(ctx, /규모가 크거나 인터페이스·모듈 구조를 바꿔도 마찬가지다/);
+    assert.match(ctx, /플래닝 기능/);
+    // The escape hatch: a "refactor" that changes a decision is not a refactor.
+    assert.match(ctx, /결정 자체를 바꾸면/);
+    // The trigger must not name plain structural change, or it would re-capture
+    // the very refactors the next line exempts.
+    assert.doesNotMatch(ctx, /동작\/구조 변경에 해당하는지/);
+    assert.doesNotMatch(ctx, /단순 버그픽스, 리팩터링/);
+  });
+});
+
 test("absolute ALPS_ADR_MAPPING is honored as-is (not joined onto CLAUDE_PROJECT_DIR)", () => {
   withTmp((dirA) => {
     withTmp((dirB) => {

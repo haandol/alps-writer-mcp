@@ -193,10 +193,10 @@ renumber 로 경로가 바뀐 ADR 은 8단계의 cross-reference 갱신에서 �
 - 체인의 각 전환마다 로그 엔트리 하나. 날짜는 그 전환이 실제로 일어난 시점을 알 수 있으면(옛 ADR 의 `Date:`·Status 전환일·git 로그) 그것을, 모르면 오늘로 둔다.
 - **minor 는 harvest 하지 않는다** — 임계값 미세 조정·표현·구현 사실 정정은 로그에 넣지 않는다 (Git 이 보존). 로그를 노이즈로 채우지 않는다.
 
-포맷·규칙은 `authoring-rules.md` "결정 로그 (decision-log.md)" 를 그대로 따른다. rollup 이 특히 지켜야 할 것:
+기록 기준은 `authoring-rules.md` "결정 로그 기록 기준", 포맷은 시드 `decision-log.template.md` 를 그대로 따른다. rollup 이 특히 지켜야 할 것:
 
 - **프로즈에 옛 ADR 번호를 박지 않는다.** 각 엔트리는 `현재 ADR` 링크 한 줄로만 **통합(survivor) ADR 의 최종 경로**(7단계 renumber 후 번호)를 가리킨다. 옛 번호(0002, 0003…)를 본문 텍스트에 적으면, 이후 rollup 의 `scan_citation` 이 로그를 stale 인용으로 오탐한다.
-- 로그가 없으면 새로 만들고, 있으면 역순(최신 먼저) 맨 위에 엔트리를 추가한다.
+- 로그가 없으면 `docs/adr/decision-log.template.md`(없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/decision-log.template.md`)를 카테고리 폴더의 `decision-log.md` 로 복사해 시작하고, 있으면 역순(최신 먼저) 맨 위에 엔트리를 추가한다.
 - **삭제하는 `Superseded`/체인 멤버의 회색지대 근거는 harvest 로 보존된다** — 통합본(현재 상태) + 로그(전환 이력)가 함께 옛 결정을 담으므로, 삭제로 결정이 유실되지 않는다.
 
 harvest 는 `.mapping.json` 을 건드리지 않는다 (로그는 컨벤션 파일, 미인덱스 — `structure.md`).

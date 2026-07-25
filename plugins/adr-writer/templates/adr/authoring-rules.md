@@ -186,19 +186,9 @@ ADR 본문은 **현재 코드 상태를 설명하는 요구사항 문서**다 �
 
 ### 결정 로그 포맷 (역순 — 최신 먼저)
 
+포맷의 source of truth 는 **시드 파일 [`decision-log.template.md`](./decision-log.template.md)** 다 (`docs/adr/` 에 함께 복사된다). 카테고리에 첫 major 전환이 생기면 그 파일을 `docs/adr/<category>/decision-log.md` 로 복사하고 `<category>` 와 엔트리를 실제 내용으로 채운다 — 포맷을 기억에서 재작성하지 않는다. 엔트리 한 개의 형태는 다음과 같다.
+
 ```markdown
-# Decision Log: <category>
-
-이 문서는 <category> 카테고리의 **주요 결정 변경 이력**이다. 각 ADR 본문은 현재
-상태만 서술하고, "무엇이 왜 바뀌었나"의 시간축은 여기에 역순으로 쌓는다. 개별
-diff 는 Git 이 보존한다.
-
-<!-- 규칙:
-  - 역순(최신 먼저). major 변경만 — 판정 기준은 위 "결정 로그 기록 기준".
-  - 현재 상태를 중복 서술하지 않는다(ADR 본문의 몫). 값·구현 상수·필드 표 금지.
-  - PRD(ALPS) 를 참조하지 않는다.
-  - ADR 번호를 프로즈에 박지 않는다 — "현재 ADR" 링크 한 줄로만 가리킨다. -->
-
 ## YYYY-MM-DD — <한 줄 변경 요약>
 
 - **현재 ADR**: [<kebab-title>](./NNNN-kebab-title.md)
