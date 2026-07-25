@@ -14,6 +14,7 @@ import {
   countDrivers,
   countAlternatives,
   relatedLinkTargets,
+  decisionLogLinkTargets,
   codeRefHits,
   validateMappingShape,
   checkCategoryKey,
@@ -539,5 +540,87 @@ test("CLI: a contiguous-from-0001 category emits no numbering-gap warning", () =
     const r = parseLint(dir);
     assert.equal(r.code, 0);
     assert.equal(r.warnings.filter((w) => w.rule === "numbering-gap").length, 0);
+  });
+});
+
+// ── unit: decisionLogLinkTargets ────────────────────────────────────────
+test("decisionLogLinkTargets returns local targets, skips URLs and the seed placeholder", () => {
+  const body = `# Decision Log: auth
+
+## 2026-07-25 — x
+
+- **현재 ADR**: [token](./0001-token.md)
+- 참고: [spec](https://example.com/s.md) and [anchor](#why)
+- 상위: [other](../billing/0002-plan.md#decision)
+`;
+  assert.deepEqual(decisionLogLinkTargets(body), ["./0001-token.md", "../billing/0002-plan.md"]);
+});
+
+test("decisionLogLinkTargets ignores an unedited seed (NNNN placeholder)", () => {
+  const seed = `# Decision Log: <category>
+
+## YYYY-MM-DD — <한 줄 변경 요약>
+
+- **현재 ADR**: [<kebab-title>](./NNNN-kebab-title.md)
+`;
+  assert.deepEqual(decisionLogLinkTargets(seed), []);
+});
+
+// ── CLI: decision-log ADR pointer must resolve ──────────────────────────
+// The gap this closes: a rollup renumber moves the ADR a log points at, and
+// neither the stale-citation finder (matches "<cat>/NNNN" tokens, not the log's
+// relative "./NNNN-title.md") nor R10 related-broken (reads NNNN-*.md bodies
+// only) notices the orphaned pointer.
+test("CLI: a decision-log pointing at a missing ADR is an error", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    write(
+      dir,
+      "docs/adr/identity/login/decision-log.md",
+      `# Decision Log: identity/login
+
+## 2026-07-02 — 해시 교체
+
+- **현재 ADR**: [gone](./0009-renumbered-away.md)
+`,
+    );
+    const r = parseLint(dir);
+    assert.equal(r.code, 1, JSON.stringify(r.errors));
+    const hit = r.errors.find((e) => e.rule === "decision-log-link-broken");
+    assert.ok(hit, JSON.stringify(r.errors));
+    assert.match(hit.msg, /0009-renumbered-away\.md/);
+  });
+});
+
+test("CLI: an unedited decision-log seed in a category is not flagged", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    write(
+      dir,
+      "docs/adr/identity/login/decision-log.md",
+      `# Decision Log: <category>
+
+## YYYY-MM-DD — <한 줄 변경 요약>
+
+- **현재 ADR**: [<kebab-title>](./NNNN-kebab-title.md)
+`,
+    );
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, JSON.stringify(r.errors));
+  });
+});
+
+test("CLI: the decision-log seed at the ADR root is scaffolding, not a category log", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    // Root-level seed named .template.md — must be ignored by the log walk and
+    // never enumerated as an ADR.
+    write(
+      dir,
+      "docs/adr/decision-log.template.md",
+      `# Decision Log: <category>\n\n- **현재 ADR**: [x](./NNNN-x.md)\n`,
+    );
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, JSON.stringify(r.errors));
   });
 });

@@ -42,6 +42,7 @@ import {
   countDrivers,
   countAlternatives,
   relatedLinkTargets,
+  decisionLogLinkTargets,
   codeRefHits,
   validateMappingShape,
   sectionRange,
@@ -129,6 +130,30 @@ function findAdrFiles(root) {
       const full = path.join(dir, e.name);
       if (e.isDirectory()) walk(full);
       else if (e.isFile() && /^[0-9]{4}-.*\.md$/.test(e.name)) out.push(full);
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
+// Enumerate the per-category decision-log.md files. Kept separate from
+// findAdrFiles so the log is never treated as an ADR (it stays out of the index,
+// numbering, orphan and per-ADR section checks) — the only thing checked is that
+// its ADR pointers still resolve. The seed at the ADR root
+// (decision-log.template.md) is excluded: it is scaffolding, not a category log.
+function findDecisionLogs(root) {
+  const out = [];
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) walk(full);
+      else if (e.isFile() && e.name === "decision-log.md") out.push(full);
     }
   };
   walk(root);
@@ -368,6 +393,30 @@ function main() {
           `방금 adr-rollup 을 실행했다면 7단계 renumber 가 남았을 수 있습니다 — 결번을 메울지 사용자에게 확인하세요. ` +
           `(split/adr-sync 로 생긴 결번이면 정상이니 그대로 둡니다.)`,
       );
+  }
+
+  // ── decision-log ADR pointers resolve on disk ─────────────────────────
+  // The log is a convention file (no NNNN- name, absent from .mapping.json), so
+  // no per-ADR check reads it — yet adr-rollup's step 7 renumber moves the very
+  // ADR its "현재 ADR" pointer names. A missed repoint left a log pointing at a
+  // deleted path with a clean harness: the stale-citation finder matches the
+  // "<cat>/NNNN" token form while the log links relatively ("./0001-x.md"), and
+  // R10 only reads NNNN-*.md bodies. Error, not warning: a log whose pointer is
+  // dead has lost the one reference that makes the entry traceable.
+  for (const logFile of findDecisionLogs(adrRoot)) {
+    const rel = relFromRepo(logFile);
+    if (!inScope(rel)) continue;
+    const body = readSafe(logFile);
+    if (body === null) continue;
+    for (const target of decisionLogLinkTargets(body)) {
+      if (!existsSync(path.resolve(path.dirname(logFile), target))) {
+        rep.error(
+          "decision-log-link-broken",
+          rel,
+          `decision-log 링크 대상 없음: ${target} (rollup renumber 후 '현재 ADR' 포인터를 새 경로로 옮기세요)`,
+        );
+      }
+    }
   }
 
   // ── adr-invariants.sh (a)/(b) sub-run ─────────────────────────────────

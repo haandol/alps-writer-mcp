@@ -181,7 +181,7 @@ renumber 로 경로가 바뀐 ADR 은 8단계의 cross-reference 갱신에서 �
   - `--removed` (check **(c)**) — 체인에서 **삭제된** ADR id. 출력은 "repoint to the consolidated ADR" — 그 인용을 **통합(survivor) ADR** 로 옮긴다 (결정이 거기로 흡수됐으므로).
   - `--renumbered` (check **(d)**) — renumber 로 번호만 바뀐 같은 ADR 의 `옛:새` 쌍. 출력은 "repoint to its new number" — 그 인용을 **그 ADR 의 새 번호** 로 옮긴다 (결정은 다른 ADR 로 이동한 게 아니라 번호만 바뀌었으므로).
   - 두 플래그를 분리해 넘기므로 스크립트가 `(c)`/`(d)` 로 구분 출력하고, "통합본으로" vs "새 번호로" repoint 를 혼동하지 않는다. 이 grep 은 코드→ADR·ADR→PRD 검사와 같은 source of truth 다.
-  - **이 finder 는 repoint 전(前) 대상 locator 이지 사후 검증 게이트가 아니다.** renumber 가 번호를 재사용하므로(0003→0002 등), repoint 를 끝낸 뒤 같은 인자로 다시 돌리면 **새로 올바르게 배치된 파일을 오탐**한다 — 예: `--removed payment/0002` 는 방금 renumber 된 새 `0002-...md` 를, `--renumbered payment/0003:...` 는 새 `0003-...md` 를 다시 잡는다(finder 는 kebab 무시하고 `<cat>/NNNN` 번호 토큰만 매칭). repoint 를 마쳤는지 확인하는 **사후 오라클은 `adr-structure-lint` 의 `related-broken`(0 이어야 함) + 삭제/옛 kebab 파일명 grep(0 이어야 함)** 이다. 이 finder 는 repoint 를 시작하기 전 한 번만 쓴다.
+  - **이 finder 는 repoint 전(前) 대상 locator 이지 사후 검증 게이트가 아니다.** renumber 가 번호를 재사용하므로(0003→0002 등), repoint 를 끝낸 뒤 같은 인자로 다시 돌리면 **새로 올바르게 배치된 파일을 오탐**한다 — 예: `--removed payment/0002` 는 방금 renumber 된 새 `0002-...md` 를, `--renumbered payment/0003:...` 는 새 `0003-...md` 를 다시 잡는다(finder 는 kebab 무시하고 `<cat>/NNNN` 번호 토큰만 매칭). repoint 를 마쳤는지 확인하는 **사후 오라클은 `adr-structure-lint` 의 `related-broken`·`decision-log-link-broken`(둘 다 0 이어야 함) + 삭제/옛 kebab 파일명 grep(0 이어야 함)** 이다 — `decision-log-link-broken` 은 9단계에서 쓴 로그의 `현재 ADR` 포인터가 renumber 후 경로를 가리키는지 보는 검사로, finder 는 로그의 상대 링크(`./NNNN-title.md`)를 매칭하지 못하므로 이 lint 가 유일한 자동 확인이다. 이 finder 는 repoint 를 시작하기 전 한 번만 쓴다.
 
 ### 9. 주요 이력 harvest → decision-log.md (맨 마지막)
 

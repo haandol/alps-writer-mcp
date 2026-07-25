@@ -514,3 +514,37 @@ function pathIsAbsoluteOrTraverses(value) {
     value.split(/[\\/]/).some((segment) => segment === "..")
   );
 }
+
+// ── decision-log ADR pointers ─────────────────────────────────────────────
+// A category's decision-log.md is a CONVENTION file, not an ADR: it is absent
+// from .mapping.json and is never enumerated as an ADR (it has no NNNN- name),
+// so none of the per-ADR checks see it. That leaves one hole worth closing
+// deterministically — its "현재 ADR" pointer.
+//
+// authoring-rules "결정 로그": each entry carries exactly one ADR reference, a
+// link to the ADR that is currently live. adr-rollup step 7 renumbers files and
+// step 9 writes the log, so a rollup that renumbers a survivor must repoint that
+// link. Nothing caught a miss: adr-invariants' stale-citation finder matches the
+// "<cat>/NNNN" token form, while the log links relatively ("./0001-token.md"),
+// and R10 related-broken only reads NNNN-*.md bodies. The result was a log
+// pointing at a deleted path with a green harness.
+//
+// Returns every local link target in the file (anchors stripped, URLs skipped)
+// so the CLI can resolve them against disk. Deliberately not limited to the
+// "현재 ADR" line: a log should only ever link to live ADRs, so any dangling
+// local link in it is the same defect.
+export function decisionLogLinkTargets(body) {
+  const out = [];
+  const re = /\[[^\]]*\]\(([^)]+)\)/g;
+  let m;
+  while ((m = re.exec(body))) {
+    let target = m[1].trim();
+    if (/^(https?:|mailto:|#)/i.test(target)) continue;
+    target = target.split("#")[0].trim();
+    // Skip the seed's placeholder so an unedited copy of
+    // decision-log.template.md does not read as a broken link.
+    if (!target || target.includes("NNNN")) continue;
+    out.push(target);
+  }
+  return out;
+}

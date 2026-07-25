@@ -181,7 +181,7 @@ ADR 본문은 **현재 코드 상태를 설명하는 요구사항 문서**다 �
 ### 결정 로그 위치·성격
 
 - 카테고리(피쳐 leaf 또는 flat context) 하나당 `decision-log.md` 하나. `docs/adr/<category>/` 안에 ADR 파일들과 나란히 둔다.
-- **컨벤션 파일이다 — ADR 이 아니고 `.mapping.json` 에 등록하지 않는다.** 스킬은 존재 여부만 확인하고, 결정론적 하네스(`adr-structure-lint`)는 `NNNN-` 로 시작하지 않는 이 파일을 ADR 로 열거하지 않으므로 검사·인덱스 대상이 아니다.
+- **컨벤션 파일이다 — ADR 이 아니고 `.mapping.json` 에 등록하지 않는다.** 결정론적 하네스(`adr-structure-lint`)는 `NNNN-` 로 시작하지 않는 이 파일을 ADR 로 열거하지 않으므로 per-ADR 검사·인덱스 정합·orphan 검사 대상이 아니다. **예외는 링크 하나** — 로그의 ADR 포인터가 디스크에 실재하는지는 하네스가 검사한다(`decision-log-link-broken`). rollup renumber 가 그 ADR 을 옮기므로, 포인터를 안 고치면 로그가 사라진 경로를 가리키게 되고 다른 어떤 검사도 그걸 잡지 못한다.
 - 로그는 **현재 ADR 을 가리키는 링크만** 담고 그 반대(코드·PRD)를 참조하지 않는다 — log → ADR 단방향. ADR 본문(Related 포함)은 로그를 역으로 링크하지 않는다.
 
 ### 결정 로그 포맷 (역순 — 최신 먼저)

@@ -213,7 +213,7 @@ bounded context(도메인) 폴더가 기본이고, 그 안의 피쳐가 UI → A
 
 - **시드에서 복사해 만든다** — 첫 major 전환이 생기면 `docs/adr/decision-log.template.md`(없으면 `${CLAUDE_PLUGIN_ROOT}/templates/adr/decision-log.template.md`)를 `docs/adr/<category>/decision-log.md` 로 복사하고 `<category>` 와 엔트리를 채운다. 포맷을 기억에서 재작성하지 않는다. **남길 전환이 생기기 전에는 만들지 않는다** — 빈 로그를 미리 두지 않는다.
 - **`.mapping.json` 에 등록하지 않는다** — 로그는 ADR 이 아니라 컨벤션 파일이다. 매핑 스키마에 `decisionLog` 같은 필드를 두지 않으며(엔트리는 `additionalProperties:false`), 스킬은 카테고리 폴더에서 존재 여부만 확인한다.
-- **결정론적 하네스가 검사하지 않는다** — `adr-structure-lint` 는 `NNNN-` 로 시작하는 파일만 ADR 로 열거하므로 `decision-log.md` 는 per-ADR 검사·인덱스 정합·orphan 검사 어디에도 걸리지 않는다. `/adr-sync` 의 디스크 ADR 전수 조회도 이 파일을 제외한다.
+- **ADR 로 검사되지 않는다** — `adr-structure-lint` 는 `NNNN-` 로 시작하는 파일만 ADR 로 열거하므로 `decision-log.md` 는 per-ADR 검사·인덱스 정합·orphan 검사 어디에도 걸리지 않는다. `/adr-sync` 의 디스크 ADR 전수 조회도 이 파일을 제외한다. **단 로그의 ADR 포인터 실재는 하네스가 검사한다**(`decision-log-link-broken`) — rollup renumber 후 포인터를 안 고치면 로그가 사라진 경로를 가리키는데, `<cat>/NNNN` 토큰을 찾는 stale-citation finder 도 `NNNN-*.md` 본문만 보는 R10 도 이걸 잡지 못하기 때문이다. (루트의 `decision-log.template.md` 시드는 스캐폴딩이라 제외된다.)
 - **참조 방향은 log → ADR 단방향** — 로그는 `현재 ADR` 링크만 담고 코드·PRD 를 참조하지 않는다. ADR 본문(Related 포함)은 로그를 역으로 링크하지 않는다.
 - 생성·갱신 주체: `/adr-impl`·`/adr-sync`(major 결정 변경 시 append/harvest), `/adr-rollup`(체인의 major 전환 harvest). 자세한 흐름은 각 스킬 참조.
 
