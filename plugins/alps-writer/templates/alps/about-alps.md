@@ -60,17 +60,16 @@ The result is a PRD whose quality is bounded by the _template_ and the _agent's 
 
 ALPS is the first stage of the agentic development cycle this plugin supports:
 
-```
-ALPS (Section 7 features)
-   │
-   ▼  /feature-to-adr
-ADR (one decision per file under docs/adr/<category>/)
-   │
-   ▼  /adr-impl
-Code + tests
-   │
-   ▼  /adr-sync
-Learnings folded back into the ADR
+```mermaid
+flowchart TD
+    ALPS["ALPS<br/>(Section 7 features)"]
+    ADR["ADR<br/>(one decision per file under docs/adr/&lt;category&gt;/)"]
+    CODE["Code + tests"]
+    SYNC["Learnings folded back into the ADR"]
+
+    ALPS -->|"/feature-to-adr"| ADR
+    ADR -->|"/adr-impl"| CODE
+    CODE -->|"/adr-sync"| SYNC
 ```
 
 Each ALPS feature becomes one or more ADRs; each ADR drives implementation; drift between code and ADR is detected and repaired. ALPS sits at the top of this chain — the cleaner it is, the cleaner everything downstream.

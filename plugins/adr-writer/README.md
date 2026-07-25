@@ -25,8 +25,8 @@ codex plugin add adr-writer@alps-writer
 | Command                          | Role                                                                                                                                            |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/adr-new <category>`            | Author a new ADR directly — the default authoring path                                                                                          |
-| `/adr-impl [id]`                 | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build                                           |
-| `/adr-impl-review [id]`          | Explain the implementation, then run independent necessity/sufficiency reviews and tests; emit a Mermaid-rich junior repair guide (report-only) |
+| `/adr-impl [category]`           | Implement an ADR in code (including tests). With no argument, lists Proposed ADRs and asks which to build                                       |
+| `/adr-impl-review [category]`    | Explain the implementation, then run independent necessity/sufficiency reviews and tests; emit a Mermaid-rich junior repair guide (report-only) |
 | `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                                              |
 | `/adr-rollup [category]`         | Consolidate ADR groups whose evolution history of one logical decision is split (no arg → all categories)                                       |
 

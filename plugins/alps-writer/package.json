@@ -1,6 +1,6 @@
 {
   "name": "alps-writer",
-  "version": "0.4.20",
+  "version": "0.4.22",
   "private": true,
   "description": "MCP server for interactive ALPS (PRD) writing with AI — bundled and shipped inside the alps-writer Claude Code plugin (dist/index.js).",
   "type": "module",

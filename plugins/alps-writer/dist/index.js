@@ -31497,7 +31497,11 @@ var DocumentController = class {
 
 // src/index.ts
 var server = new McpServer(
-  { name: "alps-writer", version: "0.4.20" },
+  // Keep in lockstep with every manifest version (package.json, the two
+  // plugin.json files, marketplace.json). tests/version-consistency.test.ts
+  // fails the build when they drift — this literal silently reported 0.4.20
+  // to MCP clients for two releases after a manifest-only version bump.
+  { name: "alps-writer", version: "0.4.22" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 

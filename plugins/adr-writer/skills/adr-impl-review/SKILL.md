@@ -1,6 +1,7 @@
 ---
 name: adr-impl-review
 description: Adversarially review code implemented from an ADR with independent necessity and sufficiency passes. First produces a junior-readable implementation explanation for human intent confirmation, then runs isolated reviewers to find unnecessary changes and missing behavior, executes targeted tests or reproducible checks, and emits evidence-backed review artifacts. Report-only; never edits code or ADRs. Use after /adr-impl, or when the user asks for a necessity/sufficiency review, minimality/completeness review, adversarial implementation review, or "필요충분 테스트". Keywords - "/adr-impl-review", "ADR 구현 검토", "필요성 리뷰", "충분성 리뷰", "필요충분 테스트", "적대적 코드 리뷰", "구현이 ADR 대로 됐는지".
+argument-hint: "[adr-path-or-category] [--base <ref>]"
 ---
 
 # adr-impl-review
@@ -85,7 +86,7 @@ ADR 식별은 `/adr-impl`과 같은 규칙을 따른다.
 - 테스트: 관련 테스트를 실제 실행하고, 가능하면 최소 재현을 사용한다. **테스트가 결함을 실제로 잡는지**까지 본다 — property/mutation 도구가 프로젝트에 이미 있으면 핵심 불변식에 한정해 돌려 약한 테스트를 `Test gap`으로, 정적/보안 분석(CodeQL 등)이 이미 구성돼 있으면 이 ADR 범위 코드에 한해 증거로 쓴다. 도구를 새로 설치하거나 제품 코드를 수정하지 않고, 범위 밖 취약점은 `/security-review`로만 넘긴다.
 - 재현용 임시 파일은 산출물 디렉터리에만 만들고, 저장소 파일을 변경하지 않는다.
 
-**두 리뷰어는 되도록 서로 다른 모델 계열로 돌린다** — 같은 모델 계열은 같은 가정을 공유해 둘 다 같은 결함을 놓치고 "좋아 보인다"에 거짓 합의하기 쉽다. 관점(필요성·충분성)뿐 아니라 판단 계열도 갈라야 반증력이 산다. Codex multi-agent가 model override를 지원하면 **필요성 reviewer는 `openai.gpt-5.6-sol`, `reasoning_effort: high`**로 실행하고, 충분성 reviewer는 그와 **다른 계열의 최고 추론 모델**을 high reasoning으로 실행한다. 하네스가 단일 계열만 제공해 다양화가 불가능하면 두 리뷰어 모두 `openai.gpt-5.6-sol`, `reasoning_effort: high`로 fallback하되 **모델을 다양화하지 못했음과 각 reviewer가 실제 쓴 모델을 보고서에 기록한다**. 설명자는 기본 모델을 사용해도 된다.
+**두 리뷰어는 되도록 서로 다른 모델 계열로 돌린다** — 같은 모델 계열은 같은 가정을 공유해 둘 다 같은 결함을 놓치고 "좋아 보인다"에 거짓 합의하기 쉽다. 관점(필요성·충분성)뿐 아니라 판단 계열도 갈라야 반증력이 산다. 하네스가 model override를 지원하면 두 reviewer를 **서로 다른 제공자 계열의 최고 추론 모델**로, 각각 **최고 reasoning 등급**으로 실행한다. 특정 모델 ID를 여기 고정하지 않는다 — 모델은 이 스킬보다 빠르게 교체되므로, 호출 시점에 그 하네스에서 사용 가능한 최상위 추론 모델을 고른다. 단일 계열만 제공돼 다양화가 불가능하면 같은 계열의 최고 추론 모델로 두 reviewer를 모두 돌리되 **모델을 다양화하지 못했음과 각 reviewer가 실제 쓴 모델을 보고서에 기록한다**. 설명자는 기본 모델을 사용해도 된다.
 
 각 클라이언트의 실행 순서는 다음과 같다.
 

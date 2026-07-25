@@ -93,8 +93,8 @@ flowchart TD
 
 1. `/alps-init` → answer the focused questions section by section; the agent saves each only after you confirm.
 2. After Section 7 (feature specs), run `/feature-to-adr` → it walks each feature and hands it to `/adr-new`, producing a `Proposed` ADR per feature under `docs/adr/<category>/` and seeding `docs/adr/.mapping.json`.
-3. `/adr-impl <id>` → implement an accepted-in-spirit ADR in code + tests. On success it flips the ADR to `Accepted`.
-4. `/adr-impl-review <id>` → confirm the junior-readable explanation, then review necessity and sufficiency independently and inspect the Mermaid repair guide.
+3. `/adr-impl <category>` → implement an accepted-in-spirit ADR in code + tests. On success it flips the ADR to `Accepted`.
+4. `/adr-impl-review <category>` → confirm the junior-readable explanation, then review necessity and sufficiency independently and inspect the Mermaid repair guide.
 5. `/adr-sync` at the end of a cycle → fold what you learned back into the ADRs and repair any drift.
 
 `/feature-to-adr` is a **one-time import**: it converts each Section 7 feature into an ADR once. After that the decision is managed at the ADR level — if the PRD later changes, edit the affected ADR directly (or supersede it with a new one) rather than re-importing.
@@ -102,8 +102,8 @@ flowchart TD
 ### B. ADR-only — no PRD (adr-writer standalone)
 
 1. `/adr-new <category>` → describe the decision directly (refactor, infra choice, new feature direction). No ALPS document required.
-2. `/adr-impl <id>` → build it in code.
-3. `/adr-impl-review <id>` → run the report-only adversarial review and inspect its junior repair guide.
+2. `/adr-impl <category>` → build it in code.
+3. `/adr-impl-review <category>` → run the report-only adversarial review and inspect its junior repair guide.
 4. As you keep working, the ADR-first hook re-injects the ADR map every turn so the agent checks ADRs before changing behavior. Run `/adr-sync` to reconcile ADRs with shipping code.
 
 In both flows the hook runs automatically once adr-writer is installed — every user turn re-injects the ADR map and the ADR-first directive.
@@ -122,8 +122,8 @@ In both flows the hook runs automatically once adr-writer is installed — every
 | Command                          | Role                                                                                                                                                 |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/adr-new <category>`            | Author a new ADR directly — the default path, no ALPS PRD required                                                                                   |
-| `/adr-impl [id]`                 | Implement an ADR in code (including tests). With no `id`, lists Proposed ADRs and asks which to build                                                |
-| `/adr-impl-review [id]`          | Explain the diff, confirm intent, run independent necessity/sufficiency reviews and tests, and emit a Mermaid-rich junior repair guide (report-only) |
+| `/adr-impl [category]`           | Implement an ADR in code (including tests). With no argument, lists Proposed ADRs and asks which to build                                            |
+| `/adr-impl-review [category]`    | Explain the diff, confirm intent, run independent necessity/sufficiency reviews and tests, and emit a Mermaid-rich junior repair guide (report-only) |
 | `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                                                   |
 | `/adr-rollup [category]`         | Consolidate only ADR groups whose evolution history of one logical decision is split (no arg → all)                                                  |
 
