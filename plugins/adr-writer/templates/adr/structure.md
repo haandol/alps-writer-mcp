@@ -13,8 +13,10 @@
 
 ```
 docs/adr/
-├── README.md         # 개념 인덱스 + 작성 규칙 (ADR 목록은 두지 않음)
-├── .mapping.json     # ADR 레지스트리/인덱스 (adrs·dependsOn·subdomainType. 코드 경로도 PRD 참조도 저장 안 함)
+├── README.md            # 개념 인덱스 (ADR 목록도 트리도 두지 않음)
+├── authoring-rules.md   # 작성 규칙 · 결정 로그 포맷 · 리뷰 체크리스트
+├── structure.md         # 이 문서 — 디렉토리 레이아웃 · 매핑 정책
+├── .mapping.json        # ADR 레지스트리/인덱스 (adrs·dependsOn·subdomainType. 코드 경로도 PRD 참조도 저장 안 함)
 ├── identity/                       # BOUNDED CONTEXT (core subdomain)
 │   ├── 0001-token-rotation.md      # context 전반 cross-cutting 결정 (부모 폴더 직속)
 │   ├── decision-log.md             # (선택) 이 카테고리의 major 결정 변경 이력 — 컨벤션 파일, 매핑 미등록
@@ -42,7 +44,7 @@ docs/adr/
 - 시스템 전체에 걸친 cross-cutting context(`infra/`, `integration/`, `security/`, `platform/`)는 두 개 이상의 context/피쳐가 명시적으로 의존할 때만 만든다 (아래 "cross-cutting context — 정말 공유하는 결정만").
 - 키는 **최대 2 세그먼트**(`<context>` 또는 `<context>/<feature>`). 그 이상으로 깊어지지 않는다.
 - 파일명: `NNNN-kebab-case-title.md`. 번호는 그 폴더(context 직속 또는 피쳐 sub-folder) 안에서 순차 증가.
-- 새 context/피쳐 폴더를 추가하면 `.mapping.json` 의 카테고리 키와 `adrs[]` path 를 갱신한다. README 는 개념적 디렉토리 구조 그림만 들고 있으므로, 트리 예시가 실제 레이아웃과 크게 어긋날 때만 함께 손본다 (per-ADR 목록은 두지 않는다).
+- 새 context/피쳐 폴더를 추가하면 `.mapping.json` 의 카테고리 키와 `adrs[]` path 를 갱신한다. 위 트리는 이 문서가 들고 있는 개념 예시이므로, 실제 레이아웃과 크게 어긋날 때만 함께 손본다 ([`README.md`](./README.md) 는 개념 인덱스만 두고 트리도 per-ADR 목록도 두지 않는다).
 
 > **용어**: 이 문서에서 "카테고리(category)" 는 `.mapping.json` 의 entry 키 한 개를 가리키는 중립어다 — 단일-피쳐 context 면 `identity`, 다중-피쳐 context 면 `identity/login` 처럼 세그먼트 수가 다를 뿐 둘 다 한 개의 카테고리 entry 다. "bounded context" 는 최상위 폴더(도메인 경계), "피쳐(vertical slice)" 는 leaf(한 사용자 동작) 를 가리킨다.
 
@@ -110,7 +112,7 @@ docs/adr/
 > - `identity/` 직속 cross-cutting ADR → context 전반 코드 (`src/features/identity/shared/` 등)
 > - `infra/` ADR (system-wide cross-cutting) → `src/shared/infra/`, `infra/`
 >
-> ADR 본문에서는 폴더 단위까지만 참조하므로, 진입점 매핑이 README 에 있어야 검토자가 빠르게 코드를 찾을 수 있다. 한 피쳐의 결정이 여러 진입점에 흩어진다면 그 자체가 vertical slice 위반 신호다.
+> ADR 본문에서는 폴더 단위까지만 참조하므로, 진입점 매핑을 이 절에 적어두면 검토자가 빠르게 코드를 찾을 수 있다. 한 피쳐의 결정이 여러 진입점에 흩어진다면 그 자체가 vertical slice 위반 신호다.
 
 ## 흔한 context · subdomain 예시
 

@@ -117,10 +117,18 @@ ADR 폴더는 **DDD 도메인(bounded context) × 피쳐(vertical slice)** 두 �
 
 ## 상태
 
+```mermaid
+stateDiagram-v2
+    [*] --> Proposed: /adr-new
+    Proposed --> Accepted: /adr-impl (구현 + 테스트 통과)
+    Accepted --> Proposed: 결정이 바뀌어 재구현 대기
+    Accepted --> Deprecated: 대체 ADR 없이 폐기
+    Accepted --> Superseded: 결정 주제가 분기
+    Deprecated --> [*]
+    Superseded --> [*]
 ```
-Proposed → Accepted → Deprecated
-                   → Superseded by [ADR XXXX]
-```
+
+`Superseded` 는 `Superseded by [ADR XXXX](link)` 형태로 후속 ADR 을 명시한다.
 
 | 상태       | 의미                                                                                            |
 | ---------- | ----------------------------------------------------------------------------------------------- |

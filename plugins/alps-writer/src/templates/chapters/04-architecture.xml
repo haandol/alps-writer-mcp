@@ -37,8 +37,10 @@ Rel(user, system, "Uses", "HTTPS")
   - Infrastructure: Where the product runs and how it is deployed (e.g., cloud provider, CI/CD)
   - External Services: Third-party APIs or services (e.g., payment, email, AI/ML)
 - Not all categories are required — include only what is relevant to the MVP.
+- Record the expected launch scale that drove this choice as a one-line "Scale assumption". Write it down rather than leaving it in the conversation: it is the main driver behind the stack, and Section 6.2 reuses it as the starting point for the performance NFR. Distinguish total from concurrent users when both are known.
     </description>
     <example>
+- Scale assumption: ~1,000 total users at launch, tens concurrent at peak
 - Frontend: React (Tailwind CSS)
 - Backend: Node.js (Express)
 - Database: MongoDB

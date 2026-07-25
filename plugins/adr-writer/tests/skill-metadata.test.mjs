@@ -68,22 +68,29 @@ test("adr-impl-review advertises the argument its own procedure parses", () => {
   assert.match(source, /--base/);
 });
 
+// Every user-facing prompt / seeded template that could carry a diagram: the
+// skills, the agent definitions, the ADR docs copied into docs/adr/, and the
+// ALPS explainer.
+function diagramTargets() {
+  const markdownIn = (...segments) => {
+    const dir = path.join(...segments);
+    return readdirSync(dir)
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => path.join(dir, f));
+  };
+  return [
+    ...skillFiles().map((s) => s.file),
+    path.join(PLUGINS_ROOT, "alps-writer", "templates", "alps", "about-alps.md"),
+    ...markdownIn(ADR_ROOT, "agents"),
+    ...markdownIn(ADR_ROOT, "templates", "adr"),
+  ];
+}
+
 // Mermaid-first (CLAUDE.md). Directory trees drawn with ├── └── are the one
 // documented exception; anything else using box-drawing characters is a diagram
 // that should have been Mermaid.
 test("user-facing prompts and templates draw diagrams in Mermaid, not ASCII", () => {
-  const targets = [
-    ...skillFiles().map((s) => s.file),
-    path.join(PLUGINS_ROOT, "alps-writer", "templates", "alps", "about-alps.md"),
-    ...readdirSync(path.join(ADR_ROOT, "agents"))
-      .filter((f) => f.endsWith(".md"))
-      .map((f) => path.join(ADR_ROOT, "agents", f)),
-    ...readdirSync(path.join(ADR_ROOT, "templates", "adr"))
-      .filter((f) => f.endsWith(".md"))
-      .map((f) => path.join(ADR_ROOT, "templates", "adr", f)),
-  ];
-
-  for (const file of targets) {
+  for (const file of diagramTargets()) {
     const offenders = read(file)
       .split("\n")
       .map((line, index) => [index + 1, line])
@@ -93,6 +100,39 @@ test("user-facing prompts and templates draw diagrams in Mermaid, not ASCII", ()
       offenders,
       [],
       `${path.relative(PLUGINS_ROOT, file)} uses box-drawing characters outside a directory tree — use Mermaid`,
+    );
+  }
+});
+
+// The same defect class as box-drawing, but with arrow glyphs: a flow drawn as
+// ```text  A → B → C  ```. Scoped to `text`/untagged fences whose lines are
+// almost entirely arrows, so the many legitimate uses stay unflagged — prose
+// arrows, `bash` fences whose comments say "코드 → ADR", and the output-format
+// templates in agents/ and the ADR skills, which are report skeletons, not
+// diagrams.
+test("flow diagrams are Mermaid, not arrow-glyph text blocks", () => {
+  for (const file of diagramTargets()) {
+    const source = read(file);
+    const offenders = [];
+
+    for (const block of source.matchAll(/^```(\w*)\n([\s\S]*?)^```/gm)) {
+      const [, lang, body] = block;
+      if (lang && lang !== "text") continue;
+
+      const lines = body.split("\n").filter((line) => line.trim());
+      // A flow diagram: most lines carry an arrow, and none look like the
+      // markdown headings/bullets/tables of an output-format skeleton.
+      const arrowed = lines.filter((line) => /[→←↔▼▲]/.test(line)).length;
+      const structural = lines.filter((line) => /^\s*(#{1,6} |[-*|] |\| )/.test(line)).length;
+      if (lines.length && arrowed >= lines.length / 2 && structural === 0) {
+        offenders.push(body.trim().split("\n")[0]);
+      }
+    }
+
+    assert.deepEqual(
+      offenders,
+      [],
+      `${path.relative(PLUGINS_ROOT, file)} draws a flow with arrow glyphs in a text block — use Mermaid`,
     );
   }
 });
