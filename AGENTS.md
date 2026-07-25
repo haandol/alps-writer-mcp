@@ -14,9 +14,18 @@ pnpm build            # Bundle the alps-writer MCP server (pnpm --filter alps-wr
 pnpm lint             # ESLint the MCP server
 pnpm format           # Prettier across the repo
 
+pnpm bump 0.4.24      # Set the release version (or: patch | minor | major)
+pnpm bump:check       # Verify every version site agrees
+
 pnpm --filter alps-writer dev     # Run MCP server with tsx in watch mode
 pnpm --filter alps-writer start   # Run built bundle (node dist/index.js)
 ```
+
+### Versioning
+
+The release version lives in **five** places that must agree: the four plugin manifests (`.claude-plugin/` + `.codex-plugin/` for both plugins), the `marketplace.json` entries, and the `serverInfo` literal in `plugins/alps-writer/src/index.ts` — that last one is what an MCP client reports, and `tsconfig`'s `rootDir: "src"` prevents importing the version from `package.json`. Always bump with `pnpm bump <version>`, then `pnpm build` so the committed `dist/` carries the new `serverInfo`; bumping by hand has drifted twice (0.3.0 and 0.4.20 both shipped with a stale server version).
+
+Both `package.json` files are **deliberately pinned to `0.0.0`** and are not part of the release version — they are `private: true`, so their version reaches no consumer. Don't "resync" them; `version-consistency.test.ts` asserts the pin.
 
 Build (inside `plugins/alps-writer/`) runs `tsc --noEmit` (typecheck), then esbuild bundles `src/index.ts` → `dist/index.js` with deps inlined (ESM, node20 target), then copies static assets `cp -r src/templates dist/ && cp -r src/guides dist/`. The asset copy is required because the server reads XML templates / MD guides at runtime via `fs.readFileSync` (`import.meta.url`-relative). **`dist/` is committed** — regenerate and commit it whenever `src/` changes.
 
@@ -29,8 +38,10 @@ Tests use Node's built-in test runner. ALPS TypeScript tests run through `tsx`; 
 └── marketplace.json      # Marketplace manifest — registers both plugins
 .agents/plugins/
 └── marketplace.json      # Codex marketplace manifest
-package.json              # Private workspace root (prettier/husky/lint-staged)
+package.json              # Private workspace root (prettier/husky/lint-staged); version pinned 0.0.0
 pnpm-workspace.yaml       # packages: plugins/alps-writer
+scripts/
+└── bump-version.mjs      # Set/verify the release version across all five sites
 
 plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 ├── .claude-plugin/plugin.json   # mcpServers only (node dist/index.js); skills/ (alps-init, feature-to-adr) are auto-discovered
@@ -54,14 +65,15 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 ├── .claude-plugin/plugin.json   # hooks registration (no MCP)
 ├── .codex-plugin/plugin.json    # Codex metadata; registers skills + hooks
 ├── README.md
-├── skills/               # adr-new, adr-impl, adr-sync, adr-rollup
+├── skills/               # adr-new, adr-impl, adr-impl-review, adr-sync, adr-rollup
 ├── agents/               # ADR authoring reviewer + isolated impl explainer/review/report roles
 ├── hooks/
 │   ├── hooks.json        # UserPromptSubmit registration
 │   └── surface-adr-context.mjs  # UserPromptSubmit — inject ADR-first directive + mapping snapshot
 └── templates/adr/
-    ├── README.md         # ADR writing rules (copied into docs/adr/ on /adr-new)
+    ├── README.md         # ADR concepts (copied into docs/adr/ on /adr-new)
     ├── authoring-rules.md, structure.md
+    ├── decision-log.template.md  # Seed for a category's decision-log.md
     └── mapping.schema.json   # Schema for docs/adr/.mapping.json
 ```
 

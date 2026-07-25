@@ -1,6 +1,7 @@
 {
   "name": "alps-writer-plugins",
-  "version": "0.4.22",
+  "//version": "Intentionally pinned to 0.0.0 and NOT the release version. This package is private (never published to npm), so its version has no consumer. The release version lives in the plugin manifests — see scripts/bump-version.mjs.",
+  "version": "0.0.0",
   "private": true,
   "description": "Codex and Claude Code marketplace: ALPS authoring and ADR-driven development as two independent plugins.",
   "type": "module",
@@ -10,6 +11,8 @@
     "test": "pnpm --filter alps-writer test && node --test \"plugins/adr-writer/tests/**/*.test.mjs\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "bump": "node scripts/bump-version.mjs",
+    "bump:check": "node scripts/bump-version.mjs --check",
     "prepare": "husky"
   },
   "keywords": [

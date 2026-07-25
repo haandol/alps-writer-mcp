@@ -1,6 +1,7 @@
 {
   "name": "alps-writer",
-  "version": "0.4.22",
+  "//version": "Intentionally pinned to 0.0.0 and NOT the release version. This package is private (never published to npm) — the MCP server ships as a bundle inside the plugin, so the version users see comes from .claude-plugin/plugin.json and the serverInfo literal in src/index.ts. See scripts/bump-version.mjs.",
+  "version": "0.0.0",
   "private": true,
   "description": "MCP server for interactive ALPS (PRD) writing with AI — bundled and shipped inside the alps-writer Claude Code plugin (dist/index.js).",
   "type": "module",
