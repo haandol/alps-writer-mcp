@@ -8,5 +8,12 @@ allowBuilds:
 # patched release. <4.12.25 carries 5 advisories (CORS wildcard, serve-static
 # path traversal, Lambda adapter header/cookie bugs); the SDK allows hono ^4,
 # so >=4.12.25 stays compatible without bumping the SDK itself.
+#
+# @hono/node-server <2.0.5 has a serve-static path-traversal advisory and the
+# fix only landed on 2.x, so this override crosses the SDK's declared ^1.19.9.
+# Safe here: the server speaks stdio only (src/index.ts uses
+# StdioServerTransport), so the SDK's HTTP transports — the sole importers of
+# @hono/node-server — are never pulled into the esbuild bundle.
 overrides:
   hono@<4.12.25: ">=4.12.25"
+  "@hono/node-server@<2.0.5": ">=2.0.5"
