@@ -5,9 +5,10 @@
 - No additional features beyond those in Section 6.1 may be specified here.
 
 - SCOPE — this section captures REPRODUCIBLE REQUIREMENTS, not implementation decisions:
-  - WRITE here (the WHAT, reproducibly): what each user action must do, which layers it crosses (UI → API → data), what must be true for it to be correct (acceptance criteria, edge cases, error responses the user sees).
+  - WRITE here (the WHAT, reproducibly): what each user action must do, which layers it crosses (UI → API → data), what must be true for it to be correct (acceptance criteria, edge cases, error responses the user sees), and the VALUES the result must honor — limits, quotas, retention periods, size caps, permission rules — each with its number and basis (pricing policy, security rule, regulation).
   - DO NOT write here (the WHY/HOW — these belong to an ADR or to the code): why a particular library / algorithm / key design was chosen, alternatives considered, trade-offs, tuning constants, exact column lists, or framework-specific snippets.
   - Rule of thumb: if a sentence would still be true after the team swaps the database or the hashing library, it belongs here. If it justifies *that choice*, it belongs in an ADR.
+  - The two lists split on one question: **would a developer picking a different value break the requirement?** "Max 20 turns per session" survives any rewrite, so it is a requirement and stays. "Connection pool of 10" does not, so it is a tuning constant and goes. Never soften a requirement value into "reasonably limited" or "an appropriate period" — this section is where the number enters the pipeline, and blurring it here lets the implementation invent its own.
   - Each feature here becomes one ADR category via `/feature-to-adr`. The PRD states the requirement once; the ADR then owns the architectural decision and the code owns the implementation. Keep this section free of decisions so the ADR is not a duplicate.
   </description>
   <template id="7.x" title="Feature Template">
@@ -42,8 +43,9 @@
 - Describe the implementation as a vertical slice: trace each user action end-to-end from UI through API to data store, so this feature can be developed and tested independently.
 - For each key action in the user flow, describe WHAT happens at each layer it touches (UI / API / data) — at the level of behavior and responsibility, not implementation.
 - Stay reproducible, stay decision-free:
-  - DO state: the action, the layers it crosses, the data it reads/writes (conceptually), what is returned to the user, and any shared interface this feature relies on (e.g., "uses the shared auth session", "writes to the user record").
-  - DO NOT state: chosen libraries/algorithms (e.g., bcrypt, JWT), exact column lists, tuning constants, or why one approach was picked over another — those are architectural decisions (→ ADR) or implementation details (→ code), and pinning them here makes the PRD churn whenever the code does.
+  - DO state: the action, the layers it crosses, the data it reads/writes (conceptually), what is returned to the user, any shared interface this feature relies on (e.g., "uses the shared auth session", "writes to the user record"), and any value the result must honor (a limit, quota, retention period, size cap, or permission rule) with its number and basis.
+  - DO NOT state: chosen libraries/algorithms (e.g., bcrypt, JWT), exact column lists, tuning constants (pool sizes, backoff delays, cache lifetimes), or why one approach was picked over another — those are architectural decisions (→ ADR) or implementation details (→ code), and pinning them here makes the PRD churn whenever the code does.
+  - A requirement value is not a tuning constant: "a free-plan user may upload 5 files per month (pricing policy)" is a requirement and belongs here; "the upload retries 3 times" is a tuning constant and does not.
   - Keep API references at the endpoint level (method + path + purpose); leave request/response schemas to the code.
 - If this feature shares resources with other features (e.g., a common table or auth middleware), note the shared interface rather than redefining it.
       </description>
@@ -57,14 +59,21 @@
    - UI: as the user leaves the email field, checks availability (GET /api/auth/check-email)
    - API: looks up whether the email is already taken
    - Response: an inline message tells the user if the email is available
-> (How the password is hashed, the auth token format, and the user table's columns are architectural/implementation choices — leave them to the ADR and the code, not this section.)
+
+Values the result must honor:
+
+- A password is at least 10 characters (security policy)
+- 5 consecutive failed sign-in attempts lock the account for 30 minutes (security policy)
+- An unverified account is deleted after 7 days (data-retention policy)
+
+> (How the password is hashed, the auth token format, and the user table's columns are architectural/implementation choices — leave them to the ADR and the code, not this section. Retry counts and cache lifetimes are tuning constants and are likewise absent. But the three values above stay: a developer choosing different ones would break the product.)
       </example>
     </subsection>
     <subsection id="7.x.4" title="Edge Cases">
       <description>List potential edge cases and how they should be handled.</description>
       <example>
 - User submits an already registered email → Show "Email already exists" error
-- User enters a password with less than 8 characters → Show validation error
+- User enters a password with less than 10 characters → Show validation error
 - Network timeout during API call → Show retry option
       </example>
     </subsection>
@@ -82,11 +91,14 @@
       <description>
 - Define the conditions that must be met for this feature to be considered complete.
 - Use clear, testable statements.
+- Restate every value from 7.x.3 ("Values the result must honor") as a checkable criterion, so the same number appears in both places and a reviewer can verify it.
       </description>
       <example>
 - [ ] User can enter email and password in the sign-up form
 - [ ] Form validates email format before submission
-- [ ] Password must be at least 8 characters with one special character
+- [ ] Password must be at least 10 characters with one special character
+- [ ] A 6th consecutive failed sign-in locks the account for 30 minutes
+- [ ] An account still unverified after 7 days is deleted
 - [ ] Successful sign-up redirects user to main screen
 - [ ] Duplicate email shows appropriate error message
 - [ ] All error states display user-friendly messages

@@ -39,6 +39,19 @@ const REQUIRED_FINDING_TEXT = [
   "완료 조건:",
   "확인 필요:",
 ];
+// The merge-fitness axes under "## 10". Checking the heading alone let a writer
+// ship a table with an axis quietly missing — and the one most likely to be
+// dropped is 계약 준수 (requirement-value conformance), because a report that
+// found no bug reads as complete without it.
+const REQUIRED_MERGE_AXES = [
+  "문제 적합성",
+  "기능 충분성",
+  "계약 준수",
+  "변경 최소성",
+  "검증 강도",
+  "운영 안전성",
+  "유지보수성",
+];
 
 function usage(message) {
   if (message) process.stderr.write(`adr-impl-review-validate: ${message}\n`);
@@ -109,6 +122,11 @@ function validateReport(report, findingCount, errors) {
   }
   if (!mermaidBlocks.some((block) => /^\s*sequenceDiagram\b/m.test(block))) {
     errors.push("implementation-review.md missing a Mermaid sequenceDiagram");
+  }
+
+  for (const axis of REQUIRED_MERGE_AXES) {
+    if (!report.includes(axis))
+      errors.push(`implementation-review.md merge-fitness checklist missing axis: ${axis}`);
   }
 
   if (findingCount > 0) {

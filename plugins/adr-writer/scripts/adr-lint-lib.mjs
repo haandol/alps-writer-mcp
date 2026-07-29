@@ -6,10 +6,11 @@
 //
 // The deterministic checks here are the ones the LLM adr-reviewer can OFFLOAD
 // (R1 Status enum, R5a anti-pattern key, R8 index/mapping presence, R10
-// Related-link existence, R13/R14 counts, R16 dependsOn integrity, plus
-// filename / path-depth / required-section shape). Judgment-only rules (R4
-// two-stage filter, R12 gray-zone fidelity, R14 strawman nuance, R3) stay with
-// the reviewer — see agents/adr-reviewer.md.
+// Related-link existence, R13/R14 counts, R16 dependsOn integrity, R18's
+// constant-identifier form, plus filename / path-depth / required-section
+// shape). Judgment-only rules (R4 requirement gate + two-stage filter, R12
+// gray-zone fidelity, R14 strawman nuance, R3, and R18's requirement-vs-tuning
+// call) stay with the reviewer — see agents/adr-reviewer.md.
 
 // ── category-key shape ───────────────────────────────────────────────────
 // ≤2 lowercase-kebab segments (context or context/feature). Stricter than a
@@ -348,6 +349,39 @@ export function codeRefHits(body) {
     const stripped = line.replace(/\([^)]*\.md[^)]*\)/g, "");
     if (pathRe.test(stripped) || lineCiteRe.test(stripped))
       hits.push({ line: i + 1, text: line.trim().slice(0, 120) });
+  });
+  return hits;
+}
+
+// ── requirement value expressed as a code constant (R18 — advisory) ───────
+// authoring-rules "구체적인 숫자": a requirement value BELONGS in the ADR, but
+// written as a domain sentence ("채팅 한 세션은 최대 20턴 — 요금제 정책"), never
+// as the code identifier that happens to hold it today. The identifier is the
+// code's to name and rename; the requirement is not.
+//
+// Only the identifier FORM is deterministic. Whether a number is a requirement
+// value (keep) or an implementation tuning value (drop) is a judgment call that
+// stays with the reviewer (R18 in agents/adr-reviewer.md) — the harness never
+// flags a bare number, so it cannot push an author into deleting a requirement.
+// WARN, not ERROR: an API/enum table may legitimately carry SCREAMING_SNAKE
+// tokens (error codes, enum members), which the reviewer distinguishes.
+//
+// Two forms, deliberately asymmetric. A SCREAMING_SNAKE identifier is unambiguous
+// enough to flag under either `=` or `:`. A single all-caps word only counts under
+// `=`, because the colon form is how requirement prose legitimately labels a value
+// ("SLA: 99.9%", "TTL: 7일") and flagging that would push authors to delete it.
+const CONST_ASSIGN_RE =
+  /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b\s*[:=]\s*[{[]?\s*-?\d|\b[A-Z][A-Z0-9_]{2,}\b\s*=\s*[{[]?\s*-?\d/;
+export function constantAssignmentHits(body) {
+  const hits = [];
+  let inFence = false;
+  body.split(/\r?\n/).forEach((line, i) => {
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      return;
+    }
+    if (inFence) return; // fenced blocks are caught by the impl-detail rule (R3)
+    if (CONST_ASSIGN_RE.test(line)) hits.push({ line: i + 1, text: line.trim().slice(0, 120) });
   });
   return hits;
 }

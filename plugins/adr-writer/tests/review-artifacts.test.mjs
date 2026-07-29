@@ -49,6 +49,15 @@ sequenceDiagram
 ## 8. 수정 실행 순서
 ## 9. 검증 체크리스트
 ## 10. 머지 판정 체크리스트
+| 축 | 판정 |
+| --- | --- |
+| 문제 적합성 | 충족 |
+| 기능 충분성 | 미충족 |
+| 계약 준수 | 충족 |
+| 변경 최소성 | 충족 |
+| 검증 강도 | 충족 |
+| 운영 안전성 | 판정불가 |
+| 유지보수성 | 충족 |
 ## 11. 리뷰 한계와 질문
 `;
 }
@@ -82,6 +91,24 @@ test("review artifact validator accepts a self-contained junior repair guide", (
 
     const result = validate(dir);
     assert.equal(result.status, 0, result.stderr);
+  });
+});
+
+// A report can carry heading 10 and still omit an axis from the table. The axis
+// most likely to vanish is 계약 준수 — a review that found no bug reads complete
+// without ever checking whether the ADR's requirement values were honored.
+test("review artifact validator rejects a merge-fitness table missing an axis", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(
+      path.join(dir, "implementation-review.md"),
+      validReport().replace("| 계약 준수 | 충족 |\n", ""),
+    );
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /missing axis: 계약 준수/);
   });
 });
 

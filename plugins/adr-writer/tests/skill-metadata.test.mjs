@@ -167,6 +167,103 @@ test("every ADR template on disk is named in the /adr-new seeding step", () => {
   }
 });
 
+// ── requirement-value preservation (R18/R19) ──────────────────────────────
+// The rule this plugin is most exposed to losing: an ADR must carry the values
+// the RESULT has to honor (max turns, quotas, retention) while leaving the
+// implementation's tuning values in code. Every stage that could quietly filter
+// them out — authoring, review, sync, rollup, implementation, import — has to
+// name the distinction, or one prompt reverts to "no constants in an ADR" and
+// the requirement disappears from the pipeline.
+test("the authoring rules gate requirements ahead of the code-readthrough filter", () => {
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  // the gate exists and runs first
+  assert.match(rules, /요구사항 관문/);
+  assert.match(rules, /재생성 테스트/);
+  // the requirement-value vs tuning-value split, with both directions stated
+  assert.match(rules, /요구사항 값은 반드시 적고/);
+  assert.match(rules, /구현 튜닝값/);
+  // the old blanket ban on constants must be gone — it swept requirements away
+  assert.doesNotMatch(rules, /구현 상수\/튜닝값/);
+});
+
+test("every stage that filters an ADR body names the requirement-value rule", () => {
+  const stages = {
+    "agents/adr-reviewer.md": [/요구사항 관문/, /R18/, /R19/],
+    "skills/adr-new/SKILL.md": [/요구사항 값/, /재생성 테스트/],
+    "skills/adr-sync/SKILL.md": [/요구사항 관문/, /Missing requirement/],
+    "skills/adr-rollup/SKILL.md": [/요구사항 계약 무손실 이월/],
+    "skills/adr-impl/SKILL.md": [/요구사항 값은 값 그대로 시행/],
+    "agents/adr-impl-sufficiency-reviewer.md": [/요구사항 값 준수/],
+    "agents/adr-impl-necessity-reviewer.md": [/요구사항 값은 계약/],
+    "agents/adr-impl-explainer.md": [/ADR이 정한 값과 코드의 값/],
+    "agents/adr-impl-review-report-writer.md": [/계약 준수/],
+    "templates/adr/README.md": [/재생성 테스트/],
+  };
+  for (const [rel, patterns] of Object.entries(stages)) {
+    const source = read(path.join(ADR_ROOT, rel));
+    for (const pattern of patterns) assert.match(source, pattern, `${rel} must state ${pattern}`);
+  }
+  // the ALPS-side importer must hand the numbers over instead of summarizing
+  assert.match(
+    read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md")),
+    /요구사항 계약 재료/,
+  );
+});
+
+// Section 7 is where a requirement value first enters the pipeline. If the guide
+// never asks for it, /feature-to-adr has nothing to hand over and the ADR cannot
+// invent it — the contract is lost before the ADR cycle begins. Both the source
+// guide and the built copy the MCP server serves must carry the question.
+test("ALPS Section 7 elicits the values the result must honor", () => {
+  for (const dir of ["src", "dist"]) {
+    const guide = read(path.join(PLUGINS_ROOT, "alps-writer", dir, "guides", "07.md"));
+    const label = `alps-writer/${dir}/guides/07.md`;
+    assert.match(guide, /limits, quotas, retention periods, size caps/, label);
+    assert.match(guide, /must NOT decide on their own/, label);
+    // the split rule, and the guard against inventing a number the user never gave
+    assert.match(guide, /would a developer picking a different value break the requirement/, label);
+    assert.match(guide, /Never invent a requirement value the user did not give/, label);
+    // the rule cuts both ways — tuning constants stay excluded
+    assert.match(guide, /tuning constants/, label);
+  }
+});
+
+// The chapter template is what lands in the user's own .alps.xml, so the rule has
+// to be there too — a guide-only fix leaves the document itself saying "no
+// constants", which is what dropped requirement values in the first place.
+test("the Section 7 chapter template keeps requirement values and drops tuning constants", () => {
+  for (const dir of ["src", "dist"]) {
+    const chapter = read(
+      path.join(PLUGINS_ROOT, "alps-writer", dir, "templates", "chapters", "07-feature-spec.xml"),
+    );
+    const label = `alps-writer/${dir}/templates/chapters/07-feature-spec.xml`;
+    assert.match(chapter, /VALUES the result must honor/, label);
+    assert.match(chapter, /Values the result must honor:/, label);
+    assert.match(
+      chapter,
+      /would a developer picking a different value break the requirement/,
+      label,
+    );
+    assert.match(chapter, /A requirement value is not a tuning constant/, label);
+    // acceptance criteria must restate the values so the number is verifiable
+    assert.match(chapter, /Restate every value from 7\.x\.3/, label);
+  }
+});
+
+// A requirement value change alters the contract a regenerated implementation
+// must honor, so it cannot be filed as a minor (unlogged) edit.
+test("a requirement value change is logged as major, not swept up as minor", () => {
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  const major = rules.match(/- \*\*로그에 남긴다 \(major\)\*\*[^\n]*/)?.[0] ?? "";
+  assert.match(major, /요구사항 값 변경/);
+  const minor = rules.match(/- \*\*로그에 남기지 않는다 \(minor\)\*\*[^\n]*/)?.[0] ?? "";
+  assert.doesNotMatch(minor, /임계/, "threshold tweaks must not read as always-minor");
+  assert.match(
+    read(path.join(ADR_ROOT, "templates", "adr", "decision-log.template.md")),
+    /요구사항 값 변경/,
+  );
+});
+
 // The decision-log seed is the single source for the log format. authoring-rules
 // must point at it rather than carrying a second, drift-prone copy of the header.
 test("the decision-log format has one source: the seed file", () => {

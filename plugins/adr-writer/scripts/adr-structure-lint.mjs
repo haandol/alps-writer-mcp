@@ -8,9 +8,12 @@
 // index — the README carries no ADR list) and asserts the shape rules the LLM
 // adr-reviewer would otherwise eyeball — the deterministic half of
 // R1/R5a/R8/R10/R13/R14/R16 plus filename, path-depth, required-section, and
-// mapping-status↔body checks. Judgment-only rules (R4 two-stage filter, R12
-// gray-zone fidelity, R14 strawman nuance, R3 impl-detail) are NOT attempted
-// here — they stay with the reviewer.
+// mapping-status↔body checks, and R18's constant-identifier form. Judgment-only
+// rules (R4 requirement gate + two-stage filter, R12 gray-zone fidelity, R14
+// strawman nuance, R3 impl-detail, and R18's requirement-value-vs-tuning-value
+// call) are NOT attempted here — they stay with the reviewer. In particular the
+// harness never flags a bare number: deleting a requirement value is the failure
+// mode this plugin cares most about, so only an LLM judges which numbers stay.
 //
 // It shells out to adr-invariants.sh (unless --no-invariants) so a single run
 // covers reverse references too, folding that exit code into the aggregate.
@@ -44,6 +47,7 @@ import {
   relatedLinkTargets,
   decisionLogLinkTargets,
   codeRefHits,
+  constantAssignmentHits,
   validateMappingShape,
   sectionRange,
   numberingGaps,
@@ -341,6 +345,16 @@ function main() {
     // R2: code-reference depth (advisory)
     for (const hit of codeRefHits(body))
       rep.warn("code-ref-depth", `${where}:${hit.line}`, `파일 단위 코드 참조 의심: ${hit.text}`);
+
+    // R18 (form half): a value written as a code constant. The value itself may
+    // well belong here — requirement values must stay — but the identifier that
+    // holds it does not. Advisory: the reviewer decides requirement vs tuning.
+    for (const hit of constantAssignmentHits(body))
+      rep.warn(
+        "value-as-constant",
+        `${where}:${hit.line}`,
+        `값이 코드 상수 형태로 적혀 있습니다: ${hit.text} — 요구사항 값이면 도메인 문장으로 (예: "채팅 한 세션은 최대 20턴 — 요금제 정책"), 구현 튜닝값이면 코드로 옮기세요`,
+      );
 
     // R8 (disk→mapping): this file must be listed in .mapping.json adrs[].
     // .mapping.json is the single ADR index (README has no ADR list), so an

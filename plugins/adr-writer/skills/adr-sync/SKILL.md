@@ -51,7 +51,7 @@ Quick mode는 이 단계와, 3.7 의 인덱스 기반 stale `fN` 네이밍 **감
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs [category]   # 인자 없으면 전체
 ```
 
-이 하네스는 각 ADR 본문 + `.mapping.json` + 디스크 상태를 파싱해 다음을 기계적으로 검증한다: Status enum·날짜 형식(R1 앞부분), 필수 섹션 존재, 파일명 canonical·stale `fN-` 접두사, 경로 깊이 ≤2, 안티패턴 카테고리 세그먼트(R5 앞부분), Decision Drivers/대안 개수(R13/R14), Related 링크 실재(R10), `dependsOn` 무결성(R16), 매핑↔디스크 정합 + adrs 레코드(path/status/summary) 형식 + status↔본문 정합(R8/status-index-mismatch), 그리고 내부적으로 `adr-invariants.sh` 로 코드→ADR·ADR→PRD 역참조(R15/R17). 하네스가 잡은 `error` 는 아래 Pass 2 의 해당 단계(파일명/매핑 hygiene 은 6단계, Status 형식은 아래 2-Status, 역참조 제거는 5단계)에서 정정하고 7단계 보고 **Fixed** 에 기재한다. 하네스가 못 보는 **의미 판정**(코드 실재로 본 Status drift, 회색지대 결정 ↔ 코드 모순, evolution narration 정리)은 아래 deep 단계가 이어서 수행한다 — 하네스는 형식·정합, sync 본문은 결정 drift 를 본다.
+이 하네스는 각 ADR 본문 + `.mapping.json` + 디스크 상태를 파싱해 다음을 기계적으로 검증한다: Status enum·날짜 형식(R1 앞부분), 필수 섹션 존재, 파일명 canonical·stale `fN-` 접두사, 경로 깊이 ≤2, 안티패턴 카테고리 세그먼트(R5 앞부분), Decision Drivers/대안 개수(R13/R14), Related 링크 실재(R10), `dependsOn` 무결성(R16), 매핑↔디스크 정합 + adrs 레코드(path/status/summary) 형식 + status↔본문 정합(R8/status-index-mismatch), 값이 코드 상수 형태로 적혔는지(R18 형식 절반 — `value-as-constant` warning), 그리고 내부적으로 `adr-invariants.sh` 로 코드→ADR·ADR→PRD 역참조(R15/R17). 하네스가 잡은 `error` 는 아래 Pass 2 의 해당 단계(파일명/매핑 hygiene 은 6단계, Status 형식은 아래 2-Status, 역참조 제거는 5단계)에서 정정하고 7단계 보고 **Fixed** 에 기재한다. 하네스가 못 보는 **의미 판정**(코드 실재로 본 Status drift, 회색지대 결정 ↔ 코드 모순, evolution narration 정리, **요구사항 값 누락·drift**)은 아래 deep 단계가 이어서 수행한다 — 하네스는 형식·정합, sync 본문은 결정 drift 를 본다. **하네스는 맨숫자를 잡지 않는다**(요구사항 값을 지우게 만들 위험이 크므로) — 어떤 값이 남아야 하는지는 전부 아래 판단 단계의 몫이다.
 
 각 대상 ADR에 대해:
 
@@ -66,28 +66,32 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs [category]   # 인자 
    - **UI 라벨/상수** — 사용자 노출 문자열 grep.
    - **Source-of-truth 포인터** — "스키마는 `docs/tables/auth.md` 참조" 같은 외부 문서 경로가 아직 존재하고 그 파일 자체와도 일치하는지.
    - **Related ADR 링크** — 존재 여부와 Status 정합성.
-3. 구현 세부사항 bloat 식별 — 다음 두 기준으로 본문을 훑고 점진적으로 제거한다:
-   - **코드 직독 테스트** (`README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대"): 본문 단락이 관련 코드를 읽으면 자명한가? 자명하면 ADR 에서 뺀다 (함수 책임 분담, 모듈 의존 그래프, 필드 타입표, 에러 메시지·UI 라벨, 환경 변수 이름, 의사코드 등).
-   - **금지 항목 표** (`authoring-rules.md` "ADR에 포함하지 않는 것"): 파일 경로(폴더 이하), 코드 스니펫, 구현 상수·튜닝값, 엔티티 필드 상세 표, 마이그레이션 명령어, 전체 JSON.
+3. 구현 세부사항 bloat 식별 — **먼저 요구사항 관문을 적용하고**(`authoring-rules.md` "요구사항 관문과 두 단계 필터"), 관문을 통과한 항목은 제거 대상에서 빼둔 뒤 아래 두 기준으로 본문을 훑는다:
+   - **요구사항 관문 (제거 금지선)**: "이 사실이 빠지면 ADR 만 보고 다시 만든 코드가 요구사항을 어길 수 있는가?" YES 면 코드에서 자명해 보여도 **남긴다** — 요구사항 값(한도·주기·보존 기간·상한·목표치), 권한 규칙, 필수 검증 조건, 상태 전이, 실패 시 보장 동작. sync 가 bloat 제거라는 이름으로 요구사항을 걷어내면 ADR 은 형식만 깔끔한 빈 문서가 되고, 다음 구현이 그 계약을 잃는다.
+   - **코드 직독 테스트** (`README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대"): 관문을 통과하지 못한 단락이 관련 코드를 읽으면 자명한가? 자명하면 ADR 에서 뺀다 (함수 책임 분담, 모듈 의존 그래프, 필드 타입표, 에러 메시지 문구·UI 라벨, 환경 변수 이름, 의사코드 등).
+   - **금지 항목 표** (`authoring-rules.md` "ADR에 포함하지 않는 것" — "요구사항이면 예외" 열을 함께 읽는다): 파일 경로(폴더 이하), 코드 스니펫, **구현 튜닝값**(커넥션 풀·백오프·캐시 TTL·워커 수 — 개발자가 바꿔도 요구사항을 어기지 않는 값), 엔티티 필드 상세 표, 마이그레이션 명령어, 전체 JSON.
+   - **동시에 누락도 본다** — 코드에는 명백한 요구사항 계약(예: 세션 턴 수 상한, 플랜별 사용량 한도)이 있는데 ADR 본문에 없으면, 그것이 요구사항인지 구현 튜닝값인지 사용자에게 묻고 요구사항이면 ADR 에 값과 근거로 추가한다. 이건 bloat 제거의 반대 방향이며 `Suggestions` 에 `[Missing requirement] <무엇>` 으로 남긴다. **다만 코드의 값을 요구사항으로 단정해 조용히 옮겨 적지 않는다** — 코드는 값이 계약인지 우연인지 말해주지 않으므로 반드시 사용자 확인을 거친다.
      3-E. **evolution narration 정리 — 온전한 현재-상태 문서로 재구성** (Pass 2 의 서브스텝 — 아래 별도 섹션 `### 3.5 카테고리 슬라이스 무결성` 과 다르다). 한 ADR 안에 시간이 지나며 끼어든 진화 서술을 현재 상태 단일 서술로 다듬어, 그 ADR 하나만 읽어도 최신 코드의 결정이 끊김 없이 읽히게 한다. 다음을 찾아 고친다:
-   - **진화 어법 → 현재형 단언**: "처음엔 X 였다가 Y 로 바꿨다", "v2 에서 Z 추가", "기존 A 대비 B 로 변경", "as of 2024-...", "deprecated 됐던 ~" 류 시간순 서술을, 현재 코드가 하는 것만 남긴 단언("시스템은 Y 로 동작한다")으로 바꾼다. 옛 단계를 본문에서 걷어내되, **그것이 major 전환**(채택 대안 교체·Driver 반전·핵심 알고리즘/아키텍처 변경·동작 바꾸는 버그 수정 — `authoring-rules.md` "결정 로그 기록 기준")이면 **삭제 전에 그 카테고리의 `decision-log.md` 로 harvest** 한다 (역순 맨 위 한 줄. 로그가 없으면 `decision-log.template.md` 시드를 카테고리 폴더로 복사해 시작한다 — `structure.md` "결정 로그"; 프로즈에 옛 ADR 번호를 넣지 않고 `현재 ADR` 링크만). **minor 진화**(임계값 미세 조정·표현·구현 사실 정정)면 그냥 삭제한다 (Git 이 이력 보존) — 로그에 넣지 않는다.
+   - **진화 어법 → 현재형 단언**: "처음엔 X 였다가 Y 로 바꿨다", "v2 에서 Z 추가", "기존 A 대비 B 로 변경", "as of 2024-...", "deprecated 됐던 ~" 류 시간순 서술을, 현재 코드가 하는 것만 남긴 단언("시스템은 Y 로 동작한다")으로 바꾼다. 옛 단계를 본문에서 걷어내되, **그것이 major 전환**(채택 대안 교체·Driver 반전·핵심 알고리즘/아키텍처 변경·동작 바꾸는 버그 수정 — `authoring-rules.md` "결정 로그 기록 기준")이면 **삭제 전에 그 카테고리의 `decision-log.md` 로 harvest** 한다 (역순 맨 위 한 줄. 로그가 없으면 `decision-log.template.md` 시드를 카테고리 폴더로 복사해 시작한다 — `structure.md` "결정 로그"; 프로즈에 옛 ADR 번호를 넣지 않고 `현재 ADR` 링크만). **minor 진화**(경계 서술 다듬기·표현·구현 사실 정정)면 그냥 삭제한다 (Git 이 이력 보존) — 로그에 넣지 않는다. **요구사항 값이 달라진 진화**("최대 20턴 → 30턴")는 minor 가 아니다 — 결과물이 지켜야 하는 계약이 바뀌었으므로 harvest 대상이다.
    - **본문 중간에 박힌 Changelog/History/Revision/Update 류 단락·소제목 제거**: 이런 절은 ADR 본문이 아니라 Git 의 몫이다. 단 다른 ADR 을 supersede/replace 한 사실 자체는 `Status`·`Related` 에 한 줄로만 남기고 본문 서사로 풀지 않는다.
    - **중복·모순된 결정 서술 통합**: 같은 결정을 본문 여러 곳에서 서로 다른 시점으로 서술하면, 현재 코드 기준 한 번만 서술하도록 합친다.
    - 재구성은 `README.md` `## ADR 템플릿` 의 표준 섹션 순서(Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / Related)와 `authoring-rules.md` 의 섹션별 작성 규칙에 맞춰 문단을 재배치하되, **회색지대 결정(채택 근거·대안·도메인 규칙·상태 전이·fallback)은 절대 누락하지 않는다** — 진화 서술 안에 묻혀 있던 진짜 근거·대안을 현재형으로 살려 옮긴다. 정보 _압축_ 이지 _손실_ 이 아니다.
    - 단, **회색지대 결정이 코드와 모순될 때는 narration 정리라는 이름으로 ADR 을 코드에 맞춰 조용히 덮어쓰지 않는다** — 아래 "source of truth 의 범위" 분기를 그대로 따른다 (결정 변경 vs 위반).
 4. 회색지대 충실도 점검 — 본문에 (a) 대안 비교/채택 근거 (b) 비즈니스 규칙의 시스템 번역 (c) 도메인 규칙·상태 전이 (d) 외부 의존 fallback 중 하나도 없으면 ADR 가치가 약하다는 신호 → `Suggestions` 에 "회색지대 보강 또는 ADR 폐기 검토" 로 기록.
+   4-b. **재생성 테스트** (`authoring-rules.md` "ADR 이 만족시켜야 하는 것") — "이 카테고리의 코드가 전부 지워지고 이 ADR 만 남으면, 이것만 읽고 요구사항을 지키는 코드를 다시 만들 수 있는가?" 를 묻는다. 구현 방법·구조·이름이 달라지는 것은 정상이므로 무시하고, **결과 계약의 누락만** 본다 — 요구사항 값, 권한·가시성 규칙, 필수 검증 조건, 상태 전이·불변식, 실패 시 사용자에게 보장되는 동작. 누락이 보이면 `Suggestions` 에 `[Missing requirement] <무엇이 빠졌는가 — 코드의 어느 동작이 근거인가>` 로 남기고 사용자에게 확인해 채운다. 이 점검은 3번 bloat 제거와 짝이다 — sync 는 덜어내기만 하는 명령이 아니라 **계약을 온전하게 유지하는** 명령이다.
 5. Decision Drivers / 대안 ≥2 점검 (`authoring-rules.md` "Decision Drivers" / "대안 검토 — 최소 2개 이상"):
    - Decision Drivers 가 빈약(0-2개)하거나 일반 품질 속성("유지보수성", "확장성") 일색이면 → `Suggestions` 에 "Drivers 를 옵션 변별하는 사실/제약으로 보강" 으로 기록
    - 대안이 1개뿐이거나 strawman 이면 → `Suggestions` 에 "현실적 대안 추가 또는 ADR 폐기 검토" 로 기록 (이미 `Accepted` 인 ADR 이 흔한 누락 케이스 — 회고적으로라도 검토 당시의 옵션을 적는다)
 6. ADR을 코드에 맞게 수정 — 단, **무엇을 코드에 맞추는지는 아래 "source of truth 의 범위"로 갈린다.** 구현 사실·Status 는 코드에 맞춰 ADR 을 정정하고, 회색지대 결정이 코드와 모순되면 ADR 을 코드에 맞추지 말고 결정 위반으로 다룬다. `.mapping.json` 의 해당 adrs[] summary(한 줄 Key Decision)도 함께 갱신.
 
-**주의**: 새 구현 세부사항을 ADR에 추가하지 않는다. ADR은 비즈니스 ↔ 코드 사이의 회색지대(결정의 근거·도메인 규칙·트레이드오프) 만 다룬다 — 코드를 직접 읽어 알 수 있는 사실은 코드와 docstring 으로 보낸다.
+**주의**: 새 구현 세부사항을 ADR에 추가하지 않는다. ADR은 비즈니스 ↔ 코드 사이의 회색지대(결정의 근거·도메인 규칙·트레이드오프)와 **결과물이 지켜야 하는 요구사항 계약**만 다룬다 — 코드를 직접 읽어 알 수 있고 요구사항도 아닌 사실은 코드와 docstring 으로 보낸다. 반대로 **요구사항 계약이 ADR 에서 빠져 있으면 그것은 추가해야 할 누락**이므로 위 3번의 `[Missing requirement]` 분기로 다룬다 (사용자 확인 후).
 
 #### source of truth 의 범위 — 무엇이 코드를 따르고 무엇이 ADR 을 따르는가
 
 "코드가 source of truth" 는 **구현 사실에 한정**된다. 회색지대 결정까지 코드에 맞추면, 코드 변경이 ADR 결정을 끌고 다니게 되어 PRD → ADR → 코드 단방향이 깨진다 (`README.md` "안정성 기울기 검증"). 두 경우를 구분한다:
 
 - **구현 사실·Status (코드가 권위)** — API 표·error code·enum·필드 이름·키 패턴·Status 실재 여부. 코드와 다르면 **ADR 을 코드에 맞춰 정정**한다. 이건 코드가 자연히 앞서는 정상 방향이다.
+- **요구사항 값 (ADR 이 권위 — 코드에 맞춰 덮어쓰지 않는다)** — ADR 은 "최대 20턴" 인데 코드가 30턴이면, 그것은 정정할 구현 사실이 아니라 **계약 불일치**다. 값을 조용히 코드 쪽으로 고치면 요구사항이 코드에 의해 재정의된다. 아래 회색지대 결정과 같은 분기(의도된 변경 vs 위반)로 사용자에게 묻고, `Suggestions` 에 `[Requirement value drift] <category> — ADR "<값>" ↔ 코드 "<값>"` 으로 남긴다.
 - **회색지대 결정 (ADR 이 권위)** — 채택 근거·대안 비교·도메인 규칙·상태 전이·외부 의존 fallback·키 디자인의 _의도_. 코드가 이 결정과 **모순**되면 (예: ADR 은 "낙관적 락" 인데 코드가 비관적 락으로 바뀜), ADR 을 코드에 맞춰 조용히 고치지 **않는다** — 이건 누군가 ADR-first 사이클을 건너뛰고 결정을 바꾼 신호다. 다음 둘 중 하나로 분기해 사용자에게 묻는다:
   - **의도된 결정 변경** → ADR 을 현재 결정에 맞게 갱신해 코드를 정당화한다. edit-in-place 로 본문을 현재 상태로 고치는 것이 기본이고, 그 전환이 **major** 면(채택 대안 교체·Driver 반전·핵심 알고리즘/아키텍처 변경) 카테고리 `decision-log.md` 에 한 줄 남긴다. 결정 주제가 분기해 옛 결정을 별개 레코드로 공존시켜야 할 때만 새 ADR 로 supersede 한다 (판정: `authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때"). `Suggestions` 에 `[Decision changed in code] <category> — 코드가 ADR 결정과 모순. ADR 갱신(major 면 decision-log 기록) 후 정렬 필요` 로 기록.
   - **의도치 않은 위반** → 코드가 결정을 어긴 것이므로 코드 수정 대상이다. ADR 은 그대로 두고 `Suggestions` 에 `[Code violates ADR] <category> — 코드가 ADR 결정과 어긋남. 코드 정정 검토` 로 기록.
@@ -211,6 +215,8 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
 - [Supersede recommended?] — 결정 주제가 분기해 옛 결정을 별개 레코드로 공존시켜야 하는 경우만 (edit-in-place + decision-log 로 담을 수 없을 때 — `authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때"). 단순 결정 전환은 supersede 가 아니라 edit-in-place + decision-log 로 흡수한다
 - [Sub-folder split recommended] — <category>: ADR <n>개, 후보 sub-feature ...
 - [Feature-ID naming] — <category>: 옛 fN 네이밍, canonical화 보류 (사용자가 거절 시)
+- [Missing requirement] — <category>: 코드가 지키는 계약(<무엇>)이 ADR 에 없음. 요구사항이면 값·근거로 추가 (사용자 확인 필요)
+- [Requirement value drift] — <category>: ADR "<값>" ↔ 코드 "<값>". 의도된 변경인지 위반인지 판정 필요
 ```
 
 ## Notes

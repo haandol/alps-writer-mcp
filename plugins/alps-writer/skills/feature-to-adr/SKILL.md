@@ -72,6 +72,7 @@ ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고�
 - **Context 재료** — ALPS 의 비즈니스 동기·user story·acceptance criteria 핵심.
 - **Decision 재료** — Section 7 의 user flow / technical description (vertical slice: 사용자 동작 → API → 데이터 흐름).
 - **Decision Drivers 후보** — 1단계에서 분류한, 이 feature 에 걸리는 NFR(6.2 에서 Scope 가 `Global` 이거나 이 Feature ID 인 것)과 전역 아키텍처 제약(4.2). 측정 가능한 제약 형태로 그대로 넘긴다(예: "p95 3초 이내", "AWS 만 사용"). `/adr-new` 는 이를 Decision Drivers 의 출발점으로 삼아 대안을 변별한다 — PRD 의 비기능 요구가 ADR 의 의사결정 근거로 이어지는 통로다.
+- **요구사항 계약 재료 (숫자를 그대로 옮긴다)** — Section 7 의 acceptance criteria·user flow·제약과 6.2 NFR 에 적힌 **값**(최대 횟수·턴 수, 사용량 한도, 보존 기간, 크기 상한, 응답 목표치, 권한 규칙)을 요약하지 말고 값과 근거째로 넘긴다. `/adr-new` 는 이것을 ADR 의 요구사항 계약으로 적는다 (`authoring-rules.md` "구체적인 숫자"). **PRD 의 숫자를 "적절히"·"제한적으로" 로 일반화해 넘기지 않는다** — ADR 은 PRD 를 다시 가리키지 않으므로(단방향 import), 여기서 뭉개면 그 요구사항은 파이프라인에서 영구히 사라지고 구현이 임의 값을 고른다.
 - **영향 영역 힌트** — user flow / technical description 에서 추출한 페이지·컴포넌트 키워드. ADR Decision 의 vertical slice 서술에 쓰인다 (매핑에 코드 경로로 저장되지는 않는다).
 
 ALPS feature 가 명시적 ID 를 가지더라도 파일명·폴더명·카테고리 키에 그 ID 를 넣지 않는다 — `/adr-new` 가 부여하는 파일명은 canonical 하게 `NNNN-kebab-title.md` 형태이고, 키는 feature 이름 기반이다. ID 는 `.mapping.json` 어디에도 저장하지 않으며(adr-writer 는 ALPS 를 참조하지 않는다), `/adr-impl` 은 카테고리 키로 대상을 찾으므로 ID 흔적을 남길 필요가 없다.

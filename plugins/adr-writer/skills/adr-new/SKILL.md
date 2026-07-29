@@ -39,6 +39,8 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 1. **어떤 문제/요구가 이 결정을 부르고 있나?** (Context)
 2. **이 결정을 변별하는 압력·제약·요구사항은 무엇인가?** (Decision Drivers — 3-5개. "확장성", "유지보수성" 같은 일반 품질 속성이 아니라 옵션 사이의 선택을 실제로 가르는 사실/제약. 작성 규칙은 `authoring-rules.md` "Decision Drivers" 참조). 사용자가 단답이면 "성능·보안·비용·복잡도·팀 역량·일정 중 어떤 것이 이 결정을 좁히고 있나요?" 로 한 번 더 유도
 3. **어떤 선택을 하려고 하는가? 핵심 한 줄.** (Decision)
+   - **결과물이 지켜야 하는 값·계약도 함께 받는다** (요구사항 계약 — `authoring-rules.md` "구체적인 숫자"). 사용자가 먼저 말하지 않아도 **반드시 한 번 묻는다**: "이 기능에서 개발자가 임의로 정하면 안 되는 값이나 규칙이 있나요? 예를 들어 최대 횟수·턴 수, 사용량 한도, 보존 기간, 크기 상한, 응답 목표 시간, 권한 규칙 같은 것." 받은 값은 **숫자와 근거(정책·계약·규정)를 그대로** ADR 에 옮긴다. 판정 질문은 "개발자가 이 값을 바꾸면 요구사항 위반인가?" — YES 면 요구사항 값이라 반드시 적고, NO 면 구현 튜닝값이라 적지 않는다. 사용자가 "적당히 알아서" 라고 답한 항목은 튜닝값으로 분류해 ADR 에서 뺀다 — **임의로 숫자를 만들어 요구사항처럼 적지 않는다.**
+
 4. **검토했지만 채택하지 않은 다른 안이 있는가? 최소 2개의 현실적 대안을 받는다** (대안 검토 — `authoring-rules.md` "대안 검토 — 최소 2개 이상" 참조. 사용자가 "그냥 이거 한 가지밖에 생각 안 했다" 면 한 번 되묻는다 — "이전에 한 번이라도 검토 테이블에 올랐던 다른 접근이 있나요? 가령 직접 구현 / 외부 서비스 / 다른 라이브러리. 진짜로 외길이라면 ADR 보다는 docstring·README 영역일 수 있어요." 그래도 없다면 BLOCK 으로 자동 검토에서 잡힌다 — 임의로 strawman 을 만들지 않는다)
 5. **이 결정보다 먼저 구현돼 있어야 하는 다른 카테고리(선행 조건)가 있는가?** (선행 의존 — 예: "결제는 장바구니가 먼저 동작해야 한다"). 있으면 그 **선행 카테고리 키**를 받는다 (없으면 "없음"). 이 답은 4단계에서 `.mapping.json` 의 `dependsOn` 으로 저장되고 `/adr-impl` 의 선행 게이트가 읽는다 — 7단계 확인 화면의 "선행 조건" 줄도 여기서 나온다. ALPS PRD 가 함께 있는 프로젝트라면 의존성은 `/feature-to-adr` 가 Section 6.3 에서 옮겨오므로 여기서 다시 묻지 않아도 된다.
 6. **(선택) 이 결정이 속한 bounded context 와 그 DDD subdomain 분류는?** — 카테고리가 2-세그먼트(`identity/login`)거나 사용자가 도메인 분류를 신경 쓰는 경우에만 가볍게 묻는다 ("이 context 가 제품 경쟁력의 핵심(core)인가요, 떠받치는 보조(supporting)인가요, 기성품으로 대체 가능한 일반(generic)인가요?"). 답하면 4단계에서 context entry 의 `subdomainType` 으로 저장한다. **모르거나 평면 단일-피쳐면 묻지 않고 생략** — advisory 메타데이터이므로 강제하지 않는다.
@@ -54,7 +56,9 @@ ALPS 가 없는 상태에서 ADR 을 잘 쓰려면 다음 정보가 필요하다
 - **본문 최상단 `Date:` 는 ADR 작성일(`YYYY-MM-DD`)로 채운다** — 작성 시점 기록이며, Status 전환 날짜(`Accepted (YYYY-MM-DD)`)와는 별개다. `Proposed` Status 줄에는 날짜를 붙이지 않는다.
 - **Status 는 항상 `Proposed` 로 시작** (`/adr-impl` 이 구현·테스트 후 `Accepted` 로 자동 전환). 사용자에게 승격 여부를 묻지 않는다 — 자동 전환 정책은 `README.md` "자동 전환 규칙" 참조
 - 본문 구조: Status / Context / Decision Drivers / Decision / 대안 검토 / Consequences / (선택) Implementation Notes / Related. **필수 섹션은 Status·Context·Decision·Consequences** 네 개이며, `adr-structure-lint` 가 이 넷의 존재를 하드 체크한다. Decision Drivers·대안 검토는 강력 권장(누락 시 경고), Implementation Notes 는 아키텍처 수준 구현 고려사항이 있을 때만 두는 선택 섹션이다 (README `## ADR 템플릿` 과 동일).
-- **회색지대만 적는다** — 코드 직독으로 알 수 있는 것(함수 책임, 모듈 의존, 필드 타입, 에러 메시지·로그·환경 변수 이름, 의사코드)은 본문에 넣지 않는다. 채택 근거, 비즈니스 규칙의 시스템 번역, 도메인 규칙·상태 전이, 외부 의존 fallback 같은 "코드만 봐서는 안 보이는 결정의 동기" 가 본문의 중심이 되어야 한다 — 상세는 `README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
+- **회색지대만 적는다** — 코드 직독으로 알 수 있고 요구사항도 아닌 것(함수 책임, 모듈 의존, 필드 타입, 에러 메시지 문구·로그·환경 변수 이름, 의사코드, 구현 튜닝값)은 본문에 넣지 않는다. 채택 근거, 비즈니스 규칙의 시스템 번역, 도메인 규칙·상태 전이, 외부 의존 fallback 같은 "코드만 봐서는 안 보이는 결정의 동기" 가 본문의 중심이 되어야 한다 — 상세는 `README.md` "ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대" 참조
+- **요구사항 값은 값 그대로 적는다** — 2단계에서 받은 한도·주기·상한·목표치를 `Decision` 의 요구사항 계약(README 템플릿의 `### 요구사항 계약`)에 숫자와 근거로 남긴다. "제한된다", "적절한 시간 내" 로 뭉개지 않고, 동시에 상수 이름·환경 변수 이름으로 적지도 않는다 (`MAX_TURNS = 20` ✗ / "채팅 한 세션은 최대 20턴 — 요금제 정책" ✓). 상세 판정은 `authoring-rules.md` "구체적인 숫자" 참조
+- **재생성 테스트를 스스로 한 번 통과시킨다** — 초안을 다 쓴 뒤 "이 코드가 전부 지워지고 이 ADR 만 남으면, 이것만 읽고 요구사항을 지키는 코드를 다시 만들 수 있는가" 를 묻는다. 구현 방법이 달라지는 건 정상이지만, 지켜야 하는 계약(요구사항 값·권한 규칙·필수 검증·상태 전이·실패 시 보장 동작)이 빠졌으면 그 자리에서 사용자에게 되묻고 채운다 — 6단계 reviewer 의 R19 가 같은 것을 다시 본다
 - **Decision은 vertical slice로 묘사** — 한 단락 또는 sequenceDiagram으로 사용자 동작 → API → 데이터 변형까지 끊김 없이 잇는다. 한 피쳐(leaf — 피쳐 sub-folder 또는 단일-피쳐 context)에서 UI/API/Data 결정을 모두 다루는 것이 정상이며, 레이어별 ADR로 쪼개지 않는다. 비동기·상태 전이가 핵심이면 stateDiagram-v2 / flowchart 사용
 - 금지/유지 항목 상세는 `authoring-rules.md` 참조 (다이어그램 내부도 동일하게 적용)
 
@@ -105,7 +109,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <이번에 작성한 A
 이 하네스는 이번 ADR 이 사는 `docs/adr/` 를 파싱해 다음을 기계적으로 검증한다 (근거: `authoring-rules.md`·`README.md`·`structure.md`):
 
 - Status enum·날짜 형식(R1 앞부분), 필수 섹션(Status/Context/Decision/Consequences) 존재, 파일명 canonical(`NNNN-kebab.md`, stale `fN-` 접두사 금지), 제목번호=파일명번호, 경로 깊이 ≤2 세그먼트
-- 안티패턴 카테고리 세그먼트(R5 앞부분), Decision Drivers 3-5개(R13), 대안 ≥2개(R14), Related 링크 실재(R10)
+- 안티패턴 카테고리 세그먼트(R5 앞부분), Decision Drivers 3-5개(R13), 대안 ≥2개(R14), Related 링크 실재(R10), 값이 코드 상수 형태로 적혔는지(R18 형식 절반 — `value-as-constant` warning)
 - `.mapping.json` 스키마·`dependsOn` 무결성(dangling/self-edge/순환 — R16), 매핑 ↔ 디스크 정합(R8) + 매핑 `adrs` 레코드(path/status/summary) 형식·status↔본문 정합
 - 내부적으로 `adr-invariants.sh` 를 호출해 코드→ADR·ADR→PRD 역참조(R15/R17)도 함께 본다
 
@@ -117,7 +121,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <이번에 작성한 A
 2. named subagent 가 없으면 `${CLAUDE_PLUGIN_ROOT}/agents/adr-reviewer.md` 를 읽고, 그 전문을 reviewer 지침으로 전달한 **일반 read-only subagent** 하나를 실행한다. Codex 플러그인은 `agents/*.md`를 컴포넌트로 등록하지 않으므로 이 fallback이 기본 경로다.
 3. subagent 기능 자체를 사용할 수 없는 클라이언트에서만 메인 세션이 같은 reviewer 지침을 직접 수행하고, 격리 검토를 사용할 수 없었다고 결과에 한 줄 밝힌다.
 
-reviewer 는 하네스가 못 잡는 **판단 룰에 집중**한다 — 코드 직독/리트머스 필터(R4), 회색지대 충실도(R12), 대안이 strawman 인지(R14 질), Decision Drivers 가 의견이 아닌 변별 사실인지(R13 질), 구현 세부 침투(R3), vertical slice 응집(R5 뒷부분).
+reviewer 는 하네스가 못 잡는 **판단 룰에 집중**한다 — 요구사항 관문/코드 직독/리트머스 필터(R4), 회색지대 충실도(R12), 대안이 strawman 인지(R14 질), Decision Drivers 가 의견이 아닌 변별 사실인지(R13 질), 구현 세부 침투(R3), vertical slice 응집(R5 뒷부분), **요구사항 값 누락·튜닝값 침투(R18)**, **재생성 테스트(R19 — 코드가 지워져도 ADR 만으로 요구사항을 지키는 코드를 만들 수 있는가)**. 하네스는 맨숫자를 보지 않으므로 요구사항 값이 빠졌는지는 reviewer 만 잡는다.
 
 - 입력: 작성된 ADR 파일 경로, 매핑 entry 변경 전/후, (있다면) ALPS Section 7 발췌, **하네스 결과 요약(통과/남은 warning)**
 - 출력: `PASS` / `FIX_REQUIRED` / `BLOCK` punch list
@@ -134,6 +138,7 @@ reviewer 는 하네스가 못 잡는 **판단 룰에 집중**한다 — 코드 �
 **카테고리**: <category 키 — 예: identity/login (context: identity, subdomain: core)>
 **Decision (요약)**: <2-3문장>
 **Decision Drivers**: <3-5개 한 줄씩>
+**요구사항 계약**: <결과물이 지켜야 하는 값·규칙 — 값과 근거를 그대로. 없으면 "없음">
 **검토 대안**: <옵션 N개 — 채택안 + 미채택안들>
 **선행 조건**: <의존 ADR 또는 없음>
 

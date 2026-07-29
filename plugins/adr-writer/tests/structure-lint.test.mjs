@@ -16,6 +16,7 @@ import {
   relatedLinkTargets,
   decisionLogLinkTargets,
   codeRefHits,
+  constantAssignmentHits,
   validateMappingShape,
   checkCategoryKey,
   numberingGaps,
@@ -173,6 +174,35 @@ test("codeRefHits flags a source-file path but not a .md Related link", () => {
   assert.equal(codeRefHits("apps/web/src/Login.tsx 를 고친다").length, 1);
   assert.equal(codeRefHits("- [x](./0002-x.md)").length, 0);
   assert.equal(codeRefHits("services/auth/auth_service.go:42 참조").length, 1);
+});
+
+// ── unit: constantAssignmentHits (advisory R18 form half) ───────────────
+// The rule the harness must NOT overreach on: a requirement value belongs in the
+// ADR, so a bare number is never flagged. Only the code-constant FORM is.
+test("constantAssignmentHits flags a value written as a code constant", () => {
+  assert.equal(constantAssignmentHits("`MAX_TURNS = 20` 으로 제한한다").length, 1);
+  assert.equal(constantAssignmentHits("TIMER = {1: 60}").length, 1);
+  assert.equal(constantAssignmentHits("AUTH_TOKEN_TTL: 604800").length, 1);
+});
+
+test("constantAssignmentHits leaves requirement values written as prose alone", () => {
+  // Every one of these MUST survive: they are the contract a regenerated
+  // implementation has to honor.
+  for (const line of [
+    "채팅 한 세션은 최대 20턴이며, 초과 시 새 세션을 시작한다 (요금제 정책)",
+    "무료 플랜은 월 업로드 5회 (과금 정책)",
+    "refresh token 은 7일 만료로 회전한다",
+    "p95 응답 3초 이내 (NFR 6.2)",
+    "첨부는 최대 25MB — 요금·UX 계약",
+  ])
+    assert.deepEqual(constantAssignmentHits(line), [], line);
+});
+
+test("constantAssignmentHits ignores fenced blocks and constants without a value", () => {
+  // Fenced code is the impl-detail rule's (R3) territory, judged by the reviewer.
+  assert.deepEqual(constantAssignmentHits("```ts\nconst MAX_TURNS = 20;\n```"), []);
+  // An enum member or error code mentioned without an assigned number is fine.
+  assert.deepEqual(constantAssignmentHits("에러 코드 RATE_LIMIT_EXCEEDED 를 반환한다"), []);
 });
 
 // ── unit: validateMappingShape ──────────────────────────────────────────
@@ -490,6 +520,42 @@ test("CLI: --warn-as-error turns a warning into a failure", () => {
     assert.equal(clean.code, 0, "warning alone does not fail");
     const strict = runStructureLint(dir, ["--no-invariants", "--warn-as-error"]);
     assert.equal(strict.code, 1, "--warn-as-error escalates the warning");
+  });
+});
+
+// ── integration: R18 (requirement value vs code constant) ───────────────
+// The pair that pins the rule's direction. An ADR carrying its requirement
+// values as prose is CLEAN — the harness must never nudge an author toward
+// deleting them; only the code-constant form draws a warning.
+test("CLI: an ADR stating requirement values in prose stays clean", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    write(
+      dir,
+      "docs/adr/identity/login/0001-password-policy.md",
+      `# ADR 0001: x\n\nDate: 2026-07-01\n\n## Status\nAccepted (2026-07-02)\n\n## Context\nc\n\n## Decision Drivers\n- p95 응답 3초 이내\n- b\n- c\n\n## Decision\n비밀번호는 최소 10자 (보안 정책). 5회 연속 실패 시 계정을 잠근다.\n\n### 대안 검토\n- a\n- b\n\n## Consequences\nok\n\n## Related\n- [0002](./0002-rate-limit.md)\n`,
+    );
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, JSON.stringify(r.errors));
+    assert.deepEqual(
+      r.warnings.filter((w) => w.rule === "value-as-constant"),
+      [],
+      "requirement values written as prose must not be flagged",
+    );
+  });
+});
+
+test("CLI: a value written as a code constant is a warning, not an error", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    write(
+      dir,
+      "docs/adr/identity/login/0001-password-policy.md",
+      `# ADR 0001: x\n\nDate: 2026-07-01\n\n## Status\nAccepted (2026-07-02)\n\n## Context\nc\n\n## Decision Drivers\n- a\n- b\n- c\n\n## Decision\n세션 상한은 MAX_TURNS = 20 으로 둔다.\n\n### 대안 검토\n- a\n- b\n\n## Consequences\nok\n\n## Related\n- [0002](./0002-rate-limit.md)\n`,
+    );
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, "advisory only — the value itself may well belong here");
+    assert.ok(r.warnings.some((w) => w.rule === "value-as-constant"));
   });
 });
 

@@ -1,7 +1,7 @@
 {
   "name": "alps-writer",
   "description": "Author ALPS (PRD) documents in Claude Code via an MCP server — guided, section-by-section product specs. Hand features off to the adr-writer plugin with /feature-to-adr.",
-  "version": "0.4.25",
+  "version": "0.4.26",
   "author": {
     "name": "haandol"
   },

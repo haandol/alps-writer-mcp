@@ -65,21 +65,31 @@ test("sufficiency reviewer tests the tests — mutation and static analysis as v
   assert.match(skill, /테스트가 결함을 실제로 잡는지/);
 });
 
-test("junior repair report ends with a six-axis merge-fitness checklist", () => {
+test("junior repair report ends with a seven-axis merge-fitness checklist", () => {
   const writer = read("agents/adr-impl-review-report-writer.md");
+  const skill = read("skills/adr-impl-review/SKILL.md");
   assert.match(writer, /머지 판정 체크리스트/);
-  for (const axis of [
+  const axes = [
     "문제 적합성",
     "기능 충분성",
+    "계약 준수",
     "변경 최소성",
     "검증 강도",
     "운영 안전성",
     "유지보수성",
-  ]) {
+  ];
+  for (const axis of axes) {
     assert.match(writer, new RegExp(axis));
+    // the skill advertises the same axis list, or a caller writing the report
+    // by hand (no subagent available) drops one silently
+    assert.match(skill, new RegExp(axis), `SKILL.md must name the ${axis} axis`);
   }
+  assert.match(writer, new RegExp(`${axes.length}축`));
+  assert.match(skill, new RegExp(`${axes.length}축`));
   // 문제 적합성은 명세 축이라 human-baseline을 근거로 삼고 밖으로 라우팅한다.
   assert.match(writer, /명세 부족을 지적했으면/);
+  // 계약 준수는 기능 충분성과 별개 축이다 — 로직이 있어도 값이 다르면 위반.
+  assert.match(writer, /기능 충분성과 다른 축/);
 });
 
 test("junior repair report requires grounded Mermaid and executable fix guidance", () => {
