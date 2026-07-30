@@ -24,41 +24,41 @@ function validate(dir) {
 }
 
 function validReport() {
-  return `# ADR 구현 리뷰 및 수정 가이드
+  return `# ADR implementation review and repair guide
 
-## 1. 판정 요약
-## 2. 먼저 알아야 할 목표
-## 3. 코드를 읽는 순서
-## 4. 현재 구현 지도
+## 1. Verdict summary
+## 2. What to know first
+## 3. Order to read the code
+## 4. Map of the current implementation
 \`\`\`mermaid
 flowchart LR
   A --> B
 \`\`\`
-## 5. 런타임 흐름
+## 5. Runtime flow
 \`\`\`mermaid
 sequenceDiagram
   A->>B: request
 \`\`\`
-## 6. 상태·데이터·실패 모델
-## 7. 발견 사항
+## 6. State, data, and failure model
+## 7. Findings
 ### F1. Duplicate settlement
-- 수정할 파일과 심볼: src/stream.mjs
-- 건드리지 말아야 할 범위: protocol
-- 완료 조건: one record
-- 확인 필요: none
-## 8. 수정 실행 순서
-## 9. 검증 체크리스트
-## 10. 머지 판정 체크리스트
-| 축 | 판정 |
+- Files and symbols to change: src/stream.mjs
+- Scope not to touch: protocol
+- Completion criteria: one record
+- Needs confirmation: none
+## 8. Fix execution order
+## 9. Verification checklist
+## 10. Merge decision checklist
+| Axis | Verdict |
 | --- | --- |
-| 문제 적합성 | 충족 |
-| 기능 충분성 | 미충족 |
-| 계약 준수 | 충족 |
-| 변경 최소성 | 충족 |
-| 검증 강도 | 충족 |
-| 운영 안전성 | 판정불가 |
-| 유지보수성 | 충족 |
-## 11. 리뷰 한계와 질문
+| Problem fitness | met |
+| Functional adequacy | not met |
+| Contract compliance | met |
+| Change minimality | met |
+| Verification strength | met |
+| Operational safety | undetermined |
+| Maintainability | met |
+## 11. Review limits and questions
 `;
 }
 
@@ -95,20 +95,20 @@ test("review artifact validator accepts a self-contained junior repair guide", (
 });
 
 // A report can carry heading 10 and still omit an axis from the table. The axis
-// most likely to vanish is 계약 준수 — a review that found no bug reads complete
+// most likely to vanish is "Contract compliance" — a review that found no bug reads complete
 // without ever checking whether the ADR's requirement values were honored.
 test("review artifact validator rejects a merge-fitness table missing an axis", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
     writeFileSync(
       path.join(dir, "implementation-review.md"),
-      validReport().replace("| 계약 준수 | 충족 |\n", ""),
+      validReport().replace("| Contract compliance | met |\n", ""),
     );
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
 
     const result = validate(dir);
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /missing axis: 계약 준수/);
+    assert.match(result.stderr, /missing axis: Contract compliance/);
   });
 });
 

@@ -1,179 +1,188 @@
 # Architecture Decision Records (ADR)
 
-이 디렉토리는 프로젝트의 주요 아키텍처 결정을 문서화한다. ADR 은 코드 구현의 근거이며, 새 결정은 `/adr-new <category>` 로 직접 작성한다. ALPS (PRD) 가 함께 있는 프로젝트라면 Section 7 의 각 feature 를 `/feature-to-adr` helper 로 한 번에 ADR 로 변환할 수도 있다.
+This directory documents the project's major architectural decisions. An ADR is the rationale behind the code implementation, and new decisions are written directly with `/adr-new <category>`. In a project that also has an ALPS (PRD), each Section 7 feature can be converted into an ADR in one pass with the `/feature-to-adr` helper.
 
-이 문서는 인덱스다. 상세 규칙·구조는 sub-doc 으로 분리해 둔다.
+This document is an index. The detailed rules and structure are split into sub-documents.
 
-- [`authoring-rules.md`](./authoring-rules.md) — ADR 본문에 무엇을 넣고 무엇을 빼는지, 재생성 테스트·요구사항 관문과 두 단계 필터·요구사항 값 vs 구현 튜닝값·코드 참조 깊이·DB 동시 작업·리뷰 체크리스트
-- [`structure.md`](./structure.md) — DDD 도메인(bounded context) × 피쳐 디렉토리 레이아웃, 피쳐 sub-folder 분할, subdomain 분류, [`ADR 레지스트리`](./structure.md#adr-레지스트리-mappingjson)(`.mapping.json` 정책)
+- [`authoring-rules.md`](./authoring-rules.md) — what goes into an ADR body and what stays out: the regeneration test, the requirement gate and two filters, requirement values vs implementation tuning values, code-reference depth, DB changes as one unit, and the review checklist
+- [`structure.md`](./structure.md) — the DDD domain (bounded context) × feature directory layout, feature sub-folder splitting, subdomain classification, and the [`ADR registry`](./structure.md#the-adr-registry-mappingjson) (`.mapping.json` policy)
 
-## ADR이란?
+## What is an ADR?
 
-Architecture Decision Record (ADR)는 소프트웨어 개발 과정에서 내린 중요한 아키텍처 결정을 기록하는 문서다. 각 ADR은 다음을 포함한다:
+An Architecture Decision Record (ADR) documents an important architectural decision made during software development. Each ADR contains:
 
-- **Context**: 결정이 필요했던 배경과 문제
-- **Decision Drivers**: 옵션을 평가하는 데 사용된 압력·제약·요구사항 (선택지를 실제로 변별하는 것만)
-- **Decision**: 내린 결정과 그 이유
-- **대안 검토**: **최소 2개 이상**의 현실적 대안과 채택하지 않은 이유
-- **Consequences**: 결정의 긍정적/부정적 영향
+- **Context**: the background and problem that required the decision
+- **Decision Drivers**: the pressures, constraints, and requirements used to evaluate the options (only those that genuinely discriminate between them)
+- **Decision**: the decision made and why
+- **Alternatives**: **at least two** realistic alternatives and why they were not adopted
+- **Consequences**: the positive and negative effects of the decision
 
-## ADR이 다루는 영역 — 비즈니스와 코드 사이의 회색지대
+## What an ADR covers — the gray zone between business and code
 
-ADR 은 **비즈니스 요구사항(WHY)** 과 **코드(WHAT/HOW)** 사이에 끼어 있는 모호한 영역을 구체화하는 문서다. 이 회색지대만 ADR 에 적는다 — 여기서 회색지대는 "결정의 근거" 뿐 아니라 **결과물이 지켜야 하는 요구사항 계약**까지 포함한다 (아래 [재생성 테스트](#재생성-테스트--adr-완성도의-단일-기준)).
+An ADR is the document that makes concrete the ambiguous area wedged between **business requirements (WHY)** and **code (WHAT/HOW)**. Only this gray zone goes into an ADR — and here the gray zone includes not just "the rationale for the decision" but **the requirement contract the result must honor** (see [the regeneration test](#the-regeneration-test--the-single-standard-for-adr-completeness) below).
 
 ```mermaid
 flowchart LR
-    A["비즈니스 요구사항<br/>(ALPS / 사용자 스토리)"] --> B["회색지대<br/>(ADR이 채우는 영역)"]
-    B --> C["코드<br/>(구현 자체가 사실)"]
+    A["Business requirements<br/>(ALPS / user stories)"] --> B["The gray zone<br/>(what an ADR fills in)"]
+    B --> C["Code<br/>(the implementation is the fact)"]
 ```
 
-**회색지대에 해당하는 것들** — 코드만 읽어서는 동기와 근거가 안 보이는 결정, 그리고 **결과물이 지켜야 하는 계약**.
+**What belongs to the gray zone** — decisions whose motivation and rationale cannot be seen from the code alone, plus **the contract the result must honor.**
 
-- 같은 요구사항을 풀 수 있는 **여러 접근 중 왜 이것을 골랐는가** (대안 비교와 채택 근거)
-- 코드 곳곳에 흩어져 있어 한 곳에서 보지 않으면 안 보이는 **횡단 결정** (예: 토큰 회전 정책, 키 디자인 패턴, 상태 머신 전체)
-- 비즈니스 규칙이 시스템 동작으로 **번역되는 방식** (예: "가입 후 7일 grace period" → 어떤 트리거·테이블·상태값으로 표현되는가)
-- **결과물이 지켜야 하는 요구사항 값** — 최대 턴 수, 횟수 한도, 보존 기간, 크기 상한, 응답 목표치처럼 개발자가 임의로 바꾸면 요구사항 위반이 되는 숫자. 값과 근거를 그대로 적는다 (구현이 성능을 위해 고른 튜닝값은 반대로 적지 않는다 — 판정 기준은 [`authoring-rules.md`](./authoring-rules.md#구체적인-숫자--요구사항-값은-반드시-적고-구현-튜닝값은-적지-않는다))
-- 도메인 모델 사이의 **개념 수준 관계** (필드 정의가 아니라 "Flashcard 와 Vocabulary 는 phrase hash 로 연결된다" 수준)
-- 외부 시스템·서비스에 의존할 때의 **fallback / degradation 정책**
-- 한 결정이 가진 **의도된 트레이드오프와 리스크**
+- Among **several approaches** that could solve the same requirement, **why this one was chosen** (the alternatives comparison and adoption rationale)
+- **Cross-cutting decisions** scattered across the code that are invisible unless gathered in one place (e.g. the token rotation policy, the key design pattern, a whole state machine)
+- How a business rule is **translated into system behavior** (e.g. "7-day grace period after signup" → which triggers, tables, and state values express it)
+- **The requirement values the result must honor** — numbers such as max turns, count limits, retention periods, size caps, and response targets that become a requirement violation if a developer changes them at will. Record the value and its basis verbatim (conversely, do not record tuning values the implementation chose for performance — for the criteria see [`authoring-rules.md`](./authoring-rules.md#concrete-numbers--keep-requirement-values-drop-tuning-values))
+- **Non-numeric requirements** — allowed value sets (the list of order states and their transition rules), mandatory fields, permission and visibility rules, ordering and uniqueness, and the unit of money or time. Requirements do not arrive only as numbers, so keep them by applying the same deciding question ("would a developer changing this at will be a violation?"). **Split enums — the allowed set and transitions belong to the ADR, the identifier name and representation to the code** ([`authoring-rules.md`](./authoring-rules.md#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering))
+- **Conceptual-level relationships** between domain models (not field definitions, but at the level of "Flashcard and Vocabulary are linked by phrase hash")
+- The **fallback / degradation policy** when depending on an external system or service
+- The **intended trade-offs and risks** a decision carries
 
-**회색지대가 아닌 것들** — 에이전트/리뷰어가 그 ADR 이 다스리는 코드를 직접 읽으면 알 수 있고 **요구사항도 아닌** 것은 ADR 의 일이 아니다. 함수/클래스 책임 분담, 시그니처, 필드 타입, 디자인 패턴, 디렉토리 레이아웃, 에러 메시지 문구, 환경 변수 이름, 의사코드, 성능 튜닝값 등은 코드와 docstring·README·AGENTS.md 가 source of truth 다. ADR 에 옮겨 적으면 코드 변경 때마다 ADR 도 함께 갱신해야 하는 부담만 늘고 drift 가 쌓인다. 자세한 금지/유지 항목 표는 [`authoring-rules.md`](./authoring-rules.md#adr에-포함하지-않는-것) 참조.
+**What does not belong to the gray zone** — anything an agent or reviewer can learn by reading the code this ADR governs that is **also not a requirement** is not the ADR's business. Function and class responsibilities, signatures, field types, design patterns, directory layout, error message wording, env var names, pseudocode, performance tuning values, and the like have the code plus docstrings, the README, and AGENTS.md as their source of truth. Transcribing them into an ADR only adds the burden of updating the ADR on every code change and accumulates drift. For the detailed forbidden/keep tables see [`authoring-rules.md`](./authoring-rules.md#what-to-exclude-from-an-adr).
 
-### 재생성 테스트 — ADR 완성도의 단일 기준
+### The regeneration test — the single standard for ADR completeness
 
-ADR 의 목표는 **같은 코드를 재현하는 것이 아니라, 다시 만들어진 코드가 비즈니스 요구사항을 만족하게 하는 것**이다.
+An ADR's goal is **not to reproduce the same code, but to make regenerated code satisfy the business requirements.**
 
-> 코드가 전부 지워지고 이 ADR 만 남았을 때, 이것만 읽고 요구사항을 정확히 지키는 코드를 다시 만들 수 있는가?
+> If all the code were deleted and only this ADR survived, could someone read it and rebuild code that honors the requirements exactly?
 
-- **구현 방법·구조·이름은 달라도 된다** — ADR 에 없으므로 재량이다.
-- **결과물이 지켜야 하는 것은 하나도 빠질 수 없다** — 빠지면 재생성된 코드가 요구사항을 어긴다.
+- **Implementation, structure, and names may differ** — they are not in the ADR, so they are discretionary.
+- **Nothing the result must honor may be missing** — if it is, the regenerated code violates a requirement.
 
-이 테스트가 아래 [코드 직독 테스트](#코드-직독-테스트-2차-필터)보다 우선한다. 전체 정의와 요구사항 관문은 [`authoring-rules.md`](./authoring-rules.md#adr-이-만족시켜야-하는-것--재생성-테스트).
+This test takes precedence over [the code-readthrough test](#the-code-readthrough-test-the-second-filter) below. For the full definition and the requirement gate, see [`authoring-rules.md`](./authoring-rules.md#what-an-adr-must-satisfy--the-regeneration-test).
 
-### 의존성은 단방향, 참조는 어느 방향으로도 직접 적지 않는다
+### Requirements live in both the ADR and the code — and the ADR comes first
 
-PRD → ADR → 코드 는 **논리적 단방향 의존**이다. 안쪽(=상류) 레이어가 바뀌면 바깥쪽이 따라 바뀌지만, 그 반대는 일어나면 안 된다.
+The fact that a requirement value or rule also lives in the code is not a reason to drop it from the ADR. The two hold different things — **the ADR is the contract** ("a chat session is capped at 7 turns — pricing policy"), and **the code is that contract's enforcement** (the logic that counts turns and cuts off past 7). From the code alone you can see "it is 7 turns today" but **not whether that is a contract to honor or a value the implementation happened to pick.**
+
+So changing that value changes a system behavior requirement, and the order is fixed — **fix the ADR first (plus one line in `decision-log.md`, since it is major), then bring the code into line.** This holds even when it looks like a single constant. Conversely, a tuning value absent from the ADR is implementation discretion and carries no such order. For details see [`authoring-rules.md`](./authoring-rules.md#requirements-live-in-the-code-and-in-the-adr--layers-not-duplication).
+
+### Dependencies run one way; references are written in neither direction
+
+PRD → ADR → code is a **logical one-way dependency.** When an inner (upstream) layer changes, the outer layers follow, but never the reverse.
 
 ```mermaid
 flowchart RL
-    PRD["ALPS / PRD<br/>(가장 안정)"]
-    ADR["ADR<br/>(회색지대)"]
-    Code["코드<br/>(가장 휘발)"]
+    PRD["ALPS / PRD<br/>(most stable)"]
+    ADR["ADR<br/>(the gray zone)"]
+    Code["Code<br/>(most volatile)"]
 
-    Code -. 논리적 의존 .-> ADR
-    ADR -. 논리적 의존 .-> PRD
+    Code -. logical dependency .-> ADR
+    ADR -. logical dependency .-> PRD
 ```
 
-참조는 **양쪽 변(PRD↔ADR, ADR↔코드) 어디에도 직접 적지 않는다**. PRD↔ADR 는 아예 저장하지 않고(adr-writer 는 ALPS 를 참조하지 않는다), 카테고리·ADR·`dependsOn` 의 연결만 외부 매핑 레이어(`.mapping.json`) 한 곳에 둔다.
+References are **written directly on neither edge (PRD↔ADR, ADR↔code).** PRD↔ADR is not stored at all (adr-writer does not reference ALPS), and only the linkage of categories, ADRs, and `dependsOn` lives in one external mapping layer (`.mapping.json`).
 
-- **ADR → 코드 참조 금지**: ADR 에 파일·함수·줄 번호를 적지 않는다. 자세한 규칙은 [`authoring-rules.md`](./authoring-rules.md#코드-참조-깊이--폴더-단위까지만).
-- **코드 → ADR 참조 금지**: 주석·상수·import 에 ADR ID 나 경로를 남기지 않는다. ADR 번호는 split / rollup / supersede 로 이동하므로, 코드가 ADR ID 를 들고 있으면 결정이 바뀌지 않았는데도 구조 변경이 코드 줄줄이 수정을 강제한다.
-- **ADR → PRD 참조 금지**: ADR 본문(Context·Related 포함)에 ALPS 파일 경로·Section 번호·feature-id 를 적지 않는다. ADR 은 PRD 의 *동기를 흡수*하되 PRD 를 _가리키지_ 않는다 — PRD feature 가 split / 재번호 / 재구성되면, 결정이 바뀌지 않았는데도 ADR 본문 수정을 강제하기 때문이다. PRD 의 user story·acceptance criteria 를 ADR 에 복사하지도 않는다 (중복 → drift).
-- **PRD → ADR 참조 금지**: ALPS 문서가 특정 ADR ID·경로를 본문에 적지 않는다. PRD 는 가장 안정적인 계약이며 하류 산출물을 알지 못한다.
-- **ADR 결정이 바뀌면 코드는 바뀐다 / PRD 가 바뀌면 ADR·코드가 바뀐다** — 그게 단방향 의존이 의도하는 정상 흐름이다. 역방향(코드 변경이 ADR 을, ADR 변경이 PRD 를 끌고 가는 것)은 일어나면 안 된다.
-- **연결은 외부 매핑 레이어에 둔다**: [`docs/adr/.mapping.json`](./structure.md#adr-레지스트리-mappingjson) 이 ADR 인덱스(카테고리 → adrs, 각 adr 의 path·status·summary)와 카테고리 간 `dependsOn` 을 한 곳에 기록한다. **PRD 참조는 매핑에 저장하지 않는다** — adr-writer 는 ALPS 를 참조하지 않는다. ADR↔코드 도 본문에서 직접 가리키지 않고(코드는 그때그때 탐색), 이 매핑이 카테고리·ADR·의존을 잇는 유일한 결합점이다.
-- **안정성 기울기 검증**: 변경 빈도가 `Code >> ADR >> PRD` 를 따라야 한다. 휘발성 높은 레이어의 변경이 안정 레이어의 변경을 끌고 다닌다면, 화살표가 잘못 그려진 것 — 보통 ADR 이 코드 디테일을 들고 있거나, 코드가 ADR ID 를, ADR 이 ALPS 경로를 들고 있다.
+- **No ADR → code references**: never write files, functions, or line numbers in an ADR. For the detailed rule see [`authoring-rules.md`](./authoring-rules.md#code-references--folder-level-only).
+- **No code → ADR references**: never leave an ADR ID or path in comments, constants, or imports. ADR numbers move through split / rollup / supersede, so code holding an ADR ID forces a cascade of code edits on a structural change even when the decision did not change.
+- **No ADR → PRD references**: never write an ALPS file path, section number, or feature ID in the ADR body (Context and Related included). An ADR _absorbs_ the PRD's motivation but never _points at_ it — because if a PRD feature is split, renumbered, or restructured, that would force ADR body edits even though the decision did not change. Never copy the PRD's user stories or acceptance criteria into an ADR either (duplication → drift).
+- **No PRD → ADR references**: an ALPS document never writes a specific ADR ID or path in its body. The PRD is the most stable contract and knows nothing of its downstream artifacts.
+- **When an ADR decision changes, the code changes / when the PRD changes, the ADR and code change** — that is the normal flow a one-way dependency intends. The reverse (a code change dragging the ADR, or an ADR change dragging the PRD) must never happen.
+- **Keep the linkage in the external mapping layer**: [`docs/adr/.mapping.json`](./structure.md#the-adr-registry-mappingjson) records the ADR index (categories → adrs, each with path, status, summary) and the `dependsOn` between categories in one place. **PRD references are not stored in the mapping** — adr-writer does not reference ALPS. ADR↔code is likewise not pointed at from the body (the code is searched for as needed), and this mapping is the only coupling point joining categories, ADRs, and dependencies.
+- **Verifying the stability gradient**: change frequency must follow `Code >> ADR >> PRD`. If a change in a volatile layer drags a change in a stable one, an arrow is drawn wrong — usually because the ADR holds code detail, or the code holds an ADR ID, or the ADR holds an ALPS path.
 
-### 코드 직독 테스트 (2차 필터)
+### The code-readthrough test (the second filter)
 
-먼저 **요구사항 관문**을 묻는다 — "이 사실이 빠지면 ADR 만 보고 다시 만든 코드가 요구사항을 어길 수 있는가?" YES 면 아래 필터를 적용하지 않고 **무조건 남긴다.**
+Ask the **requirement gate** first — "if this fact were missing, could code rebuilt from the ADR alone violate a requirement?" YES means **keep it unconditionally**, without applying the filter below.
 
-관문을 통과하지 못한(=요구사항이 아닌) 줄에만 다음을 묻는다.
+Only for lines that failed the gate (i.e. are not requirements), ask:
 
-> "에이전트가 이 ADR 이 다스리는 코드를 그대로 읽으면, 이 사실을 발견할 수 있는가?"
+> "Would an agent reading the code this ADR governs discover this fact?"
 >
-> **YES** → ADR 에 넣지 않는다 (코드가 source of truth).
-> **NO** → 회색지대 후보다. 그 다음으로 [리트머스 테스트](./authoring-rules.md#요구사항-관문과-두-단계-필터)를 통과해야 ADR 에 들어간다.
+> **YES** → leave it out of the ADR (the code is the source of truth).
+> **NO** → it is a gray-zone candidate. It then has to pass [the litmus test](./authoring-rules.md#the-requirement-gate-and-two-filters) to go into the ADR.
 
-관문에서 남긴 것 + 두 필터를 모두 통과한 것만 ADR 본문에 남긴다. 세 질문의 전체 정의는 [`authoring-rules.md`](./authoring-rules.md#요구사항-관문과-두-단계-필터).
+Only what the gate kept plus what passed both filters stays in the ADR body. For the full definition of the three questions see [`authoring-rules.md`](./authoring-rules.md#the-requirement-gate-and-two-filters).
 
-## ADR이 다루는 결정의 종류
+> **Caution — "the code has that value" is not grounds for dropping a requirement that passed the gate.** A requirement value or rule is naturally enforced in the code too (that is what makes it work), so it is visible on a code readthrough. But it passed the gate first, so it is not subject to this filter — see [Requirements live in both the ADR and the code](#requirements-live-in-both-the-adr-and-the-code--and-the-adr-comes-first) above. What this filter removes is what is "in the code **and also not a requirement.**"
 
-다음 중 하나에 해당하면 ADR을 작성한다.
+## Kinds of decisions an ADR covers
 
-| 종류             | 예                                                                                     |
-| ---------------- | -------------------------------------------------------------------------------------- |
-| **도메인 결정**  | 인증 방식, 결제 모델, 권한 체계, 핵심 도메인 엔티티의 관계와 상태 머신                 |
-| **인프라 결정**  | 배포 토폴로지, 캐시 전략, 모니터링·알람 구조, CDN/이미지 처리 정책                     |
-| **데이터 결정**  | DB 키 디자인(PK/SK/GSI), 단일 테이블 vs 다중 테이블, 마이그레이션 전략                 |
-| **외부 연동**    | LLM/결제/메일/푸시 등 외부 서비스 선정과 graceful degradation 정책                     |
-| **보안·운영**    | 비밀 관리 전략, 토큰 회전, 감사 로그 범위, 백업/복구 RPO·RTO                           |
-| **UX 아키텍처**  | 라우팅 구조, 상태 관리 라이브러리 선택, 디자인 시스템 채택 — 토큰 자체는 디자인 문서로 |
-| **마이그레이션** | API 버전 전환 전략, 백필 절차의 안전성, downtime 허용 범위                             |
+Write an ADR when the decision falls into one of these.
 
-ADR 폴더는 **DDD 도메인(bounded context) × 피쳐(vertical slice)** 두 축으로 묶는다 — 최상위 폴더(`docs/adr/<context>/`)는 도메인 전문가의 모델 경계(bounded context), sub-folder(`<context>/<feature>/`)는 한 사용자 동작의 vertical slice 다. ALPS Section 7 의 feature 는 그 sub-folder(또는 피쳐가 하나뿐이라 평면으로 둔 context 폴더)와 1:1 매핑된다. 기술 레이어로 폴더를 만들지 않는 이유, subdomain 분류(core/supporting/generic), cross-cutting context 사용 조건은 [`structure.md`](./structure.md#디렉토리-구조--ddd-도메인bounded-context--피쳐vertical-slice).
+| Kind                     | Examples                                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| **Domain decisions**     | Authentication method, payment model, permission scheme, core domain entity relationships and state machines             |
+| **Infrastructure**       | Deployment topology, caching strategy, monitoring and alerting structure, CDN/image handling policy                      |
+| **Data decisions**       | DB key design (PK/SK/GSI), single-table vs multi-table, migration strategy                                               |
+| **External integration** | Choosing external services (LLM, payments, mail, push) and the graceful degradation policy                               |
+| **Security and ops**     | Secret management strategy, token rotation, audit log scope, backup/recovery RPO and RTO                                 |
+| **UX architecture**      | Routing structure, state-management library choice, design system adoption — the tokens themselves go to the design docs |
+| **Migration**            | API version transition strategy, backfill safety, acceptable downtime                                                    |
 
-## ADR이 아닌 것 (anti-patterns)
+ADR folders are grouped along **two axes: DDD domain (bounded context) × feature (vertical slice)** — the top-level folder (`docs/adr/<context>/`) is the domain expert's model boundary (a bounded context), and a sub-folder (`<context>/<feature>/`) is one user action's vertical slice. An ALPS Section 7 feature maps 1:1 onto that sub-folder (or onto the flat context folder when there is only one feature). For why folders are never created per technical layer, the subdomain classification (core/supporting/generic), and the conditions for using a cross-cutting context, see [`structure.md`](./structure.md#directory-structure--ddd-domain-bounded-context--feature-vertical-slice).
 
-다음은 ADR로 만들지 않는다. 만들면 ADR 신뢰도가 떨어지고 검토 부담만 커진다.
+## What an ADR is not (anti-patterns)
 
-- **버그 수정 결정** — "이 함수의 null 체크를 추가했다"는 ADR 사유가 아니다. 코드와 커밋 메시지로 충분
-- **스타일/포매팅 변경** — Prettier·ESLint 규칙 변경은 PR 설명·CONTRIBUTING.md 영역
-- **의존성 패치 업그레이드** — `lodash 4.17.20 → 4.17.21`. 메이저 업그레이드(`React 17 → 18`)는 ADR 후보
-- **리팩토링** — 함수 분리·이름 변경부터 인터페이스 정리·모듈 재배치까지, 동작을 바꾸지 않는 구조 변경은 ADR 대상이 아니다. 코딩 에이전트의 플래닝 기능이 변경 범위와 호출자 영향을 그때그때 계획하므로, 그 계획을 ADR 로 옮겨 적을 필요가 없다 (계획은 코드와 함께 휘발되는 것이 정상이고, ADR 로 굳히면 안정 레이어가 리팩터링에 끌려다닌다). 단 리팩터링이 **결정 자체를 바꾸면**(채택 대안 교체, 상태 머신·키 디자인 변경, 외부 의존 fallback 변경) 그건 리팩터링이 아니라 결정 변경이므로 해당 ADR 을 갱신한다
-- **임시 실험·POC** — "다음 주에 결정" 단계는 결정이 확정된 뒤 ADR로 적는다
-- **개인 작업 가이드** — "이 모듈은 항상 internal/ 하위에 둔다" 같은 컨벤션은 AGENTS.md/README
+Do not turn these into ADRs. Doing so lowers ADR credibility and only increases the review burden.
 
-판단이 애매하면 [요구사항 관문과 두 단계 필터](./authoring-rules.md#요구사항-관문과-두-단계-필터)를 적용한다.
+- **Bug-fix decisions** — "added a null check to this function" is not an ADR reason. The code and the commit message suffice
+- **Style/formatting changes** — Prettier or ESLint rule changes belong in the PR description or CONTRIBUTING.md
+- **Dependency patch upgrades** — `lodash 4.17.20 → 4.17.21`. A major upgrade (`React 17 → 18`) is an ADR candidate
+- **Refactoring** — from extracting a function or renaming to tidying an interface or relocating modules, a structural change that does not alter behavior is not an ADR target. The coding agent's planning step plans the change scope and caller impact as it goes, so there is no need to transcribe that plan into an ADR (a plan is meant to be volatile alongside the code; freezing it into an ADR drags the stable layer along with the refactor). But if a refactor **changes the decision itself** (replacing the adopted alternative, changing a state machine or key design, changing an external-dependency fallback), that is not a refactor but a decision change, so update the relevant ADR
+- **Temporary experiments and POCs** — a "we'll decide next week" stage is written as an ADR once the decision is settled
+- **Personal working guides** — conventions such as "this module always lives under internal/" belong in AGENTS.md or the README
 
-## ADR vs ALPS vs 디자인 문서
+When the judgment is ambiguous, apply [the requirement gate and two filters](./authoring-rules.md#the-requirement-gate-and-two-filters).
 
-세 문서는 같은 결정을 **다른 추상화 레벨에서** 다룬다. 같은 정보를 중복으로 적지 않는다.
+## ADR vs ALPS vs design documents
 
-| 문서                      | 답하는 질문              | 예                                                           |
-| ------------------------- | ------------------------ | ------------------------------------------------------------ |
-| **ALPS PRD**              | WHAT / WHY (사용자 관점) | "이메일 가입 feature를 추가한다. 신규 가입 전환율 +10% 목표" |
-| **ADR**                   | HOW (아키텍처 관점)      | "JWT는 단기 access + 7일 refresh로 회전한다"                 |
-| **디자인 문서/토큰**      | HOW (시각·인터랙션 관점) | "primary 컬러, 입력 필드 높이 48px, 에러 토스트 패턴"        |
-| **코드/AGENTS.md/README** | HOW (상세 구현)          | "파일 구조, 함수 시그니처, 커넥션 풀 크기, 셋업 명령어"      |
+The three documents address the same decision **at different levels of abstraction.** Never record the same information twice.
 
-ADR 행의 "7일" 이 뭉개지지 않고 그대로 있는 점에 주의한다 — **요구사항 값은 ADR 이 보관하고**, 같은 결정을 실현하는 튜닝값(풀 크기·백오프)은 코드가 보관한다.
+| Document                  | The question it answers       | Example                                                                     |
+| ------------------------- | ----------------------------- | --------------------------------------------------------------------------- |
+| **ALPS PRD**              | WHAT / WHY (user's view)      | "Add an email signup feature. Target +10% new-signup conversion"            |
+| **ADR**                   | HOW (architectural view)      | "JWT rotates as a short-lived access token plus a 7-day refresh"            |
+| **Design docs / tokens**  | HOW (visual and interaction)  | "Primary color, input field height 48px, error toast pattern"               |
+| **Code/AGENTS.md/README** | HOW (detailed implementation) | "File structure, function signatures, connection pool size, setup commands" |
 
-규칙: ALPS의 user story·acceptance criteria를 ADR에 복사하지 않는다 — 위 [의존성 모델](#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다)대로 ADR 은 ALPS 의 동기를 흡수하되 PRD 를 가리키지 않는다 (adr-writer 는 ALPS 를 참조하지 않는다). 디자인 토큰 값은 디자인 문서로, 함수 시그니처·파일 경로는 코드와 docstring으로 간다.
+Note that the "7-day" in the ADR row stays intact rather than being blurred — **the ADR keeps the requirement values**, while the code keeps the tuning values (pool sizes, backoff) that realize the same decision.
 
-## 상태
+Rule: never copy ALPS's user stories or acceptance criteria into an ADR — per [the dependency model](#dependencies-run-one-way-references-are-written-in-neither-direction) above, an ADR absorbs ALPS's motivation but never points at the PRD (adr-writer does not reference ALPS). Design token values go to the design docs; function signatures and file paths go to the code and its docstrings.
+
+## Status
 
 ```mermaid
 stateDiagram-v2
     [*] --> Proposed: /adr-new
-    Proposed --> Accepted: /adr-impl (구현 + 테스트 통과)
-    Accepted --> Proposed: 결정이 바뀌어 재구현 대기
-    Accepted --> Deprecated: 대체 ADR 없이 폐기
-    Accepted --> Superseded: 결정 주제가 분기
+    Proposed --> Accepted: /adr-impl (implemented + tests pass)
+    Accepted --> Proposed: decision changed, awaiting reimplementation
+    Accepted --> Deprecated: retired with no replacement ADR
+    Accepted --> Superseded: the decision topic forked
     Deprecated --> [*]
     Superseded --> [*]
 ```
 
-`Superseded` 는 `Superseded by [ADR XXXX](link)` 형태로 후속 ADR 을 명시한다.
+`Superseded` names the successor ADR in the form `Superseded by [ADR XXXX](link)`.
 
-| 상태       | 의미                                                                                            |
-| ---------- | ----------------------------------------------------------------------------------------------- |
-| Proposed   | ADR이 시스템에 제안된 상태. 결정 자체는 합의되었더라도 **아직 코드 구현이 끝나지 않음**         |
-| Accepted   | **코드 구현이 완료된 상태**. ADR이 묘사하는 동작이 실제로 코드베이스에 존재하고 테스트를 통과함 |
-| Deprecated | 더 이상 유효하지 않음. 대체 ADR 없이 폐기                                                       |
-| Superseded | 새로운 ADR로 대체됨. `Superseded by [ADR XXXX](link)` 형태로 후속 ADR을 명시                    |
+| Status     | Meaning                                                                                                                       |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Proposed   | The ADR has been proposed to the system. Even when the decision itself is agreed, **the code implementation is not finished** |
+| Accepted   | **The code implementation is complete.** The behavior the ADR describes actually exists in the codebase and passes tests      |
+| Deprecated | No longer valid. Retired with no replacement ADR                                                                              |
+| Superseded | Replaced by a new ADR. Names the successor in the form `Superseded by [ADR XXXX](link)`                                       |
 
-### 자동 전환 규칙
+### Automatic transition rules
 
-상태는 **사람이 손으로 묻고 바꾸는 값이 아니라 사이클이 자동으로 갱신하는 값**이다.
+Status is **not a value a human asks about and changes by hand, but one the cycle updates automatically.**
 
-- `/adr-new`(또는 그것에 위임하는 `/feature-to-adr`)로 새 ADR이 만들어지면 항상 `Proposed`로 저장된다. 사용자에게 "Accepted로 할까요?"를 묻지 않는다.
-- `/adr-impl`이 ADR을 구현하고 테스트가 통과하면 그 명령이 ADR Status를 `Accepted`로 자동 갱신한다. 승격 여부를 따로 확인하지 않는다.
-- `/adr-sync`는 코드와 ADR을 대조해 Status drift를 잡는다: ADR이 `Accepted`인데 묘사한 동작이 코드에 없으면 `Proposed`로 되돌리고, ADR이 `Proposed`인데 코드+테스트가 있으면 `Accepted`로 올린다. (`Accepted`의 기준은 위 상태 표와 같이 **구현 + 테스트 통과**다 — 코드 존재만으로 올리지 않는다.)
-- **요구사항 변경으로 이미 `Accepted`된 ADR의 결정이 실제로 바뀌면**(제자리 수정이라도 결정 방향이 달라졌으면 — 판정은 [`authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때"](./authoring-rules.md#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정) 참조), 새 결정이 코드·테스트로 반영되기 전까지 Status를 `Proposed`로 되돌린다. 이후 `/adr-impl`이 다시 `Proposed → Accepted`로 자동 승격한다. supersede라면 되돌리는 대신 옛 ADR을 `Superseded`로 표기하고 새 ADR을 `Proposed`로 시작한다. 단순 구현 사실 정정(API 표·엔티티명 등)은 결정이 안 바뀐 것이므로 이 규칙 대상이 아니다 — `Accepted`를 유지한다.
-- 상태 전환 시 날짜를 함께 기록한다: `Accepted (YYYY-MM-DD)`, `Deprecated (YYYY-MM-DD)`. **괄호 안에는 날짜만 넣는다** — `Accepted (2026-07-09)` 처럼 날짜 하나뿐이며, 그 뒤에 참조·feature-id·구현 설명 같은 부가 텍스트를 붙이지 않는다 (`Accepted (2026-07-09) — F1 구현`, `Accepted (2026-07-09, ref)` 모두 금지 — `adr-structure-lint` 가 `date-only` 로 잡는다). `Superseded`는 날짜 대신 후속 ADR 링크로 표기한다 (`Superseded by [ADR XXXX](link)`). `Proposed`에는 날짜를 붙이지 않는다 — 작성일은 본문 최상단 `Date:`(작성 시점, Status 전환일과 별개)에 두고, Status 줄의 날짜는 전환 시에만 기록한다.
-- `Implemented`, `Done`, `Completed` 같은 비공식 상태는 사용하지 않는다.
+- When a new ADR is created by `/adr-new` (or `/feature-to-adr`, which delegates to it), it is always saved as `Proposed`. Never ask the user "shall I make it Accepted?"
+- When `/adr-impl` implements an ADR and the tests pass, that command updates the ADR's Status to `Accepted` automatically. It does not separately confirm the promotion.
+- `/adr-sync` catches Status drift by comparing the code with the ADR: if the ADR is `Accepted` but the behavior it describes is absent from the code, it reverts to `Proposed`; if the ADR is `Proposed` but the code plus tests exist, it promotes to `Accepted`. (The bar for `Accepted` is **implementation plus passing tests**, as in the status table above — never promote on the existence of code alone.)
+- **When a requirement change actually changes the decision of an already-`Accepted` ADR** (even an in-place edit, if the decision's direction changed — for the judgment call see [`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"](./authoring-rules.md#changing-an-adr--edit-in-place-vs-supersede)), revert Status to `Proposed` until the new decision is reflected in code and tests. `/adr-impl` then auto-promotes `Proposed → Accepted` again. For a supersede, rather than reverting, mark the old ADR `Superseded` and start the new ADR as `Proposed`. A mere implementation-fact correction (an API table, an entity name, and so on) means the decision did not change, so it is not subject to this rule — keep `Accepted`.
+- Record the date with the transition: `Accepted (YYYY-MM-DD)`, `Deprecated (YYYY-MM-DD)`. **The parentheses hold the date only** — just the single date, as in `Accepted (2026-07-09)`, with no trailing references, feature IDs, or implementation notes (`Accepted (2026-07-09) — implements F1` and `Accepted (2026-07-09, ref)` are both forbidden — `adr-structure-lint` catches them as `date-only`). `Superseded` is marked with the successor link instead of a date (`Superseded by [ADR XXXX](link)`). `Proposed` carries no date — the authoring date lives in the `Date:` at the top of the body (the time of writing, separate from the Status transition date), and the date on the Status line is recorded only on a transition.
+- Never use informal statuses such as `Implemented`, `Done`, or `Completed`.
 
-### 진화 이력은 어디에 사는가 — decision-log.md
+### Where evolution history lives — decision-log.md
 
-ADR 본문은 **현재 코드 상태를 설명하는 요구사항 문서**다 — "처음엔 ~였다가 ~로 바꿨다" 같은 시간축 서술을 본문에 남기지 않는다. 같은 결정이 진화하면 **기존 ADR 을 현재 상태로 덮어쓰는 것(edit-in-place)이 기본**이고, 그 전환이 major(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전·폐기)면 카테고리별 `docs/adr/<category>/decision-log.md` 에 역순 한 줄로 남긴다. 새 ADR(supersede)은 결정 주제가 분기해 옛 결정을 별개 레코드로 공존시켜야 할 때만 만든다 (판정: [`authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때"](./authoring-rules.md#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정)).
+An ADR body is **a requirements document describing the current state of the code** — no timeline narration such as "it was X at first, then changed to Y". When the same decision evolves, **overwriting the existing ADR to current state (edit-in-place) is the default**, and if that transition is major (replacing the adopted alternative, changing the core algorithm or architecture, inverting a Driver, retirement), leave one line, newest first, in the per-category `docs/adr/<category>/decision-log.md`. Create a new ADR (a supersede) only when the decision topic forks and the old decision must coexist as a separate record (for the judgment call see [`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"](./authoring-rules.md#changing-an-adr--edit-in-place-vs-supersede)).
 
-**세 층이 각자 다른 것을 보존한다**: ADR 본문 = 현재 상태 / `decision-log.md` = 주요 변경의 시간축 / Git = verbatim diff. 로그는 ADR 이 아닌 **컨벤션 파일**이라 `.mapping.json` 에 등록하지 않고 결정론적 하네스도 검사하지 않는다 — 기록 기준·포맷은 [`authoring-rules.md` "결정 로그 (decision-log.md)"](./authoring-rules.md#결정-로그-decision-logmd), 디렉토리·미인덱스 정책은 [`structure.md`](./structure.md#결정-로그-decision-logmd--매핑에-등록하지-않는-컨벤션-파일).
+**Three layers preserve different things**: the ADR body = current state / `decision-log.md` = the timeline of major changes / Git = the verbatim diff. The log is a **convention file** rather than an ADR, so it is not registered in `.mapping.json` and the deterministic harness does not check it — for the recording criteria and format see [`authoring-rules.md` "Decision log (decision-log.md)"](./authoring-rules.md#decision-log-decision-logmd), and for the directory and non-indexing policy see [`structure.md`](./structure.md#decision-log-decision-logmd--a-convention-file-not-registered-in-the-mapping).
 
-## ADR 템플릿
+## ADR template
 
 ```markdown
-# ADR XXXX: 제목
+# ADR XXXX: title
 
 Date: YYYY-MM-DD
 
@@ -181,32 +190,32 @@ Date: YYYY-MM-DD
 
 Proposed | Accepted (YYYY-MM-DD) | Deprecated (YYYY-MM-DD) | Superseded by [ADR XXXX](link)
 
-<!-- Accepted/Deprecated 괄호에는 전환 날짜만 — 그 뒤에 참조·설명을 붙이지 않는다. -->
+<!-- The Accepted/Deprecated parentheses hold the transition date only — no trailing references or explanations. -->
 
 ## Context
 
-결정이 필요한 배경과 문제. PRD 의 비즈니스 동기를 여기서 *흡수*해 서술한다 — ALPS 파일 경로·Section 번호·feature-id 를 본문에 적지 않는다. PRD 를 가리키지 않는다 (adr-writer 는 ALPS 를 참조하지 않는다).
+The background and problem requiring the decision. _Absorb_ the PRD's business motivation and narrate it here — never write an ALPS file path, section number, or feature ID in the body. Never point at the PRD (adr-writer does not reference ALPS).
 
 ## Decision Drivers
 
-- 이 결정을 변별하는 압력·제약·요구사항 3-5개. 일반적인 품질 속성("유지보수성") 이 아니라 옵션 사이의 선택을 실제로 가르는 것만.
-- 예: "동시 사용자 10k 처리", "PII 가 외부로 나가면 안 됨", "팀이 Go 경험만 있음".
+- The 3-5 pressures, constraints, and requirements that discriminate this decision. Not generic quality attributes ("maintainability") but only what genuinely decides between the options.
+- Examples: "handle 10k concurrent users", "PII must not leave the system", "the team has Go experience only".
 
 ## Decision
 
-내린 결정과 그 이유.
+The decision made and why.
 
-### 요구사항 계약
+### Requirement contract
 
-(결과물이 지켜야 하는 것 — 코드가 사라져도 이것만 보고 다시 만들 수 있게. 한도·정원·주기·보존 기간·허용 범위 같은 **요구사항 값은 숫자와 근거를 그대로** 적는다. 예: "채팅 한 세션은 최대 20턴 — 요금제 정책". 구현 튜닝값(풀 크기·백오프·캐시 TTL)은 적지 않는다.)
+(What the result must honor — so it can be rebuilt from this alone once the code is gone. Record **requirement values with their number and basis verbatim**, such as limits, quotas, cycles, retention periods, and allowed ranges. Example: "a chat session is capped at 20 turns — pricing policy". **Record non-numeric requirements here too** — allowed value sets and forbidden transitions, mandatory fields, permissions and visibility, ordering and uniqueness, units. Example: "an order is paid, shipping, delivered, or cancelled, and a cancelled order never moves to shipping". Do not record implementation tuning values (pool sizes, backoff, cache TTL) or enum identifier names.)
 
-### 시퀀스 다이어그램
+### Sequence diagram
 
-비동기 처리·서비스 간 연동·이벤트 흐름이 포함된 결정이라면 Mermaid 다이어그램을 추가한다.
+If the decision involves async processing, cross-service integration, or event flow, add a Mermaid diagram.
 
-### 대안 검토
+### Alternatives
 
-**최소 2개 이상**의 현실적 대안을 비교한다. 진짜 대안만 — strawman(누가 봐도 안 될 옵션) 은 넣지 않는다. 각 대안의 pros/cons 는 위 Decision Drivers 에 비추어 적는다. 진짜로 외길이라 대안이 없다면, 그 결정에 ADR 자체가 필요한지 다시 판단한다.
+Compare **at least two** realistic alternatives. Real alternatives only — never include a strawman (an option nobody would take). Write each alternative's pros and cons against the Decision Drivers above. If it truly was the only path, reconsider whether the decision needs an ADR at all.
 
 ## Consequences
 
@@ -214,23 +223,25 @@ Proposed | Accepted (YYYY-MM-DD) | Deprecated (YYYY-MM-DD) | Superseded by [ADR 
 
 ## Implementation Notes
 
-(선택 섹션 — 아키텍처 수준의 구현 고려사항이 있을 때만 둔다. 없으면 생략한다.) 아키텍처 수준의 구현 고려사항만. 코드 스니펫·파일 경로·필드별 스키마·구현 튜닝값은 포함하지 않는다. 요구사항 값은 여기가 아니라 Decision 의 요구사항 계약에 둔다.
+(An optional section — keep it only when there are architecture-level implementation considerations, and omit it otherwise.) Architecture-level considerations only. Do not include code snippets, file paths, per-field schemas, or implementation tuning values. Requirement values go in the Decision's requirement contract, not here.
 
 ## Related
 
-- 관련 ADR: [...] (같은/의존 카테고리의 ADR 링크 — ADR ↔ ADR 참조는 정상)
-- 스키마/테이블 문서: [...] (DB 변경이 있는 경우)
+- Related ADRs: [...] (links to ADRs in the same or a depended-upon category — ADR ↔ ADR references are fine)
+- Schema/table documents: [...] (when there is a DB change)
 
-> adr-writer 는 standalone 이므로 ADR 본문은 PRD 를 가리키지 않는다 — 여기에도 ALPS feature 링크를 적지 않는다. 매핑도 PRD 참조를 저장하지 않는다.
+> adr-writer is standalone, so an ADR body never points at the PRD — do not write an ALPS feature link here either. The mapping stores no PRD reference.
 ```
 
-## ADR 인덱스는 어디에 있나
+> The template's section headings are illustrative. Write ADR bodies in the language the user writes in (`authoring-rules.md` "Conventions") — the harness accepts either an English "Alternatives" heading or its localized equivalent.
 
-ADR 목록은 이 README 가 아니라 [`docs/adr/.mapping.json`](./structure.md#adr-레지스트리-mappingjson) 이 단일하게 들고 있다 — 카테고리별 `adrs[]` 레코드마다 path·Status·한 줄 summary 를 담으며, 이 인덱스는 UserPromptSubmit hook 이 매 턴 렌더링한다. 그래서 README 는 별도의 ADR 목록을 두지 않고, ADR 이 무엇인지·회색지대 모델·의존성 모델·템플릿 같은 **개념 인덱스**만 유지한다. 새 ADR 을 추가하거나 본문 결정이 바뀌면 그 한 줄 요약은 `.mapping.json` 의 해당 `adrs[]` 레코드(path·status·summary)에 갱신한다.
+## Where the ADR index lives
 
-## 참고
+The ADR list is held solely by [`docs/adr/.mapping.json`](./structure.md#the-adr-registry-mappingjson) rather than this README — each category's `adrs[]` record carries a path, Status, and one-line summary, and the UserPromptSubmit hook renders that index every turn. So the README keeps no separate ADR list and remains a **conceptual index** only: what an ADR is, the gray-zone model, the dependency model, and the template. When you add an ADR or its body decision changes, update that one-line summary in the corresponding `adrs[]` record in `.mapping.json`.
 
-- [ADR GitHub](https://adr.github.io/) — ADR 일반 자료 모음
-- [Joel Parker Henderson — ADR templates](https://github.com/joelparkerhenderson/architecture-decision-record) — 다양한 템플릿 비교
-- [Michael Nygard — Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) — 원조 ADR 글
-- [adr-writer plugin](https://github.com/haandol/alps-writer-plugins) — 이 plugin 자체
+## References
+
+- [ADR GitHub](https://adr.github.io/) — a collection of general ADR material
+- [Joel Parker Henderson — ADR templates](https://github.com/joelparkerhenderson/architecture-decision-record) — a comparison of various templates
+- [Michael Nygard — Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) — the original ADR article
+- [adr-writer plugin](https://github.com/haandol/alps-writer-plugins) — this plugin itself

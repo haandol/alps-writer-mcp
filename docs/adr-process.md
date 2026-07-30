@@ -1,74 +1,74 @@
-# ADR 프로세스 개요 (다이어그램)
+# ADR process overview (diagrams)
 
-이 문서는 `alps-writer` → `adr-writer` 로 이어지는 전체 개발 사이클을 Mermaid 로 한눈에 정리한 것이다. 서술형 설명은 [`usage.md`](./usage.md), 의존성 규칙의 근거는 [`dependency-model.md`](./dependency-model.md) 를 참조한다.
+This document lays out the whole development cycle from `alps-writer` to `adr-writer` at a glance in Mermaid. For the prose explanation see [`usage.md`](./usage.md); for the rationale behind the dependency rules see [`dependency-model.md`](./dependency-model.md).
 
-핵심 불변식:
+Core invariants:
 
-- **`.mapping.json` 은 단일 ADR 인덱스**다 — 카테고리별로 각 ADR 을 `{path, status, summary}` 로 한 번씩 담고 `dependsOn` 을 기록한다. README 는 ADR 목록을 두지 않으며(개념 인덱스만), UserPromptSubmit hook 이 이 인덱스를 매 턴 렌더한다.
-- **adr-writer 는 standalone** 이다 — 매핑은 코드 경로도 PRD 참조도 저장하지 않는다. `/feature-to-adr` 가 ALPS 를 읽는 것은 **최초 1회 import** 뿐이고, 그 뒤 결정은 ADR 레벨에서 관리된다.
-- **의존은 단방향(PRD → ADR → 코드)** 이고, 어느 산출물도 다른 산출물을 본문에서 직접 가리키지 않는다.
-- **ADR 본문 = 현재 상태, decision-log.md = 주요 변경 이력.** ADR 은 현재 코드를 설명하는 요구사항 문서이고, 진화의 시간축은 카테고리별 `decision-log.md`(컨벤션 파일, 미인덱스)가 보존한다. 진화는 edit-in-place + 로그가 기본이며 supersede 는 결정 주제 분기에만 예약된다.
-- **ADR 의 완성도 기준은 재생성 테스트**다 — "코드가 전부 지워지고 이 ADR 만 남았을 때, 이것만 읽고 요구사항을 정확히 지키는 코드를 다시 만들 수 있는가?" 구현 방법·구조·이름은 달라도 되지만(ADR 에 없으므로 재량), **결과물이 지켜야 하는 계약은 하나도 빠질 수 없다**. 그래서 요구사항 값(최대 턴 수·사용량 한도·보존 기간·상한·목표치)은 숫자와 근거를 그대로 ADR 에 적고, 구현 튜닝값(커넥션 풀·백오프·캐시 TTL)은 적지 않는다. 판정 기준은 `templates/adr/authoring-rules.md` "구체적인 숫자".
+- **`.mapping.json` is the single ADR index** — it holds each ADR once per category as `{path, status, summary}` and records `dependsOn`. The README keeps no ADR list (only the conceptual index), and the UserPromptSubmit hook renders this index every turn.
+- **adr-writer is standalone** — the mapping stores neither code paths nor a PRD reference. `/feature-to-adr` reads the ALPS only for **a single initial import**, after which the decision is managed at the ADR level.
+- **Dependencies run one way (PRD → ADR → code)**, and no artifact points at another directly in its body.
+- **The ADR body = current state, decision-log.md = the major-change history.** An ADR is a requirements document describing the current code, while the timeline of its evolution is preserved by the per-category `decision-log.md` (a convention file, not indexed). Evolution defaults to edit-in-place plus the log, and supersede is reserved for a forked decision topic.
+- **The standard for ADR completeness is the regeneration test** — "if all the code were deleted and only this ADR survived, could requirement-honoring code be rebuilt from it alone?" Implementation, structure, and names may differ (they are not in the ADR, so they are discretionary), but **not one of the contracts the result must honor may be missing.** So requirement values (max turns, usage quotas, retention periods, caps, targets) go into the ADR with their number and basis verbatim, while implementation tuning values (connection pools, backoff, cache TTL) do not. For the criteria see `templates/adr/authoring-rules.md` "Concrete numbers".
 
-## 1. 전체 라이프사이클
+## 1. The whole lifecycle
 
 ```mermaid
 flowchart TD
-    subgraph entry["진입 — 둘 중 하나"]
+    subgraph entry["Entry — one of two"]
         direction TB
-        AlpsInit(["/alps-init<br/>ALPS PRD 를 섹션 단위로 작성"])
-        S7["Section 7 feature spec<br/>+ 6.3 의존성 그래프"]
+        AlpsInit(["/alps-init<br/>write the ALPS PRD section by section"])
+        S7["Section 7 feature spec<br/>+ the 6.3 dependency graph"]
         AlpsInit --> S7
-        ADROnly(["ADR-only 진입<br/>PRD 없음"])
+        ADROnly(["ADR-only entry<br/>no PRD"])
     end
 
-    subgraph author["ADR 작성 (adr-writer)"]
+    subgraph author["ADR authoring (adr-writer)"]
         direction TB
-        F2A(["/feature-to-adr<br/>일회성 import — feature 당 1회"])
-        New(["/adr-new &lt;category&gt;<br/>결정 하나를 직접 작성"])
-        Proposed["Proposed ADR<br/>+ .mapping.json 레코드<br/>adrs: {path, status: Proposed, summary}<br/>+ dependsOn"]
-        F2A -->|"각 feature 를 위임<br/>(dependsOn 만 보강)"| New
+        F2A(["/feature-to-adr<br/>one-time import — once per feature"])
+        New(["/adr-new &lt;category&gt;<br/>write one decision directly"])
+        Proposed["Proposed ADR<br/>+ .mapping.json record<br/>adrs: {path, status: Proposed, summary}<br/>+ dependsOn"]
+        F2A -->|"delegates each feature<br/>(supplements dependsOn only)"| New
         New --> Proposed
     end
 
-    subgraph impl["구현 (/adr-impl)"]
+    subgraph impl["Implementation (/adr-impl)"]
         direction TB
         Impl(["/adr-impl &lt;category-key&gt;"])
-        Gate{"dependsOn 충족?<br/>선행 ADR 이 Accepted 인가"}
-        Prereq["선행부터 구현<br/>(dependsOn 위상 순서)"]
-        Code["코드 + 테스트 작성<br/>vertical slice: UI → API → Data"]
-        Accepted["Status → Accepted (YYYY-MM-DD)<br/>본문 ## Status 와 매핑 status 를 lockstep 갱신"]
+        Gate{"dependsOn satisfied?<br/>are the prerequisite ADRs Accepted"}
+        Prereq["implement prerequisites first<br/>(dependsOn topological order)"]
+        Code["write code + tests<br/>vertical slice: UI → API → Data"]
+        Accepted["Status → Accepted (YYYY-MM-DD)<br/>update the body ## Status and the mapping status in lockstep"]
         Impl --> Gate
-        Gate -->|"선행이 Proposed / dangling"| Prereq
+        Gate -->|"a prerequisite is Proposed / dangling"| Prereq
         Prereq --> Gate
-        Gate -->|"선행 모두 Accepted"| Code
-        Code -->|"테스트 통과"| Accepted
+        Gate -->|"all prerequisites Accepted"| Code
+        Code -->|"tests pass"| Accepted
     end
 
-    subgraph maint["유지보수 — 반복"]
+    subgraph maint["Maintenance — repeating"]
         direction TB
-        Review(["/adr-impl-review [category]<br/>주니어용 설명 + 사람 의도 확인<br/>필요성 ∥ 충분성·테스트<br/>Mermaid 수정 가이드 (보고만)"])
-        Sync(["/adr-sync [category] [--quick]<br/>drift 수리 · 카테고리 무결성<br/>· stale fN canonical화 · status↔본문 정합"])
-        Rollup(["/adr-rollup [category]<br/>한 결정의 진화 체인 통합"])
+        Review(["/adr-impl-review [category]<br/>junior-facing explanation + human intent confirmation<br/>necessity ∥ sufficiency and tests<br/>Mermaid repair guide (report only)"])
+        Sync(["/adr-sync [category] [--quick]<br/>repair drift · category integrity<br/>· canonicalize stale fN · status↔body consistency"])
+        Rollup(["/adr-rollup [category]<br/>consolidate one decision's evolution chain"])
     end
 
-    Mapping[(".mapping.json<br/>단일 ADR 인덱스<br/>category → adrs{path,status,summary}<br/>+ dependsOn<br/>(코드 경로·PRD 참조 없음)")]
-    Hook[["UserPromptSubmit hook<br/>매 턴 .mapping.json 인덱스 렌더"]]
+    Mapping[(".mapping.json<br/>the single ADR index<br/>category → adrs{path,status,summary}<br/>+ dependsOn<br/>(no code paths, no PRD reference)")]
+    Hook[["UserPromptSubmit hook<br/>renders the .mapping.json index every turn"]]
 
-    S7 -.->|"Section 7 + 6.3 읽기<br/>(alps-writer → adr-writer, 단방향·1회)"| F2A
+    S7 -.->|"reads Section 7 + 6.3<br/>(alps-writer → adr-writer, one-way, once)"| F2A
     ADROnly --> New
     Proposed --> Impl
     Accepted --> Review
-    Review -->|"증거 검토 후"| Sync
-    Review -.->|"구현 사실 drift 발견"| Sync
-    Sync -->|"다음 사이클"| Impl
-    Sync -.->|"진화 이력이 여러 ADR 로 분산?"| Rollup
+    Review -->|"after evidence review"| Sync
+    Review -.->|"implementation-fact drift found"| Sync
+    Sync -->|"next cycle"| Impl
+    Sync -.->|"evolution history scattered across ADRs?"| Rollup
     Rollup -.-> Sync
 
-    Proposed -.->|"레코드 기록"| Mapping
-    Accepted -.->|"status 갱신 (lockstep)"| Mapping
+    Proposed -.->|"records the entry"| Mapping
+    Accepted -.->|"updates status (lockstep)"| Mapping
     Mapping --> Hook
-    Hook -.->|"ADR-first 유도"| Impl
+    Hook -.->|"steers ADR-first"| Impl
 
     classDef cmd fill:#e8f0fe,stroke:#4285f4,color:#111;
     classDef gate fill:#fef7e0,stroke:#f9ab00,color:#111;
@@ -76,62 +76,62 @@ flowchart TD
     class Gate gate;
 ```
 
-**읽는 법**
+**How to read it**
 
-- **두 진입점.** PRD-first 는 `/alps-init` 에서 시작해 `/feature-to-adr` 로 ADR 레이어에 넘어간다(alps-writer 가 adr-writer 에 넘기는 유일한 지점 — 단방향). ADR-only 는 PRD 없이 `/adr-new` 에서 바로 시작한다.
-- **`/feature-to-adr` 는 얇은 일회성 importer** 다. Section 7 + 6.3 을 읽어 이름 기반 canonical 카테고리 키를 만들고 작성은 `/adr-new` 에 위임하며, 매핑에는 `dependsOn` 만 보강한다. PRD 가 나중에 바뀌면 재import 하지 않고 해당 ADR 을 직접 편집(또는 supersede)한다.
-- **의존성 게이트는 필수.** `/adr-impl` 은 곧장 코딩으로 가지 않고 `dependsOn` 을 전이적으로 따라가, 선행이 `Proposed`/dangling 이면 그것부터 위상 순서로 구현한다. Status 는 테스트 통과 후에만 `Accepted` 로 바뀐다(의도가 아니라 사실의 기록).
-- **구현 후 검토는 반증 기반이며 보고 전용이다.** `/adr-impl-review`는 실제 diff를 주니어도 이해할 수 있게 설명하고 사람의 의도를 확인한 뒤, 서로 결과를 공유하지 않는 필요성·충분성 reviewer를 병렬 실행한다. 필요성은 제거 가능한 변경을, 충분성은 ADR 결정 누락과 반례를 targeted test로 공격한다. 마지막에는 실제 코드 관계만 그린 Mermaid와 수정 순서·완료 조건을 포함한 주니어용 Markdown 가이드를 만든다. `[Impl-fact mismatch]`는 코드가 권위인 구현 사실이므로 `/adr-sync`로 라우팅한다.
-- **진화 이력은 ADR 본문이 아니라 decision-log 에 산다.** ADR 본문은 현재 상태만 서술하고, 같은 결정이 진화하면 edit-in-place 로 덮어쓴다. major 전환(채택 대안 교체·핵심 알고리즘/아키텍처 변경·Driver 반전)은 카테고리별 `decision-log.md` 에 역순 한 줄로 남긴다 — `/adr-impl`·`/adr-sync` 가 append/harvest 하고, `/adr-rollup` 은 통합 시 체인의 major 전환을 로그로 harvest 한 뒤 현재 상태 통합본만 남긴다. 로그는 컨벤션 파일이라 `.mapping.json` 에 등록하지 않고 하네스가 검사하지 않는다. supersede(새 ADR)는 결정 주제가 분기할 때만 — evolution chain 을 기본으로 쌓지 않는다.
-- **`/adr-impl` 은 카테고리 키로 대상을 찾는다.** Feature ID 는 어디에도 저장하지 않으며, 번호뿐인 fallback 키(`f1`)도 평범한 리터럴 카테고리 키로 해석된다.
-- **hook 이 사이클을 지탱한다.** 매 턴 `.mapping.json` 인덱스 스냅샷과 ADR-first 지시를 재주입해 긴 세션(compaction)에서도 흐름이 유지된다.
-- **리팩터링은 사이클에서 면제된다.** 동작을 바꾸지 않는 구조 변경은 규모가 크더라도 ADR 을 만들지 않는다 — 코딩 에이전트의 플래닝 기능이 변경 범위와 호출자 영향을 그때그때 계획하므로, 그 계획을 안정 레이어인 ADR 로 굳히면 리팩터링이 ADR 을 끌고 다닌다. 버그픽스·lint/포맷·문서 수정·운영 명령·정보 조회도 같은 이유로 면제다. 단 "리팩터링" 이 결정 자체를 바꾸면(채택 대안 교체·상태 머신·키 디자인·외부 의존 fallback) 그건 동작 변경이므로 해당 ADR 을 갱신한다.
+- **Two entry points.** PRD-first starts at `/alps-init` and crosses into the ADR layer via `/feature-to-adr` (the only point where alps-writer hands off to adr-writer — one way). ADR-only starts straight at `/adr-new` with no PRD.
+- **`/feature-to-adr` is a thin, one-time importer.** It reads Section 7 plus 6.3, builds name-based canonical category keys, delegates the authoring to `/adr-new`, and supplements only `dependsOn` in the mapping. If the PRD changes later, it is not re-imported; the ADR is edited directly (or superseded).
+- **The dependency gate is mandatory.** `/adr-impl` does not go straight to coding: it walks `dependsOn` transitively, and if a prerequisite is `Proposed` or dangling, it implements that first in topological order. Status becomes `Accepted` only after the tests pass (a record of fact, not of intent).
+- **Post-implementation review is disproof-based and report-only.** `/adr-impl-review` explains the actual diff so a junior can follow it, confirms the human's intent, then runs the necessity and sufficiency reviewers in parallel without sharing results. Necessity attacks removable changes; sufficiency attacks missing ADR decisions and counterexamples with targeted tests. It finishes by producing a junior-facing Markdown guide with Mermaid diagrams drawn only from real code relationships, plus the fix order and completion criteria. `[Impl-fact mismatch]` is an implementation fact where the code is authoritative, so it routes to `/adr-sync`.
+- **Evolution history lives in the decision log, not the ADR body.** The ADR body describes only the current state, and when the same decision evolves it is overwritten in place. Major transitions (replacing the adopted alternative, changing the core algorithm or architecture, inverting a Driver) are left as one reverse-order line in the per-category `decision-log.md` — `/adr-impl` and `/adr-sync` append or harvest into it, and `/adr-rollup` harvests a chain's major transitions into the log during consolidation and keeps only the current-state consolidated ADR. The log is a convention file, so it is not registered in `.mapping.json` and the harness does not check it. A supersede (a new ADR) happens only when the decision topic forks — evolution chains are not accumulated by default.
+- **`/adr-impl` finds its target by category key.** The Feature ID is stored nowhere, and even a number-only fallback key (`f1`) is interpreted as an ordinary literal category key.
+- **The hook sustains the cycle.** Re-injecting the `.mapping.json` index snapshot and the ADR-first directive every turn keeps the flow intact even in long sessions (through compaction).
+- **Refactoring is exempt from the cycle.** A structural change that does not alter behavior gets no ADR, however large — the coding agent's planning step plans the change scope and caller impact as it goes, and freezing that plan into the stable ADR layer would let refactors drag the ADR along. Bug fixes, lint/formatting, documentation edits, ops commands, and information lookups are exempt for the same reason. But if a "refactor" changes the decision itself (replacing the adopted alternative, a state machine, a key design, an external-dependency fallback), that is a behavior change, so update the relevant ADR.
 
-## 2. ADR Status 전이
+## 2. ADR Status transitions
 
-Status 는 사람이 손으로 정하는 값이 아니라 사이클이 자동으로 갱신하는 값이다. 자세한 규칙은 `docs/adr/README.md` "상태" + "자동 전환 규칙".
+Status is not a value a human sets by hand but one the cycle updates automatically. For the detailed rules see `docs/adr/README.md` "Status" + "Automatic transition rules".
 
 ```mermaid
 stateDiagram-v2
     [*] --> Proposed: /adr-new · /feature-to-adr
-    Proposed --> Accepted: /adr-impl 테스트 통과
-    Accepted --> Proposed: 결정 변경 → 재구현 대기
-    Accepted --> Deprecated: 대체 없이 폐기
-    Accepted --> Superseded: 새 ADR 로 대체
-    Proposed --> Superseded: 새 ADR 로 대체
+    Proposed --> Accepted: /adr-impl tests pass
+    Accepted --> Proposed: decision changed → awaiting reimplementation
+    Accepted --> Deprecated: retired with no replacement
+    Accepted --> Superseded: replaced by a new ADR
+    Proposed --> Superseded: replaced by a new ADR
     Superseded --> [*]
     Deprecated --> [*]
 
     note right of Accepted
-        괄호 안에는 전환 날짜만
+        the parentheses hold the transition date only
         Accepted (YYYY-MM-DD)
-        참조·설명·feature-id 등 부가 텍스트 금지
+        no trailing references, notes, or feature ids
     end note
 ```
 
-- `Proposed` — 제안됨, 아직 미구현. 날짜를 붙이지 않는다(작성일은 본문 최상단 `Date:`).
-- `Accepted (YYYY-MM-DD)` — 구현 + 테스트 통과. 괄호에는 **전환 날짜만** 넣는다(하네스가 `date-only` 로 검증).
-- `Deprecated (YYYY-MM-DD)` — 대체 없이 폐기.
-- `Superseded by [ADR XXXX](link)` — 새 ADR 로 대체(날짜 대신 후속 링크).
+- `Proposed` — proposed, not yet implemented. Carries no date (the authoring date lives in the `Date:` at the top of the body).
+- `Accepted (YYYY-MM-DD)` — implemented plus tests passing. The parentheses hold **the transition date only** (the harness verifies this as `date-only`).
+- `Deprecated (YYYY-MM-DD)` — retired with no replacement.
+- `Superseded by [ADR XXXX](link)` — replaced by a new ADR (the successor link instead of a date).
 
-## 3. 의존성 모델 & 결합점
+## 3. The dependency model and coupling points
 
-PRD → ADR → 코드 는 논리적 단방향 의존이다. 세 산출물 어느 것도 다른 것을 본문에서 물리적으로 가리키지 않고, 연결은 `.mapping.json`(카테고리 → ADR + `dependsOn`) 한 곳에만 둔다. 매핑은 PRD 참조도 코드 경로도 담지 않는다.
+PRD → ADR → code is a logical one-way dependency. None of the three artifacts physically points at another in its body; the linkage lives in exactly one place, `.mapping.json` (category → ADR + `dependsOn`). The mapping holds neither a PRD reference nor code paths.
 
 ```mermaid
 flowchart RL
-    PRD["ALPS / PRD<br/>비즈니스 요구<br/>(가장 안정)"]
-    ADR["ADR<br/>아키텍처 결정<br/>(회색지대)"]
-    Code["코드<br/>구현 상세<br/>(가장 휘발)"]
-    Mapping[(".mapping.json<br/>단일 ADR 인덱스<br/>category → adrs + dependsOn<br/>(코드 경로·PRD 참조 없음)")]
+    PRD["ALPS / PRD<br/>business requirements<br/>(most stable)"]
+    ADR["ADR<br/>architectural decisions<br/>(the gray zone)"]
+    Code["Code<br/>implementation detail<br/>(most volatile)"]
+    Mapping[(".mapping.json<br/>the single ADR index<br/>category → adrs + dependsOn<br/>(no code paths, no PRD reference)")]
 
-    Code -. 논리적 의존 .-> ADR
-    ADR -. 논리적 의존 .-> PRD
+    Code -. logical dependency .-> ADR
+    ADR -. logical dependency .-> PRD
 
     Mapping -- adrs --> ADR
-    ADR == "repo 탐색<br/>(경로 미저장)" ==> Code
+    ADR == "repo search<br/>(paths not stored)" ==> Code
 ```
 
-- **PRD↔ADR 는 저장하지 않는다** — adr-writer 는 ALPS 를 참조하지 않는다. ADR 은 PRD 의 동기를 최초 import 때 흡수할 뿐, 이후 가리키지 않는다(방어선 R15 / `adr-invariants.sh` 검사 (b)).
-- **ADR↔코드 도 본문에서 가리키지 않는다** — ADR 이 다스리는 코드는 결정 키워드로 repo 를 그때그때 탐색해 찾는다. 리팩터링이 ADR·매핑을 끌고 다니지 않는다.
-- **안정성 기울기**: 변경 빈도는 `코드 >> ADR >> PRD` 를 따라야 한다. 휘발 레이어의 변경이 안정 레이어를 끌고 다니면 화살표가 잘못 그려진 것이다.
+- **PRD↔ADR is not stored** — adr-writer does not reference ALPS. An ADR absorbs the PRD's motivation at the initial import and never points at it afterward (guardrail R15 / check (b) in `adr-invariants.sh`).
+- **ADR↔code is not pointed at from the body either** — the code an ADR governs is found by searching the repo with the decision's keywords each time. A refactor never drags the ADR or the mapping along.
+- **The stability gradient**: change frequency must follow `code >> ADR >> PRD`. If a change in a volatile layer drags a stable one, an arrow is drawn wrong.

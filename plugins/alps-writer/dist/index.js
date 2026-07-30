@@ -31501,7 +31501,7 @@ var server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.4.26" },
+  { name: "alps-writer", version: "0.4.27" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 
@@ -31612,9 +31612,9 @@ server.tool(
   "save_alps_section",
   `Save content to a subsection in the ALPS document.
 \u26A0\uFE0F BEFORE CALLING THIS TOOL:
-1. \uC791\uC131 \uC644\uB8CC\uB41C \uB0B4\uC6A9\uC744 \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uBA3C\uC800 \uCD9C\uB825\uD558\uC138\uC694
-2. "\uC218\uC815\uD560 \uB0B4\uC6A9\uC774 \uC788\uC73C\uC2E0\uAC00\uC694?" \uB77C\uACE0 \uD655\uC778\uC744 \uC694\uCCAD\uD558\uC138\uC694
-3. \uC0AC\uC6A9\uC790\uAC00 \uD655\uC778\uD55C \uD6C4\uC5D0\uB9CC \uC774 \uB3C4\uAD6C\uB97C \uD638\uCD9C\uD558\uC138\uC694`,
+1. Print the completed content to the user first
+2. Ask them to confirm it ("Is there anything you want to change?")
+3. Call this tool only after the user has confirmed`,
   {
     section: external_exports.number().min(1).max(9).describe("Section number (1-9)"),
     subsection_id: external_exports.string().min(1).describe(

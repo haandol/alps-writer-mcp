@@ -1,313 +1,319 @@
-# ADR 작성 규칙과 리뷰 체크리스트
+# ADR authoring rules and review checklist
 
-ADR 본문에 무엇을 넣고 무엇을 빼는지에 대한 규칙을 모은다. 디렉토리/매핑 정책은 [`structure.md`](./structure.md), 개념·의존성 모델은 [`README.md`](./README.md) 참조.
+What goes into an ADR body and what stays out. Directory and mapping policy: [`structure.md`](./structure.md). Concepts and the dependency model: [`README.md`](./README.md).
 
-ADR은 아키텍처 결정(Context, Decision, Consequences)을 기록하는 문서다. 코드를 변경할 때마다 ADR을 함께 수정해야 하는 부담을 줄이기 위해, **구현 세부사항은 ADR에 포함하지 않는다.**
+An ADR records an architectural decision (Context, Decision, Consequences). To keep code changes from dragging ADR edits behind them, **implementation detail stays out of the ADR.**
 
-## ADR 이 만족시켜야 하는 것 — 재생성 테스트
+## What an ADR must satisfy — the regeneration test
 
-ADR 의 목표는 **같은 코드를 다시 뽑아내는 것이 아니라, 다시 만들어진 코드가 비즈니스 요구사항을 만족하게 하는 것**이다. 그래서 완성도 판정은 하나의 질문으로 환원된다.
+An ADR's goal is **not to reproduce the same code, but to make regenerated code satisfy the business requirements.** So completeness reduces to one question:
 
-> **재생성 테스트**: "코드가 전부 지워지고 이 ADR 만 남았을 때, 이것만 읽고 비즈니스 요구사항을 정확히 지키는 코드를 다시 만들 수 있는가?"
+> **Regeneration test**: "If all the code were deleted and only this ADR survived, could someone read it and rebuild code that honors the business requirements exactly?"
 
-- **구현 방법·구조·파일 배치·이름은 달라도 된다** — ADR 에 없으므로 재량이다. 그게 정상이고, ADR 이 그것까지 적으면 안 된다.
-- **결과물이 지켜야 하는 것은 하나도 빠져 있으면 안 된다** — 빠지면 재생성된 코드가 요구사항을 어긴다. 이건 ADR 의 결함이다.
+- **Implementation, structure, file layout, and names may differ** — they are not in the ADR, so they are the implementer's discretion. That is correct, and an ADR must not pin them.
+- **Nothing the result must honor may be missing** — if it is, the regenerated code violates a requirement. That is a defect in the ADR.
 
-두 문장이 이 문서의 나머지 규칙 전부를 지배한다. 아래 필터는 "무엇을 뺄까"의 도구이고, 재생성 테스트는 "무엇을 절대 빼면 안 되는가"의 기준이다.
+These two sentences govern every other rule here. The filters below are tools for "what to drop"; the regeneration test is the standard for "what may never be dropped."
 
-## 요구사항 관문과 두 단계 필터
+## The requirement gate and two filters
 
-ADR 본문의 한 줄 한 줄에 세 질문을 이 순서로 적용한다.
+Apply three questions to each line of the body, **in this order**:
 
-0. **요구사항 관문**: "이 사실이 ADR 에서 빠지면, ADR 만 보고 다시 만든 코드가 요구사항을 어길 수 있는가?" — YES 면 **무조건 남긴다.** 아래 두 필터를 적용하지 않는다.
-1. **코드 직독 테스트**: "에이전트가 이 ADR 이 다스리는 코드를 그대로 읽으면 이 사실을 발견할 수 있는가?" — YES 면 ADR 에 넣지 않는다 (코드가 source of truth).
-2. **리트머스 테스트**: "이 값/세부사항이 코드에서 바뀌면, 아키텍처 결정 자체가 바뀌는가?" — NO 면 ADR 에 넣지 않는다.
+0. **Requirement gate**: "If this fact were missing, could code rebuilt from the ADR alone violate a requirement?" — YES → **always keep it.** Do not apply the filters below.
+1. **Code-readthrough test**: "Would an agent reading the code this ADR governs discover this fact?" — YES → leave it out (code is the source of truth).
+2. **Litmus test**: "If this value/detail changed in the code, would the architectural decision itself change?" — NO → leave it out.
 
-**요구사항 관문이 먼저인 이유**: 1·2 만 적용하면 "코드를 읽으면 알 수 있다" 는 이유로 **요구사항 자체가 빠져나간다.** 코드는 시스템이 지금 그렇게 동작한다는 사실만 알려주고, 그것이 지켜야 하는 계약인지 구현이 고른 우연한 값인지는 말해주지 않는다. 코드가 사라지면 그 구분도 함께 사라지므로, 요구사항은 애초에 코드 직독 테스트의 대상이 아니다.
+**Why the gate comes first**: applying only 1 and 2 lets **requirements themselves leak out** under the excuse "you can read it in the code." Code tells you the system behaves this way today; it does not tell you whether that is a contract to honor or a value the implementation happened to pick. When the code is gone, so is that distinction — so requirements were never subject to the code-readthrough test.
 
-리트머스 테스트만 단독으로 적용하면 "코드를 읽어도 알 수 있는 결정 사실"까지 ADR 에 들어와 회색지대가 흐려진다. 요구사항 관문을 통과하지 못한 줄에 대해서만, 코드 직독 테스트로 먼저 거른 뒤 리트머스 테스트로 다시 거른다.
+The litmus test alone, without filter 1, lets decision facts that are obvious from the code back in and blurs the gray zone. Only for lines that fail the gate: filter with the code-readthrough test first, then the litmus test.
 
-## 구체적인 숫자 — 요구사항 값은 반드시 적고, 구현 튜닝값은 적지 않는다
+## Requirements — what the result must honor
 
-숫자라서 빼는 것이 아니다. **그 숫자가 요구사항이면 값 그대로 ADR 에 있어야 하고**, 구현이 고른 튜닝값이면 코드에 둔다. 가르는 질문은 하나다 — **"개발자가 이 값을 임의로 바꾸면 요구사항 위반인가?"**
+### Concrete numbers — keep requirement values, drop tuning values
 
-- **위반이다 → 요구사항 값. ADR 에 숫자와 단위를 그대로 적는다.** 제품·비즈니스·계약·규제가 정한 값이라, 코드가 다시 만들어질 때도 같은 값이어야 한다.
-- **위반이 아니다 → 구현 튜닝값. 적지 않는다.** 성능·안정성을 위해 구현이 고른 값이라 바뀌어도 요구사항은 그대로다.
+A number is not dropped for being a number. **If the number is a requirement, it belongs in the ADR verbatim**; if the implementation picked it, it belongs in the code. One question decides: **"If a developer changed this value at will, would that violate a requirement?"**
 
-| 요구사항 값 — ADR 에 적는다                      | 구현 튜닝값 — 코드에 둔다   |
-| ------------------------------------------------ | --------------------------- |
-| 채팅 한 세션은 최대 20턴                         | HTTP 커넥션 풀 크기 10      |
-| 무료 플랜은 월 업로드 5회                        | 재시도 백오프 200ms         |
-| 가입 후 7일 grace period, refresh token 7일 만료 | 성능용 로컬 캐시 TTL 30초   |
-| 비밀번호 최소 10자 (보안 정책)                   | bcrypt cost factor 12       |
-| 첨부 최대 25MB (요금·UX 계약)                    | 업로드 스트리밍 청크 64KB   |
-| p95 응답 3초 이내 (NFR 목표)                     | 워커 스레드 4개             |
-| 5회 연속 로그인 실패 시 계정 잠금                | 잡 큐 폴링 간격 500ms       |
-| 검색 결과는 페이지당 20건                        | 인덱스 refresh interval 1초 |
+- **Yes → requirement value. Write the number and unit verbatim.** Product, business, contract, or regulation set it, so regenerated code must use the same value.
+- **No → implementation tuning value. Leave it out.** The implementation chose it for performance or stability; changing it leaves the requirement intact.
 
-경계 케이스 판정 요령:
+| Requirement value — put in the ADR                    | Tuning value — leave in code  |
+| ----------------------------------------------------- | ----------------------------- |
+| A chat session is capped at 20 turns                  | HTTP connection pool size 10  |
+| Free plan allows 5 uploads per month                  | Retry backoff 200ms           |
+| 7-day grace period after signup; refresh token 7 days | Local perf cache TTL 30s      |
+| Password minimum 10 characters (security policy)      | bcrypt cost factor 12         |
+| Attachments up to 25MB (pricing/UX contract)          | Upload streaming chunk 64KB   |
+| p95 response within 3s (NFR target)                   | 4 worker threads              |
+| Account locks after 5 consecutive failed sign-ins     | Job queue poll interval 500ms |
+| Search returns 20 results per page                    | Index refresh interval 1s     |
 
-- **재시도 횟수** — "최대 3회" 가 사용자·정산에 보이는 계약(중복 결제 방지, SLA)이면 요구사항 값이다. 일시 오류를 흡수하려는 값일 뿐이면 튜닝값이므로 "재시도는 유한하다" 수준만 적는다.
-- **타임아웃** — 사용자에게 약속한 응답 상한이면 요구사항 값, 내부 커넥션 타임아웃이면 튜닝값.
-- **보존 기간·정원·한도** — 대개 요구사항 값이다 (요금제·법규·UX 계약이 정한다).
-- 애매하면 **적는 쪽으로 기울인다.** 빠진 요구사항은 잘못된 제품을 만들지만, 남은 값 하나는 노이즈일 뿐이다.
+Judging edge cases:
 
-**값은 도메인 문장으로 적고 코드 식별자로 적지 않는다** — 상수 이름·환경 변수 이름·설정 키는 여전히 금지다 (이름은 코드가 정하고 바뀐다). `MAX_TURNS = 20` 이 아니라 "채팅 한 세션은 최대 20턴이며, 초과 시 새 세션을 시작한다" 처럼 쓴다. **값에는 근거를 한 조각 붙인다** ("요금제 정책", "보안 규정", "계약 §4.2") — 근거가 없으면 다음 독자가 그 값을 튜닝값으로 오인해 지운다.
+- **Retry counts** — "at most 3" is a requirement value when it is a contract the user or billing sees (duplicate-payment prevention, an SLA). If it merely absorbs transient errors it is a tuning value, so write only "retries are finite."
+- **Timeouts** — a response ceiling promised to users is a requirement value; an internal connection timeout is a tuning value.
+- **Retention, quotas, limits** — usually requirement values (pricing, law, or UX contracts set them).
+- When unsure, **lean toward writing it.** A missing requirement builds the wrong product; one extra value is just noise.
 
-## 코드 참조 깊이 — 폴더 단위까지만
+**Write values as domain sentences, never as code identifiers** — constant names, environment variable names, and config keys stay banned (the code owns and renames those). Not `MAX_TURNS = 20` but "a chat session is capped at 20 turns; exceeding it starts a new session." **Attach a scrap of justification** ("pricing policy", "security rule", "contract §4.2") — without it the next reader mistakes the value for a tuning value and deletes it.
 
-ADR 안에서 코드를 가리킬 때는 **폴더(디렉토리) 단위**까지만 허용한다. 파일 단위 이하로 내려가지 않는다.
+### Non-numeric requirements — value sets, mandatory fields, permissions, ordering
 
-- 허용: `packages/api/handlers/`, `apps/web/src/components/`, `services/<domain>/`
-- 금지: `apps/web/src/components/Login.tsx`, `services/auth/auth_service.go`
-- 금지: 파일명·줄 번호 인용 (예: `prompt_template.md:42`)
+Requirements do not arrive only as numbers. Apply the **same deciding question** ("would a developer changing this at will violate a requirement?") to non-numeric facts. YES means it passes the requirement gate, so it stays. Treating only numbers as requirements lets the facts below get filed as "obvious from the code" and leak out, and the regenerated code breaks the contract.
 
-본문, 표, Mermaid 다이어그램 모두에 동일하게 적용된다. 함수명·클래스명·파일명을 본문에서 직접 인용해야 한다면 그 결정은 ADR이 아니라 docstring·README·인라인 주석에 적합한지 다시 판단한다.
+| Requirement fact — put in the ADR                                           | Implementation's choice — leave in code   |
+| --------------------------------------------------------------------------- | ----------------------------------------- |
+| **Allowed value set**: an order is paid, shipping, delivered, or cancelled  | Constant names and wire-string casing     |
+| **Mandatory or not**: a refund request must state a reason (regulation)     | Whether validation uses zod or the ORM    |
+| **Permission/visibility**: only invited members can read a private board    | Whether the check sits in middleware      |
+| **Ordering/uniqueness**: payment succeeds at most once per order            | Which hash builds the idempotency key     |
+| **Unit/format**: amounts in integer KRW, timestamps stored UTC (billing)    | Internal DTO field types                  |
+| **Allowed/forbidden transitions**: a cancelled order never goes to shipping | Whether transitions use a switch or table |
 
-대칭으로, **코드 측에서도 ADR ID·경로를 본문에 남기지 않는다** — 주석·상수·import 어디에도. 마찬가지로 **ADR 본문에 PRD(ALPS) 경로·Section 번호·feature-id 를 적지 않는다** (Context·Related 포함) — adr-writer 는 standalone 이라 ADR 은 import 시점에 PRD 의 동기를 한 번 흡수할 뿐 다시 PRD 를 가리키지 않으며, 매핑도 PRD 참조를 저장하지 않는다. 카테고리 → ADR → (탐색으로 찾는) 코드 의 연결은 [`structure.md`](./structure.md#adr-레지스트리-mappingjson) 의 `.mapping.json` 한 곳에만 둔다. 자세한 근거는 [README 의 의존성 모델](./README.md#의존성은-단방향-참조는-어느-방향으로도-직접-적지-않는다) 참조.
+**The key split — the business-defined set vs the name the implementation gave it**: the _set_ of order states and its _transition rules_ are a business contract, so the ADR is authoritative. The **constant name, enum identifier, and wire representation** (`StatusPaid` vs `"PAID"`) are implementation facts, so the code is authoritative. So "enums are code-authoritative" must not be applied wholesale — split it: **set and transitions belong to the ADR, names and representation to the code.** This split also governs the [source-of-truth scope](#changing-an-adr--edit-in-place-vs-supersede) decision and the code-reconciliation steps in `/adr-sync` and `/adr-rollup`.
 
-## 다이어그램 내 코드 참조
+When unsure, **lean toward writing it** here too — same reason as with numbers.
 
-Mermaid 다이어그램 안에서도 함수명·메서드 호출 대신 동작을 서술한다.
+### Requirements live in the code and in the ADR — layers, not duplication
 
-- Bad: `stats.IncrementSourceCount("chat")`
-- Good: `sourceCounts.<source> 증가`
+A requirement value or rule exists in **both the ADR and the code.** This is not the duplication the [code-readthrough test](#the-requirement-gate-and-two-filters) removes, because the two hold different things:
 
-이 규칙은 sequenceDiagram, stateDiagram, flowchart 모두에 동일하게 적용된다.
+- **ADR = the contract** ("a chat session is capped at 7 turns — pricing policy"). What must be honored, and why.
+- **Code = enforcement of that contract** (counting turns and starting a new session past 7). How it is honored.
 
-## ADR에 포함하지 않는 것
+From the code alone you can see "it is 7 turns today," but **not whether that is a contract to honor or a value the implementation happened to pick.** Only the ADR carries that distinction, so dropping the value from the ADR because the code has it destroys the basis for telling contract from coincidence.
 
-코드 직독으로 알 수 있는 것 + 회색지대를 벗어난 세부사항은 모두 제외한다. **단 위 요구사항 관문을 통과한 항목은 이 표보다 우선한다** — 표의 "금지" 는 그 사실이 요구사항이 아닐 때의 기본값이다. 각 행의 마지막 열이 그 예외를 적어둔다.
+#### So the change order is fixed — ADR first, code second
 
-| 금지 항목                       | 예                                    | 대안                                | 요구사항이면 예외                                                |
-| ------------------------------- | ------------------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
-| 파일 경로 또는 그 이하          | `apps/web/src/Login.tsx`              | 폴더 단위까지만 (`apps/web/src/`)   | 예외 없음 (경로는 요구사항이 될 수 없다)                         |
-| 코드 스니펫                     | 함수 시그니처, 인터페이스, 구조체     | 코드 자체가 source of truth         | 예외 없음 — 계약이면 산문·표로 서술한다                          |
-| 함수/클래스 책임 분담           | "AuthService 가 SessionStore 를 호출" | 코드와 docstring                    | 예외 없음                                                        |
-| 모듈/패키지 의존 그래프         | "auth → users → notifications"        | 코드의 import 문 자체               | 예외 없음                                                        |
-| 디자인 패턴 적용 사실           | "Repository 패턴 사용", "DI 컨테이너" | 코드 구조에서 자명                  | 예외 없음                                                        |
-| 엔티티 상세 필드 표             | `phraseHash \| S \| ...`              | `docs/tables/`로 위임               | 예외 없음 (키 디자인은 아래 "유지하는 것")                       |
-| 필드 타입·검증 규칙·디폴트 값   | `email: string, required, max 255`    | 코드의 스키마/zod/ORM 정의          | **비즈니스가 정한 한도·형식**(비밀번호 10자, 첨부 25MB)은 적는다 |
-| 구현 튜닝값                     | 커넥션 풀 10, 백오프 200ms            | "재시도는 유한하다" 같은 개념만     | **요구사항 값**(최대 20턴, 월 5회, 7일)은 값 그대로 적는다       |
-| 환경 변수 이름·설정 키          | `AUTH_TOKEN_TTL`, `DB_POOL_SIZE`      | 설정 문서·코드의 default 값         | 이름은 금지 유지 — 값이 요구사항이면 **값만** 도메인 문장으로    |
-| 에러 메시지·UI 라벨·로그 문자열 | "Invalid credentials"                 | 코드의 i18n / 메시지 카탈로그       | 문구는 금지 유지 — 사용자에게 **무엇을 알려야 하는가**는 적는다  |
-| 마이그레이션/운영 명령어        | `uv run python migrate_...`           | 스크립트 자체에 문서화              | 예외 없음 — 무중단 여부 등 제약만 적는다                         |
-| 전체 API JSON 응답 예시         | 20줄짜리 요청/응답                    | 목적·핵심 파라미터를 1-2문장으로    | 예외 없음 — 요구되는 필드의 **의미**만 문장으로                  |
-| 알고리즘 의사코드               | "1. 토큰 검증 2. 세션 생성 3. ..."    | 함수 본문이 source of truth         | 순서가 **도메인 규칙**이면 상태 전이·불변식으로 적는다           |
-| 디렉토리/파일 네이밍 규칙       | "핸들러는 `*-handler.ts`"             | AGENTS.md / CONTRIBUTING.md         | 예외 없음                                                        |
-| CSS 클래스·Tailwind 유틸        | `bg-primary`, `flex-col`              | 디자인 토큰 단위 (DESIGN.md 등)으로 | 예외 없음                                                        |
+Changing a requirement value or rule **changes a system behavior requirement.** Therefore:
 
-## ADR에 유지하는 것
+1. **Update the ADR's requirement contract to the new value or rule** (7 turns → 10 turns).
+2. Record the transition as one line in the category's `decision-log.md` — a requirement value or rule change is major at minimum ([logging criteria](#what-to-log--minor-vs-major)).
+3. **Bring the code to that value in the same change unit.**
 
-회색지대만 남긴다 — 코드 직독으로 알 수 없거나, 한 곳에 모아 보지 않으면 의도가 흐려지는 것들. **여기에 요구사항 관문을 통과한 모든 것이 더해진다** — 결과물이 지켜야 하는 계약은 코드에서 자명해 보여도 남긴다.
+**Never change the code first and reconcile the ADR later.** That lets a code change redefine the requirement after the fact, inverting the PRD → ADR → code direction ([stability gradient](./README.md#dependencies-run-one-way-references-are-written-in-neither-direction)). This holds even when the edit looks like "one constant" — the order is set by **whether it is a contract**, not by the size of the change.
 
-- **결과물이 지켜야 하는 요구사항** — 한도·정원·주기·보존 기간·허용 범위 같은 **요구사항 값**(위 [구체적인 숫자](#구체적인-숫자--요구사항-값은-반드시-적고-구현-튜닝값은-적지-않는다)), 사용자에게 보이는 동작 계약, 권한·가시성 규칙, 필수 검증 조건. 코드가 사라져도 이것만 보고 같은 계약을 지키는 코드를 다시 만들 수 있어야 한다
-- **문제 배경과 동기** (WHY) — 왜 이 결정이 필요했는가. 비즈니스 요구가 어떤 제약·전제 위에서 이 선택을 강제했는지
-- **Decision Drivers** — 옵션을 변별하는 압력·제약·요구사항. 자세한 작성 규칙은 아래 [Decision Drivers](#decision-drivers) 참조
-- **결정 요약** — 무엇을 결정했고, 대안 대비 왜 이것을 선택했는가 (선택 근거가 핵심 — 결정 자체는 코드에 드러나지만, "왜 그쪽이 아니었는가" 는 코드에 안 남는다)
-- **대안 비교표** — 검토한 대안들과 채택하지 않은 이유. 자세한 작성 규칙은 아래 [대안 검토 — 최소 2개 이상](#대안-검토--최소-2개-이상) 참조
-- **비즈니스 규칙의 시스템 번역** — "가입 후 7일 grace period" 같은 비즈니스 규칙이 어떤 트리거·상태값·이벤트로 표현되는지의 매핑 (개념 수준, 함수 호출 체인 아님). **규칙에 실린 값(7일)은 반올림하거나 "일정 기간" 으로 뭉개지 않고 그대로 적는다**
-- **엔티티 관계** (개념 수준) — "Flashcard는 Vocabulary와 별도 엔티티로 phrase hash로 연결" (필드 목록 아님)
-- **DB 키 디자인** — PK/SK/GSI 패턴, sparse 인덱스 여부 — 키 구조가 바뀌면 결정이 흔들리므로 ADR에 유지 (필드별 타입 정의는 `docs/tables/`)
-- **액세스 패턴** — 용도·쿼리(Table/GSI/GetItem/BatchGet)·호출 빈도 — 키 디자인의 검증 근거
-- **행동 규칙과 상태 전이** — Grade 체계, 상태 머신, 도메인 invariant. 코드 여러 곳에 흩어져 있어 모아서 봐야 의미가 보이는 것
-- **시스템 간 연동 방식** — "퀴즈 완료 시 SRS 리뷰를 트리거한다" (함수 호출 체인이 아니라 도메인 이벤트 수준)
-- **외부 의존의 fallback / degradation 정책** — "LLM 응답 실패 시 캐시된 마지막 결과 반환, 그것도 없으면 빈 결과로 graceful 처리"
-- **Mermaid 다이어그램** — 비동기 흐름, 서비스 간 연동, 이벤트 기반 처리에 적극 사용. 텍스트 설명보다 다이어그램이 명확하면 다이어그램을 우선. 다이어그램 안에서도 함수명이 아닌 도메인 동작을 표현
-- **Consequences** — 긍정적·부정적 영향, 의도된 트레이드오프, 리스크
-- **API 엔드포인트 표** — Method / Path / 목적 한 줄 (요청/응답 스키마는 코드와 OpenAPI 가 source of truth)
+By contrast, **tuning values absent from the ADR** (pool sizes, backoff, cache TTL, worker counts) carry no such order. Change them freely in code, and do not write them back up into the ADR.
+
+`/adr-impl` (value changes during implementation), `/adr-sync` (its "requirement value — ADR is authoritative" branch), and `/adr-impl-review` (the contract-compliance axis) all enforce this same direction.
+
+## Code references — folder level only
+
+When an ADR points at code, **folder (directory) granularity is the limit.** Never go to file level or below.
+
+- Allowed: `packages/api/handlers/`, `apps/web/src/components/`, `services/<domain>/`
+- Forbidden: `apps/web/src/components/Login.tsx`, `services/auth/auth_service.go`
+- Forbidden: filename or line-number citations (e.g. `prompt_template.md:42`)
+
+This applies equally to prose, tables, and Mermaid diagrams. Inside diagrams, describe the behavior rather than naming functions or method calls — Bad: `stats.IncrementSourceCount("chat")`; Good: `increment sourceCounts.<source>`. That holds for sequenceDiagram, stateDiagram, and flowchart alike. If a decision truly requires quoting a function, class, or file name, reconsider whether it belongs in a docstring, README, or inline comment instead of an ADR.
+
+Symmetrically, **code must not carry ADR IDs or paths** — not in comments, constants, or imports. Likewise, **an ADR body must not carry PRD (ALPS) paths, section numbers, or feature IDs** (Context and Related included): adr-writer is standalone, so an ADR absorbs the PRD's motivation once at import time and never points back at it, and the mapping stores no PRD reference either. The category → ADR → (searched-for) code link lives in exactly one place, [`.mapping.json`](./structure.md#the-adr-registry-mappingjson). Full rationale: [the dependency model](./README.md#dependencies-run-one-way-references-are-written-in-neither-direction).
+
+## What to exclude from an ADR
+
+Exclude everything discoverable by reading the code, plus detail outside the gray zone. **Items that passed the requirement gate override this table** — "forbidden" is the default for when the fact is _not_ a requirement. The last column records each exception.
+
+| Forbidden                          | Example                                | Instead                              | Exception when it is a requirement                                                                                      |
+| ---------------------------------- | -------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| File paths or deeper               | `apps/web/src/Login.tsx`               | Folder level (`apps/web/src/`)       | None (a path cannot be a requirement)                                                                                   |
+| Code snippets                      | Signatures, interfaces, structs        | The code is the source of truth      | None — state a contract as prose or a table                                                                             |
+| Function/class responsibilities    | "AuthService calls SessionStore"       | Code and docstrings                  | None                                                                                                                    |
+| Module/package dependency graphs   | "auth → users → notifications"         | The imports themselves               | None                                                                                                                    |
+| Design patterns used               | "Repository pattern", "DI container"   | Obvious from code structure          | None                                                                                                                    |
+| Detailed entity field tables       | `phraseHash \| S \| ...`               | Delegate to `docs/tables/`           | None (key design is under "what to keep")                                                                               |
+| Field types, validation, defaults  | `email: string, required, max 255`     | Schema/zod/ORM definitions           | **Business-set limits, formats, and mandatory fields** (10-char password, 25MB attachment, required refund reason) stay |
+| Enum identifiers and wire form     | `StatusPaid`, `"PAID"`, value casing   | Type and constant definitions        | **The business-set allowed value set and transition rules** go in as domain sentences (set = ADR, name = code)          |
+| Implementation tuning values       | Pool of 10, backoff 200ms              | Concepts only ("retries are finite") | **Requirement values** (20 turns, 5/month, 7 days) go in verbatim                                                       |
+| Env var names and config keys      | `AUTH_TOKEN_TTL`, `DB_POOL_SIZE`       | Config docs, code defaults           | Names stay banned — if the value is a requirement, write **only the value** as a sentence                               |
+| Error messages, UI labels, logs    | "Invalid credentials"                  | i18n / message catalog               | Wording stays banned — **what the user must be told** goes in                                                           |
+| Migration/ops commands             | `uv run python migrate_...`            | Document in the script itself        | None — record only constraints such as zero-downtime                                                                    |
+| Full API JSON examples             | A 20-line request/response             | Purpose and key params in 1-2 lines  | None — state only the **meaning** of required fields                                                                    |
+| Algorithm pseudocode               | "1. verify token 2. create session..." | The function body is the truth       | If the ordering is a **domain rule**, write it as transitions and invariants                                            |
+| Directory/file naming conventions  | "handlers are `*-handler.ts`"          | AGENTS.md / CONTRIBUTING.md          | None                                                                                                                    |
+| CSS classes and Tailwind utilities | `bg-primary`, `flex-col`               | Design-token docs (DESIGN.md)        | None                                                                                                                    |
+
+## What to keep in an ADR
+
+Keep only the gray zone — what code cannot reveal, or what loses its intent unless gathered in one place. **Everything that passed the requirement gate is added to this** — a contract the result must honor stays even when it looks obvious in the code.
+
+- **Requirements the result must honor** — [requirement values](#concrete-numbers--keep-requirement-values-drop-tuning-values) (limits, quotas, cycles, retention, allowed ranges) and [non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering) (allowed sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units), plus user-visible behavior contracts and required validation conditions. With the code gone, this alone must be enough to rebuild code honoring the same contract
+- **Problem background and motivation** (WHY) — why this decision was needed; which constraints and premises forced this choice
+- **Decision Drivers** — the pressures, constraints, and requirements that discriminate between options (see [Decision Drivers](#decision-drivers))
+- **Decision summary** — what was decided and why over the alternatives (the rationale is the point: the decision shows up in code, but "why not the other way" does not)
+- **Alternatives table** — the options considered and why they were not adopted (see [Alternatives](#alternatives--at-least-two))
+- **Business rules translated into system behavior** — how a rule like "7-day grace period after signup" maps onto triggers, state values, and events (conceptual, not a call chain). **Values carried by the rule (7 days) are written verbatim, never rounded or blurred into "a certain period"**
+- **Entity relationships** (conceptual) — "Flashcard is a separate entity from Vocabulary, linked by phrase hash" (not a field list)
+- **DB key design** — PK/SK/GSI patterns, whether an index is sparse — key structure shifts the decision, so it stays (per-field types go in `docs/tables/`)
+- **Access patterns** — purpose, query type (Table/GSI/GetItem/BatchGet), call frequency — the evidence that validates the key design
+- **Behavioral rules and state transitions** — grading schemes, state machines, domain invariants: things scattered across the code that only make sense gathered
+- **Cross-system integration** — "completing a quiz triggers an SRS review" (domain-event level, not a call chain)
+- **Fallback / degradation policy for external dependencies** — "on LLM failure return the last cached result; if none, degrade gracefully to empty"
+- **Mermaid diagrams** — use freely for async flows, service integration, and event-driven processing. Prefer a diagram when it is clearer than prose. Inside diagrams, express domain behavior rather than function names
+- **Consequences** — positive and negative effects, intended trade-offs, risks
+- **API endpoint table** — Method / Path / one-line purpose (request and response schemas belong to the code and OpenAPI)
 
 ## Decision Drivers
 
-옵션 사이의 선택을 **실제로 가르는** 압력·제약·요구사항만 적는다. 모든 ADR 에 강제되는 섹션은 아니지만, 대안 비교가 단순한 호불호로 보이지 않으려면 거의 항상 필요하다.
+Record only the pressures, constraints, and requirements that **actually discriminate** between options. Not mandatory in every ADR, but almost always needed for the alternatives comparison to read as more than taste.
 
-- 3-5개. 10개를 넘으면 그중 몇 개는 다른 driver 의 하위 항목일 가능성이 크다
-- 비즈니스 driver 와 기술 driver 를 섞는다 — 한 쪽만 있으면 결정 근거가 빈약해 보인다
-- 사실/제약으로 적는다. 의견·선호("우리는 모던한 스택을 좋아한다") 는 driver 가 아니다
-- 옵션을 변별해야 한다 — 모든 옵션이 동등하게 만족하는 항목은 driver 가 아니다 (그건 그냥 공통 전제)
+- 3-5 of them. Past ten, some are probably sub-items of another driver
+- Mix business and technical drivers — one kind alone makes the rationale look thin
+- State facts and constraints. Opinions and preferences ("we like a modern stack") are not drivers
+- They must discriminate — an item every option satisfies equally is not a driver, just a shared premise
 
-| Bad                        | Good                                                 |
-| -------------------------- | ---------------------------------------------------- |
-| "확장 가능해야 한다"       | "동시 사용자 10k, p99 레이턴시 200ms 이내"           |
-| "유지보수성이 좋아야 한다" | "팀에 Go 경험자만 있고 Rust 는 없음"                 |
-| "보안이 중요하다"          | "PII 가 외부 LLM 으로 나가면 안 됨 (계약 조항 §4.2)" |
+| Bad                       | Good                                                     |
+| ------------------------- | -------------------------------------------------------- |
+| "It must be scalable"     | "10k concurrent users, p99 latency within 200ms"         |
+| "It must be maintainable" | "The team knows only Go, no Rust experience"             |
+| "Security matters"        | "PII must not leave for an external LLM (contract §4.2)" |
 
-Good 쪽이 모두 **숫자·제약을 그대로 들고 있다는 점**에 주의한다 — driver 의 수치를 뭉개면 옵션을 변별하지 못해 driver 구실을 못 한다. driver 로 쓴 목표치(예: "p95 3초 이내")는 그 자체가 결과물이 지켜야 하는 요구사항이므로 Decision 본문에서도 다시 뭉개지 않는다.
+Note that every Good entry **keeps its numbers and constraints intact** — blur a driver's figures and it can no longer discriminate, so it stops being a driver. A target used as a driver ("p95 within 3s") is itself a requirement the result must honor, so do not blur it in the Decision body either.
 
-driver 가 빈약하면 [대안 검토](#대안-검토--최소-2개-이상)도 같이 빈약해진다 — 둘은 짝이다.
+Thin drivers make [alternatives](#alternatives--at-least-two) thin too — they come as a pair.
 
-## 대안 검토 — 최소 2개 이상
+## Alternatives — at least two
 
-ADR 본문에는 **검토한 현실적 대안이 최소 2개 이상** 적혀 있어야 한다. 진짜로 외길이라 대안이 없다면, 그 결정에 ADR 자체가 필요한지 다시 판단한다 — 결정의 핵심 가치는 "왜 다른 길이 아니었는가" 이고 코드는 그것을 남기지 않는다.
+An ADR body must record **at least two realistic alternatives.** If there genuinely was only one path, reconsider whether the decision needs an ADR at all — a decision's core value is "why not the other way," and code does not preserve that.
 
-- 각 대안의 pros/cons 는 위 [Decision Drivers](#decision-drivers) 에 비추어 적는다 — driver 와 무관한 일반론은 의미 없음
-- **strawman 금지** — "그냥 다 손으로 짠다" 처럼 누가 봐도 안 될 옵션을 채워 숫자를 맞추지 않는다. 진짜로 한 번이라도 검토 테이블에 올랐던 옵션만
-- 각 대안은 아키텍처 수준에서 한두 단락으로 묘사한다 — 함수 시그니처·디렉토리 구조 같은 구현 디테일은 [코드 직독 테스트](#요구사항-관문과-두-단계-필터)에 걸린다
-- vertical slice 가능성도 같이 평가한다 — 어떤 옵션이 한 피쳐를 UI → API → Data 로 독립 구현·테스트할 수 있게 해주는가
-- "고려한 대안 없음" 으로 비워두지 않는다. 사용자가 "정말 없다" 고 하면 본 ADR 보다 ALPS Section 7 또는 docstring 영역인지 한 번 되묻는다
+- Write each alternative's pros and cons **against the [Decision Drivers](#decision-drivers)** — generalities unrelated to the drivers are meaningless
+- **No strawmen** — do not pad the count with options nobody would take ("just hand-write everything"). Only options that genuinely reached the table
+- Describe each alternative in one or two paragraphs at the architecture level — implementation detail like signatures or directory layout is caught by the [code-readthrough test](#the-requirement-gate-and-two-filters)
+- Assess vertical-slice viability too — which option lets one feature be built and tested independently from UI → API → Data
+- Never leave it as "no alternatives considered." If the user insists there are none, ask once whether this belongs in ALPS Section 7 or a docstring instead
 
-흔한 실패:
+Common failures:
 
-- 옵션이 1개뿐 — 대안 검토 자체가 성립 안 함 → 리뷰의 R14(대안 ≥2)에서 fail (대안이 부실하면 R12 회색지대도 함께 약해지지만, 단일 대안을 직접 잡는 룰은 R14 다)
-- 옵션이 2개인데 둘 다 "이렇게 하자" / "안 한다" — 진짜 대안이 아님
-- pros/cons 가 driver 와 무관한 일반론 ("러닝커브가 있다", "유연하다")
+- Only one option — there is no comparison at all → fails review rule R14 (alternatives ≥ 2). (Weak alternatives also weaken R12's gray zone, but R14 is the rule that catches a single option directly)
+- Two options that are "do this" and "do nothing" — not real alternatives
+- Pros and cons that are generalities unrelated to the drivers ("there's a learning curve", "it's flexible")
 
-## API 섹션
+## API section
 
-API 엔드포인트 목록(Method, Path, 설명)은 아키텍처 결정의 일부이므로 유지한다. 전체 요청/응답 JSON 예시·헤더 상세·에러 응답 페이로드는 포함하지 않는다 (1-2문장 요약으로 대체).
+Keep the endpoint list (Method, Path, description) — it is part of the architectural decision. Leave out full request/response JSON examples, header details, and error payloads (replace with a one- or two-sentence summary).
 
-## DB 스키마와 액세스 패턴 — 동시 작업 규칙
+## DB schema and access patterns — one change unit
 
-키 디자인(PK/SK/GSI)은 아키텍처 결정의 핵심이므로 ADR에 유지한다. ADR이 새 엔티티를 추가하거나 기존 키 패턴을 바꾸는 경우, 다음을 **하나의 변경 단위로** 처리한다:
+Key design (PK/SK/GSI) is core to the architectural decision, so it stays in the ADR. When an ADR adds a new entity or changes an existing key pattern, handle all of the following **as a single change unit**:
 
-1. ADR 본문에 키 디자인·액세스 패턴 표 작성
-2. `docs/tables/{테이블}.md` 에 해당 엔티티 추가/갱신 (필드 정의·SK prefix 가능 패턴·예시 포함)
-3. `docs/tables/{테이블}.md` 의 **Related ADRs** 섹션에 새 ADR 역참조 링크 추가
-4. ADR의 Related 섹션에서 해당 테이블 문서 링크 추가
+1. Write the key design and access-pattern table in the ADR body
+2. Add or update that entity in `docs/tables/{table}.md` (field definitions, possible SK prefix patterns, examples)
+3. Add a back-link to the new ADR in that file's **Related ADRs** section
+4. Link the table document from the ADR's Related section
 
-세 곳(ADR, 테이블 문서, 양방향 링크)이 모두 갱신돼야 한 작업이 완료된 것으로 본다. 한쪽만 업데이트하면 검토 시 불일치가 누적된다.
+The work is done only when all three (ADR, table doc, bidirectional links) are updated. Updating one side alone accumulates inconsistency.
 
-`docs/tables/`를 사용하지 않는 프로젝트라면 동등한 스키마 문서(예: `prisma/schema.prisma`, `db/schema.sql`, OpenAPI 스펙)와의 양방향 링크로 대체한다 — source-of-truth 문서와 ADR이 항상 함께 움직이게 하는 것이 핵심이다.
+For projects without `docs/tables/`, substitute the equivalent schema document (`prisma/schema.prisma`, `db/schema.sql`, an OpenAPI spec) with bidirectional links — the point is that the source-of-truth document and the ADR always move together.
 
-## 한 ADR = 한 결정
+## One ADR = one decision
 
-하나의 ADR은 하나의 logical decision만 다룬다. 여러 결정이 한 파일에 섞이면 검토·supersede·roll-up이 모두 어려워진다.
+One ADR covers one logical decision. Mixing several into one file makes review, supersede, and roll-up all harder.
 
-분리 신호:
+Split signals:
 
-- 본문이 350줄을 넘는다 (Mermaid 다이어그램·대안 비교표는 세지 않는다 — [길이 가이드](#길이-가이드))
-- 서로 다른 엔티티/시스템에 대한 결정이 한 파일에 들어가 있다
-- "그리고 추가로…"로 시작하는 절이 두 개 이상 있다
-- Status가 부분적으로만 적용된다 (핵심 흐름은 구현돼서 Accepted여야 하지만 일부 흐름은 아직 미구현이라 Proposed로 남아 있는 상태)
+- The body exceeds 350 lines (Mermaid blocks and the alternatives table do not count — see length guidance below)
+- Decisions about different entities or systems sit in one file
+- Two or more clauses begin with "and additionally…"
+- Status applies only partly (the core flow is implemented and should be Accepted, but some flow is unbuilt and stays Proposed)
 
-이 신호 중 둘 이상이면 ADR을 분리한다 (예: `0003-payment.md` → `0003-payment-checkout.md` + `0004-payment-refund.md`).
+Split when two or more of these hold (e.g. `0003-payment.md` → `0003-payment-checkout.md` + `0004-payment-refund.md`).
 
-## 요구사항 변경으로 ADR을 고칠 때 — edit-in-place vs supersede 판정
+**Length guidance** — count the body excluding Mermaid blocks and the alternatives table, since this document actively encourages diagrams ([diagram selection](#diagram-selection)):
 
-비즈니스 요구사항이 바뀌어 기존 결정에 손을 대야 할 때, **제자리 수정(edit-in-place)** 과 **새 ADR로 대체(supersede)** 중 무엇을 할지 정하는 단일 기준이다. 자주 반복되는 판단이므로 즉흥적으로 정하지 않고 아래 체크리스트를 따른다. 이 절이 그 판정의 source of truth이며, 다른 스킬·문서는 이 절을 링크한다.
+- **Standard 50-150 lines** — most ADRs land here.
+- **< 30 lines** — a signal that motivation or alternatives are missing.
+- **> 350 lines** — a split signal, but not sufficient alone; split when it appears together with the other signals above.
 
-판정 기준은 **"왜 이 선택이었나"(Context · Decision Drivers · 채택 근거)가 바뀌는가**이다. 대부분의 변경은 **edit-in-place** — ADR 본문을 현재 코드 상태로 덮어쓴다. **새 ADR(supersede)은 예외**이고, edit-in-place 중 major 전환만 추가로 [결정 로그](#결정-로그-decision-logmd)에 한 줄 남긴다. 세 갈래다.
+## Changing an ADR — edit-in-place vs supersede
 
-**① edit-in-place, 로그 없음 (minor)** — "왜"가 그대로이고 세부만 조정될 때:
+When a business requirement changes and an existing decision must be touched, this is the single criterion for choosing **edit-in-place** over **a new superseding ADR**. It recurs often, so follow the checklist rather than deciding ad hoc. This section is the source of truth for that call; other skills and documents link here.
 
-- Context / Decision Drivers / 채택 근거가 **그대로**이고, 세부만 조정된다.
-- 구현 사실을 정정한다 — Status, 엔티티명, API 표, enum, 상태값 등 코드 직독으로 확인되는 것. (이건 `/adr-sync`의 "source of truth 범위: 구현 사실은 코드가 권위"와 같은 방향이다.)
-- 회색지대 결정의 **미세 조정** — 방향은 유지한 채 경계·예외 서술을 다듬는 정도.
-- 표현·구조 정리.
+The criterion is **whether "why this choice" (Context, Decision Drivers, adoption rationale) changes.** Most changes are **edit-in-place** — overwrite the body to the current state. **A new ADR (supersede) is the exception**, and among edit-in-place cases only major transitions also get one line in the [decision log](#decision-log-decision-logmd). Three branches:
 
-> **요구사항 값이 바뀐 것은 ①이 아니다** — "최대 20턴 → 30턴", "무료 5회 → 3회" 처럼 [요구사항 값](#구체적인-숫자--요구사항-값은-반드시-적고-구현-튜닝값은-적지-않는다)이 달라지면 결과물이 지켜야 하는 계약이 달라진 것이므로 최소 ②(로그 한 줄)로 다룬다. 값 하나라 작아 보여도 재생성된 코드의 동작이 달라진다. 구현 튜닝값 조정은 애초에 ADR 에 없으므로 이 판정에 들어오지 않는다.
+**① Edit-in-place, no log (minor)** — the "why" is unchanged and only details shift:
 
-**② edit-in-place, + 결정 로그 한 줄 (major)** — 결정의 방향은 유지하되(같은 주제를 여전히 하나의 현재-상태 레코드로 서술할 수 있음) "왜/무엇"이 실질적으로 바뀌어, 나중에도 참조할 가치가 있는 전환일 때. ADR 본문은 현재 상태로 재작성하고, 그 전환을 [결정 로그](#결정-로그-decision-logmd)에 남긴다:
+- Context / Decision Drivers / adoption rationale are **unchanged**; only details are adjusted.
+- Correcting implementation facts — Status, entity names, the API table, enum **identifiers and representation**, state-value **names**: things verifiable by reading the code. (Same direction as `/adr-sync`'s "source-of-truth scope: code is authoritative for implementation facts.") **But a changed value set or transition rule is not ①** — if allowed states are added or removed, or a forbidden transition becomes allowed, the contract changed, so treat it as ② at minimum per [non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering).
+- **Fine-tuning** a gray-zone decision — refining boundary or exception wording while keeping the direction.
+- Wording and structure cleanup.
 
-- **채택한 대안 교체** (예: "낙관적 락" → "비관적 락"). 옛 접근의 근거는 로그가 보존한다 — 옛 ADR을 통째로 남기지 않는다.
-- **Decision Drivers 반전** — 결정을 좁히던 압력·제약이 달라졌다 (예: "PII 외부 반출 금지" 제약이 사라짐).
-- **핵심 알고리즘·아키텍처 변경**, 또는 **동작을 바꾸는 핵심 버그 수정**.
+> **A changed requirement value is not ①** — "20 turns → 30", "free 5 → 3" and the like change [the contract the result must honor](#concrete-numbers--keep-requirement-values-drop-tuning-values), so treat them as ② (one log line) at minimum. One value looks small, but regenerated code behaves differently. Tuning-value adjustments are not in the ADR to begin with, so they never enter this decision.
 
-**③ supersede — 새 ADR을 만들고 옛 것을 `Status: Superseded by [ADR XXXX](link)`로 남긴다** — ②로 담을 수 없을 때만. 좁게 예약한다:
+**② Edit-in-place + one decision-log line (major)** — the decision's direction holds (the topic can still be described as a single current-state record), but the "why/what" substantively changed in a way worth referencing later. Rewrite the body to the current state and log the transition:
 
-- **결정 주제 자체가 분기한다** — 하나의 결정이 서로 독립적으로 살아 움직이는 둘 이상의 결정으로 갈라져, 옛 것을 **별개의 참조 가능한 레코드**로 공존시켜야 할 때. (변경이 "[한 ADR = 한 결정](#한-adr--한-결정)"의 분리 신호 — 350줄 초과, 서로 다른 엔티티 결정 혼재 — 를 함께 만들면 이 경우다.)
-- 즉 옛 ADR과 새 ADR이 **동시에 각자 "현재 상태"로 유효**해야 하는 경우. 한 결정이 다른 결정으로 **대체**될 뿐이면(옛 것이 더는 유효하지 않음) ②의 edit-in-place로 충분하다 — 로그가 전환을 남기므로 근거를 잃지 않는다.
+- **Replacing the adopted alternative** (e.g. optimistic → pessimistic locking). The log preserves the old approach's rationale — do not keep the whole old ADR.
+- **Inverted Decision Drivers** — a pressure or constraint that narrowed the decision changed (e.g. the "no PII leaves for an external LLM" constraint disappeared).
+- **A core algorithm or architecture change**, or **a core bug fix that changes behavior**.
 
-**단일 기준**: 변경 후에도 결정이 **하나의 현재-상태 레코드로 표현 가능**하면 edit-in-place(minor면 ①, major면 ②), 옛 결정을 **별도 레코드로 공존**시켜야 하면 supersede(③). 애매하면 **edit-in-place + 로그가 기본**이다 — ADR 본문을 현재 상태로 유지하면서 근거는 로그로 보존하기 때문이다. (옛 모델은 진화 때마다 새 ADR을 만들어 chain을 쌓고 나중에 rollup으로 통합했지만, 이제는 진화를 edit-in-place + 로그로 흡수해 chain 자체가 잘 생기지 않는다.)
+**③ Supersede — create a new ADR and mark the old one `Status: Superseded by [ADR XXXX](link)`** — only when ② cannot hold it. Reserve it narrowly:
 
-supersede를 택하면 옛 ADR Status 전환 · 새/옛 ADR 양방향 Related 링크 · `.mapping.json` 인덱스(`adrs[]` 의 path·status·summary) 갱신 · 옛 번호를 인용하던 다른 ADR의 repoint를 **한 변경 단위로** 처리한다 (Related는 ADR↔ADR 참조라 정상이다). 새 ADR은 `Proposed`로 저장하고, 구현·테스트가 끝나면 `/adr-impl`이 `Accepted`로 자동 승격한다. supersede 도 major 전환이므로 [결정 로그](#결정-로그-decision-logmd)에 한 줄 남긴다.
+- **The decision topic itself forks** — one decision splits into two or more that live independently, requiring the old one to coexist as a **separately referenceable record.** (This is the case when the change also produces the [one ADR = one decision](#one-adr--one-decision) split signals.)
+- That is, when the old and new ADR must **each be valid as "current state" simultaneously.** If one decision merely **replaces** another (the old is no longer valid), ②'s edit-in-place suffices — the log preserves the rationale.
 
-## 결정 로그 (decision-log.md)
+**Single criterion**: if the decision is still **expressible as one current-state record** after the change, edit in place (① if minor, ② if major); if the old decision must **coexist as a separate record**, supersede (③). When unsure, **edit-in-place plus a log entry is the default** — it keeps the body at current state while the log preserves the rationale.
 
-ADR 본문은 **현재 코드 상태를 설명하는 요구사항 문서**다 — "처음엔 ~였다가 ~로 바꿨다" 같은 시간축 서술을 본문에 남기지 않는다. 그렇다고 주요 전환의 근거까지 Git 커밋에만 묻어버리면 나중에 "이 알고리즘을 왜 갈아치웠나" 를 추적하기 어렵다. 그래서 **major 결정 변경만** 카테고리별 `docs/adr/<category>/decision-log.md` 에 역순 한 줄로 남긴다. **ADR 본문 = 현재 상태, 로그 = 주요 변경의 시간축, Git = verbatim diff** — 세 층이 각자 다른 것을 보존한다.
+Choosing supersede means handling, **as one change unit**: the old ADR's Status transition, bidirectional Related links, the `.mapping.json` index (`adrs[]` path, status, summary), and repointing other ADRs that cited the old number (Related is an ADR↔ADR reference, which is fine). Save the new ADR as `Proposed`; `/adr-impl` promotes it to `Accepted` once implementation and tests pass. Supersede is also a major transition, so log one line.
 
-### 결정 로그 기록 기준 — minor vs major
+**When the same decision evolves, edit-in-place plus a log is the default** — do not stack a new ADR per revision, and keep evolution narration ("added in v2", "changed from the previous approach") out of the body. This keeps a category's ADR count equal to the number of genuinely distinct decisions. If a legacy supersede chain has scattered one decision's history across several ADRs, `/adr-rollup` harvests that bundle's major history into `decision-log.md`, merges it into one current-state ADR, and deletes the rest (per bundle, not per category) — see `${CLAUDE_PLUGIN_ROOT}/skills/adr-rollup/SKILL.md`.
 
-위 [edit-in-place vs supersede 판정](#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정)의 ②/③에서 이 절로 온다.
-
-- **로그에 남긴다 (major)** — 채택 대안 교체, Decision Driver 반전, 핵심 알고리즘·아키텍처 변경, 동작을 바꾸는 핵심 버그 수정, supersede, **요구사항 값 변경**(최대 20턴 → 30턴 등 — 결과물이 지켜야 하는 계약이 달라졌으므로). **대체 ADR 없이 결정을 폐기(`Deprecated`)** 하는 것도 major 로그 엔트리다.
-- **로그에 남기지 않는다 (minor)** — 구현 사실 정정(API·enum·필드명·Status), 경계 서술 다듬기, 표현 수정. 이런 것까지 남기면 로그가 노이즈로 차 신호를 잃는다. Git 이 보존한다. (구현 튜닝값 조정은 ADR 에 없으므로 애초에 로그 대상이 아니다.)
-- 로그 엔트리는 **결정이 바뀌는 시점**에 추가한다 — ADR Status 의 `Accepted`/`Proposed` 자동 전환과는 별개다. 로그는 _결정_ 을 기록하고, Status 는 _구현 사실_ 을 기록한다.
-
-### 결정 로그 위치·성격
-
-- 카테고리(피쳐 leaf 또는 flat context) 하나당 `decision-log.md` 하나. `docs/adr/<category>/` 안에 ADR 파일들과 나란히 둔다.
-- **컨벤션 파일이다 — ADR 이 아니고 `.mapping.json` 에 등록하지 않는다.** 결정론적 하네스(`adr-structure-lint`)는 `NNNN-` 로 시작하지 않는 이 파일을 ADR 로 열거하지 않으므로 per-ADR 검사·인덱스 정합·orphan 검사 대상이 아니다. **예외는 링크 하나** — 로그의 ADR 포인터가 디스크에 실재하는지는 하네스가 검사한다(`decision-log-link-broken`). rollup renumber 가 그 ADR 을 옮기므로, 포인터를 안 고치면 로그가 사라진 경로를 가리키게 되고 다른 어떤 검사도 그걸 잡지 못한다.
-- 로그는 **현재 ADR 을 가리키는 링크만** 담고 그 반대(코드·PRD)를 참조하지 않는다 — log → ADR 단방향. ADR 본문(Related 포함)은 로그를 역으로 링크하지 않는다.
-
-### 결정 로그 포맷 (역순 — 최신 먼저)
-
-포맷의 source of truth 는 **시드 파일 [`decision-log.template.md`](./decision-log.template.md)** 다 (`docs/adr/` 에 함께 복사된다). 카테고리에 첫 major 전환이 생기면 그 파일을 `docs/adr/<category>/decision-log.md` 로 복사하고 `<category>` 와 엔트리를 실제 내용으로 채운다 — 포맷을 기억에서 재작성하지 않는다. 엔트리 한 개의 형태는 다음과 같다.
-
-```markdown
-## YYYY-MM-DD — <한 줄 변경 요약>
-
-- **현재 ADR**: [<kebab-title>](./NNNN-kebab-title.md)
-- **변경 유형**: 알고리즘 | 아키텍처 | 채택 대안 교체 | Driver 반전 | 요구사항 값 변경 | 동작 바꾸는 버그 수정 | 폐기
-- **무엇이**: <이전 접근 → 현재 접근, 결정 수준 한두 문장>
-- **왜**: <이 변경을 부른 driver/제약의 변화>
-- **무효가 된 것** (선택): <이전 결정이 남겼던 Consequence 중 이제 사라진 것>
-```
-
-`현재 ADR` 포인터가 **유일한** ADR 참조이고 항상 현재 살아 있는 ADR 경로를 가리킨다 — 프로즈에 옛 번호를 넣지 않으므로, 이후 `/adr-rollup` 이 그 ADR 을 renumber 해도 이 한 줄만 새 경로로 고치면 되고, rollup 의 stale-citation finder 가 로그를 오탐하지 않는다.
-
-## 같은 결정이 진화할 때 — edit-in-place + 로그가 기본
-
-같은 logical decision 이 시간이 지나며 바뀌면, **기존 ADR 을 현재 상태로 덮어쓰고 major 전환이면 [결정 로그](#결정-로그-decision-logmd)에 한 줄 남긴다** — 진화할 때마다 새 ADR 을 쌓지 않는다. ADR 본문에는 진화 서술("v2 에서 ~ 추가", "기존 대비 ~로 변경")을 남기지 않는다. 이렇게 하면 한 카테고리의 ADR 수가 "실제로 존재하는 서로 다른 결정 수" 로 유지되고, 옛 evolution-chain 모델이 만들던 supersede 더미가 생기지 않는다.
-
-**새 ADR(supersede)은 결정 주제가 분기할 때만** — 위 [edit-in-place vs supersede 판정](#요구사항-변경으로-adr을-고칠-때--edit-in-place-vs-supersede-판정)의 ③. 옛 결정과 새 결정이 각자 "현재 상태" 로 공존해야 하는 경우다.
-
-과거 모델의 잔재로 한 결정의 진화 이력이 supersede chain 으로 여러 ADR 에 흩어져 있으면, `/adr-rollup` 이 그 묶음의 major 이력을 `decision-log.md` 로 harvest 한 뒤 현재 상태 통합본 하나로 합치고 나머지를 삭제한다 (전체 카테고리가 아니라 묶음 단위). roll-up 절차와 판정 기준은 `${CLAUDE_PLUGIN_ROOT}/skills/adr-rollup/SKILL.md` 참조.
-
-## 길이 가이드
-
-줄 수는 **Mermaid 다이어그램 블록과 대안 비교표를 제외한 본문**으로 센다 — 이 문서는 다이어그램을 적극 권장하므로([다이어그램 선택](#다이어그램-선택)), 다이어그램이 늘어난 만큼을 길이 초과로 보지 않는다.
-
-- **표준 50-150줄** — 대부분의 ADR 이 여기 들어온다.
-- **< 30줄** — 결정의 동기·대안이 부족한 신호.
-- **> 350줄** — 분리 신호. 단독으로는 분리 근거가 아니고, [한 ADR = 한 결정](#한-adr--한-결정)의 다른 신호와 함께 나타날 때 분리한다.
-
-## 다이어그램 선택
-
-| 다이어그램        | 사용 시점                                                        |
-| ----------------- | ---------------------------------------------------------------- |
-| `sequenceDiagram` | 비동기 흐름·서비스 간 호출·이벤트 기반 처리                      |
-| `stateDiagram-v2` | 상태 전이가 결정의 핵심 (주문 상태 머신, 챌린지 라이프사이클 등) |
-| `flowchart`       | 조건 분기·결정 트리·라우팅 규칙                                  |
-| `erDiagram`       | 새 엔티티 관계가 핵심이고 `docs/tables/`로 위임할 수 없을 때만   |
-
-텍스트 설명보다 다이어그램이 명확하면 다이어그램을 우선한다.
-
-## 점진적 정리
-
-기존 ADR 중 위 규칙에 맞지 않는 내용이 포함된 것은, 해당 ADR이 업데이트될 때 점진적으로 제거한다. 한 번에 모든 ADR을 정리할 필요는 없다.
-
-## 한국어 작성
-
-ADR 본문은 한국어로 작성한다. 기술 용어, 코드 식별자, 영문 고유명사는 원어 그대로 쓴다.
-
-## 명명 규칙
-
-- 파일명: `XXXX-kebab-case-title.md`. **PRD Feature ID(`F1` 등)를 파일명·폴더명에 넣지 않는다** — Feature ID 는 어디에도 저장하지 않으며, 카테고리 키는 언제나 canonical 한 name 기반이고 파일명도 `XXXX-kebab-case-title.md` 로 둔다. (`/adr-impl` 은 카테고리 키로만 대상을 해석한다 — `f1` 은 fallback 키였을 때만 존재하는 평범한 literal 키다.)
-- 번호는 카테고리 내에서 순차적으로 증가. split으로 빠진 번호는 결번으로 둔다 (renumber 금지). **단 rollup 은 예외** — 체인을 합쳐 ADR 을 삭제한 카테고리는 `adr-rollup` 마지막 단계에서 결번을 메워 다시 연속 번호로 만든다 (rollup 흔적을 남기지 않는다는 원칙). split·sync 에는 renumber 가 없다.
-- 제목은 명확하고 간결하게
-- **폴더 이름 = ubiquitous language**: 최상위 context 폴더는 도메인 전문가가 쓰는 모델 용어로 짓고(`identity/`, `ordering/`), 피쳐 sub-folder 는 사용자 동작 용어로 짓는다(`login/`, `checkout/`). 두 층의 어휘가 다를 수 있다 — context 는 도메인 모델의 말, leaf 는 사용자가 인지하는 동작의 말. 어느 층이든 기술 레이어 이름(`api`, `db`, `services`)은 금지 (`structure.md` "안티패턴 카테고리"). 카테고리 키 파생·fallback 키 규칙은 `structure.md` "ADR 레지스트리 (.mapping.json)".
-
-## ADR 리뷰 체크리스트
-
-PR 리뷰어 또는 작성자 본인이 머지 전에 확인한다.
-
-- [ ] **Status가 유효한 값**인가 (`Proposed`/`Accepted`/`Deprecated`/`Superseded by [...]`)
-- [ ] **결정 한 줄 요약**이 `.mapping.json` 의 해당 `adrs[]` 레코드(summary)에 갱신되었는가
-- [ ] **재생성 테스트** — 코드를 전부 지우고 이 ADR 만 남았다고 상상했을 때, 이것만 읽고 요구사항을 지키는 코드를 다시 만들 수 있는가. 빠진 계약(한도·주기·권한·필수 검증·상태 전이)이 없는가
-- [ ] **요구사항 값이 값 그대로 적혀 있는가** — 결과물이 지켜야 하는 숫자(최대 턴 수, 횟수 한도, 보존 기간, 크기 상한, NFR 목표치)를 "적절히", "제한된다" 로 뭉개지 않았는가. 각 값에 근거(정책·계약·규정)가 한 조각 붙어 있는가
-- [ ] **구현 튜닝값은 없는가** — 개발자가 바꿔도 요구사항을 어기지 않는 값(풀 크기·백오프·캐시 TTL·워커 수)이 본문에 남아 있지 않은가
-- [ ] **코드 직독 테스트** — 본문의 모든 단락에 대해 "이 사실이 이 ADR 이 다스리는 코드를 읽으면 자명한가?" 를 물었을 때, 자명한 항목이 본문에 남아 있지 않은가 (자명한 것은 코드가 source of truth). 단 요구사항 관문을 통과한 항목은 자명해도 남긴다
-- [ ] **현재 상태 서술** — 본문에 진화 서술("처음엔 ~였다가", "v2 에서 ~ 추가", "기존 대비 ~로 변경")이 남아 있지 않은가 (evolution history 는 본문이 아니라 [`decision-log.md`](#결정-로그-decision-logmd) 에 — major 변경이면 로그에 한 줄 남기고 본문은 현재 상태만)
-- [ ] **회색지대 점검** — 본문에 (a) 채택 근거 / 대안 비교, (b) 비즈니스 규칙의 시스템 번역, (c) 도메인 규칙·상태 전이, (d) 외부 의존 fallback 중 **하나 이상**이 실제로 들어 있는가 (없으면 ADR 의 가치가 약함)
-- [ ] **폴더 단위 이하 코드 참조**가 본문/표/다이어그램 어디에도 남아 있지 않은가
-- [ ] **코드 측 역참조 없음** — 이 ADR 이 다스리는 코드(주석·상수·import)에 ADR ID·경로가 남아 있지 않은가 (코드↔ADR 연결은 코드에도 매핑에도 두지 않는다). 코드가 이미 있으면 adr-reviewer R17 또는 `/adr-sync` 5단계 (a) grep 으로 점검하고, 코드가 아직 없는 신규 `Proposed` 면 구현 후 `/adr-sync` 가 점검한다
-- [ ] **금지 항목**(코드 스니펫, 구현 튜닝값, 함수 호출 그래프, 필드 타입표, 환경 변수 이름, 의사코드, 전체 JSON, 마이그레이션 명령어)이 들어가지 않았는가 — 단 요구사항 값·비즈니스 한도는 금지 항목이 아니다
-- [ ] **Decision Drivers** 가 3-5개로 적혀 있고, 의견이 아니라 옵션을 변별하는 사실/제약인가
-- [ ] **대안이 최소 2개** 적혀 있고, 각 대안의 pros/cons 가 Decision Drivers 에 비추어 적혀 있는가 (strawman 아닌가)
-- [ ] **Mermaid 다이어그램**이 필요한 결정인데 누락되지 않았는가
-- [ ] **DB 키 패턴**을 바꿨다면 `docs/tables/{name}.md`(또는 동등 문서)와 양방향 링크가 있는가
-- [ ] **PRD 역참조 없음** — 본문(Context·Related 포함)에 ALPS 경로·Section 번호·feature-id 가 적혀 있지 않은가 (adr-writer 는 ALPS 를 참조하지 않으므로 ADR 본문·매핑 어디에도 PRD 를 가리키지 않는다)
-- [ ] **Related**에 의존 ADR 링크(있다면)가 유효한가 — ADR ↔ ADR 참조는 정상이며, PRD 링크는 넣지 않는다
-- [ ] **한 ADR = 한 결정** 원칙이 지켜졌는가 (분리 신호 없음)
-- [ ] **`.mapping.json`**의 해당 카테고리 entry가 새 ADR을 포함하는가
+## Decision log (decision-log.md)
+
+An ADR body is **a requirements document describing the current state of the code** — no timeline narration ("it was X at first, then became Y"). But burying the rationale for major transitions in Git commits alone makes "why was this algorithm replaced?" hard to trace later. So **major decision changes only** go into a per-category `docs/adr/<category>/decision-log.md`, newest first, one line each. **ADR body = current state, log = timeline of major changes, Git = verbatim diff** — three layers preserving different things.
+
+### What to log — minor vs major
+
+Reached from ②/③ of [edit-in-place vs supersede](#changing-an-adr--edit-in-place-vs-supersede).
+
+- **Log it (major)** — replacing the adopted alternative, inverted Decision Drivers, a core algorithm or architecture change, a core bug fix that changes behavior, supersede, **a requirement value change** (20 turns → 30 etc., since the contract the result must honor changed), and **a non-numeric requirement change** (allowed set added or removed, mandatory → optional, changed permission or visibility rules, a formerly forbidden transition becoming allowed — see [non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering)). **Deprecating a decision with no replacement** is also a major entry.
+- **Do not log it (minor)** — correcting implementation facts (API table, enum identifiers, field names, Status), refining boundary wording, rewording. Logging these fills the log with noise and drowns the signal; Git preserves them. (Tuning-value adjustments are not in the ADR, so they never qualify.) **An enum's _name_ changing is minor, but its _allowed set_ changing is major** — see above.
+- Add the entry **at the moment the decision changes** — separate from the automatic `Accepted`/`Proposed` Status transition. The log records the _decision_; Status records the _implementation fact_.
+
+### Location and nature
+
+- One `decision-log.md` per category (feature leaf or flat context), alongside the ADR files in `docs/adr/<category>/`.
+- **It is a convention file, not an ADR, and is not registered in `.mapping.json`.** The deterministic harness (`adr-structure-lint`) does not enumerate it as an ADR because it does not start with `NNNN-`, so it is exempt from per-ADR checks, index consistency, and orphan detection. **One exception — links**: the harness does verify that the log's ADR pointer resolves on disk (`decision-log-link-broken`). A rollup renumber moves that ADR, and if the pointer is not fixed the log points at a vanished path that no other check would catch.
+- The log holds **only links pointing to current ADRs** and never references code or the PRD — log → ADR, one way. An ADR body (Related included) does not link back to the log.
+- **Format lives in the seed file [`decision-log.template.md`](./decision-log.template.md)** (copied alongside into `docs/adr/`). On a category's first major transition, copy it to `docs/adr/<category>/decision-log.md` and fill in `<category>` and the entry — do not rewrite the format from memory. The `current ADR` pointer is the **only** ADR reference and always points at the live path; keeping old numbers out of the prose means a later `/adr-rollup` renumber requires fixing only that one line, and the rollup's stale-citation finder will not flag the log.
+
+## Diagram selection
+
+| Diagram           | When to use                                                                  |
+| ----------------- | ---------------------------------------------------------------------------- |
+| `sequenceDiagram` | Async flows, inter-service calls, event-driven processing                    |
+| `stateDiagram-v2` | State transitions are core to the decision (order state machine, lifecycles) |
+| `flowchart`       | Conditional branching, decision trees, routing rules                         |
+| `erDiagram`       | Only when new entity relationships are core and cannot go to `docs/tables/`  |
+
+Prefer a diagram whenever it is clearer than prose.
+
+## Conventions
+
+- **Write ADR bodies in the language the user writes in** — this rules file and every harness prompt are English, but the ADRs they govern follow the user. Keep technical terms, code identifiers, and proper nouns in their original form.
+- **Filenames**: `XXXX-kebab-case-title.md`. **Never put a PRD Feature ID (`F1` etc.) in a filename or folder name** — Feature IDs are stored nowhere, category keys are always derived from the canonical name, and `/adr-impl` resolves targets by category key alone (`f1` exists only as an ordinary literal key when it was a fallback).
+- **Numbering** increases sequentially within a category. Numbers vacated by a split stay as gaps (no renumbering). **Rollup is the sole exception** — a category where a chain was merged and ADRs deleted gets its gaps closed in `adr-rollup`'s final step (rollup leaves no trace). Split and sync never renumber.
+- Titles: clear and concise.
+- **Folder names = ubiquitous language**: top-level context folders take the domain expert's model vocabulary (`identity/`, `ordering/`); feature sub-folders take user-action vocabulary (`login/`, `checkout/`). The two layers may differ. At either layer, technical layer names (`api`, `db`, `services`) are banned (`structure.md` "Anti-pattern categories"). Key derivation and fallback rules: `structure.md` "The ADR registry (.mapping.json)".
+- **Clean up progressively** — when an existing ADR violates these rules, fix it as that ADR is next updated. There is no need to sweep every ADR at once.
+
+## ADR review checklist
+
+For the PR reviewer or the author before merge.
+
+- [ ] **Status is a valid value** (`Proposed`/`Accepted`/`Deprecated`/`Superseded by [...]`)
+- [ ] **The one-line decision summary** is updated in the matching `.mapping.json` `adrs[]` record
+- [ ] **Regeneration test** — imagining all code deleted and only this ADR left, could requirement-honoring code be rebuilt? Is any contract missing (limits, cycles, permissions, required validation, state transitions)?
+- [ ] **Requirement values appear verbatim** — numbers the result must honor (max turns, count limits, retention, size caps, NFR targets) are not blurred into "appropriately" or "is limited". Does each carry a scrap of justification (policy, contract, regulation)?
+- [ ] **Non-numeric requirements survived too** — allowed value sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units and formats, forbidden transitions were not dropped as "obvious from the code" ([non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering))
+- [ ] **No tuning values** — values a developer may change without violating a requirement (pool sizes, backoff, cache TTL, worker counts) are absent
+- [ ] **Code-readthrough test** — for every paragraph, asking "is this obvious from reading the code this ADR governs?", nothing obvious remains (the code is the source of truth for those). Items that passed the requirement gate stay even when obvious
+- [ ] **Current-state narration** — no evolution narration ("originally it was", "added in v2", "changed from before") remains; evolution history belongs in [`decision-log.md`](#decision-log-decision-logmd), not the body
+- [ ] **Gray-zone check** — the body actually contains **at least one** of: (a) adoption rationale / alternatives, (b) business rules translated into system behavior, (c) domain rules and state transitions, (d) external-dependency fallback (without these the ADR has little value)
+- [ ] **No code references below folder level** anywhere in prose, tables, or diagrams
+- [ ] **No back-references from code** — the code this ADR governs (comments, constants, imports) carries no ADR ID or path. If the code exists, check via adr-reviewer R17 or `/adr-sync` step 5(a) grep; for a new `Proposed` with no code yet, `/adr-sync` checks after implementation
+- [ ] **No forbidden items** (code snippets, tuning values, call graphs, field-type tables, env var names, pseudocode, full JSON, migration commands) — requirement values and business limits are _not_ forbidden items
+- [ ] **Decision Drivers** number 3-5 and are discriminating facts or constraints, not opinions
+- [ ] **At least two alternatives**, each with pros and cons weighed against the Decision Drivers (no strawmen)
+- [ ] **A Mermaid diagram** is not missing where the decision needs one
+- [ ] **If a DB key pattern changed**, `docs/tables/{name}.md` (or the equivalent) exists with bidirectional links
+- [ ] **No PRD back-references** — no ALPS path, section number, or feature ID in the body (Context and Related included)
+- [ ] **Related** dependency ADR links (if any) resolve — ADR ↔ ADR references are fine; PRD links are not
+- [ ] **One ADR = one decision** holds (no split signals)
+- [ ] **`.mapping.json`** has the matching category entry including the new ADR

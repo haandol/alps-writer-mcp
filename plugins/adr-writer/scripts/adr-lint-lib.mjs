@@ -20,7 +20,7 @@
 export const KEY_RE = /^[a-z0-9]+(-[a-z0-9]+)*(\/[a-z0-9]+(-[a-z0-9]+)*)?$/;
 
 // Technical-layer / work-type names banned as EITHER category segment
-// (structure.md "안티패턴 카테고리"). vertical-slice tracing breaks when a
+// (structure.md "Anti-pattern categories"). vertical-slice tracing breaks when a
 // feature's decision is split along these.
 export const ANTIPATTERN_SEGMENTS = new Set([
   "frontend",
@@ -61,7 +61,7 @@ const CONTROL_CHAR_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 
 // Sections the README ADR template marks as the load-bearing spine. HARD =
 // must be present (structural well-formedness). SOFT = expected but their
-// absence is advisory (Decision Drivers / 대안 검토 / Related — their深 quality
+// absence is advisory (Decision Drivers / alternatives / Related — their deeper quality
 // is an LLM call, so only presence is checked, and only as a warning).
 export const HARD_SECTIONS = ["Status", "Context", "Decision", "Consequences"];
 
@@ -111,7 +111,7 @@ export function hasCycle(mapping) {
 // ── Status line (R1 enum/format half) ────────────────────────────────────
 // The code-reality half of R1 ("does the described behavior exist in code?")
 // is LLM/adr-sync territory; only the closed vocabulary + date convention is
-// deterministic here. README "상태" + "자동 전환 규칙":
+// deterministic here. README "Status" + "Automatic transition rules":
 //   Proposed                                (never dated)
 //   Accepted (YYYY-MM-DD)                    (parentheses hold ONLY the date)
 //   Deprecated (YYYY-MM-DD)                  (parentheses hold ONLY the date)
@@ -157,7 +157,7 @@ export function classifyStatus(statusValue) {
 }
 
 // ── filename canonicality ─────────────────────────────────────────────────
-// authoring-rules "명명 규칙": NNNN-kebab-case-title.md, and NO Feature ID in
+// authoring-rules "Conventions": NNNN-kebab-case-title.md, and NO Feature ID in
 // the filename (the stale fN- prefix adr-sync 3.7 case (1) fixes).
 export function checkFilename(basename) {
   const canonical = /^[0-9]{4}-[a-z0-9]+(-[a-z0-9]+)*\.md$/;
@@ -173,7 +173,7 @@ export function checkFilename(basename) {
 // ── numbering gaps (rollup advisory) ──────────────────────────────────────
 // Given ADR file basenames grouped per category, report categories whose NNNN
 // sequence is non-contiguous (a gap or a missing 0001). This is ADVISORY only:
-// split/adr-sync legitimately leave gaps ("결번 유지, renumber 금지"), so a gap
+// split/adr-sync legitimately leave gaps ("keep gaps, never renumber"), so a gap
 // is NOT an error — it's a signal that, if we just ran adr-rollup, step 7
 // (renumber) may have been skipped. The lint surfaces it as a warning and the
 // rollup skill asks the user whether to fill it.
@@ -205,7 +205,7 @@ export function numberingGaps(filesByCategory) {
 // ── path depth ────────────────────────────────────────────────────────────
 // structure.md: at most 2 category segments → at most 2 DIRECTORY levels
 // between the ADR root and the file. e.g. identity/login/0001.md = 2 (ok);
-// identity/login/social/0001.md = 3 (fail — "최대 1단계 깊이" for sub-folders).
+// identity/login/social/0001.md = 3 (fail — "at most one level deep" for sub-folders).
 // relPath is the ADR path relative to the ADR root (no leading docs/adr/).
 export function categoryDepth(relPath) {
   const parts = relPath.split("/").filter(Boolean);
@@ -265,15 +265,23 @@ export function sectionRange(body, pred) {
   return { start, end, lines, heading: heads[idx] };
 }
 
+// The alternatives heading, in either language. Harness prompts and rule docs
+// are English, but an ADR body follows the language the user writes in
+// (authoring-rules "Conventions"), so a Korean-authored ADR titles this section
+// "대안 검토" and an English-authored one "Alternatives". Matching only one
+// spelling would report `alternatives-missing` on a perfectly good ADR and let
+// R14's count check silently skip it.
+const ALTERNATIVES_HEADING = /^(?:대안\s*검토|alternatives(?:\s*[-—:].*)?)$/i;
+
 // presence of each HARD_SECTIONS heading (## level) + soft-section presence.
 export function checkSections(body) {
   const { heads } = parseHeadings(body);
   const h2 = new Set(heads.filter((h) => h.level === 2).map((h) => h.text.trim()));
   const missingHard = HARD_SECTIONS.filter((s) => !h2.has(s));
   const hasDrivers = h2.has("Decision Drivers");
-  // 대안 검토 is authored at ## or ### depending on the template variant.
+  // The alternatives section is authored at ## or ### depending on the template variant.
   const hasAlternatives = heads.some(
-    (h) => h.level >= 2 && h.level <= 4 && /^대안\s*검토$/.test(h.text.trim()),
+    (h) => h.level >= 2 && h.level <= 4 && ALTERNATIVES_HEADING.test(h.text.trim()),
   );
   const hasRelated = h2.has("Related");
   return { missingHard, hasDrivers, hasAlternatives, hasRelated };
@@ -293,7 +301,7 @@ export function countDrivers(body) {
 // Take the strongest structural signal available so a table-based ADR and a
 // bullet-based one both yield a sensible count.
 export function countAlternatives(body) {
-  const sec = sectionRange(body, (h) => /^대안\s*검토$/.test(h.text.trim()));
+  const sec = sectionRange(body, (h) => ALTERNATIVES_HEADING.test(h.text.trim()));
   if (!sec) return { present: false, count: 0 };
   let bullets = 0;
   let subheads = 0;
@@ -335,7 +343,7 @@ export function relatedLinkTargets(body) {
 }
 
 // ── code-reference depth (R2 — advisory heuristic) ────────────────────────
-// authoring-rules "코드 참조 깊이 — 폴더 단위까지만": no file-level path or
+// authoring-rules "Code references — folder level only": no file-level path or
 // file:line citation. FP-prone (must not flag .md Related/table links), so the
 // CLI emits these as WARN, not ERROR — the reviewer confirms true violations.
 const SRC_EXT = "tsx?|jsx?|go|py|java|rb|rs|c|cc|cpp|h|hpp|cs|kt|swift|php|scala|sql|sh|ya?ml|toml";
@@ -354,8 +362,8 @@ export function codeRefHits(body) {
 }
 
 // ── requirement value expressed as a code constant (R18 — advisory) ───────
-// authoring-rules "구체적인 숫자": a requirement value BELONGS in the ADR, but
-// written as a domain sentence ("채팅 한 세션은 최대 20턴 — 요금제 정책"), never
+// authoring-rules "Concrete numbers": a requirement value BELONGS in the ADR, but
+// written as a domain sentence ("a chat session is capped at 20 turns — pricing policy"), never
 // as the code identifier that happens to hold it today. The identifier is the
 // code's to name and rename; the requirement is not.
 //
@@ -369,7 +377,7 @@ export function codeRefHits(body) {
 // Two forms, deliberately asymmetric. A SCREAMING_SNAKE identifier is unambiguous
 // enough to flag under either `=` or `:`. A single all-caps word only counts under
 // `=`, because the colon form is how requirement prose legitimately labels a value
-// ("SLA: 99.9%", "TTL: 7일") and flagging that would push authors to delete it.
+// ("SLA: 99.9%", "TTL: 7 days") and flagging that would push authors to delete it.
 const CONST_ASSIGN_RE =
   /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b\s*[:=]\s*[{[]?\s*-?\d|\b[A-Z][A-Z0-9_]{2,}\b\s*=\s*[{[]?\s*-?\d/;
 export function constantAssignmentHits(body) {
@@ -553,9 +561,9 @@ function pathIsAbsoluteOrTraverses(value) {
 // A category's decision-log.md is a CONVENTION file, not an ADR: it is absent
 // from .mapping.json and is never enumerated as an ADR (it has no NNNN- name),
 // so none of the per-ADR checks see it. That leaves one hole worth closing
-// deterministically — its "현재 ADR" pointer.
+// deterministically — its "current ADR" pointer.
 //
-// authoring-rules "결정 로그": each entry carries exactly one ADR reference, a
+// authoring-rules "Decision log": each entry carries exactly one ADR reference, a
 // link to the ADR that is currently live. adr-rollup step 7 renumbers files and
 // step 9 writes the log, so a rollup that renumbers a survivor must repoint that
 // link. Nothing caught a miss: adr-invariants' stale-citation finder matches the
@@ -565,7 +573,7 @@ function pathIsAbsoluteOrTraverses(value) {
 //
 // Returns every local link target in the file (anchors stripped, URLs skipped)
 // so the CLI can resolve them against disk. Deliberately not limited to the
-// "현재 ADR" line: a log should only ever link to live ADRs, so any dangling
+// "current ADR" line: a log should only ever link to live ADRs, so any dangling
 // local link in it is the same defect.
 export function decisionLogLinkTargets(body) {
   const out = [];

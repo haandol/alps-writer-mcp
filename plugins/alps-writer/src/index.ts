@@ -13,7 +13,7 @@ const server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.4.26" },
+  { name: "alps-writer", version: "0.4.27" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 
@@ -138,9 +138,9 @@ server.tool(
   "save_alps_section",
   `Save content to a subsection in the ALPS document.
 ⚠️ BEFORE CALLING THIS TOOL:
-1. 작성 완료된 내용을 사용자에게 먼저 출력하세요
-2. "수정할 내용이 있으신가요?" 라고 확인을 요청하세요
-3. 사용자가 확인한 후에만 이 도구를 호출하세요`,
+1. Print the completed content to the user first
+2. Ask them to confirm it ("Is there anything you want to change?")
+3. Call this tool only after the user has confirmed`,
   {
     section: z.number().min(1).max(9).describe("Section number (1-9)"),
     subsection_id: z

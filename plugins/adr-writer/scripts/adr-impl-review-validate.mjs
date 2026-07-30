@@ -20,37 +20,37 @@ const ALLOWED_CATEGORIES = new Set([
 const ALLOWED_PERSPECTIVES = new Set(["necessity", "sufficiency", "both"]);
 const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
 const REQUIRED_REPORT_TEXT = [
-  "# ADR 구현 리뷰 및 수정 가이드",
-  "## 1. 판정 요약",
-  "## 2. 먼저 알아야 할 목표",
-  "## 3. 코드를 읽는 순서",
-  "## 4. 현재 구현 지도",
-  "## 5. 런타임 흐름",
-  "## 6. 상태·데이터·실패 모델",
-  "## 7. 발견 사항",
-  "## 8. 수정 실행 순서",
-  "## 9. 검증 체크리스트",
-  "## 10. 머지 판정 체크리스트",
-  "## 11. 리뷰 한계와 질문",
+  "# ADR implementation review and repair guide",
+  "## 1. Verdict summary",
+  "## 2. What to know first",
+  "## 3. Order to read the code",
+  "## 4. Map of the current implementation",
+  "## 5. Runtime flow",
+  "## 6. State, data, and failure model",
+  "## 7. Findings",
+  "## 8. Fix execution order",
+  "## 9. Verification checklist",
+  "## 10. Merge decision checklist",
+  "## 11. Review limits and questions",
 ];
 const REQUIRED_FINDING_TEXT = [
-  "수정할 파일과 심볼:",
-  "건드리지 말아야 할 범위:",
-  "완료 조건:",
-  "확인 필요:",
+  "Files and symbols to change:",
+  "Scope not to touch:",
+  "Completion criteria:",
+  "Needs confirmation:",
 ];
 // The merge-fitness axes under "## 10". Checking the heading alone let a writer
 // ship a table with an axis quietly missing — and the one most likely to be
-// dropped is 계약 준수 (requirement-value conformance), because a report that
-// found no bug reads as complete without it.
+// dropped is "Contract compliance" (requirement-value conformance), because a
+// report that found no bug reads as complete without it.
 const REQUIRED_MERGE_AXES = [
-  "문제 적합성",
-  "기능 충분성",
-  "계약 준수",
-  "변경 최소성",
-  "검증 강도",
-  "운영 안전성",
-  "유지보수성",
+  "Problem fitness",
+  "Functional adequacy",
+  "Contract compliance",
+  "Change minimality",
+  "Verification strength",
+  "Operational safety",
+  "Maintainability",
 ];
 
 function usage(message) {

@@ -6,101 +6,103 @@ argument-hint: "[category-or-feature-id?]"
 
 # feature-to-adr
 
-ALPS Section 7 의 feature 를 ADR 초안으로 일괄 변환하는 helper 입니다. **ADR 작성 자체는 별도 플러그인 `adr-writer` 의 `/adr-new` 에 위임**하고, 본 스킬은 ALPS 를 읽어 feature 큐를 만들고 카테고리를 정한 뒤 각 feature 를 `/adr-new` 로 넘기는 **얇은 importer** 역할만 합니다. 의존 방향은 alps-writer → adr-writer 한 방향이며, adr-writer 는 ALPS 를 전혀 알지 못합니다.
+A helper that bulk-converts ALPS Section 7 features into ADR drafts. **ADR authoring itself is delegated to `/adr-new` in the separate `adr-writer` plugin**, and this skill acts only as a **thin importer**: it reads the ALPS, builds the feature queue, decides the categories, and hands each feature to `/adr-new`. The dependency runs one way, alps-writer → adr-writer, and adr-writer knows nothing of ALPS.
 
-인자가 있으면 **해당 feature 한 개만** 처리하고, 인자가 없으면 **Section 7 전체 feature 를 순차적으로 모두** 변환합니다.
+With an argument it processes **only that one feature**; without one it converts **every Section 7 feature, sequentially.**
 
-## 절차
+> **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the ADR content in the language the user writes in (`authoring-rules.md` "Conventions"). Any user-facing phrasing below is a guide, not a literal string.
 
-### 1. 선행 조건 확인 및 ALPS 로드
+## Procedure
 
-먼저 **adr-writer 플러그인이 설치되어 있는지** 확인한다 — `/adr-new` 스킬을 호출할 수 있어야 한다. 없으면 다음을 안내하고 중단한다:
+### 1. Check the prerequisite and load the ALPS
+
+First confirm **that the adr-writer plugin is installed** — you must be able to invoke the `/adr-new` skill. If it is not, give this guidance and stop:
 
 ```
-/feature-to-adr 는 ADR 작성을 adr-writer 플러그인의 /adr-new 에 위임합니다.
-adr-writer 를 먼저 설치해 주세요.
+/feature-to-adr delegates ADR authoring to the adr-writer plugin's /adr-new.
+Please install adr-writer first.
 Codex: codex plugin add adr-writer@alps-writer
 Claude Code: /plugin install adr-writer@alps-writer
 ```
 
-이어서 ALPS 를 로드한다:
+Then load the ALPS:
 
-- `mcp__alps-writer__load_alps_document`로 현재 문서를 로드.
-- `mcp__alps-writer__read_alps_section(7)`로 feature 목록 추출.
-- `mcp__alps-writer__read_alps_section(6)`로 **Section 6.3 Feature Dependency Diagram 을 항상 확인**한다. ALPS 는 feature 사이 의존성을 6.3 의 Mermaid `graph TD`(`F2 -->|depends on| F1` 형태)로 들고 있다 — 이 그래프가 곧 "어떤 feature 가 어떤 feature 보다 먼저 구현돼야 하는가"의 source of truth 다. 그래프가 있으면 의존 엣지를 모두 파싱해 둔다(4단계에서 매핑에 옮긴다). 그래프가 비어 있거나 6.3 자체가 없으면 feature 간 의존이 없는 것으로 본다 — 억지로 만들어내지 않는다.
-  - **파싱 직후 그래프 무결성을 검사한다** (위상 정렬·`dependsOn` 기록은 비순환 DAG 를 전제로 하므로 — 매핑 스키마의 "keep acyclic (no self-edge)"). (a) **self-edge**(`F1 -->|depends on| F1`)는 무시하고 `"F1 이 자기 자신에 의존 — 무시함"` 한 줄을 알린다. (b) **순환**(`F1 ↔ F2`, 또는 더 긴 back-edge)이 있으면 위상 정렬이 불가능하므로 **큐 정렬·카테고리 생성·`dependsOn` 기록을 시작하지 않고 멈춘다** — 어떤 feature 들이 서로 물려 있는지 사용자에게 알리고, Section 6.3 의 순환을 먼저 끊도록 요청한 뒤(필요 시 `/alps-init` 으로 기존 문서를 이어 6.3 수정, 또는 `mcp__alps-writer__load_alps_document`) 재실행하게 한다. 이 한 번의 검사가 아래 위상 정렬(처리 대상 결정)과 4단계 `dependsOn` 기록 두 곳을 모두 보호하므로, cyclic 그래프가 `.mapping.json` 에 영구 기록돼 하류(`adr-impl`·`adr-sync`)에서 뒤늦게 터지는 것을 막는다.
-- Section 6.2(Non-Functional Requirements)와 Section 4.2(Technology Stack / 제약)도 함께 읽어둔다. 이들은 ADR 의 **Decision Drivers** 후보다 — 측정 가능한 NFR(예: "p95 3초 이내")과 전역 제약(예: "AWS 만 사용", "팀이 Node 경험만")이 옵션을 변별하는 압력이 된다. 각 NFR 의 Scope(`Global` 또는 Feature ID)를 보고 어느 feature 의 Driver 로 넘길지 분류해 둔다(3단계에서 `/adr-new` 에 전달).
-- ALPS 문서가 없으면 사용자에게 알리고 `mcp__alps-writer__init_alps_document` 또는 `/alps-init`을 권유한 뒤 중단.
+- Load the current document with `mcp__alps-writer__load_alps_document`.
+- Extract the feature list with `mcp__alps-writer__read_alps_section(7)`.
+- **Always check Section 6.3, the Feature Dependency Diagram**, with `mcp__alps-writer__read_alps_section(6)`. ALPS holds the dependencies between features as a Mermaid `graph TD` in 6.3 (in the form `F2 -->|depends on| F1`) — that graph is the source of truth for "which feature must be implemented before which." If the graph exists, parse all its dependency edges (they move into the mapping in step 4). If the graph is empty or 6.3 is absent, treat it as having no inter-feature dependencies — never invent them.
+  - **Check the graph's integrity immediately after parsing** (topological sorting and recording `dependsOn` presume an acyclic DAG — the mapping schema's "keep acyclic (no self-edge)"). (a) Ignore a **self-edge** (`F1 -->|depends on| F1`) and report one line: `"F1 depends on itself — ignored"`. (b) If there is a **cycle** (`F1 ↔ F2`, or a longer back-edge), topological sorting is impossible, so **stop without starting the queue sort, category creation, or `dependsOn` recording** — tell the user which features are entangled, ask them to break the cycle in Section 6.3 first (amending 6.3 by continuing the existing document with `/alps-init` if needed, or via `mcp__alps-writer__load_alps_document`), and have them re-run. This single check protects both the topological sort below (deciding what to process) and the step 4 `dependsOn` recording, preventing a cyclic graph from being permanently written into `.mapping.json` and blowing up later downstream (`adr-impl`, `adr-sync`).
+- Also read Section 6.2 (Non-Functional Requirements) and Section 4.2 (Technology Stack / constraints). These are candidates for the ADR's **Decision Drivers** — measurable NFRs (e.g. "p95 within 3s") and global constraints (e.g. "AWS only", "the team has Node experience only") become the pressures that discriminate between options. Look at each NFR's Scope (`Global` or a Feature ID) and classify which feature's Drivers it should be passed to (handed to `/adr-new` in step 3).
+- If there is no ALPS document, tell the user, suggest `mcp__alps-writer__init_alps_document` or `/alps-init`, and stop.
 
-처리 대상 결정:
+Decide what to process:
 
-- **인자가 있는 경우**: 해당 카테고리/피쳐 ID에 매칭되는 feature 1개만 큐에 넣는다. 단 이 단일 feature 가 6.3 에서 의존하는 선행이 아직 ADR 로 변환되지 않았다면, 기록될 `dependsOn` 이 매핑에 entry 없는 카테고리 키를 가리키는 **dangling 참조**가 될 수 있다 — `adr-impl` 이 이를 미구현 선행으로 처리하지만(그쪽 step 2 의 dangling 분기), 선행이 미변환임을 알면 인자 없이 전체 Section 7 을 의존성 닫힘 순서로 변환하는 편이 깔끔하다고 한 줄 안내한다.
-- **인자가 없는 경우**: Section 7 의 **모든 feature** 를 큐에 넣는다. 6.3 의존성 그래프가 있으면 **의존성 위상 순서**(의존 대상이 의존하는 쪽보다 먼저)로 큐를 정렬한다 — 그래야 카테고리를 만들 때 `dependsOn` 이 가리킬 선행 카테고리가 이미 존재한다. 그래프가 없으면 ALPS 등장 순서를 따른다. 단 `docs/adr/.mapping.json` 에 이미 ADR 이 매핑된 feature 는 큐에서 제외한다 (재실행 시 중복 방지).
-- 큐가 비어 있으면 "변환할 신규 feature 가 없습니다" 메시지를 띄우고 종료.
-- 큐에 2개 이상이 들어 있으면 사용자에게 처리 순서를 한 번 보여주고 "이 순서로 모든 피쳐를 ADR 로 변환하겠습니다. 진행할까요?" 한 번만 확인. 이후 각 피쳐는 `/adr-new` 의 승인 시점에서만 멈춘다.
+- **With an argument**: queue only the one feature matching that category or feature ID. Note that if a prerequisite this single feature depends on in 6.3 has not been converted into an ADR yet, the `dependsOn` you record may become a **dangling reference** pointing at a category key with no mapping entry — `adr-impl` handles that as an unimplemented prerequisite (its step 2 dangling branch), but if you know the prerequisite is unconverted, note in one line that converting all of Section 7 in dependency-closed order (with no argument) would be cleaner.
+- **With no argument**: queue **every feature** in Section 7. If the 6.3 dependency graph exists, sort the queue in **dependency topological order** (a dependency target before the side depending on it) — that way, when a category is created, the prerequisite category its `dependsOn` points at already exists. Without the graph, follow the ALPS order of appearance. Exclude from the queue any feature already mapped to an ADR in `docs/adr/.mapping.json` (preventing duplicates on a re-run).
+- If the queue is empty, print "there are no new features to convert" and finish.
+- If the queue holds two or more, show the user the processing order once and confirm just once: "I will convert every feature into an ADR in this order. Shall I proceed?" After that, each feature pauses only at `/adr-new`'s approval point.
 
-> 아래 2~4단계는 큐의 각 feature 에 대해 **순차적으로 한 번씩 반복**한다. 한 피쳐의 `/adr-new` 승인이 완료된 뒤에야 다음 피쳐의 2단계로 넘어간다.
+> Steps 2-4 below are **repeated once per feature in the queue, sequentially.** Move to the next feature's step 2 only after that feature's `/adr-new` approval is complete.
 
-> **PRD 는 한 번만 import 한다**: `/feature-to-adr` 는 ALPS feature 를 ADR 로 **최초 변환**하는 one-time importer 다. 한 번 ADR 이 만들어지면 그 결정은 이후 **ADR 레벨에서 관리**된다 — PRD 가 나중에 바뀌면 매핑된 feature 를 다시 가져오지 않고, 해당 카테고리의 ADR 을 직접 편집(또는 새 ADR 로 supersede)해 변경을 흡수한다. 그래서 이미 매핑된 feature 는 재실행 시 큐에서 제외한다.
+> **The PRD is imported only once**: `/feature-to-adr` is a one-time importer that performs the **initial conversion** of ALPS features into ADRs. Once an ADR exists, that decision is **managed at the ADR level** — if the PRD changes later, do not re-import the mapped feature; absorb the change by editing that category's ADR directly (or superseding it with a new ADR). That is why already-mapped features are excluded from the queue on a re-run.
 
-### 2. 카테고리 결정 (importer 책임)
+### 2. Decide the category (the importer's responsibility)
 
-카테고리 키 결정은 ALPS 측 지식이므로 importer 가 직접 정해 `/adr-new` 에 넘긴다. ALPS feature 는 그 자체가 vertical slice (UI → API → Data) 단위이므로, **한 feature 는 한 카테고리(leaf) 와 1:1 로 매핑** 한다. 다만 폴더는 DDD 도메인(bounded context) × 피쳐 두 축으로 조직되므로(`structure.md` "디렉토리 구조"), 카테고리 키가 단일 세그먼트(`auth`)인지 2-세그먼트(`identity/login`)인지는 아래 그룹핑 여부로 갈린다. **키는 언제나 feature 이름에서 파생하고 명시적 Feature ID 는 키에 쓰지 않는다** (아래 규칙 — ID 는 어디에도 저장하지 않는다).
+Deciding the category key is ALPS-side knowledge, so the importer settles it and hands it to `/adr-new`. An ALPS feature is itself a vertical slice (UI → API → Data) unit, so **one feature maps 1:1 onto one category (a leaf).** However, since folders are organized along two axes, DDD domain (bounded context) × feature (`structure.md` "Directory structure"), whether the category key is single-segment (`auth`) or two-segment (`identity/login`) depends on the grouping decision below. **The key is always derived from the feature name, and an explicit Feature ID is never used as the key** (per the rule below — the ID is stored nowhere).
 
-**카테고리 키는 언제나 feature 이름에서 canonical 하게 뽑는다** — feature 이름을 kebab-case 로 변환해 의미 있는 카테고리 키를 만든다 (예: "User Authentication" → `auth`, "Marketplace Listings" → `marketplace`). **기본은 단일 세그먼트(평면)** 다.
+**Always derive the category key canonically from the feature name** — convert the feature name to kebab-case to make a meaningful category key (e.g. "User Authentication" → `auth`, "Marketplace Listings" → `marketplace`). **The default is a single segment (flat).**
 
-- **명시적 Feature ID(`F1`, `F-AUTH-01`)가 있어도 그 ID 를 카테고리 키로 쓰지 않는다.** adr-writer 는 ALPS 를 참조하지 않으므로 ID 는 `.mapping.json` 어디에도 저장하지 않는다 (한 번 변환하고 나면 결정은 ADR 레벨에서 관리된다). 이렇게 해야 canonical ADR 구조(`identity/login/0001-...md`, `infra/0001-...md`)를 그대로 쓰고, 폴더명·파일명에 `f1` 이 중복으로 남지 않는다.
-  - **`/adr-impl` 은 카테고리 키로 대상을 찾는다** — feature 이름 기반 canonical 키(`identity/login`)든, 아래 fallback 의 리터럴 키(`f1`)든, `/adr-impl <key>` 는 그 키로 매칭한다(`adr-impl` step 1). 별도의 Feature-ID 조회 경로는 없으므로 키를 ID 로 고정할 이유가 없다.
-- **fallback** — feature 이름이 없거나 `F1` 처럼 번호뿐이라 의미 있는 kebab 을 뽑을 수 없을 때만, ID 를 소문자로 변환한 값(`f1`, `f-auth-01`)을 단일 세그먼트 키로 쓴다. 이 경우 그 값은 Feature ID 를 보존하는 필드가 아니라 그냥 리터럴 카테고리 키다.
+- **Even when an explicit Feature ID (`F1`, `F-AUTH-01`) exists, never use that ID as the category key.** adr-writer does not reference ALPS, so the ID is stored nowhere in `.mapping.json` (once converted, the decision is managed at the ADR level). This is what keeps the canonical ADR structure (`identity/login/0001-...md`, `infra/0001-...md`) intact and prevents `f1` from lingering redundantly in folder and file names.
+  - **`/adr-impl` finds its target by category key** — whether it is a canonical feature-name key (`identity/login`) or the literal fallback key below (`f1`), `/adr-impl <key>` matches on that key (`adr-impl` step 1). There is no separate Feature-ID lookup path, so there is no reason to pin the key to the ID.
+- **Fallback** — only when there is no feature name, or it is a bare number like `F1` so no meaningful kebab can be extracted, use the lowercased ID (`f1`, `f-auth-01`) as a single-segment key. In that case the value is not a field preserving the Feature ID; it is simply a literal category key.
 
-**도메인(bounded context) 그룹핑 — 기본 끔, 요청 시에만**: ALPS 에는 feature 위에 도메인을 묶는 개념이 없다 (Section 6.1/6.3/7 모두 feature 가 최소·최대 단위). 그래서 importer 는 **PRD 가 주지 않은 도메인 경계를 임의로 만들어내지 않는다** — adr-writer 가 ALPS-agnostic 이라는 불변식과 같은 선이다. 두 경우에만 2-세그먼트 `<context>/<feature>` 키를 쓴다:
+**Domain (bounded context) grouping — off by default, only on request**: ALPS has no concept of grouping domains above features (in Sections 6.1, 6.3, and 7 alike, the feature is both the smallest and largest unit). So the importer **never invents a domain boundary the PRD did not give** — the same line as the invariant that adr-writer is ALPS-agnostic. Use a two-segment `<context>/<feature>` key in only two cases:
 
-1. ALPS Section 7 가 이미 feature 를 그룹/epic/상위 묶음으로 조직하고 있어 도메인 경계가 PRD 에 명시돼 있는 경우 — 그 그룹명을 context 로 쓴다.
-2. 사용자가 명시적으로 "이 feature 들을 `identity` 로 묶어줘" 같이 그룹핑을 요청한 경우 — 큐를 만들 때(1단계) 또는 진행 확인 시 한 번 물어 확인하고 적용한다.
+1. ALPS Section 7 already organizes features into groups, epics, or higher-level bundles, so the domain boundary is stated in the PRD — use that group name as the context.
+2. The user explicitly requests grouping, e.g. "group these features under `identity`" — confirm it once when building the queue (step 1) or at the progress confirmation, then apply it.
 
-둘 다 아니면 **평면(단일 세그먼트) 유지가 기본**이다. 단일-context/소규모 PRD 는 그룹핑하지 않는다.
+If neither holds, **keeping it flat (single-segment) is the default.** Do not group a single-context or small PRD.
 
-ALPS feature 가 이름에 기술 레이어를 포함하더라도 ADR 카테고리는 사용자가 인지하는 기능 단위 이름으로 다듬는다 (안티패턴 카테고리 `frontend/`·`backend/`·`api/`·`db/` 회피 — context 폴더·피쳐 sub-folder 양쪽 모두).
+Even when an ALPS feature name includes a technical layer, refine the ADR category into a functional unit name the user recognizes (avoiding the anti-pattern categories `frontend/`, `backend/`, `api/`, `db/` — for both context folders and feature sub-folders).
 
-### 3. /adr-new 위임
+### 3. Delegate to /adr-new
 
-결정한 카테고리로 **`/adr-new <category>` 를 호출**하고, 해당 feature 의 ALPS Section 7 발췌를 컨텍스트로 함께 전달한다. ADR 초안 작성·자동 검토(adr-reviewer)·`.mapping.json` 인덱스 레코드 작성(adrs[] 의 path·status·summary)·`Proposed` 저장·사용자 승인은 **전부 `/adr-new`(→ adr-writer) 가 처리**한다. 본 스킬에서 ADR 작성 규칙을 다시 풀어쓰지 않는다.
+**Invoke `/adr-new <category>`** with the category you decided, passing that feature's ALPS Section 7 excerpt along as context. Drafting the ADR, the automated review (adr-reviewer), writing the `.mapping.json` index record (the adrs[] path, status, summary), saving as `Proposed`, and the user approval are **all handled by `/adr-new` (→ adr-writer).** Do not restate the ADR authoring rules in this skill.
 
-`/adr-new` 에 넘기는 입력:
+The input handed to `/adr-new`:
 
-- **카테고리 키** — 2단계에서 결정한 값.
-- **Context 재료** — ALPS 의 비즈니스 동기·user story·acceptance criteria 핵심.
-- **Decision 재료** — Section 7 의 user flow / technical description (vertical slice: 사용자 동작 → API → 데이터 흐름).
-- **Decision Drivers 후보** — 1단계에서 분류한, 이 feature 에 걸리는 NFR(6.2 에서 Scope 가 `Global` 이거나 이 Feature ID 인 것)과 전역 아키텍처 제약(4.2). 측정 가능한 제약 형태로 그대로 넘긴다(예: "p95 3초 이내", "AWS 만 사용"). `/adr-new` 는 이를 Decision Drivers 의 출발점으로 삼아 대안을 변별한다 — PRD 의 비기능 요구가 ADR 의 의사결정 근거로 이어지는 통로다.
-- **요구사항 계약 재료 (숫자를 그대로 옮긴다)** — Section 7 의 acceptance criteria·user flow·제약과 6.2 NFR 에 적힌 **값**(최대 횟수·턴 수, 사용량 한도, 보존 기간, 크기 상한, 응답 목표치, 권한 규칙)을 요약하지 말고 값과 근거째로 넘긴다. `/adr-new` 는 이것을 ADR 의 요구사항 계약으로 적는다 (`authoring-rules.md` "구체적인 숫자"). **PRD 의 숫자를 "적절히"·"제한적으로" 로 일반화해 넘기지 않는다** — ADR 은 PRD 를 다시 가리키지 않으므로(단방향 import), 여기서 뭉개면 그 요구사항은 파이프라인에서 영구히 사라지고 구현이 임의 값을 고른다.
-- **영향 영역 힌트** — user flow / technical description 에서 추출한 페이지·컴포넌트 키워드. ADR Decision 의 vertical slice 서술에 쓰인다 (매핑에 코드 경로로 저장되지는 않는다).
+- **The category key** — the value decided in step 2.
+- **Context material** — the core of ALPS's business motivation, user story, and acceptance criteria.
+- **Decision material** — Section 7's user flow / technical description (the vertical slice: user action → API → data flow).
+- **Decision Driver candidates** — the NFRs that apply to this feature (those in 6.2 whose Scope is `Global` or this Feature ID) and the global architectural constraints (4.2), as classified in step 1. Pass them through verbatim as measurable constraints (e.g. "p95 within 3s", "AWS only"). `/adr-new` uses these as the starting point for the Decision Drivers that discriminate between alternatives — this is the channel through which the PRD's non-functional requirements become the ADR's decision rationale.
+- **Requirement contract material (carry the numbers over verbatim)** — pass the **values** recorded in Section 7's acceptance criteria, user flow, and constraints, and in the 6.2 NFRs (max counts and turns, usage quotas, retention periods, size caps, response targets, permission rules) along with their basis, without summarizing. **Pass the non-numeric requirements too** — the list of allowed states or values and their transition rules, whether an input is mandatory, visibility rules, whether duplicates are allowed, and the unit of money or time (`authoring-rules.md` "Non-numeric requirements"). `/adr-new` records these as the ADR's requirement contract (`authoring-rules.md` "Concrete numbers"). **Never generalize the PRD's numbers into "appropriately" or "in a limited way" when passing them along** — since the ADR never points back at the PRD (a one-way import), blurring them here loses that requirement from the pipeline permanently and the implementation picks an arbitrary value. The same holds for value sets and mandatory fields — summarizing them as "it manages the status" loses which states are allowed.
+- **Affected-area hints** — the page and component keywords extracted from the user flow and technical description. They are used in the ADR Decision's vertical-slice description (they are not stored in the mapping as code paths).
 
-ALPS feature 가 명시적 ID 를 가지더라도 파일명·폴더명·카테고리 키에 그 ID 를 넣지 않는다 — `/adr-new` 가 부여하는 파일명은 canonical 하게 `NNNN-kebab-title.md` 형태이고, 키는 feature 이름 기반이다. ID 는 `.mapping.json` 어디에도 저장하지 않으며(adr-writer 는 ALPS 를 참조하지 않는다), `/adr-impl` 은 카테고리 키로 대상을 찾으므로 ID 흔적을 남길 필요가 없다.
+Even when an ALPS feature has an explicit ID, never put that ID in the filename, folder name, or category key — the filename `/adr-new` assigns is canonically `NNNN-kebab-title.md`, and the key is feature-name-based. The ID is stored nowhere in `.mapping.json` (adr-writer does not reference ALPS), and `/adr-impl` finds its target by category key, so there is no need to leave a trace of the ID.
 
-### 4. 의존성(dependsOn) 보강 — importer 책임
+### 4. Supplement the dependencies (dependsOn) — the importer's responsibility
 
-`/adr-new` 가 ADR 을 작성하고 `.mapping.json` 의 카테고리 entry(feature·adrs 인덱스 레코드 등)를 채운 뒤, importer 는 6.3 그래프에서 온 **의존성만** 추가로 기록한다 — adr-writer 는 ALPS(그리고 6.3 그래프)를 모르므로 이 부분은 importer 의 책임이다. `.mapping.json` 에는 PRD 참조를 저장하지 않으므로(adr-writer 는 standalone), importer 가 뒤에 보강하는 것은 `dependsOn` 뿐이다:
+After `/adr-new` writes the ADR and fills that category's entry in `.mapping.json` (its `feature`, adrs index record, and so on), the importer additionally records **only the dependencies** that came from the 6.3 graph — adr-writer knows nothing of ALPS (and therefore of the 6.3 graph), so this part is the importer's responsibility. Since `.mapping.json` stores no PRD reference (adr-writer is standalone), the only thing the importer supplements afterward is `dependsOn`:
 
-- 해당 카테고리 entry 의 `dependsOn` — 1단계에서 파싱(및 무결성 검사)한 6.3 의존성 그래프에서 **이 feature 가 의존하는** 대상들을 카테고리 키로 변환해 배열로 기록한다. 6.3 의 의존 엣지는 Feature ID(`F3 -->|depends on| F1`)로 표현되지만, **`dependsOn` 에는 각 ID 가 아니라 그 feature 의 카테고리 키(2단계에서 이름 기반으로 정한 값)를 넣는다.** 예: `checkout` feature(`F3`)가 `login` feature(`F1`)에 의존하면 `checkout` entry(또는 그룹핑 시 `ordering/checkout`)의 `dependsOn` 에 `login`(또는 `identity/login`)을 넣는다. Feature ID 자체는 어디에도 저장하지 않으므로, 엣지를 옮길 때는 이번 배치에서 각 feature 에 정한 `Feature ID → 카테고리 키` 대응표(2단계 산물)를 참조해 변환한다. **6.3 그래프를 점검한 결과 이 feature 에 선행이 없더라도 `dependsOn` 을 `[]` 로 기록한다 — 키를 생략하지 않는다.** 6.3 을 실제로 점검한 이상 이 상태는 "의존 없음(점검 완료)" 이지 "미선언" 이 아니며, `/adr-impl` 선행 게이트는 `[]`(안내 없이 진행) 와 키 생략("의존 미선언" 경고) 을 다르게 처리하기 때문이다 (`/adr-new` 4단계와 동일 규칙). 이 필드가 `/adr-impl` 이 선행 ADR 을 먼저 구현하도록 강제하는 근거가 된다 — 6.3 의 의존성이 ADR 사이클로 넘어오는 유일한 통로이므로 빠뜨리지 않는다. 의존 엣지는 **다른 context 의 feature 를 가리켜도 정상**이다 (DDD context 사이 관계).
-  - 기록 전 각 `dependsOn` 키가 **이미 매핑에 entry 가 있는(또는 이번 배치에서 먼저 생성될) 카테고리 키**인지 확인한다 (스키마 invariant "Must reference existing category keys"). 전체 배치 실행은 1단계 위상 정렬로 선행이 먼저 생성되므로 충족되지만, 단일 feature 인자 실행은 위 dangling 케이스가 정상이다. 1단계 무결성 검사를 통과했으므로 self-edge·순환은 여기 도달하지 않는다.
-- (선택) context 수준 entry 의 `subdomainType` — 2단계에서 도메인 그룹핑을 적용했고 그 도메인의 DDD 분류가 명확하면 `core`/`supporting`/`generic` 중 하나를 context entry 에 기록한다. PRD 에 신호가 없거나 평면 구조면 **생략한다** — advisory 메타데이터이므로 비워도 매핑은 유효하고, 억지로 분류하지 않는다.
+- That category entry's `dependsOn` — from the 6.3 dependency graph parsed (and integrity-checked) in step 1, record as an array the targets **this feature depends on**, converted to category keys. The 6.3 dependency edges are expressed with Feature IDs (`F3 -->|depends on| F1`), but **`dependsOn` holds each feature's category key (the value decided by name in step 2), not the ID.** Example: if the `checkout` feature (`F3`) depends on the `login` feature (`F1`), put `login` (or `identity/login`) in the `dependsOn` of the `checkout` entry (or `ordering/checkout` when grouping). The Feature ID itself is stored nowhere, so when moving the edges over, convert them using the `Feature ID → category key` correspondence table you built for each feature in this batch (a step 2 artifact). **Even when the 6.3 graph shows this feature has no prerequisite, record `dependsOn` as `[]` — never omit the key.** Having actually checked 6.3, this state is "no dependencies (checked)" rather than "undeclared", and `/adr-impl`'s prerequisite gate treats `[]` (proceed without a notice) differently from an omitted key (a "dependencies undeclared" warning) — the same rule as `/adr-new` step 4. This field is what makes `/adr-impl` enforce implementing prerequisite ADRs first — it is the sole channel through which 6.3's dependencies carry into the ADR cycle, so never leave it out. A dependency edge **may point at a feature in another context** (a relationship between DDD contexts).
+  - Before recording, confirm each `dependsOn` key is a category key that **already has a mapping entry (or will be created earlier in this batch)** (the schema invariant "Must reference existing category keys"). A full batch run satisfies this because the step 1 topological sort creates prerequisites first, while for a single-feature run the dangling case above is normal. Since the step 1 integrity check passed, self-edges and cycles never reach this point.
+- (Optional) The context-level entry's `subdomainType` — if you applied domain grouping in step 2 and that domain's DDD classification is clear, record one of `core`/`supporting`/`generic` on the context entry. **Omit it** when the PRD gives no signal or the structure is flat — it is advisory metadata, so the mapping is valid while empty, and never force a classification.
 
 ```json
 {
   "categories": {
     "<category>": {
-      "dependsOn": ["<선행 카테고리 키>"]
+      "dependsOn": ["<prerequisite category key>"]
     }
   }
 }
 ```
 
-큐에 다음 feature 가 남아 있으면 "다음 피쳐(`<이름>`)로 계속 진행합니다" 한 줄을 출력하고 2단계로 돌아간다. 큐가 비면 전체 변환 결과 요약(생성된 ADR 목록)을 보여주고 종료.
+If the queue still holds a next feature, print one line — "continuing with the next feature (`<name>`)" — and return to step 2. When the queue empties, show a summary of the whole conversion (the list of ADRs created) and finish.
 
-### 5. opt-out 처리
+### 5. Handling opt-out
 
-사용자가 "ADR 없이 바로 구현해줘", "임시로 빨리", "hotfix" 등을 명시하면:
+If the user explicitly says "just implement it without an ADR", "quick and temporary", "hotfix", or similar:
 
-- 리스크(검토 부담↓·드리프트↑)를 한 줄로 안내한다.
-- 그래도 진행을 원하면 최소 ADR(Status: `Proposed`, Decision 1문단)이라도 `/adr-new` 로 작성한 뒤 코드로 넘어가자고 권유한다.
-- 사용자가 끝까지 거부하면 따른다. 단 다음 `/adr-sync` 시점에 ADR을 채울 deferred 항목으로 기록한다.
+- Explain the risk in one line (less review burden, more drift).
+- If they still want to proceed, suggest writing at least a minimal ADR (Status: `Proposed`, a one-paragraph Decision) with `/adr-new` before moving to code.
+- If they refuse to the end, comply. But record it as a deferred item to fill in as an ADR at the next `/adr-sync`.

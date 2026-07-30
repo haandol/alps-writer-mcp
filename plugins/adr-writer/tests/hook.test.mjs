@@ -65,7 +65,7 @@ test("corrupt mapping JSON → surfaces a warning, not '(empty)'", () => {
   withTmp((dir) => {
     write(dir, "docs/adr/.mapping.json", "{ categories: { broken,,, ");
     const ctx = runHook(dir);
-    assert.match(ctx, /JSON 파싱에 실패/);
+    assert.match(ctx, /failed to parse as JSON/);
     assert.doesNotMatch(ctx, /no ADRs registered/);
   });
 });
@@ -130,7 +130,7 @@ test("directive always carries the ADR-first cycle framing", () => {
 // Refactoring is exempt by policy: a coding agent's planning step already scopes
 // the change and its call-site impact, so writing that plan into an ADR would
 // pin a volatile plan into the stable layer. The exemption must hold regardless
-// of size — the earlier wording ("동작/구조 변경" as the trigger, "단순 리팩터링"
+// of size — the earlier wording (a "behavior or structural change" trigger, "simple refactoring"
 // as the exemption) invited the model to treat a large interface-level refactor
 // as in-scope.
 test("directive exempts refactoring of any size, but not decision changes", () => {
@@ -138,15 +138,15 @@ test("directive exempts refactoring of any size, but not decision changes", () =
     write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
     const ctx = runHook(dir);
 
-    assert.match(ctx, /리팩터링도 면제다/);
-    assert.match(ctx, /규모가 크거나 인터페이스·모듈 구조를 바꿔도 마찬가지다/);
-    assert.match(ctx, /플래닝 기능/);
+    assert.match(ctx, /Refactoring is exempt too/);
+    assert.match(ctx, /even large ones, and even those that change interfaces or module structure/);
+    assert.match(ctx, /planning step/);
     // The escape hatch: a "refactor" that changes a decision is not a refactor.
-    assert.match(ctx, /결정 자체를 바꾸면/);
+    assert.match(ctx, /alters the decision itself/);
     // The trigger must not name plain structural change, or it would re-capture
     // the very refactors the next line exempts.
-    assert.doesNotMatch(ctx, /동작\/구조 변경에 해당하는지/);
-    assert.doesNotMatch(ctx, /단순 버그픽스, 리팩터링/);
+    assert.doesNotMatch(ctx, /behavior or structural change/);
+    assert.doesNotMatch(ctx, /simple bug fixes, refactoring/);
   });
 });
 

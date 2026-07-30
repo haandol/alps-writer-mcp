@@ -132,6 +132,25 @@ test("countAlternatives counts bullet-form alternatives", () => {
   assert.deepEqual(countAlternatives(GOOD_BODY), { present: true, count: 2 });
 });
 
+// Harness prompts and rule docs are English, but an ADR BODY follows the language
+// the user writes in (authoring-rules "Conventions"). So the alternatives heading
+// arrives either way, and the checkers must accept both: matching only one spelling
+// would report `alternatives-missing` on a perfectly good ADR and make R14's count
+// check silently skip it. The fixtures above cover the Korean spelling; these cover
+// the English one.
+test("checkSections and countAlternatives accept an English alternatives heading", () => {
+  const english = GOOD_BODY.replace("### 대안 검토", "### Alternatives");
+  assert.equal(checkSections(english).hasAlternatives, true);
+  assert.deepEqual(countAlternatives(english), { present: true, count: 2 });
+  // the README template's fuller form, with a trailing qualifier after a dash
+  const withQualifier = GOOD_BODY.replace("### 대안 검토", "### Alternatives — at least two");
+  assert.equal(checkSections(withQualifier).hasAlternatives, true);
+  assert.deepEqual(countAlternatives(withQualifier), { present: true, count: 2 });
+  // an unrelated heading must still not be mistaken for the alternatives section
+  const unrelated = GOOD_BODY.replace("### 대안 검토", "### Alternative payment providers we use");
+  assert.equal(checkSections(unrelated).hasAlternatives, false);
+});
+
 test("countAlternatives counts table rows minus the header", () => {
   const body = `## Decision
 d

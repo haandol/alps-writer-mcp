@@ -64,7 +64,7 @@ test("every argument-taking skill declares an argument-hint", () => {
 test("adr-impl-review advertises the argument its own procedure parses", () => {
   const source = read(path.join(ADR_ROOT, "skills", "adr-impl-review", "SKILL.md"));
   assert.match(frontmatter(source), /^argument-hint:.*adr-path-or-category/m);
-  assert.match(source, /카테고리 키면/);
+  assert.match(source, /If it is a category key/);
   assert.match(source, /--base/);
 });
 
@@ -107,7 +107,7 @@ test("user-facing prompts and templates draw diagrams in Mermaid, not ASCII", ()
 // The same defect class as box-drawing, but with arrow glyphs: a flow drawn as
 // ```text  A → B → C  ```. Scoped to `text`/untagged fences whose lines are
 // almost entirely arrows, so the many legitimate uses stay unflagged — prose
-// arrows, `bash` fences whose comments say "코드 → ADR", and the output-format
+// arrows, `bash` fences whose comments say "code → ADR", and the output-format
 // templates in agents/ and the ADR skills, which are report skeletons, not
 // diagrams.
 test("flow diagrams are Mermaid, not arrow-glyph text blocks", () => {
@@ -177,27 +177,125 @@ test("every ADR template on disk is named in the /adr-new seeding step", () => {
 test("the authoring rules gate requirements ahead of the code-readthrough filter", () => {
   const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
   // the gate exists and runs first
-  assert.match(rules, /요구사항 관문/);
-  assert.match(rules, /재생성 테스트/);
+  assert.match(rules, /Requirement gate/);
+  assert.match(rules, /Regeneration test/);
+  assert.match(rules, /Why the gate comes first/);
   // the requirement-value vs tuning-value split, with both directions stated
-  assert.match(rules, /요구사항 값은 반드시 적고/);
-  assert.match(rules, /구현 튜닝값/);
+  assert.match(rules, /keep requirement values, drop tuning values/);
+  assert.match(rules, /tuning value/);
   // the old blanket ban on constants must be gone — it swept requirements away
   assert.doesNotMatch(rules, /구현 상수\/튜닝값/);
+  assert.doesNotMatch(rules, /no constants in an ADR/i);
+});
+
+// Requirements do not arrive only as numbers. An allowed value set, a mandatory
+// field, a permission rule and a forbidden transition are contracts too, and the
+// "code readthrough" filter sweeps them out just as easily as it swept out
+// numbers — so the rules must extend the same gate to non-numeric facts, and
+// must split enum (set = ADR, identifier = code) rather than calling enums
+// wholesale code-authoritative.
+test("the authoring rules keep non-numeric requirements, splitting enum set from identifier", () => {
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  assert.match(rules, /### Non-numeric requirements/);
+  // the load-bearing categories a regenerated implementation must honor
+  for (const kind of [
+    /Allowed value set/,
+    /Mandatory or not/,
+    /Permission\/visibility/,
+    /Ordering\/uniqueness/,
+    /Unit\/format/,
+    /Allowed\/forbidden transitions/,
+  ])
+    assert.match(rules, kind);
+  // the split that keeps a business-defined value set from being overwritten
+  assert.match(
+    rules,
+    /set and transitions belong to the ADR, names and representation to the code/,
+  );
+  // an enum whose allowed set changed is a contract change, never a minor edit
+  const minor = rules.match(/- \*\*Do not log it \(minor\)\*\*[^\n]*/)?.[0] ?? "";
+  assert.notStrictEqual(minor, "", "the minor-vs-major log criteria must be present");
+  assert.match(minor, /allowed set_ changing is major/);
+});
+
+// A requirement value lives in BOTH the ADR (the contract) and the code (its
+// enforcement) — that duplication is by design, not something the code-readthrough
+// filter should collapse. Only the ADR records that the number is a contract
+// rather than a value the implementation happened to pick, which is why changing
+// it means editing the ADR first and the code second. Without this stated, "the
+// code already has the 7" reads as grounds for dropping it from the ADR, and
+// "just bump the constant" reads as a change that skips the cycle entirely.
+test("the rules state requirements live in both layers, ADR first when changing them", () => {
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  assert.match(rules, /### Requirements live in the code and in the ADR/);
+  // the two layers hold different things — contract vs enforcement
+  assert.match(rules, /\*\*ADR = the contract\*\*/);
+  assert.match(rules, /\*\*Code = enforcement of that contract\*\*/);
+  // the ordering, and the explicit ban on the reverse
+  assert.match(rules, /ADR first, code second/);
+  assert.match(rules, /Never change the code first and reconcile the ADR later/);
+  // the README must carry the same framing where the gray-zone model is read
+  const readme = read(path.join(ADR_ROOT, "templates", "adr", "README.md"));
+  assert.match(readme, /Requirements live in both the ADR and the code/);
+  // and the code-readthrough filter must not be readable as a reason to drop it
+  assert.match(readme, /is not grounds for dropping a requirement that passed the gate/);
+});
+
+// The per-turn hook is the only guard when a user just says "bump 7 turns to 10"
+// without invoking a skill. If its scope test reads as "new feature or behavior
+// change", a bare constant edit looks exempt — so the directive has to name a
+// requirement-value change as in-scope and state the ADR-then-code ordering,
+// while keeping tuning-value edits exempt.
+test("the per-turn directive treats a requirement-value change as in-scope", () => {
+  const hook = read(path.join(ADR_ROOT, "hooks", "surface-adr-context.mjs"));
+  assert.match(
+    hook,
+    /changes a requirement value or rule is a behavior change even when it looks like a one-line constant edit/,
+  );
+  // the ordering the directive must enforce
+  assert.match(hook, /fix the ADR before the code/);
+  // tuning values stay exempt, so the directive does not swallow every constant
+  assert.match(
+    hook,
+    /tuning value absent from the ADR[^"]*is implementation discretion and therefore exempt/,
+  );
+});
+
+// Every stage that compares an ADR against code must apply the enum split, or a
+// business-defined value set gets silently rewritten to whatever the code says
+// under the banner of "implementation facts are code-authoritative".
+test("stages that reconcile ADR against code split enum set from enum identifier", () => {
+  const stages = {
+    "skills/adr-sync/SKILL.md": [
+      /Non-numeric requirements \(the ADR is authoritative\)/,
+      /allowed states being added or removed, or a formerly forbidden transition becoming allowed, is a contract change/,
+    ],
+    "skills/adr-rollup/SKILL.md": [/non-numeric requirements/],
+    "skills/adr-impl/SKILL.md": [/Non-numeric requirements are the same/],
+    "agents/adr-impl-sufficiency-reviewer.md": [/Non-numeric requirement compliance/],
+    "agents/adr-reviewer.md": [/non-numeric requirements/],
+    "skills/adr-new/SKILL.md": [/Record non-numeric requirements in the same place/],
+  };
+  for (const [rel, patterns] of Object.entries(stages)) {
+    const source = read(path.join(ADR_ROOT, rel));
+    for (const pattern of patterns) assert.match(source, pattern, `${rel} must state ${pattern}`);
+  }
 });
 
 test("every stage that filters an ADR body names the requirement-value rule", () => {
   const stages = {
-    "agents/adr-reviewer.md": [/요구사항 관문/, /R18/, /R19/],
-    "skills/adr-new/SKILL.md": [/요구사항 값/, /재생성 테스트/],
-    "skills/adr-sync/SKILL.md": [/요구사항 관문/, /Missing requirement/],
-    "skills/adr-rollup/SKILL.md": [/요구사항 계약 무손실 이월/],
-    "skills/adr-impl/SKILL.md": [/요구사항 값은 값 그대로 시행/],
-    "agents/adr-impl-sufficiency-reviewer.md": [/요구사항 값 준수/],
-    "agents/adr-impl-necessity-reviewer.md": [/요구사항 값은 계약/],
-    "agents/adr-impl-explainer.md": [/ADR이 정한 값과 코드의 값/],
-    "agents/adr-impl-review-report-writer.md": [/계약 준수/],
-    "templates/adr/README.md": [/재생성 테스트/],
+    "agents/adr-reviewer.md": [/Requirement gate/, /R18/, /R19/],
+    "skills/adr-new/SKILL.md": [/requirement value/, /regeneration test/],
+    "skills/adr-sync/SKILL.md": [/requirement gate/, /Missing requirement/],
+    "skills/adr-rollup/SKILL.md": [/Carry the requirement contract over without loss/],
+    "skills/adr-impl/SKILL.md": [/Enforce the requirement values the ADR records, at face value/],
+    "agents/adr-impl-sufficiency-reviewer.md": [/Requirement-value compliance/],
+    "agents/adr-impl-necessity-reviewer.md": [
+      /Requirement values recorded in the ADR are contract/,
+    ],
+    "agents/adr-impl-explainer.md": [/What the ADR specifies vs what the code does/],
+    "agents/adr-impl-review-report-writer.md": [/Contract compliance/],
+    "templates/adr/README.md": [/regeneration test/],
   };
   for (const [rel, patterns] of Object.entries(stages)) {
     const source = read(path.join(ADR_ROOT, rel));
@@ -206,7 +304,7 @@ test("every stage that filters an ADR body names the requirement-value rule", ()
   // the ALPS-side importer must hand the numbers over instead of summarizing
   assert.match(
     read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md")),
-    /요구사항 계약 재료/,
+    /Requirement contract material/,
   );
 });
 
@@ -225,6 +323,9 @@ test("ALPS Section 7 elicits the values the result must honor", () => {
     assert.match(guide, /Never invent a requirement value the user did not give/, label);
     // the rule cuts both ways — tuning constants stay excluded
     assert.match(guide, /tuning constants/, label);
+    // requirements are not only numbers: the guide must elicit the non-numeric ones
+    assert.match(guide, /Requirements do not arrive only as numbers/, label);
+    assert.match(guide, /which transitions are forbidden/, label);
   }
 });
 
@@ -237,7 +338,7 @@ test("the Section 7 chapter template keeps requirement values and drops tuning c
       path.join(PLUGINS_ROOT, "alps-writer", dir, "templates", "chapters", "07-feature-spec.xml"),
     );
     const label = `alps-writer/${dir}/templates/chapters/07-feature-spec.xml`;
-    assert.match(chapter, /VALUES the result must honor/, label);
+    assert.match(chapter, /VALUES AND RULES the result must honor/, label);
     assert.match(chapter, /Values the result must honor:/, label);
     assert.match(
       chapter,
@@ -247,6 +348,8 @@ test("the Section 7 chapter template keeps requirement values and drops tuning c
     assert.match(chapter, /A requirement value is not a tuning constant/, label);
     // acceptance criteria must restate the values so the number is verifiable
     assert.match(chapter, /Restate every value from 7\.x\.3/, label);
+    // non-numeric requirements must survive into the user's own document too
+    assert.match(chapter, /Requirements are not only numbers/, label);
   }
 });
 
@@ -254,13 +357,15 @@ test("the Section 7 chapter template keeps requirement values and drops tuning c
 // must honor, so it cannot be filed as a minor (unlogged) edit.
 test("a requirement value change is logged as major, not swept up as minor", () => {
   const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
-  const major = rules.match(/- \*\*로그에 남긴다 \(major\)\*\*[^\n]*/)?.[0] ?? "";
-  assert.match(major, /요구사항 값 변경/);
-  const minor = rules.match(/- \*\*로그에 남기지 않는다 \(minor\)\*\*[^\n]*/)?.[0] ?? "";
-  assert.doesNotMatch(minor, /임계/, "threshold tweaks must not read as always-minor");
+  const major = rules.match(/- \*\*Log it \(major\)\*\*[^\n]*/)?.[0] ?? "";
+  assert.match(major, /a requirement value change/);
+  // and its non-numeric twin, so a changed value set is not filed as minor either
+  assert.match(major, /non-numeric requirement change/);
+  const minor = rules.match(/- \*\*Do not log it \(minor\)\*\*[^\n]*/)?.[0] ?? "";
+  assert.doesNotMatch(minor, /threshold/i, "threshold tweaks must not read as always-minor");
   assert.match(
     read(path.join(ADR_ROOT, "templates", "adr", "decision-log.template.md")),
-    /요구사항 값 변경/,
+    /requirement value change/,
   );
 });
 
@@ -269,7 +374,7 @@ test("a requirement value change is logged as major, not swept up as minor", () 
 test("the decision-log format has one source: the seed file", () => {
   const seed = read(path.join(ADR_ROOT, "templates", "adr", "decision-log.template.md"));
   assert.match(seed, /^# Decision Log: <category>/);
-  assert.match(seed, /\*\*현재 ADR\*\*/);
+  assert.match(seed, /\*\*Current ADR\*\*/);
 
   const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
   assert.match(rules, /decision-log\.template\.md/);

@@ -89,6 +89,6 @@ test("INCONCLUSIVE with no findings does not render a false conforming claim", (
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /INCONCLUSIVE/);
-  assert.match(result.stdout, /검토가 완료되지 않았습니다/);
-  assert.doesNotMatch(result.stdout, /고칠 항목이 없습니다/);
+  assert.match(result.stdout, /the review did not complete/);
+  assert.doesNotMatch(result.stdout, /No unnecessary changes or counterexamples were confirmed/);
 });

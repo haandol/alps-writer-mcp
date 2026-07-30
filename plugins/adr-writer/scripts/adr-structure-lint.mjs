@@ -181,7 +181,7 @@ function main() {
   if (!existsSync(adrRoot) || !statSync(adrRoot).isDirectory()) {
     // No ADR tree → nothing to lint. Not an error (a fresh repo hasn't run
     // /adr-new yet); say so and exit clean.
-    finish(rep, opts, `ADR 디렉토리 없음: ${adrRoot} (아직 ADR이 없습니다)`);
+    finish(rep, opts, `no ADR directory: ${adrRoot} (no ADRs yet)`);
     return;
   }
 
@@ -194,10 +194,14 @@ function main() {
     try {
       mapping = JSON.parse(mappingRaw);
     } catch (e) {
-      rep.error("mapping-parse", mappingPath, `JSON 파싱 실패: ${e.message}`);
+      rep.error("mapping-parse", mappingPath, `failed to parse JSON: ${e.message}`);
     }
   } else {
-    rep.warn("mapping-missing", mappingPath, "매핑 파일이 없습니다 (디스크의 ADR 디렉토리로 진행)");
+    rep.warn(
+      "mapping-missing",
+      mappingPath,
+      "mapping file is absent (proceeding from the ADR directories on disk)",
+    );
   }
 
   // ── mapping shape (R16 + schema subset) ──────────────────────────────
@@ -262,7 +266,7 @@ function main() {
       rep.error(
         "path-depth",
         where,
-        `카테고리 세그먼트 ${depth}단계 (최대 2단계 — 3-세그먼트 중첩 금지)`,
+        `category is ${depth} segments deep (max 2 — 3-segment nesting is forbidden)`,
       );
 
     // R5a: anti-pattern segment on the directory path (works without mapping)
@@ -272,12 +276,12 @@ function main() {
         rep.error(
           "anti-pattern-dir",
           where,
-          `디렉토리 세그먼트 "${seg}" 는 기술 레이어 이름 (금지)`,
+          `directory segment "${seg}" is a technical layer name (forbidden)`,
         );
 
     const body = readSafe(file);
     if (body == null) {
-      rep.error("read", where, "파일을 읽을 수 없습니다");
+      rep.error("read", where, "cannot read the file");
       continue;
     }
 
@@ -290,7 +294,7 @@ function main() {
         rep.error(
           "title-number",
           where,
-          `제목 번호(${titleNum}) 가 파일명 번호(${numFromName}) 와 불일치`,
+          `title number (${titleNum}) does not match the filename number (${numFromName})`,
         );
     }
 
@@ -299,7 +303,7 @@ function main() {
     // mirror the body's ## Status line — adr-impl/adr-sync update both in
     // lockstep. A mismatch means the index went stale.
     const statusSec = sectionRange(body, (h) => h.text.trim() === "Status");
-    if (!statusSec) rep.error("status-missing", where, "## Status 섹션이 없습니다");
+    if (!statusSec) rep.error("status-missing", where, "no ## Status section");
     else {
       const val = firstNonEmpty(statusSec.lines, statusSec.start + 1, statusSec.end);
       const st = classifyStatus(val);
@@ -311,7 +315,7 @@ function main() {
           rep.error(
             "status-index-mismatch",
             where,
-            `.mapping.json 의 status "${mapped}" 가 본문 ## Status "${val}" 와 불일치`,
+            `.mapping.json status "${mapped}" does not match the body's ## Status "${val}"`,
           );
       }
     }
@@ -319,32 +323,36 @@ function main() {
     // required sections
     const secs = checkSections(body);
     for (const m of secs.missingHard)
-      rep.error("section-missing", where, `필수 섹션 누락: ## ${m}`);
+      rep.error("section-missing", where, `missing required section: ## ${m}`);
     if (!secs.hasAlternatives)
-      rep.warn("alternatives-missing", where, "대안 검토 섹션이 없습니다 (권장)");
+      rep.warn("alternatives-missing", where, "no alternatives section (recommended)");
     if (!secs.hasDrivers)
-      rep.warn("drivers-missing", where, "Decision Drivers 섹션이 없습니다 (권장)");
+      rep.warn("drivers-missing", where, "no Decision Drivers section (recommended)");
 
     // R13: Decision Drivers count 3-5
     const dr = countDrivers(body);
     if (dr.present && (dr.count < 3 || dr.count > 5))
-      rep.warn("drivers-count", where, `Decision Drivers ${dr.count}개 (권장 3-5개)`);
+      rep.warn("drivers-count", where, `${dr.count} Decision Drivers (3-5 recommended)`);
 
     // R14: alternatives ≥2 (count only; strawman is LLM)
     const alt = countAlternatives(body);
     if (alt.present && alt.count < 2)
-      rep.error("alternatives-count", where, `대안 ${alt.count}개 (최소 2개 필요)`);
+      rep.error("alternatives-count", where, `${alt.count} alternative(s) (at least 2 required)`);
 
     // R10: Related-link targets resolve on disk
     for (const target of relatedLinkTargets(body)) {
       const resolved = path.resolve(path.dirname(file), target);
       if (!existsSync(resolved))
-        rep.error("related-broken", where, `Related 링크 대상 없음: ${target}`);
+        rep.error("related-broken", where, `Related link target does not exist: ${target}`);
     }
 
     // R2: code-reference depth (advisory)
     for (const hit of codeRefHits(body))
-      rep.warn("code-ref-depth", `${where}:${hit.line}`, `파일 단위 코드 참조 의심: ${hit.text}`);
+      rep.warn(
+        "code-ref-depth",
+        `${where}:${hit.line}`,
+        `suspected file-level code reference: ${hit.text}`,
+      );
 
     // R18 (form half): a value written as a code constant. The value itself may
     // well belong here — requirement values must stay — but the identifier that
@@ -353,14 +361,14 @@ function main() {
       rep.warn(
         "value-as-constant",
         `${where}:${hit.line}`,
-        `값이 코드 상수 형태로 적혀 있습니다: ${hit.text} — 요구사항 값이면 도메인 문장으로 (예: "채팅 한 세션은 최대 20턴 — 요금제 정책"), 구현 튜닝값이면 코드로 옮기세요`,
+        `value written in code-constant form: ${hit.text} — if it is a requirement value, rewrite it as a domain sentence (e.g. "a chat session is capped at 20 turns — pricing policy"); if it is an implementation tuning value, move it to the code`,
       );
 
     // R8 (disk→mapping): this file must be listed in .mapping.json adrs[].
     // .mapping.json is the single ADR index (README has no ADR list), so an
     // on-disk ADR missing from it is a hard orphan.
     if (mapping?.categories && !mappedAdrs.has(rel))
-      rep.error("index-orphan-mapping", where, ".mapping.json 의 어느 adrs[] 에도 없음");
+      rep.error("index-orphan-mapping", where, "absent from every adrs[] in .mapping.json");
   }
 
   // ── mapping→disk: every adrs[] path exists ────────────────────────────
@@ -375,7 +383,7 @@ function main() {
           rep.error(
             "mapping-dangling-adr",
             mappingPath,
-            `카테고리 "${key}" 의 adrs 경로가 디스크에 없음: ${a}`,
+            `adrs path for category "${key}" does not exist on disk: ${a}`,
           );
       }
     }
@@ -384,7 +392,7 @@ function main() {
   // ── numbering gaps (rollup advisory, warning-only) ────────────────────
   // Group in-scope on-disk ADRs by category (directory under the ADR root) and
   // flag any category whose NNNN sequence has a hole. This is NOT an error:
-  // split/adr-sync intentionally keep gaps ("결번 유지"). It's a heads-up that
+  // split/adr-sync intentionally keep gaps ("keep gaps"). It's a heads-up that
   // if adr-rollup just deleted a chain member, its step 7 renumber may be
   // pending — the rollup skill reads this warning and asks the user whether to
   // fill the gap. Skipped when --category narrows to one leaf with no siblings.
@@ -402,17 +410,17 @@ function main() {
       rep.warn(
         "numbering-gap",
         `docs/adr/${g.category}`,
-        `번호 결번: ${g.missing.map((n) => String(n).padStart(4, "0")).join(", ")} 없음 ` +
-          `(존재: ${g.present.map((n) => String(n).padStart(4, "0")).join(", ")}). ` +
-          `방금 adr-rollup 을 실행했다면 7단계 renumber 가 남았을 수 있습니다 — 결번을 메울지 사용자에게 확인하세요. ` +
-          `(split/adr-sync 로 생긴 결번이면 정상이니 그대로 둡니다.)`,
+        `numbering gap: ${g.missing.map((n) => String(n).padStart(4, "0")).join(", ")} missing ` +
+          `(present: ${g.present.map((n) => String(n).padStart(4, "0")).join(", ")}). ` +
+          `If you just ran adr-rollup, its step-7 renumber may still be pending — ask the user whether to close the gap. ` +
+          `(A gap left by split or adr-sync is normal; leave it alone.)`,
       );
   }
 
   // ── decision-log ADR pointers resolve on disk ─────────────────────────
   // The log is a convention file (no NNNN- name, absent from .mapping.json), so
   // no per-ADR check reads it — yet adr-rollup's step 7 renumber moves the very
-  // ADR its "현재 ADR" pointer names. A missed repoint left a log pointing at a
+  // ADR its "current ADR" pointer names. A missed repoint left a log pointing at a
   // deleted path with a clean harness: the stale-citation finder matches the
   // "<cat>/NNNN" token form while the log links relatively ("./0001-x.md"), and
   // R10 only reads NNNN-*.md bodies. Error, not warning: a log whose pointer is
@@ -427,7 +435,7 @@ function main() {
         rep.error(
           "decision-log-link-broken",
           rel,
-          `decision-log 링크 대상 없음: ${target} (rollup renumber 후 '현재 ADR' 포인터를 새 경로로 옮기세요)`,
+          `decision-log link target does not exist: ${target} (after a rollup renumber, repoint the "current ADR" pointer to the new path)`,
         );
       }
     }
@@ -446,7 +454,7 @@ function main() {
       rep.error(
         "invariants-env",
         invScript,
-        `adr-invariants.sh 환경 오류(exit 2): ${(r.stderr || "").trim()}`,
+        `adr-invariants.sh environment error (exit 2): ${(r.stderr || "").trim()}`,
       );
     } else if (invExit === 1) {
       // fold each reported reverse-ref line as an error
@@ -455,11 +463,15 @@ function main() {
         if (t && !t.startsWith("✓")) rep.error("invariants", invScript, t);
       }
     } else if (invExit < 0) {
-      rep.error("invariants-spawn", invScript, "adr-invariants.sh 실행 실패 (bash/스크립트 확인)");
+      rep.error(
+        "invariants-spawn",
+        invScript,
+        "failed to run adr-invariants.sh (check bash and the script)",
+      );
     }
   }
 
-  finish(rep, opts, files.length === 0 ? "검사할 ADR 파일이 없습니다" : null);
+  finish(rep, opts, files.length === 0 ? "no ADR files to check" : null);
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -496,9 +508,9 @@ function firstNonEmpty(lines, start, end) {
 function filenameMsg(fn) {
   const map = {
     "stale-fN-prefix":
-      "파일명에 stale fN- 접두사 (Feature ID 는 파일명·카테고리 키에 넣지 않음 — canonical NNNN-kebab-title.md)",
-    uppercase: "파일명에 대문자 (kebab-case 만 허용)",
-    "not-canonical": "canonical 형식 아님 (NNNN-kebab-case-title.md)",
+      "stale fN- prefix in the filename (Feature IDs never go in filenames or category keys — canonical is NNNN-kebab-title.md)",
+    uppercase: "uppercase in the filename (kebab-case only)",
+    "not-canonical": "not canonical form (NNNN-kebab-case-title.md)",
   };
   return `${fn.basename} — ${map[fn.reason] || fn.reason}`;
 }
@@ -506,15 +518,15 @@ function filenameMsg(fn) {
 function statusReason(reason) {
   return (
     {
-      empty: "값이 비어 있음",
-      "informal-status": "비공식 상태 (Implemented/Done/Completed 금지)",
-      "proposed-should-not-carry-date": "Proposed 에는 날짜를 붙이지 않음",
-      "missing-date": "날짜 누락 (Accepted/Deprecated 는 (YYYY-MM-DD) 필요)",
+      empty: "value is empty",
+      "informal-status": "informal status (Implemented/Done/Completed are forbidden)",
+      "proposed-should-not-carry-date": "Proposed carries no date",
+      "missing-date": "missing date (Accepted/Deprecated require (YYYY-MM-DD))",
       "date-only":
-        "괄호 안에는 날짜만 (Accepted/Deprecated (YYYY-MM-DD) — 날짜 뒤 참조·설명·feature-id 등 부가 텍스트 금지)",
+        "parentheses carry the date only (Accepted/Deprecated (YYYY-MM-DD) — no trailing references, explanations, or feature IDs)",
       "superseded-needs-adr-link":
-        "Superseded 는 후속 ADR 링크 필요 (Superseded by [ADR ...](link))",
-      unrecognized: "허용된 Status 값이 아님 (Proposed/Accepted/Deprecated/Superseded)",
+        "Superseded requires a link to the successor ADR (Superseded by [ADR ...](link))",
+      unrecognized: "not an allowed Status value (Proposed/Accepted/Deprecated/Superseded)",
     }[reason] || reason
   );
 }

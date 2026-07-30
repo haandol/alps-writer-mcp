@@ -6,161 +6,164 @@ argument-hint: "[adr-path-or-category] [--base <ref>]"
 
 # adr-impl-review
 
-구현 결과를 곧바로 승인하지 않고 다음 순서로 반증한다.
+Rather than approving the implementation outright, disprove it in the following order.
 
 ```mermaid
 flowchart TD
-    EXPLAIN["쉬운 설명"] --> GATE["인간의 의도 확인"]
-    GATE --> NEC["필요성 리뷰"]
-    GATE --> SUF["충분성 리뷰 + 테스트"]
-    NEC --> EVID["증거 검증"]
+    EXPLAIN["Plain explanation"] --> GATE["Human intent confirmation"]
+    GATE --> NEC["Necessity review"]
+    GATE --> SUF["Sufficiency review + tests"]
+    NEC --> EVID["Evidence verification"]
     SUF --> EVID
-    EVID --> REPORT["주니어용 수정 리포트"]
-    REPORT --> RULING["항목별 사용자 판정"]
+    EVID --> REPORT["Junior-facing repair report"]
+    REPORT --> RULING["Per-item user ruling"]
 ```
 
-필요성·충분성 리뷰는 서로의 결과를 보지 않고 **병렬로** 실행한다 (3절).
+The necessity and sufficiency reviews run **in parallel**, without seeing each other's results (section 3).
 
-이 절차는 수학적 필요충분성의 증명이 아니다. **불필요한 변경과 빠진 동작을 서로 다른 관점에서 찾는 반증 기반 검토**다. 테스트 통과는 현재 실행한 사례에서 반례를 찾지 못했다는 증거일 뿐 완전성의 증명이 아니다.
+This procedure is not a proof of mathematical necessity and sufficiency. It is **a disproof-based review that hunts for unnecessary changes and missing behavior from two different perspectives.** A passing test is only evidence that no counterexample was found among the cases actually executed — not a proof of completeness.
 
-## 불변 원칙
+> **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the review artifacts in the language the user writes in (`authoring-rules.md` "Conventions"). Any user-facing phrasing below is a guide, not a literal string.
 
-- **보고 전용**: 코드·ADR·매핑을 자동 수정하지 않는다. Markdown/JSON/HTML 리뷰 산출물만 쓴다.
-- **독립 컨텍스트**: 설명자, 필요성 리뷰어, 충분성 리뷰어를 각각 새 격리 컨텍스트에서 실행한다. 리뷰어에게 설명문이나 상대 리뷰 결과를 넘기지 않는다.
-- **ADR이 행동 스펙**: 구현 직후에는 ADR의 결정이 권위다. 단 API 이름·실제 필드명 같은 구현 사실은 코드가 권위이므로 `Impl-fact mismatch`로 분리한다. 리뷰어 에이전트는 이 전제(ADR을 옳다고 봄)를 절대 깨지 않는다 — 명세 자체가 옳은지는 오직 2절 인간 게이트에서 사람이 묻고, 부족하면 impl-review 안에서 고치지 않고 밖으로(ADR 갱신·`adr-reviewer`) 라우팅한다.
-- **주장보다 증거**: 모든 finding은 ADR 인용, 실제 diff/코드 위치, 재현 절차나 실행 결과 중 해당 근거를 포함한다. 재현하지 못한 추측은 `Unverified risk`로만 보고한다.
-- **사람의 역할 분리**: 설명 확인은 “이해 가능하고 의도와 맞는가”의 게이트이지 코드가 옳다는 승인이 아니다.
+## Invariant principles
 
-## 1. 대상과 변경 범위 확정
+- **Report-only**: never auto-modify code, ADRs, or the mapping. Write only the Markdown/JSON/HTML review artifacts.
+- **Independent contexts**: run the explainer, the necessity reviewer, and the sufficiency reviewer each in a fresh isolated context. Never pass a reviewer the explanation document or the other reviewer's result.
+- **The ADR is the behavioral spec**: right after implementation, the ADR's decision is authoritative. But implementation facts such as API names and actual field names are the code's authority, so separate those as `Impl-fact mismatch`. The reviewer agents never break this premise (that the ADR is correct) — whether the spec itself is right is asked only by the human at the section 2 gate, and if it falls short, it is routed outward (an ADR update, `adr-reviewer`) rather than fixed inside impl-review.
+- **Evidence over assertion**: every finding includes the applicable basis among an ADR quote, the actual diff or code location, and a reproduction procedure or execution result. Report a conjecture you could not reproduce only as `Unverified risk`.
+- **Separation of the human's role**: confirming the explanation is a gate for "is this understandable and does it match the intent?" — not an approval that the code is correct.
 
-ADR 식별은 `/adr-impl`과 같은 규칙을 따른다.
+## 1. Fix the target and the change scope
 
-- 파일 경로면 해당 ADR을 사용한다.
-- 카테고리 키면 `docs/adr/.mapping.json`에서 찾는다.
-- 인자가 없으면 `Accepted` ADR 목록을 보여주고 선택받는다.
-- `Proposed` ADR이면 부분 구현 검토인지 한 번 확인한다.
+ADR identification follows the same rules as `/adr-impl`.
 
-리뷰 대상 diff는 다음 우선순위로 정한다.
+- If it is a file path, use that ADR.
+- If it is a category key, look it up in `docs/adr/.mapping.json`.
+- With no argument, show the list of `Accepted` ADRs and take a selection.
+- If it is a `Proposed` ADR, confirm once whether this is a partial-implementation review.
 
-1. 사용자가 준 PR/commit range 또는 `--base`.
-2. 현재 staged + unstaged 변경.
-3. 깨끗한 worktree면 현재 브랜치와 기본 브랜치의 merge-base diff.
+Determine the diff under review by this priority:
 
-범위가 여러 구현을 섞어 ADR과 대응시킬 수 없으면 추측하지 말고 base/range를 확인받는다. 범위 확정 뒤 다음 원본 재료를 준비한다.
+1. A PR / commit range the user supplied, or `--base`.
+2. The current staged + unstaged changes.
+3. For a clean worktree, the merge-base diff between the current branch and the default branch.
 
-- ADR 전문과 `.mapping.json`의 해당 entry
-- raw diff와 변경 파일 목록
-- 변경 코드의 직접 call path와 관련 테스트
-- `AGENTS.md`, `CONTRIBUTING.md`, `CLAUDE.md` 중 존재하는 프로젝트 규약
-- 실행 가능한 프로젝트 테스트 명령
+If the scope mixes several implementations and cannot be mapped onto the ADR, do not guess — get the base/range confirmed. After fixing the scope, prepare the following original material.
 
-리뷰 산출물 디렉터리를 하나 만들고 경로를 이후 모든 에이전트에 전달한다. 저장소를 더럽히지 않도록 기본 위치는 `${TMPDIR:-/tmp}/adr-impl-review-<adr-slug>-<timestamp>/`로 한다.
+- The full ADR text and its entry in `.mapping.json`
+- The raw diff and the list of changed files
+- The direct call paths of the changed code and the related tests
+- Whichever project conventions exist among `AGENTS.md`, `CONTRIBUTING.md`, `CLAUDE.md`
+- An executable project test command
 
-## 2. 쉬운 구현 설명과 인간 게이트
+Create one review artifact directory and pass its path to every agent that follows. To avoid dirtying the repository, the default location is `${TMPDIR:-/tmp}/adr-impl-review-<adr-slug>-<timestamp>/`.
 
-`adr-impl-explainer`를 새 read-only subagent로 실행한다.
+## 2. The plain implementation explanation and the human gate
 
-1. named agent를 사용할 수 있으면 `adr-impl-explainer`를 호출한다.
-2. 없으면 `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-explainer.md` 전문을 지침으로 준 generic read-only subagent를 호출한다.
-3. subagent 기능이 없을 때만 메인 세션이 같은 지침을 수행하고 격리 설명을 사용할 수 없었다고 밝힌다.
+Run `adr-impl-explainer` as a fresh read-only subagent.
 
-설명자에게는 ADR, raw diff, 변경 코드 범위, 관련 테스트만 준다. 결과를 `explanation.md`로 저장하고 사용자에게 보여준 뒤 다음 세 질문을 확인한다.
+1. If named agents are available, invoke `adr-impl-explainer`.
+2. Otherwise invoke a generic read-only subagent given the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-explainer.md` as its instructions.
+3. Only when subagents are unavailable should the main session carry out the same instructions, noting that isolated explanation was unavailable.
 
-1. 설명이 주니어도 이해할 만큼 쉬운가? (이해 가능성)
-2. 설명된 동작이 의도한 구현인가? (구현이 명세를 따랐는가)
-3. 이 ADR 결정(명세) 자체가 실제 사용자 문제를 담고 있는가 — 빠진 요구·리스크·위험 허용 기준이 없는가? (명세 적합성)
+Give the explainer only the ADR, the raw diff, the changed code scope, and the related tests. Save the result as `explanation.md`, show it to the user, and confirm the following three questions.
 
-앞의 두 질문은 "코드가 명세를 따랐는가"를 묻지만, 세 번째는 "명세가 옳은가"를 묻는다 — 필요충분을 만족한 코드라도 명세 자체가 불완전하면 나쁜 제품이 될 수 있어, 이 축은 사람만 판단할 수 있고 리뷰어 에이전트에 위임하지 않는다. 사용자가 고친 의도나 위험 허용 기준은 `human-baseline.md`에 기록한다. **명시적 확인 전에는 적대적 리뷰로 넘어가지 않는다.** 이해 불가면 설명을 고치고, 코드와 의도가 다르면 그 차이를 baseline에 남긴다. **명세 자체가 부족하면** impl-review 안에서 코드를 고치지 않고 baseline에 기록한 뒤 ADR 갱신(`/adr-new`·edit-in-place)이나 구현 전 `adr-reviewer`로 라우팅한다. 코드는 아직 고치지 않는다.
+1. Is the explanation simple enough for a junior to understand? (understandability)
+2. Is the behavior described the intended implementation? (did the implementation follow the spec?)
+3. Does this ADR decision (the spec) itself capture the real user problem — are any requirements, risks, or risk-tolerance criteria missing? (spec fitness)
 
-## 3. 독립 리뷰 두 개를 병렬 실행
+The first two questions ask "did the code follow the spec?", but the third asks "is the spec right?" — code that satisfies necessity and sufficiency can still make a bad product if the spec itself is incomplete, so only a human can judge this axis and it is never delegated to a reviewer agent. Record the intent the user corrected and their risk-tolerance criteria in `human-baseline.md`. **Never proceed to the adversarial reviews before explicit confirmation.** If it is not understandable, fix the explanation; if the code and the intent differ, record that difference in the baseline. **If the spec itself falls short**, do not fix code inside impl-review — record it in the baseline and route to an ADR update (`/adr-new`, edit-in-place) or to `adr-reviewer` before implementation. Do not touch the code yet.
 
-두 리뷰어에게 공통으로 **원본 재료와 `human-baseline.md`만** 준다. `explanation.md`와 상대 리뷰 결과는 주지 않는다. 그래야 설명자의 해석이나 다른 리뷰어의 결론에 anchoring되지 않는다.
+## 3. Run the two independent reviews in parallel
 
-### 3.1 필요성 리뷰
+Give both reviewers, in common, **only the original material and `human-baseline.md`.** Do not give them `explanation.md` or the other reviewer's result. That is what keeps them from anchoring on the explainer's interpretation or the other reviewer's conclusion.
 
-`adr-impl-necessity-reviewer`를 실행한다.
+### 3.1 The necessity review
 
-- 질문: “이 diff의 각 변경이 ADR 목표 달성에 꼭 필요한가?”
-- 성공 조건: 제거·축소 가능한 변경을 증거와 함께 찾는 것.
-- 금지: 스타일 취향, 미래 확장 선호, 근거 없는 “더 단순하게”. **ADR 이 적은 요구사항 값을 시행하는 코드**(상한 검사·카운터·만료 처리)를 불필요로 올리는 것도 금지 — 그건 계약이다.
-- 핵심 시도: 변경 단위마다 “이것을 삭제해도 ADR과 사용자 baseline이 유지되는가?”를 검사한다.
+Run `adr-impl-necessity-reviewer`.
 
-### 3.2 충분성 리뷰와 테스트
+- The question: "is each change in this diff strictly necessary to achieve the ADR's goal?"
+- Success condition: finding changes that can be removed or shrunk, with evidence.
+- Forbidden: style preferences, a taste for future extensibility, unjustified "make it simpler". Also forbidden is filing **code that enforces a requirement the ADR records** (cap checks, counters, expiry handling, and likewise transition guards, permission checks, duplicate prevention, required-field validation) as unnecessary — whether it is a number, a value set, or a permission, that is contract.
+- The core attempt: for each unit of change, test "does the ADR and the user baseline still hold if this is deleted?"
 
-`adr-impl-sufficiency-reviewer`를 실행한다.
+### 3.2 The sufficiency review and tests
 
-- 질문: “이 구현을 실패시키는 반례가 있는가?”
-- 성공 조건: ADR 결정 원장을 모두 정산하고, 누락·경계·오류·경합·부분 실패를 재현하는 것.
-- **요구사항 값은 값 단위로 대조한다** — ADR 이 적은 한도·정원·주기·보존 기간·상한·목표치를 원장의 개별 행으로 두고 코드의 숫자와 직접 비교한다. "제한 로직이 있다" 는 정산이 아니다. 값 불일치·미강제는 `Spec violation`, ADR 에 없는 자체 한도는 `Undecided behavior`.
-- 테스트: 관련 테스트를 실제 실행하고, 가능하면 최소 재현을 사용한다. **테스트가 결함을 실제로 잡는지**까지 본다 — property/mutation 도구가 프로젝트에 이미 있으면 핵심 불변식에 한정해 돌려 약한 테스트를 `Test gap`으로, 정적/보안 분석(CodeQL 등)이 이미 구성돼 있으면 이 ADR 범위 코드에 한해 증거로 쓴다. 도구를 새로 설치하거나 제품 코드를 수정하지 않고, 범위 밖 취약점은 `/security-review`로만 넘긴다.
-- 재현용 임시 파일은 산출물 디렉터리에만 만들고, 저장소 파일을 변경하지 않는다.
+Run `adr-impl-sufficiency-reviewer`.
 
-**두 리뷰어는 되도록 서로 다른 모델 계열로 돌린다** — 같은 모델 계열은 같은 가정을 공유해 둘 다 같은 결함을 놓치고 "좋아 보인다"에 거짓 합의하기 쉽다. 관점(필요성·충분성)뿐 아니라 판단 계열도 갈라야 반증력이 산다. 하네스가 model override를 지원하면 두 reviewer를 **서로 다른 제공자 계열의 최고 추론 모델**로, 각각 **최고 reasoning 등급**으로 실행한다. 특정 모델 ID를 여기 고정하지 않는다 — 모델은 이 스킬보다 빠르게 교체되므로, 호출 시점에 그 하네스에서 사용 가능한 최상위 추론 모델을 고른다. 단일 계열만 제공돼 다양화가 불가능하면 같은 계열의 최고 추론 모델로 두 reviewer를 모두 돌리되 **모델을 다양화하지 못했음과 각 reviewer가 실제 쓴 모델을 보고서에 기록한다**. 설명자는 기본 모델을 사용해도 된다.
+- The question: "is there a counterexample that makes this implementation fail?"
+- Success condition: accounting for every row of the ADR decision ledger, and reproducing omissions, boundaries, errors, races, and partial failures.
+- **Compare requirement values value by value** — put each limit, quota, cycle, retention period, cap, and target the ADR records as its own ledger row and compare it directly against the number in the code. "There is limit logic" is not an accounting. A value mismatch or an unenforced value is a `Spec violation`; a self-imposed limit absent from the ADR is `Undecided behavior`.
+- **Compare non-numeric requirements item by item too** — allowed value sets, transition rules, mandatory fields, permissions, visibility, ordering, uniqueness, and units are each ledger rows as well. An added or removed set member, a forbidden transition becoming allowed, and mandatory → optional are all `Spec violation`. **Split enums** — a differing identifier name is `Impl-fact mismatch` (correct the ADR), while a differing allowed set or transition rule is `Spec violation` (correct the code).
+- Tests: actually run the related tests, and use a minimal reproduction where possible. Go as far as checking **whether the tests actually catch defects** — if property or mutation tooling already exists in the project, run it restricted to the core invariants and record weak tests as `Test gap`; if static or security analysis (CodeQL and the like) is already configured, use it as evidence limited to this ADR's code scope. Do not install new tooling or modify product code, and pass out-of-scope vulnerabilities to `/security-review` only.
+- Create temporary reproduction files only in the artifact directory, and never change repository files.
 
-각 클라이언트의 실행 순서는 다음과 같다.
+**Run the two reviewers on different model families where possible** — the same model family shares the same assumptions, making it easy for both to miss the same defect and reach a false consensus of "looks good." Diversifying not only the perspective (necessity vs sufficiency) but also the judgment lineage is what keeps the disproof power alive. If the harness supports a model override, run the two reviewers on **the strongest reasoning models from different provider families**, each at **the highest reasoning tier.** Do not pin specific model IDs here — models are replaced faster than this skill, so pick the top reasoning model available in that harness at invocation time. If only a single family is available and diversification is impossible, run both reviewers on that family's strongest reasoning model but **record in the report that models could not be diversified, along with the model each reviewer actually used.** The explainer may use the default model.
 
-1. named reviewer가 있으면 해당 agent를 호출한다.
-2. 없으면 `${CLAUDE_PLUGIN_ROOT}/agents/<agent-name>.md` 전문을 읽어 generic read-only subagent에 전달한다.
-3. subagent가 없으면 메인 세션이 두 관점을 **서로의 결과를 읽지 않는 별도 패스**로 수행하고 격리 한계를 밝힌다.
+The execution order per client is as follows.
 
-결과를 각각 `necessity-review.md`, `sufficiency-review.md`로 저장한다.
+1. If a named reviewer exists, invoke that agent.
+2. Otherwise read the full text of `${CLAUDE_PLUGIN_ROOT}/agents/<agent-name>.md` and pass it to a generic read-only subagent.
+3. If subagents are unavailable, the main session performs the two perspectives as **separate passes that do not read each other's results**, and states the isolation limitation.
 
-## 4. 증거 검증과 종합
+Save the results as `necessity-review.md` and `sufficiency-review.md`.
 
-메인 세션은 두 리뷰를 투표로 합치지 않는다. 다음 규칙으로 finding을 검증한다.
+## 4. Evidence verification and synthesis
 
-1. 같은 문제는 하나로 합치되 `perspective`에 출처를 모두 남긴다.
-2. 서로 모순되는 결론은 숨기지 말고 `Contradiction` finding으로 남긴다.
-3. high-impact finding은 테스트·재현 또는 정확한 코드/ADR 대조가 있어야 확정한다.
-4. 실행하지 못했거나 call path를 끝까지 확인하지 못한 주장은 `Unverified risk`로 낮춘다.
-5. 테스트가 존재한다는 사실과 테스트가 결함을 검출한다는 사실을 구분한다.
-6. 필요성 PASS는 “불필요한 변경을 찾지 못함”, 충분성 PASS는 “현재 반례를 찾지 못하고 결정 원장을 정산함”을 뜻한다.
+The main session does not merge the two reviews by vote. Verify findings with these rules.
 
-종합 verdict:
+1. Merge the same problem into one, but keep every source in `perspective`.
+2. Do not hide mutually contradictory conclusions — record them as a `Contradiction` finding.
+3. Confirm a high-impact finding only with a test, a reproduction, or an exact code/ADR comparison.
+4. Downgrade to `Unverified risk` any claim you could not execute or whose call path you could not fully confirm.
+5. Distinguish the fact that a test exists from the fact that a test detects the defect.
+6. A necessity PASS means "no unnecessary change was found"; a sufficiency PASS means "no counterexample was found at present and the decision ledger is accounted for."
 
-- `PASS`: evidence-backed must-fix가 없고, 결정 원장이 모두 구현됨이며, 필요한 targeted test가 통과했다.
-- `FIX_REQUIRED`: 코드/ADR/테스트에 구체적 후속 조치가 필요한 finding이 있다.
-- `INCONCLUSIVE`: 중요 경로를 실행할 수 없거나 범위를 확정하지 못해 PASS/FIX를 정직하게 판정할 수 없다.
-- `BLOCK`: 결정 자체의 분기나 구조 붕괴로 개별 코드 수정 전에 사람의 아키텍처 결정이 필요하다.
+The synthesized verdict:
 
-## 5. 주니어용 수정 리포트 생성
+- `PASS`: there is no evidence-backed must-fix, every decision-ledger row is implemented, and the required targeted tests passed.
+- `FIX_REQUIRED`: there is a finding requiring concrete follow-up in the code, the ADR, or the tests.
+- `INCONCLUSIVE`: an important path could not be executed or the scope could not be fixed, so PASS/FIX cannot be judged honestly.
+- `BLOCK`: a fork in the decision itself, or a structural collapse, requires a human architectural decision before any individual code fix.
 
-독립 리뷰와 증거 검증이 끝나면 `adr-impl-review-report-writer`를 새 subagent로 실행한다. 이 단계는 결론을 새로 만들지 않고 검증된 finding을 **해당 코드를 처음 보는 주니어 개발자가 혼자 수정할 수 있는 문서**로 바꾼다.
+## 5. Generate the junior-facing repair report
 
-1. named agent를 사용할 수 있으면 `adr-impl-review-report-writer`를 호출한다.
-2. 없으면 `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` 전문을 지침으로 준 generic subagent를 호출한다.
-3. subagent 기능이 없으면 메인 세션이 같은 지침으로 작성한다.
+Once the independent reviews and evidence verification are done, run `adr-impl-review-report-writer` as a fresh subagent. This step creates no new conclusions; it turns the verified findings into **a document a junior developer seeing this code for the first time can fix it from alone.**
 
-report-writer에는 원본 ADR/diff, `human-baseline.md`, 세 에이전트 산출물, 검증된 finding과 테스트 결과를 모두 준다. 결과를 `implementation-review.md`로 저장한다.
+1. If named agents are available, invoke `adr-impl-review-report-writer`.
+2. Otherwise invoke a generic subagent given the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` as its instructions.
+3. If subagents are unavailable, the main session writes it under the same instructions.
 
-파일명은 정확히 `implementation-review.md`여야 한다. `final-review.md`, `review.md` 같은 대체 이름을 허용하지 않는다. report-writer를 사용할 수 없어 메인 세션이 작성할 때도 먼저 `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` 전문을 읽고 동일한 출력 구조를 따른다.
+Give the report-writer the original ADR and diff, `human-baseline.md`, all three agents' artifacts, and the verified findings and test results. Save the result as `implementation-review.md`.
 
-문서에는 실제 코드에서 확인한 관계만 사용한 Mermaid 다이어그램을 충분히 넣는다.
+The filename must be exactly `implementation-review.md`. Alternatives such as `final-review.md` or `review.md` are not allowed. Even when the report-writer is unavailable and the main session writes it, first read the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` and follow the same output structure.
 
-- 전체 변경 구조: `flowchart`
-- 핵심 요청/이벤트 흐름: `sequenceDiagram`
-- 상태가 있으면 상태 전이: `stateDiagram-v2`
-- 데이터 모델 변경이 있으면 관계: `erDiagram`
-- 실패·재시도·롤백 흐름이 복잡하면 별도 `flowchart`
+Include ample Mermaid diagrams using only relationships confirmed in the actual code.
 
-다이어그램은 장식이 아니라 수정 지도를 제공해야 한다. 각 노드에는 실제 심볼 또는 파일명을 연결하고, finding이 발생하는 지점과 수정 후 기대 흐름을 문서 본문에서 명확히 가리킨다. 실제 코드로 확인하지 못한 edge를 추측해 그리지 않는다. ASCII/box-drawing 다이어그램은 사용하지 않는다.
+- Overall change structure: `flowchart`
+- Core request/event flow: `sequenceDiagram`
+- State transitions, if there is state: `stateDiagram-v2`
+- Relationships, if the data model changed: `erDiagram`
+- A separate `flowchart` when the failure, retry, and rollback flow is complex
 
-각 finding에는 다음을 모두 포함한다.
+Diagrams must provide a repair map, not decoration. Tie each node to a real symbol or filename, and point clearly in the prose to where the finding occurs and the expected flow after the fix. Never guess at an edge you could not confirm in the actual code. Never use ASCII or box-drawing diagrams.
 
-1. 무엇이 문제이고 어떤 사용자/운영 증상으로 나타나는가
-2. ADR 결정과 실제 코드의 차이
-3. 읽어야 할 파일과 심볼 순서
-4. 재현 명령과 현재 결과
-5. 수정 단계와 건드리지 말아야 할 범위
-6. 수정 후 기대 동작
-7. 통과해야 할 테스트와 완료 조건
-8. 확신도와 아직 확인하지 못한 내용
+Include all of the following for each finding.
 
-문서 끝에는 dependency 순서가 반영된 `수정 실행 순서`, `검증 체크리스트`, 그리고 **7축 머지 판정 체크리스트**(문제 적합성·기능 충분성·계약 준수·변경 최소성·검증 강도·운영 안전성·유지보수성)를 둔다 — 기능 충족은 좋은 코드의 한 축일 뿐이므로 각 축을 finding·테스트·인간 게이트 근거에 매핑해 판정한다. `계약 준수` 는 ADR이 정한 요구사항 값이 그 값대로 시행되는지를 숫자로 대조하는 축이다 — 한도 로직이 동작하더라도 값이 다르면 요구사항 위반이므로 기능 충분성과 분리한다. 주니어가 문서만 보고 추측해야 하는 항목이 남으면 `확인 필요`로 명시하고 담당자에게 물을 구체적 질문을 적는다.
+1. What the problem is and which user or operational symptom it manifests as
+2. The difference between the ADR decision and the actual code
+3. The order of files and symbols to read
+4. The reproduction command and the current result
+5. The fix steps and the scope not to touch
+6. The expected behavior after the fix
+7. The tests that must pass and the completion criteria
+8. The confidence level and what has not been confirmed yet
 
-## 6. 항목 판정 페이지 생성
+At the end of the document, put a `Fix execution order` reflecting the dependency order, a `Verification checklist`, and the **seven-axis merge decision checklist** (problem fitness, functional adequacy, contract compliance, change minimality, verification strength, operational safety, maintainability) — functional adequacy is only one axis of good code, so rule on each axis by mapping it to the findings, tests, and human-gate evidence. `Contract compliance` is the axis that compares, number by number, whether the requirement values the ADR set are enforced at those values — limit logic can work while the value differs, which is a requirement violation, so keep it separate from functional adequacy. If any item would leave a junior guessing from the document alone, mark it `needs confirmation` and write the specific question to ask the owner.
 
-세 에이전트의 Markdown 원문과 종합 결과를 다음 JSON으로 직렬화한다.
+## 6. Generate the per-item ruling page
+
+Serialize the three agents' raw Markdown and the synthesized result into the following JSON.
 
 ```json
 {
@@ -175,61 +178,60 @@ report-writer에는 원본 ADR/diff, `human-baseline.md`, 세 에이전트 산�
     {
       "category": "Unnecessary change",
       "perspective": "necessity",
-      "summary": "새 이벤트 버스는 이 ADR에 필요하지 않다",
+      "summary": "the new event bus is not needed for this ADR",
       "confidence": "high",
-      "adrQuote": "취소 시 upstream 호출을 중단한다",
-      "code": "src/events/bus.ts:18 — 실제 코드 조각",
-      "evidence": "기존 abort signal 경로가 동일 목표를 충족",
+      "adrQuote": "on cancellation, abort the upstream call",
+      "code": "src/events/bus.ts:18 — the actual code fragment",
+      "evidence": "the existing abort-signal path meets the same goal",
       "test": "pnpm test -- cancel",
       "testResult": "pass after excluding the new bus path",
-      "fix": "새 이벤트 버스와 연결 코드를 제거한다"
+      "fix": "remove the new event bus and its wiring"
     }
   ],
-  "notes": "리뷰 한계 또는 모순"
+  "notes": "review limits or contradictions"
 }
 ```
 
-허용 category:
+Allowed categories:
 
-- 필요성: `Unnecessary change`, `Simpler alternative`
-- 충분성: `Spec violation`, `Decision changed in code`, `Undecided behavior`, `Impl-fact mismatch`, `Test gap`
-- 공통 품질: `Best practice`, `Refactor`
-- 검증 상태: `Unverified risk`, `Contradiction`
+- Necessity: `Unnecessary change`, `Simpler alternative`
+- Sufficiency: `Spec violation`, `Decision changed in code`, `Undecided behavior`, `Impl-fact mismatch`, `Test gap`
+- Shared quality: `Best practice`, `Refactor`
+- Verification state: `Unverified risk`, `Contradiction`
 
-다음 스크립트로 HTML을 만든다.
+Build the HTML with these scripts.
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-validate.mjs <artifact-dir>
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-report.mjs <findings.json> --out <artifact-dir>/adr-impl-review-report.html
 ```
 
-validator가 실패하면 완료 보고나 HTML 생성을 하지 않는다. 오류에 나온 누락을 `implementation-review.md` 또는 `findings.json`에서 보완하고 validator가 0으로 끝날 때까지 다시 실행한다. 특히 finding마다 `perspective`, `code`, `evidence`, `test`, `testResult`를 채우고, 테스트를 실행하지 못했으면 빈칸 대신 `NOT RUN — <이유>`를 쓴다.
+If the validator fails, do not report completion or generate the HTML. Fill the omissions it names in `implementation-review.md` or `findings.json` and re-run until the validator exits 0. In particular, fill `perspective`, `code`, `evidence`, `test`, and `testResult` for every finding, and where a test could not be run, write `NOT RUN — <reason>` rather than leaving it blank.
 
-리포트를 열고 verdict, 필요성/충분성 finding 수, 실행한 테스트, 미검증 위험 수만 채팅에 요약한다. 사용자는 각 항목을 **반영 / 무시 / 보류**로 판정하고 `feedback.json`을 내보낸다.
+Open the report and summarize in chat only the verdict, the necessity/sufficiency finding counts, the tests executed, and the number of unverified risks. The user rules on each item as **apply / skip / defer** and exports `feedback.json`.
 
-## 7. 사용자 판정 후 라우팅
+## 7. Routing after the user's ruling
 
-이 명령 자체는 계속 보고 전용이다. `feedback.json`의 승인 항목은 후속 작업으로 라우팅한다.
+This command itself remains report-only. Route the approved items in `feedback.json` to follow-up work.
 
-- `Unnecessary change` → 코드 제거. 제거 뒤 관련 테스트를 다시 실행한다.
-- `Simpler alternative` / `Refactor` → ADR 결정을 바꾸지 않는지 확인 후 단순화한다.
-- `Spec violation` / `Best practice` → 코드를 고친다.
-- `Decision changed in code` → ADR 갱신과 코드 원복 중 사용자가 결정한다.
-- `Undecided behavior` → ADR에 결정으로 추가할지 코드에서 제거할지 사용자가 결정한다.
-- `Impl-fact mismatch` → `/adr-sync <category>`로 ADR 구현 사실을 정정한다.
-- `Test gap` → 실패를 검출하는 테스트를 먼저 추가한 뒤 코드를 고친다.
-- `Unverified risk` → 먼저 재현하거나 명시적으로 위험을 수용한다. 곧바로 수정하지 않는다.
-- `Contradiction` → 두 주장 중 어느 전제가 맞는지 사람이 결정하기 전 수정하지 않는다.
+- `Unnecessary change` → remove the code. Re-run the related tests after removal.
+- `Simpler alternative` / `Refactor` → simplify after confirming it does not change the ADR decision.
+- `Spec violation` / `Best practice` → fix the code.
+- `Decision changed in code` → the user decides between updating the ADR and reverting the code.
+- `Undecided behavior` → the user decides whether to add it to the ADR as a decision or remove it from the code.
+- `Impl-fact mismatch` → correct the ADR's implementation facts with `/adr-sync <category>`.
+- `Test gap` → add a test that detects the failure first, then fix the code.
+- `Unverified risk` → reproduce it first, or explicitly accept the risk. Do not fix it straight away.
+- `Contradiction` → do not fix anything before a human decides which of the two premises holds.
 
-수정이 끝나면 `/adr-impl-review`를 다시 실행해 필요성·충분성 두 패스를 모두 닫는다.
+Once the fixes are done, run `/adr-impl-review` again to close both the necessity and sufficiency passes.
 
-## 금지
+## Prohibited
 
-- 설명자가 “쉽게 보이도록” 실패 경로·상태·동시성을 생략하지 않는다.
-- 리뷰어에게 설명문이나 상대 reviewer 결과를 전달하지 않는다.
-- 주니어용 리포트에서 Mermaid 대신 ASCII/box-drawing 다이어그램을 쓰지 않는다.
-- 실제 코드에서 확인하지 못한 구성 요소나 호출 관계를 Mermaid에 만들어 넣지 않는다.
-- 테스트를 통과했다는 이유만으로 충분성을 증명했다고 표현하지 않는다.
-- 재현하지 못한 추측을 확정 finding처럼 보고하지 않는다.
-- 리뷰 과정에서 제품 코드, ADR, 매핑, 기존 테스트를 수정하지 않는다.
-- 프로젝트 규약과 충돌하는 일반론을 베스트 프랙티스로 강요하지 않는다.
+- The explainer must not omit failure paths, state, or concurrency to "look simple."
+- Never pass a reviewer the explanation document or the other reviewer's result.
+- Never use ASCII or box-drawing diagrams instead of Mermaid in the junior-facing report.
+- Never invent components or call relationships in Mermaid that were not confirmed in the actual code.
+- Never state that sufficiency is proven merely because the tests passed.
+- Never report an unreproduced conjecture as though it were a confirmed finding.
+- Never modify product code, ADRs, the mapping, or existing tests during the review.

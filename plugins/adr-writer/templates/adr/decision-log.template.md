@@ -1,27 +1,34 @@
 # Decision Log: <category>
 
-이 문서는 <category> 카테고리의 **주요 결정 변경 이력**이다. 각 ADR 본문은 현재
-상태만 서술하고, "무엇이 왜 바뀌었나"의 시간축은 여기에 역순으로 쌓는다. 개별
-diff 는 Git 이 보존한다.
+This document is the **major decision-change history** of the <category> category. Each
+ADR body describes only the current state, while the timeline of "what changed and why"
+accumulates here, newest first. Git preserves the individual diffs.
 
-<!-- 규칙:
-  - 역순(최신 먼저). major 변경만 — 채택 대안 교체·Driver 반전·핵심 알고리즘/
-    아키텍처 변경·동작 바꾸는 버그 수정·요구사항 값 변경·supersede·대체 없는 폐기.
-    minor(구현 사실 정정·경계 서술 다듬기·표현 수정)는 남기지 않는다 — Git 이 보존한다.
-    판정 기준은 authoring-rules.md "결정 로그 기록 기준".
-  - 현재 상태를 중복 서술하지 않는다(ADR 본문의 몫) — 현재 유효한 요구사항 값은
-    ADR 본문에 있으므로 여기 옮기지 않는다. 구현 상수·필드 표 금지. 단 요구사항
-    값이 바뀐 전환은 "무엇이" 줄에 옛 값 → 새 값으로 적는다(그게 전환의 내용이다).
-  - PRD(ALPS) 를 참조하지 않는다.
-  - ADR 번호를 프로즈에 박지 않는다 — "현재 ADR" 링크 한 줄로만 가리킨다.
-  - 이 파일은 컨벤션 파일이다 — .mapping.json 에 등록하지 않고 adr-structure-lint
-    도 검사하지 않는다 (NNNN- 로 시작하지 않으므로 ADR 로 열거되지 않는다).
-  - 아래 엔트리 예시는 첫 major 전환을 기록할 때 실제 내용으로 대체한다. -->
+<!-- Rules:
+  - Reverse order (newest first). Major changes only — replacing the adopted alternative,
+    inverting a Driver, a core algorithm/architecture change, a bug fix that changes
+    behavior, a requirement value change, a requirement rule change (allowed set added or
+    removed, mandatory → optional, a permission change, a forbidden transition allowed),
+    a supersede, and retirement with no replacement.
+    Minor items (correcting implementation facts, renaming an enum identifier, refining
+    boundary wording, rephrasing) are not recorded — Git preserves them. For the criteria
+    see authoring-rules.md "What to log — minor vs major".
+  - Never duplicate the current state (that is the ADR body's job) — the currently valid
+    requirements live in the ADR body, so do not copy them here. No implementation
+    constants or field tables. But for a transition where a requirement value or rule
+    changed, write it on the "What" line as old → new (that is the content of the transition).
+  - Never reference the PRD (ALPS).
+  - Never embed an ADR number in the prose — point at it only through the single
+    "Current ADR" link.
+  - This file is a convention file — it is not registered in .mapping.json and
+    adr-structure-lint does not check it (it is not enumerated as an ADR because it does
+    not start with NNNN-).
+  - Replace the example entry below with real content when recording the first major transition. -->
 
-## YYYY-MM-DD — <한 줄 변경 요약>
+## YYYY-MM-DD — <one-line change summary>
 
-- **현재 ADR**: [<kebab-title>](./NNNN-kebab-title.md)
-- **변경 유형**: 알고리즘 | 아키텍처 | 채택 대안 교체 | Driver 반전 | 요구사항 값 변경 | 동작 바꾸는 버그 수정 | 폐기
-- **무엇이**: <이전 접근 → 현재 접근, 결정 수준 한두 문장>
-- **왜**: <이 변경을 부른 driver/제약의 변화>
-- **무효가 된 것** (선택): <이전 결정이 남겼던 Consequence 중 이제 사라진 것>
+- **Current ADR**: [<kebab-title>](./NNNN-kebab-title.md)
+- **Change type**: algorithm | architecture | adopted alternative replaced | Driver inverted | requirement value change | requirement rule change | behavior-changing bug fix | retirement
+- **What**: <previous approach → current approach, one or two sentences at the decision level>
+- **Why**: <the change in the driver or constraint that prompted this>
+- **What is now void** (optional): <the Consequences the previous decision left that no longer apply>

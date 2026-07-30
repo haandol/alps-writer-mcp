@@ -10,8 +10,8 @@
 // browser automation, no python. The page frames each finding as a docket
 // item: the ADR decision (the intended design) set against the code as built,
 // with a direction indicator that says which side is authoritative — so the
-// reviewer can see the tension and rule on it (반영 / 무시 / 보류 + a note).
-// "판정 내보내기" builds the JSON in-browser and downloads feedback.json,
+// reviewer can see the tension and rule on it (apply / skip / defer + a note).
+// "Export rulings" builds the JSON in-browser and downloads feedback.json,
 // which the main session reads to route follow-ups (fix the code, /adr-sync,
 // update the ADR).
 //
@@ -42,16 +42,16 @@
 //     "explanation":"/tmp/.../explanation.md",
 //     "report":     "/tmp/.../implementation-review.md",
 //     "scope":      ["src/checkout/handler.ts", "..."],   // code the reviewer read
-//     "conventions":"AGENTS.md",                          // or "없음"
+//     "conventions":"AGENTS.md",                          // or "none"
 //     "findings": [                                       // required (may be [])
 //       {
 //         "id":       "f1",                               // stable id (auto if absent)
 //         "category": "Spec violation",   // one of the recognized tags below
 //         "perspective": "necessity" | "sufficiency" | "both",
-//         "summary":  "재사용 감지 시 계열 폐기가 구현되지 않음",
-//         "adrQuote": "재사용이 감지되면 그 토큰 계열 전체를 폐기한다",  // ADR decision, 1 line
-//         "code":     "src/auth/refresh.ts: 재사용해도 해당 토큰만 무효화",
-//         "fix":      "계열(family) 단위 폐기로 바꾼다",
+//         "summary":  "family revocation on reuse detection is not implemented",
+//         "adrQuote": "when reuse is detected, revoke the entire token family",  // ADR decision, 1 line
+//         "code":     "src/auth/refresh.ts: on reuse it invalidates only that one token",
+//         "fix":      "switch to family-level revocation",
 //         "route":    "/adr-sync ordering/checkout",      // for Impl-fact mismatch
 //         "basis":    "AGENTS.md §error-handling",         // for Best practice — the convention cited
 //         "weight":   "now" | "next-cycle",               // TIMING axis (Refactor / Test gap)
@@ -94,68 +94,73 @@ import path from "node:path";
 const CATEGORIES = {
   "Unnecessary change": {
     hue: "#a92f27",
-    blurb: "ADR 목표를 유지하면서 제거할 수 있는 변경 — 더 작은 diff로 줄일 일.",
+    blurb: "A change removable while keeping the ADR goal — shrink the diff.",
     authority: "minimality",
     defaultDecision: "fix",
   },
   "Simpler alternative": {
     hue: "#8a4f0f",
-    blurb: "같은 계약을 기존의 더 작은 구조로 충족할 수 있음 — trade-off 확인 후 단순화.",
+    blurb:
+      "The same contract is met by a smaller existing structure — simplify after checking the trade-off.",
     authority: "contested",
     defaultDecision: "defer",
   },
   "Spec violation": {
     hue: "#c0362c",
-    blurb: "코드가 ADR 결정을 지키지 않았다 — ADR이 스펙이므로 코드를 고칠 일.",
+    blurb: "The code did not honor the ADR decision — the ADR is the spec, so fix the code.",
     authority: "adr",
     defaultDecision: "fix",
   },
   "Decision changed in code": {
     hue: "#b4690e",
-    blurb: "코드가 다른, 그러나 일관된 결정을 구현했다 — ADR 갱신 vs 코드 원복, 사용자 판정.",
+    blurb:
+      "The code implemented a different but coherent decision — update the ADR vs revert the code; user decides.",
     authority: "contested",
     defaultDecision: "defer",
   },
   "Undecided behavior": {
     hue: "#c77b0e",
     blurb:
-      "코드가 ADR이 결정하지 않은 동작을 더 한다(scope-creep) — ADR에 결정 추가 vs 코드에서 제거, 사용자 판정.",
+      "The code does something the ADR never decided (scope creep) — add the decision to the ADR vs remove it from the code; user decides.",
     authority: "contested",
     defaultDecision: "defer",
   },
   "Impl-fact mismatch": {
     hue: "#6b3fa0",
-    blurb: "ADR의 구현 사실이 코드와 다르다 — 코드가 권위, /adr-sync로 ADR을 정정.",
+    blurb:
+      "The ADR's implementation facts differ from the code — code is authoritative; correct the ADR via /adr-sync.",
     authority: "code",
     defaultDecision: "defer",
   },
   "Best practice": {
     hue: "#1f5fa8",
-    blurb: "프로젝트 규약(1차)/일반 패턴(2차) 위반 — 코드 개선 후보.",
+    blurb:
+      "Violates project conventions (primary) or general patterns (secondary) — a code-improvement candidate.",
     authority: "convention",
     defaultDecision: "fix",
   },
   Refactor: {
     hue: "#2e7d4f",
-    blurb: "결정을 바꾸지 않고 정리할 수 있는 기회.",
+    blurb: "An opportunity to tidy up without changing the decision.",
     authority: "advisory",
     defaultDecision: "defer",
   },
   "Test gap": {
     hue: "#566173",
-    blurb: "결정한 동작이 테스트로 검증되지 않았다.",
+    blurb: "The decided behavior is not verified by tests.",
     authority: "advisory",
     defaultDecision: "defer",
   },
   "Unverified risk": {
     hue: "#7a5b14",
-    blurb: "구체적 실패 가설은 있으나 실행 또는 call path 증거가 부족함 — 먼저 재현할 일.",
+    blurb:
+      "A concrete failure hypothesis without execution or call-path evidence — reproduce it first.",
     authority: "contested",
     defaultDecision: "defer",
   },
   Contradiction: {
     hue: "#7b3f91",
-    blurb: "독립 리뷰의 전제가 충돌함 — 어느 전제가 맞는지 사람이 확인해야 함.",
+    blurb: "The independent reviews' premises conflict — a human must confirm which premise holds.",
     authority: "contested",
     defaultDecision: "defer",
   },
@@ -163,28 +168,39 @@ const CATEGORIES = {
 
 // authority → the center indicator between ADR and code.
 const AUTHORITY = {
-  adr: { glyph: "→", label: "ADR 기준", hint: "코드가 결정을 따라야 함" },
-  minimality: { glyph: "−", label: "최소 변경", hint: "계약을 유지하며 코드를 줄임" },
-  code: { glyph: "←", label: "코드 기준", hint: "ADR을 코드에 맞춰 정정" },
-  contested: { glyph: "⇄", label: "판정 필요", hint: "어느 쪽이 옳은지 결정" },
-  convention: { glyph: "▸", label: "규약 기준", hint: "프로젝트 규약과 대조" },
-  advisory: { glyph: "·", label: "권고", hint: "결정-중립" },
+  adr: { glyph: "→", label: "ADR is the basis", hint: "the code must follow the decision" },
+  minimality: {
+    glyph: "−",
+    label: "Minimal change",
+    hint: "shrink the code while keeping the contract",
+  },
+  code: { glyph: "←", label: "Code is the basis", hint: "correct the ADR to match the code" },
+  contested: { glyph: "⇄", label: "Needs a ruling", hint: "decide which side is right" },
+  convention: {
+    glyph: "▸",
+    label: "Convention is the basis",
+    hint: "compare against project conventions",
+  },
+  advisory: { glyph: "·", label: "Advisory", hint: "decision-neutral" },
 };
 
 const VERDICTS = {
   PASS: {
     hue: "#2e7d4f",
-    note: "제거 가능한 변경이나 확인된 반례가 없고, 결정 원장과 targeted test가 닫힘.",
+    note: "No removable change and no confirmed counterexample; the decision ledger and targeted tests are closed.",
   },
   FIX_REQUIRED: {
     hue: "#b4690e",
-    note: "후속 조치 필요 — 불필요한 변경 제거, 코드 수정, ADR 정정, 테스트 보강 또는 사람 판정.",
+    note: "Follow-up needed — remove unnecessary changes, fix code, correct the ADR, strengthen tests, or get a human ruling.",
   },
   INCONCLUSIVE: {
     hue: "#7a5b14",
-    note: "중요 경로를 실행하거나 범위를 확정하지 못해 PASS/FIX를 판정할 증거가 부족함.",
+    note: "An important path could not be executed or the scope not pinned down, so there is not enough evidence to rule PASS or FIX.",
   },
-  BLOCK: { hue: "#c0362c", note: "vertical slice 조각화·안티패턴·결정 역전 — 구조 조정 필요." },
+  BLOCK: {
+    hue: "#c0362c",
+    note: "Fragmented vertical slice, anti-pattern category, or a forked decision — restructuring needed.",
+  },
 };
 
 // ── arg parse ────────────────────────────────────────────────────────────────
@@ -257,7 +273,7 @@ function normalizeFindings(data) {
     const unknownCat = !known(category);
     if (unknownCat) {
       process.stderr.write(
-        `adr-impl-review-report: warning — unrecognized category "${category}" (finding ${f.id || i + 1}); rendered as 미분류.\n`,
+        `adr-impl-review-report: warning — unrecognized category "${category}" (finding ${f.id || i + 1}); rendered as uncategorized.\n`,
       );
     }
     return {
@@ -293,12 +309,12 @@ function normalizeFindings(data) {
 }
 
 function findingCard(f, i, total) {
-  // Unrecognized category → a loud "미분류" card (bright orange, own blurb) so a
+  // Unrecognized category → a loud "uncategorized" card (bright orange, own blurb) so a
   // mislabeled finding demands attention instead of blending into advisory grey.
   const meta = f.unknownCat
     ? {
         hue: "#e8710a",
-        blurb: `미분류 category "${f.category}" — subagent 태그 오탈자일 수 있음. 판정 전 원래 의도를 확인하세요.`,
+        blurb: `uncategorized "${f.category}" — possibly a typo in the subagent tag. Confirm the original intent before ruling.`,
         authority: "contested",
         defaultDecision: "defer",
       }
@@ -309,7 +325,7 @@ function findingCard(f, i, total) {
         defaultDecision: "defer",
       };
   const auth = AUTHORITY[meta.authority] || AUTHORITY.advisory;
-  const tagText = f.unknownCat ? `미분류: ${f.category}` : f.category;
+  const tagText = f.unknownCat ? `uncategorized: ${f.category}` : f.category;
   const idx = String(i + 1).padStart(2, "0");
 
   // Confrontation: the ADR decision vs the code as built. Render the center
@@ -321,13 +337,13 @@ function findingCard(f, i, total) {
   if (hasAdr || hasCode) {
     const adrSide = hasAdr
       ? `<div class="side side--adr">
-           <span class="side__label">ADR 결정</span>
+           <span class="side__label">ADR decision</span>
            <p class="side__body side__body--quote">${esc(f.adrQuote)}</p>
          </div>`
       : "";
     const codeSide = hasCode
       ? `<div class="side side--code">
-           <span class="side__label">현재 코드</span>
+           <span class="side__label">Current code</span>
            <p class="side__body side__body--mono">${esc(f.code)}</p>
          </div>`
       : "";
@@ -343,55 +359,55 @@ function findingCard(f, i, total) {
   }
 
   // Follow-up meta: suggested action, sync route, convention basis, and the two
-  // advisory axes — 무게 (timing) and 효과 (effort×payoff), kept distinct so the
+  // advisory axes — weight (timing) and impact (effort×payoff), kept distinct so the
   // reviewer can tell a cheap high-value cleanup from an expensive low-value one.
   const meta_rows = [];
   if (f.fix)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">제안</span><span class="meta__v">${esc(f.fix)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Suggestion</span><span class="meta__v">${esc(f.fix)}</span></div>`,
     );
   if (f.basis)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">근거</span><span class="meta__v">${esc(f.basis)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Basis</span><span class="meta__v">${esc(f.basis)}</span></div>`,
     );
   if (f.route)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">경로</span><span class="meta__v meta__v--mono">${esc(f.route)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Route</span><span class="meta__v meta__v--mono">${esc(f.route)}</span></div>`,
     );
   if (f.weight)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">무게</span><span class="meta__v">${esc(f.weight)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Weight</span><span class="meta__v">${esc(f.weight)}</span></div>`,
     );
   if (f.impact)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">효과</span><span class="meta__v">${esc(f.impact)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Impact</span><span class="meta__v">${esc(f.impact)}</span></div>`,
     );
   if (f.perspective)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">관점</span><span class="meta__v">${esc(f.perspective)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Perspective</span><span class="meta__v">${esc(f.perspective)}</span></div>`,
     );
   if (f.evidence)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">증거</span><span class="meta__v">${esc(f.evidence)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Evidence</span><span class="meta__v">${esc(f.evidence)}</span></div>`,
     );
   if (f.test)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">테스트</span><span class="meta__v meta__v--mono">${esc(f.test)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Test</span><span class="meta__v meta__v--mono">${esc(f.test)}</span></div>`,
     );
   if (f.testResult)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">결과</span><span class="meta__v">${esc(f.testResult)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">Result</span><span class="meta__v">${esc(f.testResult)}</span></div>`,
     );
   const metaBlock = meta_rows.length ? `<div class="meta">${meta_rows.join("")}</div>` : "";
 
-  // Low-confidence findings must NOT pre-select "반영" — weak evidence should
-  // not nudge the user toward a code change. Fall back to "보류" so the user
+  // Low-confidence findings must NOT pre-select "apply" — weak evidence should
+  // not nudge the user toward a code change. Fall back to "defer" so the user
   // opts in deliberately.
   const conf = String(f.confidence || "").toLowerCase();
   const dec = conf === "low" && meta.defaultDecision === "fix" ? "defer" : meta.defaultDecision;
   const confChip =
     conf === "low" || conf === "medium" || conf === "high"
-      ? `<span class="conf conf--${conf}" title="증거 강도">${conf}</span>`
+      ? `<span class="conf conf--${conf}" title="evidence strength">${conf}</span>`
       : "";
   const opt = (val, label) => {
     const id = `r-${i}-${val}`;
@@ -406,24 +422,24 @@ function findingCard(f, i, total) {
       <span class="tag">${esc(tagText)}</span>
       <span class="finding__head-right">${confChip}<span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span></span>
     </header>
-    <h3 class="finding__title">${esc(f.summary) || "(요약 없음)"}</h3>
+    <h3 class="finding__title">${esc(f.summary) || "(no summary)"}</h3>
     ${meta.blurb ? `<p class="finding__blurb">${esc(meta.blurb)}</p>` : ""}
     ${confront}
     ${metaBlock}
     <footer class="ruling">
-      <span class="ruling__label">판정</span>
-      <div class="seg" role="radiogroup" aria-label="${esc(f.summary)} 판정">
-        ${opt("fix", "반영")}
-        ${opt("skip", "무시")}
-        ${opt("defer", "보류")}
+      <span class="ruling__label">Ruling</span>
+      <div class="seg" role="radiogroup" aria-label="${esc(f.summary)} ruling">
+        ${opt("fix", "apply")}
+        ${opt("skip", "skip")}
+        ${opt("defer", "defer")}
       </div>
-      <textarea class="ruling__note" data-finding-index="${i}" rows="2" placeholder="note (선택) — 판정 근거나 수정 방향"></textarea>
+      <textarea class="ruling__note" data-finding-index="${i}" rows="2" placeholder="note (optional) — the basis for your ruling, or the fix direction"></textarea>
     </footer>
   </article>`;
 }
 
 function buildHtml(data) {
-  const adr = esc(data.adr || "(경로 없음)");
+  const adr = esc(data.adr || "(no path)");
   const status = esc(data.status || "");
   const verdictKey = (data.verdict || "").toUpperCase();
   const vmeta = VERDICTS[verdictKey] || { hue: "#566173", note: "" };
@@ -435,15 +451,15 @@ function buildHtml(data) {
   const empty =
     count === 0 && verdictKey === "PASS"
       ? `<div class="conforms">
-           <div class="conforms__stamp">적합</div>
-           <p class="conforms__lead">확인된 불필요 변경이나 반례가 없습니다.</p>
-           <p class="conforms__sub">결정 원장과 targeted test 근거는 상세 수정 가이드에서 확인하세요.</p>
+           <div class="conforms__stamp">Conforms</div>
+           <p class="conforms__lead">No unnecessary changes or counterexamples were confirmed.</p>
+           <p class="conforms__sub">See the detailed repair guide for the decision-ledger and targeted-test evidence.</p>
          </div>`
       : count === 0
         ? `<div class="conforms">
-             <div class="conforms__stamp">${esc(verdictKey || "미판정")}</div>
-             <p class="conforms__lead">확정 finding은 없지만 검토가 완료되지 않았습니다.</p>
-             <p class="conforms__sub">상단 verdict 설명과 상세 리포트의 확인 필요 항목을 먼저 처리하세요.</p>
+             <div class="conforms__stamp">${esc(verdictKey || "unruled")}</div>
+             <p class="conforms__lead">There are no confirmed findings, but the review did not complete.</p>
+             <p class="conforms__sub">Address the verdict note above and the "needs confirmation" items in the detailed report first.</p>
            </div>`
         : "";
 
@@ -676,12 +692,12 @@ function buildHtml(data) {
       <div class="doc__meta">
         ${
           scope.length
-            ? `<div>검토 범위 · ${scope.map((s) => `<code>${esc(s)}</code>`).join(" ")}</div>`
+            ? `<div>Scope reviewed · ${scope.map((s) => `<code>${esc(s)}</code>`).join(" ")}</div>`
             : ""
         }
-        ${data.conventions ? `<div>프로젝트 규약 · <code>${esc(data.conventions)}</code></div>` : ""}
-        ${data.explanation ? `<div>쉬운 설명 · <code>${esc(data.explanation)}</code></div>` : ""}
-        ${data.report ? `<div>수정 가이드 · <code>${esc(data.report)}</code></div>` : ""}
+        ${data.conventions ? `<div>Project conventions · <code>${esc(data.conventions)}</code></div>` : ""}
+        ${data.explanation ? `<div>Plain explanation · <code>${esc(data.explanation)}</code></div>` : ""}
+        ${data.report ? `<div>Repair guide · <code>${esc(data.report)}</code></div>` : ""}
       </div>
     </div>
     <div class="stamp">
@@ -691,21 +707,21 @@ function buildHtml(data) {
     ${vmeta.note ? `<p class="vnote">${esc(vmeta.note)}</p>` : ""}
   </header>
 
-  ${count ? `<p class="count">지적 ${count}건 · 항목마다 판정하세요</p>` : ""}
+  ${count ? `<p class="count">${count} finding(s) · rule on each one</p>` : ""}
   ${empty}
   ${cards}
 
   ${
     data.notes
-      ? `<section class="notes"><div class="notes__k">부기</div><p class="notes__v">${esc(data.notes)}</p></section>`
+      ? `<section class="notes"><div class="notes__k">Notes</div><p class="notes__v">${esc(data.notes)}</p></section>`
       : ""
   }
 </div>
 
 <div class="bar">
   <div class="bar__inner">
-    <span class="hint">각 지적에 판정을 내리고 필요하면 note를 남긴 뒤 내보내세요.</span>
-    <button class="export" id="export">판정 내보내기</button>
+    <span class="hint">Rule on each finding, add a note where useful, then export.</span>
+    <button class="export" id="export">Export rulings</button>
   </div>
 </div>
 
@@ -737,7 +753,7 @@ function buildHtml(data) {
     a.remove();
     URL.revokeObjectURL(url);
     const btn = document.getElementById("export");
-    btn.textContent = "저장됨 · feedback.json";
+    btn.textContent = "Saved · feedback.json";
     btn.classList.add("done");
   });
 </script>

@@ -7,112 +7,114 @@ disable-model-invocation: true
 
 # adr-impl
 
-지정한 ADR을 코드로 구현하고, 구현·테스트가 통과하면 ADR Status를 자동으로 `Accepted`로 갱신합니다. **ADR이 없으면 먼저 ADR을 작성한 뒤 진행한다** — 일반 케이스는 `/adr-new <category>` 로 직접 작성, ALPS Section 7 feature 가 이미 있다면 `/feature-to-adr` 로 일괄 변환.
+Implements the specified ADR in code, and once the implementation and tests pass, automatically updates the ADR Status to `Accepted`. **If no ADR exists, write the ADR first and then proceed** — for the general case write it directly with `/adr-new <category>`, and if an ALPS Section 7 feature already exists, batch-convert with `/feature-to-adr`.
 
-> Status 의미: `Proposed`는 "ADR이 제안되었으나 미구현", `Accepted`는 "구현 완료". 이 명령은 마지막에 Status 전환까지 책임진다.
+> Status semantics: `Proposed` means "the ADR has been proposed but is not implemented", `Accepted` means "implementation complete". This command is responsible for the Status transition at the end.
 
-## 절차
+> **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the ADR body in the language the user writes in (`authoring-rules.md` "Conventions"). Any user-facing phrasing below is a guide, not a literal string.
 
-1. **대상 ADR 식별**
+## Procedure
 
-   인자별 분기:
-   - **인자가 파일 경로** → 그 ADR 파일 한 개를 대상으로 한다. **경로가 디스크에 없으면** 곧장 멈추지 말고 rollup 의 renumber 로 옮겨졌을 수 있으니 한 번 찾아본다:
-     - 먼저 디스크에서 같은 카테고리 디렉토리의 kebab-title 매칭(`docs/adr/<cat>/*-<title>.md`, 번호 뒤 문자열이 일치하는 ADR)을 본다 — git 없이 동작하고 가장 단순하다.
-     - 매칭이 모호하거나 없으면 git rename 이력으로 확정한다: `git log --all --diff-filter=R --name-status -- '*<title>.md'` (또는 `git log --all --diff-filter=R --name-status` 출력에서 옛 경로를 grep) 하면 `R100  docs/adr/<cat>/<옛>.md  docs/adr/<cat>/<새>.md` 형태로 옛→새 매핑이 한 줄로 나온다 — 가장 명확하다. (옛 경로에 `git log --follow -- <옛경로>` 도 rename 을 추적해 커밋들을 보여주지만, 새 경로를 한눈에 주지는 않으므로 `--diff-filter=R --name-status` 를 쓴다.)
-     - 찾으면 "`<옛경로>` 는 rollup 으로 `<새경로>` 로 이동했습니다. 이 파일을 구현할까요?" 로 확인 후 새 경로를 대상으로 삼는다. 그래도 못 찾으면 아래 "Proposed 목록 출력" 으로 폴백한다.
-   - **인자가 카테고리 키** (예: `auth`, `identity/login`) → `docs/adr/.mapping.json` 의 **카테고리 키**를 대조해 매칭한다. 카테고리 키는 기능 이름에서 canonical 하게 파생된다(`identity/login`). feature 이름이 없어 순수 숫자 워크숍 id 를 fallback 키로 쓴 경우의 `f1` 같은 키도 그대로 해석된다 — 이건 Feature ID 조회가 아니라 리터럴 카테고리 키 매칭이다 (매핑에는 Feature ID 를 담는 필드가 없다). 사용자가 context prefix 없이 피쳐 세그먼트만 줬는데(`login`) 여러 context 에 같은 피쳐명이 있어 모호하면 어느 context 인지 한 번 되묻는다 (그룹핑을 쓴 다중-context repo 에서만 드물게 발생).
-   - **인자가 비어 있거나 매칭이 모호하거나 매핑/매핑 파일이 없을 때** — `Proposed` 상태(미구현)인 ADR 목록을 한 번에 보여주고 사용자에게 어떤 ADR 을 구현할지 묻는다 (아래 "Proposed 목록 출력" 절차).
+1. **Identify the target ADR**
 
-   **Proposed 목록 출력 절차**:
-   1. `docs/adr/.mapping.json` 이 있으면 모든 카테고리를 순회. 없으면 `docs/adr/**/*.md` 를 **재귀로** 훑어(예: `find docs/adr -name '[0-9][0-9][0-9][0-9]-*.md'`) ADR 파일 목록을 만든다 — 평면 키(`docs/adr/auth/0001.md`)와 2-세그먼트 피쳐 sub-folder(`docs/adr/identity/login/0001.md`)를 **모두** 포함해야 한다. 비재귀 glob(`docs/adr/*/*.md`)은 2-세그먼트 sub-folder ADR 을 통째로 놓치므로 쓰지 않는다.
-   2. 각 ADR 파일의 `## Status` 섹션을 읽어 `Proposed` 만 추린다 (`Accepted`, `Deprecated`, `Superseded` 는 제외).
-   3. 사용자에게 다음 형식으로 한 번 보여주고 선택을 받는다:
+   Branching by argument:
+   - **The argument is a file path** → target that single ADR file. **If the path does not exist on disk**, do not stop immediately — it may have been moved by a rollup renumber, so look for it once:
+     - First check on disk for a kebab-title match in the same category directory (`docs/adr/<cat>/*-<title>.md`, the ADR whose post-number string matches) — this works without git and is the simplest.
+     - If the match is ambiguous or absent, confirm it via git rename history: `git log --all --diff-filter=R --name-status -- '*<title>.md'` (or grep the old path out of the `git log --all --diff-filter=R --name-status` output) prints the old→new mapping on a single line in the form `R100  docs/adr/<cat>/<old>.md  docs/adr/<cat>/<new>.md` — the clearest signal. (`git log --follow -- <old-path>` on the old path also tracks the rename and shows the commits, but it does not give you the new path at a glance, so use `--diff-filter=R --name-status`.)
+     - Once found, confirm with "`<old-path>` was moved to `<new-path>` by a rollup. Shall I implement this file?" and then take the new path as the target. If you still cannot find it, fall back to "Printing the Proposed list" below.
+   - **The argument is a category key** (e.g. `auth`, `identity/login`) → match it against the **category keys** in `docs/adr/.mapping.json`. Category keys are derived canonically from the feature name (`identity/login`). A key like `f1` — used when there was no feature name and a purely numeric workshop id was used as the fallback key — is also interpreted as-is; this is literal category-key matching, not a Feature ID lookup (the mapping has no field that holds a Feature ID). If the user gave only the feature segment without the context prefix (`login`) and the same feature name exists in multiple contexts, so it is ambiguous, ask once which context they mean (this happens only rarely, in multi-context repos that use grouping).
+   - **When the argument is empty, the match is ambiguous, or there is no mapping / mapping file** — show the list of ADRs in `Proposed` state (not implemented) all at once and ask the user which ADR to implement (the "Printing the Proposed list" procedure below).
+
+   **Procedure for printing the Proposed list**:
+   1. If `docs/adr/.mapping.json` exists, iterate over every category. If not, walk `docs/adr/**/*.md` **recursively** (e.g. `find docs/adr -name '[0-9][0-9][0-9][0-9]-*.md'`) to build the ADR file list — it must include **both** flat keys (`docs/adr/auth/0001.md`) and 2-segment feature sub-folders (`docs/adr/identity/login/0001.md`). Do not use a non-recursive glob (`docs/adr/*/*.md`), because it misses 2-segment sub-folder ADRs entirely.
+   2. Read each ADR file's `## Status` section and keep only `Proposed` ones (exclude `Accepted`, `Deprecated`, `Superseded`).
+   3. Show the user the following format once and take their selection:
 
       ```
-      아직 구현되지 않은 ADR 이 N개 있습니다. 어떤 ADR 을 구현할까요?
+      There are N ADRs that have not been implemented yet. Which ADR should I implement?
 
-      1. identity/login — 이메일 가입 (docs/adr/identity/login/0001-email-signup.md)
-      2. identity/password-reset — 비밀번호 재설정 (docs/adr/identity/password-reset/0001-password-reset.md)
-      3. cart — 장바구니 합산 (docs/adr/cart/0003-cart-totals.md)
+      1. identity/login — Email signup (docs/adr/identity/login/0001-email-signup.md)
+      2. identity/password-reset — Password reset (docs/adr/identity/password-reset/0001-password-reset.md)
+      3. cart — Cart totals (docs/adr/cart/0003-cart-totals.md)
 
-      번호 또는 카테고리 키로 답해주세요 (예: `identity/login`). 한 번에 여러 개를 구현하려면 "1,2" 또는 "identity/login, cart" 처럼 답하세요.
+      Answer with a number or a category key (e.g. `identity/login`). To implement several at once, answer like "1,2" or "identity/login, cart".
       ```
 
-   4. 사용자가 답하면 그 선택을 카테고리 인자로 받아 다시 1단계 시작 부분으로 돌아간다.
-   5. **Proposed ADR 이 0 개** 면 _"모든 ADR 이 이미 구현되어 있습니다. 새 결정을 남기려면 `/adr-new <category>` 로 ADR 을 먼저 작성하세요. ALPS Section 7 feature 를 일괄 변환하려면 `/feature-to-adr` 를 사용해도 됩니다."_ 라고 안내하고 종료한다.
-   6. **ADR 자체가 디스크에 한 개도 없으면** _"ADR 이 아직 없습니다. `/adr-new <category>` 로 직접 작성하거나, ALPS Section 7 feature 가 있다면 `/feature-to-adr` 로 변환한 뒤 다시 호출해주세요."_ 라고 안내하고 종료한다.
+   4. Once the user answers, take that selection as the category argument and go back to the beginning of step 1.
+   5. **If there are 0 Proposed ADRs**, tell the user _"Every ADR is already implemented. To record a new decision, write the ADR first with `/adr-new <category>`. You can also use `/feature-to-adr` to batch-convert ALPS Section 7 features."_ and finish.
+   6. **If there is not a single ADR on disk at all**, tell the user _"There are no ADRs yet. Write one directly with `/adr-new <category>`, or if you have ALPS Section 7 features, convert them with `/feature-to-adr` and call this again."_ and finish.
 
-   대상 ADR 이 식별되면 현재 Status 를 확인한다 — 이 명령은 `Proposed → Accepted` 전환을 자동 처리한다. 이미 `Accepted` 인 ADR 을 다시 구현 대상으로 받은 경우 부분 변경/보강 의도인지 사용자에게 한 번 확인하고 진행. 이때 **요구사항 변경으로 결정 자체가 바뀐 것**이면(단순 구현 정정이 아니라 — 판정은 `authoring-rules.md` "요구사항 변경으로 ADR을 고칠 때" 참조), 새 결정을 ADR 본문에 현재 상태로 반영(edit-in-place)한 뒤 Status 를 `Proposed` 로 되돌리고 이 구현을 진행한다 (5단계 테스트 통과 후 6단계가 다시 `Accepted` 로 자동 승격한다 — `README.md` "자동 전환 규칙"). 그 결정 변경이 **major**(채택 대안 교체·Driver 반전·핵심 알고리즘/아키텍처 변경·동작 바꾸는 버그 수정 — `authoring-rules.md` "결정 로그 기록 기준")면 카테고리 `decision-log.md` 에 한 줄 남긴다. **결정 주제가 분기해 옛 결정을 별개 레코드로 공존**시켜야 할 때만 supersede 로 판정하고, 그때는 `/adr-new` 로 새 ADR 을 만들어 옛 것을 `Superseded` 로 남기고 그 새 ADR 을 구현 대상으로 삼는다 (supersede 도 major 이므로 로그에 남긴다).
+   Once the target ADR is identified, check its current Status — this command handles the `Proposed → Accepted` transition automatically. If an ADR that is already `Accepted` is given as the implementation target, confirm once with the user whether the intent is a partial change / reinforcement, then proceed. At this point, if **the decision itself changed because of a requirement change** (not a mere implementation correction — for the judgment call see `authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"), reflect the new decision in the ADR body as the current state (edit-in-place), revert Status to `Proposed`, and proceed with this implementation. **A request that changes only a requirement value or rule ("max 7 turns → 10 turns", "retention 30 days → 90 days") also falls here** — even though it looks like editing a single constant in the code, a system behavior requirement has changed, so do not touch the code first; update the ADR's requirement contract to the new value first (`authoring-rules.md` "Requirements live in the code and in the ADR") (after the step 5 tests pass, step 6 will auto-promote it back to `Accepted` — `README.md` "Automatic transition rules"). If that decision change is **major** (swapping the adopted alternative, reversing a Driver, changing the core algorithm/architecture, a bug fix that changes behavior — `authoring-rules.md` "What to log — minor vs major"), leave a one-line entry in the category's `decision-log.md`. Judge it a supersede **only when the decision topic has branched and the old decision must coexist as a separate record**; in that case create a new ADR with `/adr-new`, leave the old one as `Superseded`, and take that new ADR as the implementation target (a supersede is also major, so log it).
 
-   **대상이 식별되면 어떤 경우에도 곧바로 3단계(계획)로 가지 않는다. 반드시 2단계 의존성 확인을 먼저 수행한다.** 단일 ADR 이든, 사용자가 `1,2` / `f1, f2` 처럼 여러 개를 한 번에 고른 경우든 예외 없이 2단계를 거친다.
+   **Once the target is identified, never go straight to step 3 (planning) under any circumstances. You must perform the step 2 dependency check first.** Whether it is a single ADR or the user picked several at once like `1,2` / `f1, f2`, step 2 is taken without exception.
 
-2. **의존성 확인 (선행 ADR 게이트) — 건너뛸 수 없는 필수 단계**
+2. **Dependency check (prerequisite ADR gate) — a mandatory step that cannot be skipped**
 
-   feature 는 서로 의존한다 — 예를 들어 "결제(`checkout`)" 는 "장바구니(`cart`)" 가 먼저 동작해야 구현이 의미가 있다. 이 의존을 무시하고 요청받은 ADR 부터 구현하면 선행이 없는 위에 코드를 쌓게 되어 실제 동작 순서와 어긋난다. 그래서 **구현·계획에 앞서 의존부터 본다 — 이 단계는 생략하거나 뒤로 미룰 수 없다.** (아래 예시의 카테고리 키는 이름 기반 canonical 키이고, 대상은 이 키로 지정한다.)
-   - 대상 카테고리의 `docs/adr/.mapping.json` entry 에서 `dependsOn` 을 읽는다 (이 값은 `/feature-to-adr` 가 ALPS Section 6.3 Feature Dependency Diagram 에서 옮겨오거나, `/adr-new` 가 작성 시 선행 조건으로 직접 기록한 것이다).
-     - entry 는 있는데 **`dependsOn` 키 자체가 없으면** — 의존이 선언되지 않은 것이다. 한 줄로 "이 ADR 에 `dependsOn` 이 선언돼 있지 않아 선행 점검 없이 진행합니다 — 선행 ADR 이 있으면 `.mapping.json` 의 `dependsOn` 또는 `/feature-to-adr` 로 보강하세요" 라고 알린 뒤 3단계로 진행한다 ("의존 없음" 과 "의존 미선언" 을 조용히 같게 취급하지 않는다).
-     - `dependsOn` 이 **빈 배열(`[]`)** 이면 의존 없음을 명시적으로 점검 완료한 것이므로 안내 없이 3단계로 진행한다.
-   - `dependsOn` 에 키가 있으면 그래프를 **한 노드씩 따라가며 전이적 선행 카테고리**를 방문한다(예: `checkout` → `cart` → `identity/login`). 방문하는 각 노드가 **dangling 참조**(`.mapping.json` entry 가 없거나 ADR 파일이 디스크에 한 개도 없음)이면 그 자리에서 멈춘다 — 전이 확장은 그 노드의 entry·`dependsOn` 을 읽어야 다음 hop 으로 넘어가므로, 중간 노드가 dangling 이면 더 깊은 선행에 도달할 수 없다(그래서 "다 모은 뒤" 가 아니라 hop 마다 점검한다). dangling 이 아니면 그 노드의 `dependsOn` 을 읽어 더 깊은 선행으로 확장하고, 방문한 노드의 ADR Status 를 확인한다.
-   - **dangling 참조를 만나면** — `dependsOn` 이 아직 변환·작성되지 않은 선행을 가리키는 경우다 (특히 `/feature-to-adr` 를 단일 feature 인자로 돌렸을 때 발생). 미구현 선행과 동일하게 구현을 멈추고, 그 선행은 ADR 자체가 없음을 알린 뒤 `/adr-new <category>` 로 직접 작성하거나 `/feature-to-adr` 로 해당 feature 를 변환하도록 안내한다.
-   - **선행 ADR 이 전부 `Accepted`(구현 완료)** 면 의존이 충족된 것이므로 그대로 3단계로 진행한다.
-   - **선행 ADR 중 `Proposed`(미구현) 가 하나라도 있으면 구현을 멈추고**, 무엇이 먼저 필요한지 사용자에게 안내한 뒤 선택을 받는다. 사용자가 선행부터 구현하기로 하면 의존 위상 순서(가장 깊은 선행부터)로 대상 목록을 재구성해 1단계 식별 결과에 더한다.
-   - **대상이 여러 ADR 일 때는(사용자가 직접 여러 개를 골랐든, 위에서 선행을 더했든) 항상 `dependsOn` 그래프로 위상 정렬한 뒤 가장 깊은 선행부터 순서대로 구현한다.** 사용자가 입력한 나열 순서(`checkout, identity/login, cart`)를 그대로 따르지 않는다 — 의존 순서가 입력 순서보다 우선한다. 정렬한 구현 순서를 사용자에게 한 줄로 보여주고("구현 순서: identity/login → cart → checkout") 진행한다.
-   - 의존 그래프에 순환이 있으면(예: `cart` ↔ `checkout`) 위상 정렬이 불가능하므로 구현을 멈추고, 어떤 카테고리들이 서로 물려 있는지 알린 뒤 어디부터 끊어서 시작할지 사용자에게 묻는다.
+   Features depend on each other — for example, implementing "checkout (`checkout`)" is only meaningful once "cart (`cart`)" already works. If you ignore this dependency and start with the requested ADR, you stack code on top of a missing prerequisite and diverge from the real order of operation. So **look at dependencies before implementing or planning — this step cannot be omitted or deferred.** (The category keys in the examples below are name-based canonical keys, and the target is specified with such a key.)
+   - Read `dependsOn` from the target category's entry in `docs/adr/.mapping.json` (this value was carried over from ALPS Section 6.3 Feature Dependency Diagram by `/feature-to-adr`, or recorded directly as a prerequisite by `/adr-new` at authoring time).
+     - If the entry exists but **the `dependsOn` key itself is absent** — no dependency has been declared. Say in one line, "This ADR does not declare `dependsOn`, so I'm proceeding without a prerequisite check — if there are prerequisite ADRs, fill them in via `dependsOn` in `.mapping.json` or via `/feature-to-adr`", then proceed to step 3 (do not silently treat "no dependencies" and "dependencies undeclared" as the same thing).
+     - If `dependsOn` is an **empty array (`[]`)**, that is an explicit, completed check that there are no dependencies, so proceed to step 3 without any notice.
+   - If `dependsOn` has keys, walk the graph **one node at a time to visit the transitive prerequisite categories** (e.g. `checkout` → `cart` → `identity/login`). If any node you visit is a **dangling reference** (no `.mapping.json` entry, or not a single ADR file on disk), stop right there — transitive expansion requires reading that node's entry and `dependsOn` to move to the next hop, so if an intermediate node is dangling you cannot reach the deeper prerequisites (which is why you check at every hop rather than "after collecting everything"). If it is not dangling, read that node's `dependsOn` to expand into deeper prerequisites, and check the visited node's ADR Status.
+   - **When you hit a dangling reference** — this is the case where `dependsOn` points at a prerequisite that has not been converted/authored yet (it happens especially when `/feature-to-adr` was run with a single feature argument). Stop the implementation just as you would for an unimplemented prerequisite, tell the user that the prerequisite has no ADR at all, and direct them to write it directly with `/adr-new <category>` or convert that feature with `/feature-to-adr`.
+   - **If every prerequisite ADR is `Accepted` (implementation complete)**, the dependencies are satisfied, so proceed to step 3 as-is.
+   - **If even one prerequisite ADR is `Proposed` (not implemented), stop the implementation**, tell the user what is needed first, and take their selection. If the user decides to implement the prerequisite first, rebuild the target list in dependency topological order (deepest prerequisite first) and add it to the step 1 identification result.
+   - **When there are multiple target ADRs (whether the user picked several directly or you added prerequisites above), always topologically sort them by the `dependsOn` graph and implement from the deepest prerequisite in order.** Do not simply follow the order the user typed (`checkout, identity/login, cart`) — dependency order takes precedence over input order. Show the sorted implementation order to the user in one line ("Implementation order: identity/login → cart → checkout") and proceed.
+   - If the dependency graph has a cycle (e.g. `cart` ↔ `checkout`), topological sorting is impossible, so stop the implementation, report which categories are entangled with each other, and ask the user where to cut in and start.
 
      ```
-     `checkout`(결제) 은 `cart`(장바구니) 에 의존하는데 `cart` 가 아직 미구현(Proposed) 입니다.
-     의존 순서상 `cart` 를 먼저 구현해야 `checkout` 가 제대로 동작합니다.
+     `checkout` depends on `cart`, but `cart` is not implemented yet (Proposed).
+     By dependency order, `cart` has to be implemented first for `checkout` to work properly.
 
-     - `cart` 부터 순서대로 구현하려면: "cart부터" 또는 "둘 다 순서대로"
-     - 그래도 `checkout` 만 먼저 구현하려면: "checkout만" (선행이 미구현이라 일부 동작이 비어 있을 수 있음)
+     - To implement in order starting from `cart`: "start with cart" or "both, in order"
+     - To implement only `checkout` first anyway: "checkout only" (some behavior may be empty because the prerequisite is unimplemented)
      ```
 
-   - `.mapping.json` 자체가 없거나 대상 카테고리의 entry 가 아예 없는 레거시 ADR 셋이라면 의존을 알 수 없으므로 게이트를 건너뛰되, 한 줄로 "의존성 정보가 없어 순서 점검을 건너뜁니다 (`/feature-to-adr` 또는 `.mapping.json` 의 `dependsOn` 으로 보강 가능)" 라고 알린다. (entry 는 있는데 `dependsOn` 키만 없는 경우는 위 "의존 미선언" 분기로 처리하지 이 레거시 케이스가 아니다.)
+   - If this is a legacy ADR set where `.mapping.json` itself is missing or the target category has no entry at all, the dependencies are unknowable, so skip the gate — but say in one line, "There is no dependency information, so I'm skipping the ordering check (you can fill it in via `/feature-to-adr` or `dependsOn` in `.mapping.json`)". (The case where the entry exists but only the `dependsOn` key is missing is handled by the "dependencies undeclared" branch above, not by this legacy case.)
 
-3. **계획 수립**
-   - ADR의 Decision/Mermaid 다이어그램에서 vertical slice 를 추출한다 (UI → API → 데이터). 한 ADR 은 한 피쳐(leaf — 피쳐 sub-folder 또는 단일-피쳐 context)의 슬라이스 전체를 다루므로, 구현 계획도 같은 피쳐 안에서 UI/API/Data 모든 레이어를 **함께** 변경하는 단위로 잡는다.
-   - 카테고리가 안티패턴 카테고리(`frontend/`, `backend/`, `api/`, `identity/api` 등 context·피쳐 어느 세그먼트든 — `structure.md` "안티패턴 카테고리" 참조)로 잡혀 있어 vertical slice 추출이 불가능하면 구현을 멈추고 `/adr-sync` 로 카테고리 재정렬을 권한다.
-   - ADR Decision 의 키워드로 `Glob`/`Grep` 해 관련 기존 코드를 찾아 읽고 차이를 식별한다 (코드 위치는 매핑에 없으므로 ADR 을 읽고 직접 탐색 — `structure.md` "관련 코드 찾기"). 같은 피쳐의 UI/API/Data 코드가 한곳에 모여 있는지 확인.
-   - 변경 계획을 사용자에게 제시하고 승인받는다.
+3. **Build the plan**
+   - Extract the vertical slice from the ADR's Decision / Mermaid diagram (UI → API → data). One ADR covers the whole slice of one feature (a leaf — a feature sub-folder or a single-feature context), so scope the implementation plan as a unit that changes the UI/API/Data layers **together** within that same feature.
+   - If the category is set up as an anti-pattern category (`frontend/`, `backend/`, `api/`, `identity/api`, etc. — in any segment, context or feature; see `structure.md` "Anti-pattern categories") so that vertical slice extraction is impossible, stop the implementation and recommend re-aligning the categories with `/adr-sync`.
+   - `Glob`/`Grep` on keywords from the ADR's Decision to find and read the relevant existing code and identify the gaps (code locations are not in the mapping, so read the ADR and search directly — `structure.md` "Finding the related code"). Check whether the UI/API/Data code of the same feature is gathered in one place.
+   - Present the change plan to the user and get approval.
 
-   여러 ADR 을 순서대로 구현하기로 한 경우(2단계에서 선행을 더했을 때), 아래 4~6단계를 **의존 위상 순서의 가장 깊은 선행부터 한 ADR 씩** 반복한다 — 선행이 `Accepted` 가 된 뒤에야 다음 ADR 의 4단계로 넘어간다.
+   If you decided to implement multiple ADRs in order (when prerequisites were added in step 2), repeat steps 4–6 below **one ADR at a time, starting from the deepest prerequisite in dependency topological order** — only after a prerequisite becomes `Accepted` do you move on to step 4 for the next ADR.
 
-4. **구현**
-   - 작은 단위로 Edit/Write.
-   - ADR에 명시된 행동 규칙·상태 전이·연동 방식을 그대로 따른다. ADR과 다르게 구현하려면 먼저 ADR을 수정한다.
-   - **ADR 이 적은 요구사항 값은 값 그대로 시행한다** — 한도·정원·주기·보존 기간·상한·목표치를 임의로 바꾸거나 "대충 비슷하게" 두지 않고, 그 값을 강제하는 코드(상한 검사·카운터·만료 처리)를 실제로 넣는다. 값을 바꿔야 할 이유가 생기면 코드부터 고치지 말고 ADR 을 먼저 갱신한다 (요구사항 값 변경은 최소 major 이므로 `decision-log.md` 에도 한 줄 남긴다 — `authoring-rules.md` "결정 로그 기록 기준").
-   - **ADR 에 없는 값은 구현 재량이다** — 커넥션 풀 크기·백오프·캐시 TTL·워커 수 등은 자유롭게 고르고, 그 값을 ADR 에 거꾸로 적어 올리지 않는다.
-   - 구현 도중 ADR의 회색지대 결정(채택 근거·도메인 규칙·상태 전이·fallback)을 바꿔야겠다고 판단되면, 코드부터 고치지 말고 멈춰서 "의도된 결정 변경인가, 아니면 ADR을 지키는 게 맞는가"를 사용자와 분기한다 — 결정 변경이면 ADR을 현재 결정으로 먼저 갱신(edit-in-place; 결정 주제가 분기하면 새 ADR로 supersede)한 뒤 같은 커밋에 담고, 아니면 ADR대로 구현한다. 그 변경이 **major**면(`authoring-rules.md` "결정 로그 기록 기준") 카테고리 `decision-log.md` 에도 한 줄 남긴다 — 로그 엔트리는 **결정을 바꾸는 이 시점**에 추가한다(6단계의 Status 자동 전환과는 별개다 — 로그는 결정을, Status 는 구현 사실을 기록). 코드가 회색지대 결정을 조용히 끌고 가면 PRD → ADR → 코드 단방향이 깨진다 (`adr-sync` "source of truth 의 범위"와 같은 프레이밍).
+4. **Implement**
+   - Edit/Write in small units.
+   - Follow the behavior rules, state transitions, and integration methods stated in the ADR exactly. To implement something differently from the ADR, change the ADR first.
+   - **Enforce the requirement values the ADR records, at face value** — do not arbitrarily change or "roughly approximate" limits, quotas, intervals, retention periods, ceilings, or targets; actually put in the code that enforces those values (ceiling checks, counters, expiry handling). **Non-numeric requirements are the same** — enforce exactly the allowed value sets, transition rules, mandatory-ness, permissions, visibility, ordering, uniqueness, and units that the ADR fixed (do not add a state that is not allowed, do not open a forbidden transition, and do not turn a required input into an optional one). Enum identifier names are at your discretion, but **the set and the transition rules are the contract**. If a reason arises to change a value, do not fix the code first — update the ADR first (a requirement value change is at minimum major, so also leave a one-line entry in `decision-log.md` — `authoring-rules.md` "What to log — minor vs major").
+   - **Values the ADR does not state are implementation discretion** — connection pool size, backoff, cache TTL, worker count, and so on are yours to choose freely, and you do not write those values back up into the ADR.
+   - If, mid-implementation, you judge that a gray-zone decision in the ADR (adoption rationale, domain rules, state transitions, fallback) needs to change, do not fix the code first — stop and branch with the user on "is this an intended decision change, or is honoring the ADR the right call?" — if it is a decision change, update the ADR to the current decision first (edit-in-place; if the decision topic branches, supersede with a new ADR) and put it in the same commit; otherwise implement per the ADR. If that change is **major** (`authoring-rules.md` "What to log — minor vs major"), also leave a one-line entry in the category's `decision-log.md` — the log entry is added **at the moment you change the decision** (which is separate from the automatic Status transition in step 6 — the log records the decision, Status records the fact of implementation). If code silently drags a gray-zone decision along, the one-way PRD → ADR → code flow breaks (the same framing as `adr-sync` "Scope of the source of truth").
 
-5. **테스트**
-   - 프로젝트의 테스트 명령(`AGENTS.md` 또는 `package.json` 참조)을 실행한다.
-   - 테스트가 없으면 사용자에게 어떤 검증 절차를 원하는지 묻는다.
-   - 테스트가 실패하면 6단계로 넘어가지 않는다 — 구현 버그면 4단계로, ADR이 잘못된 결정이면 ADR을 먼저 수정하고 다시 4단계로.
+5. **Test**
+   - Run the project's test command (see `AGENTS.md` or `package.json`).
+   - If there are no tests, ask the user what verification procedure they want.
+   - If tests fail, do not move on to step 6 — if it is an implementation bug go back to step 4; if the ADR made the wrong decision, fix the ADR first and then go back to step 4.
 
-6. **Status 자동 전환 (`Proposed → Accepted`)**
+6. **Automatic Status transition (`Proposed → Accepted`)**
 
-   상세 정책은 `README.md` "자동 전환 규칙" 참조. 본 단계가 트리거하는 동작:
-   - 5단계 테스트 통과 직후, **사용자 확인 없이** 대상 ADR 본문의 Status 줄을 `Accepted (YYYY-MM-DD)` 로 수정
-   - `.mapping.json` 의 해당 `adrs[]` 레코드 `status` 를 `Accepted (YYYY-MM-DD)` 로 동시 갱신 (`status` 는 본문과 lockstep — summary 도 결정이 바뀌었으면 함께)
-   - 한 카테고리에 여러 ADR이 함께 구현되었으면 모두 갱신
-   - 변경 사항을 사용자에게 한 줄로 알린다 ("ADR auth/0003 Status를 Accepted로 갱신했습니다")
+   For the detailed policy see `README.md` "Automatic transition rules". What this step triggers:
+   - Immediately after the step 5 tests pass, **without asking the user**, change the Status line in the target ADR body to `Accepted (YYYY-MM-DD)`
+   - Update the `status` of the corresponding `adrs[]` record in `.mapping.json` to `Accepted (YYYY-MM-DD)` at the same time (`status` is in lockstep with the body — and update the summary too if the decision changed)
+   - If several ADRs in one category were implemented together, update all of them
+   - Tell the user about the change in one line ("Updated ADR auth/0003 Status to Accepted")
 
-7. **마무리**
-   - Status 승격(6단계) 직후 결정론적 하네스로 ADR·매핑(=ADR 인덱스) 구조를 빠르게 재확인한다:
+7. **Wrap up**
+   - Right after the Status promotion (step 6), quickly re-verify the ADR / mapping (= ADR index) structure with the deterministic harness:
 
      ```bash
-     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <구현한 카테고리 키>
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <implemented category key>
      ```
 
-     이 검사는 Status 를 `Accepted (YYYY-MM-DD)` 로 바꾼 편집이 형식에 맞는지(R1), `.mapping.json` `adrs[]` 의 `status` 가 방금 바꾼 본문 `## Status` 와 정합한지(R8 status-index-mismatch), 코드에 ADR 역참조가 새로 남지 않았는지(R17, 내부 `adr-invariants.sh --code-only`)를 기계적으로 잡아준다. `error` 가 나오면 커밋 전에 고친다.
+     This check mechanically catches whether the edit that changed Status to `Accepted (YYYY-MM-DD)` is correctly formatted (R1), whether the `status` in `.mapping.json` `adrs[]` is consistent with the `## Status` you just changed in the body (R8 status-index-mismatch), and whether any new ADR back-references were left in the code (R17, internal `adr-invariants.sh --code-only`). If an `error` comes out, fix it before committing.
 
-   - 그런 다음 `/adr-impl-review <category>` 를 실행한다 (보고만 — 코드·ADR 미수정). 먼저 실제 diff를 주니어도 이해할 수 있게 설명해 사람의 의도를 확인하고, 서로 결과를 공유하지 않는 필요성 reviewer와 충분성 reviewer가 각각 불필요한 변경과 빠진 동작·반례를 공격한다. 충분성 reviewer는 targeted test를 실제 실행하며, 최종 산출물은 코드 구조·런타임·상태 전이를 Mermaid로 설명하고 수정 순서와 완료 조건을 담은 주니어용 가이드다. 여기서 `[Impl-fact mismatch]`가 나오면 `/adr-sync <category>`로 ADR을 코드에 맞춰 정정한다.
+   - Then run `/adr-impl-review <category>` (report only — it does not modify code or ADRs). It first explains the actual diff in a way a junior can understand so a human can confirm the intent, and then a necessity reviewer and a sufficiency reviewer, who do not share results with each other, each attack unnecessary changes and missing behavior / counterexamples. The sufficiency reviewer actually executes targeted tests, and the final artifact is a junior-facing guide that explains code structure, runtime, and state transitions in Mermaid and includes the repair order and completion criteria. If an `[Impl-fact mismatch]` comes out of it, correct the ADR to match the code with `/adr-sync <category>`.
 
-**금지**:
+**Forbidden**:
 
-- 의존성 확인(2단계) 없이 곧바로 계획·구현으로 넘어가지 않는다 — 단일 ADR 이라도 선행 게이트를 먼저 통과해야 한다.
-- 선행 ADR 이 미구현(`Proposed`) 인데 사용자 확인 없이 후행 ADR 부터 구현하지 않는다.
-- 여러 ADR 을 구현할 때 입력 순서대로 구현하지 않는다 — 반드시 `dependsOn` 위상 순서(선행 우선) 로 구현한다.
-- ADR 없이 새 기능을 구현하지 않는다.
-- 구현 중 발견한 결정 변경은 코드 수정 전에 ADR에 반영한다.
-- 테스트가 통과하지 않은 ADR을 `Accepted`로 올리지 않는다 — Status는 코드 동작의 사실이지 의도 표명이 아니다.
+- Do not jump straight to planning/implementation without the dependency check (step 2) — even a single ADR must pass the prerequisite gate first.
+- Do not start with a downstream ADR while a prerequisite ADR is unimplemented (`Proposed`) without user confirmation.
+- Do not implement multiple ADRs in input order — always implement in `dependsOn` topological order (prerequisites first).
+- Do not implement a new feature without an ADR.
+- Reflect any decision change discovered during implementation in the ADR before modifying the code.
+- Do not promote an ADR to `Accepted` when tests have not passed — Status is a fact about code behavior, not a declaration of intent.

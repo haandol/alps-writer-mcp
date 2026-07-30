@@ -25,86 +25,110 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
     assert.match(skill, new RegExp(name.replace("name: ", "")));
   }
 
-  assert.match(skill, /명시적 확인 전에는 적대적 리뷰로 넘어가지 않는다/);
-  assert.match(skill, /리뷰어에게 설명문이나 상대 리뷰 결과를 넘기지 않는다/);
-  // 리뷰어 모델 다양화 — 같은 계열의 거짓 합의를 깨기 위해 서로 다른 모델로 돌린다.
-  // 특정 모델 ID 를 단언하지 않는다: 모델은 이 스킬보다 빠르게 교체되므로, 고정하면
-  // 테스트가 낡은 ID 를 프롬프트에 붙잡아두는 쪽으로 작동한다. 대신 불변인 성질
-  // (계열 분리·최고 추론 등급·다양화 실패 시 기록 의무)만 단언한다.
-  assert.match(skill, /서로 다른 모델 계열/);
-  assert.match(skill, /서로 다른 제공자 계열의 최고 추론 모델/);
-  assert.match(skill, /최고 reasoning 등급/);
-  assert.match(skill, /특정 모델 ID를 여기 고정하지 않는다/);
-  assert.match(skill, /모델을 다양화하지 못했음과 각 reviewer가 실제 쓴 모델을 보고서에 기록한다/);
-  // 어떤 제공자의 모델 ID 도 프롬프트에 박혀 있지 않아야 한다.
+  assert.match(skill, /Never proceed to the adversarial reviews before explicit confirmation/);
+  assert.match(
+    skill,
+    /Never pass a reviewer the explanation document or the other reviewer's result/,
+  );
+  // Reviewer model diversification — run them on different families to break the
+  // false consensus a single family reaches. Do not assert a specific model ID: models
+  // are replaced faster than this skill, so pinning one makes the test hold a stale ID
+  // in the prompt. Assert only the invariant properties (family separation, the top
+  // reasoning tier, and the duty to record when diversification fails).
+  assert.match(skill, /different model families/);
+  assert.match(skill, /strongest reasoning models from different provider families/);
+  assert.match(skill, /highest reasoning tier/);
+  assert.match(skill, /Do not pin specific model IDs here/);
+  assert.match(
+    skill,
+    /record in the report that models could not be diversified, along with the model each reviewer actually used/,
+  );
+  // No provider's model ID may be embedded in the prompt.
   assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
 });
 
 test("human gate asks a third spec-fitness question that reviewers never inherit", () => {
   const skill = read("skills/adr-impl-review/SKILL.md");
-  // 세 번째 인간 게이트 질문: 명세 자체가 옳은가 (코드가 아니라 명세 축).
-  assert.match(skill, /다음 세 질문을 확인한다/);
-  assert.match(skill, /명세 적합성/);
-  assert.match(skill, /명세가 옳은가/);
-  // 명세 부족은 impl-review가 코드로 고치지 않고 밖으로 라우팅한다.
-  assert.match(skill, /명세 자체가 옳은지는 오직 2절 인간 게이트/);
-  // 충분성 리뷰어는 ADR을 옳다고 전제하는 계약을 유지한다.
+  // The third human-gate question: is the spec itself right (the spec axis, not the code).
+  assert.match(skill, /confirm the following three questions/);
+  assert.match(skill, /spec fitness/);
+  assert.match(skill, /is the spec right/);
+  // An inadequate spec is routed outward rather than fixed in code by impl-review.
+  assert.match(
+    skill,
+    /whether the spec itself is right is asked only by the human at the section 2 gate/,
+  );
+  // The sufficiency reviewer keeps the contract of presuming the ADR is correct.
   const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
-  assert.match(sufficiency, /ADR 이 옳다고 전제/);
+  assert.match(sufficiency, /assume the ADR is correct/);
 });
 
 test("sufficiency reviewer tests the tests — mutation and static analysis as verification lenses", () => {
   const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
   const skill = read("skills/adr-impl-review/SKILL.md");
-  assert.match(sufficiency, /테스트의 테스트/);
+  assert.match(sufficiency, /Testing the tests/);
   assert.match(sufficiency, /mutation/);
-  assert.match(sufficiency, /정적\/보안 분석/);
-  // 이미 구성된 도구만 쓰고 새로 설치하지 않는다.
-  assert.match(sufficiency, /이미 구성/);
-  assert.match(sufficiency, /새 도구를 설치하지 않는다/);
-  assert.match(skill, /테스트가 결함을 실제로 잡는지/);
+  assert.match(sufficiency, /Static\/security analysis/);
+  // Use only already-configured tooling; never install anything new.
+  assert.match(sufficiency, /already configured/);
+  assert.match(sufficiency, /Do not install new tools/);
+  assert.match(skill, /whether the tests actually catch defects/);
 });
 
 test("junior repair report ends with a seven-axis merge-fitness checklist", () => {
   const writer = read("agents/adr-impl-review-report-writer.md");
   const skill = read("skills/adr-impl-review/SKILL.md");
-  assert.match(writer, /머지 판정 체크리스트/);
+  assert.match(writer, /Merge decision checklist/);
   const axes = [
-    "문제 적합성",
-    "기능 충분성",
-    "계약 준수",
-    "변경 최소성",
-    "검증 강도",
-    "운영 안전성",
-    "유지보수성",
+    "Problem fitness",
+    "Functional adequacy",
+    "Contract compliance",
+    "Change minimality",
+    "Verification strength",
+    "Operational safety",
+    "Maintainability",
   ];
   for (const axis of axes) {
-    assert.match(writer, new RegExp(axis));
+    // Case-insensitive: the writer names each axis as a table row ("Problem
+    // fitness") while the skill lists them inline in prose ("problem fitness,
+    // functional adequacy, ..."). The invariant is that both name the axis, not
+    // that both capitalize it.
+    assert.match(writer, new RegExp(axis, "i"));
     // the skill advertises the same axis list, or a caller writing the report
     // by hand (no subagent available) drops one silently
-    assert.match(skill, new RegExp(axis), `SKILL.md must name the ${axis} axis`);
+    assert.match(skill, new RegExp(axis, "i"), `SKILL.md must name the ${axis} axis`);
   }
-  assert.match(writer, new RegExp(`${axes.length}축`));
-  assert.match(skill, new RegExp(`${axes.length}축`));
-  // 문제 적합성은 명세 축이라 human-baseline을 근거로 삼고 밖으로 라우팅한다.
-  assert.match(writer, /명세 부족을 지적했으면/);
-  // 계약 준수는 기능 충분성과 별개 축이다 — 로직이 있어도 값이 다르면 위반.
-  assert.match(writer, /기능 충분성과 다른 축/);
+  // Both must state the axis COUNT, so a dropped row is visible against it.
+  // Spelled out ("seven axes" / "seven-axis") rather than digits, so key off the
+  // word — and keep it derived from axes.length, so adding an axis here fails
+  // until both documents are updated too.
+  const COUNT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight"];
+  const countWord = COUNT_WORDS[axes.length];
+  assert.ok(countWord, `no spelled-out word for ${axes.length} axes — extend COUNT_WORDS`);
+  assert.match(writer, new RegExp(`${countWord}[ -]ax(is|es)`, "i"));
+  assert.match(skill, new RegExp(`${countWord}[ -]ax(is|es)`, "i"));
+  // Problem fitness is a spec axis, so it is grounded in human-baseline and routed outward.
+  assert.match(writer, /flagged the spec as inadequate/);
+  // Contract compliance is a separate axis from functional adequacy — logic can exist while the value differs.
+  assert.match(writer, /a different axis from functional adequacy/);
 });
 
 test("junior repair report requires grounded Mermaid and executable fix guidance", () => {
   const writer = read("agents/adr-impl-review-report-writer.md");
 
-  assert.match(writer, /처음 보는 주니어 개발자가 혼자 수정/);
+  assert.match(
+    writer,
+    /junior developer seeing this code for the first time can fix it from alone/,
+  );
   assert.match(writer, /flowchart/);
   assert.match(writer, /sequenceDiagram/);
   assert.match(writer, /stateDiagram-v2/);
   assert.match(writer, /erDiagram/);
-  assert.match(writer, /ASCII\/box-drawing 다이어그램은 쓰지 않는다/);
-  assert.match(writer, /실제 코드에서 확인한 관계만 Mermaid로 그린다/);
-  assert.match(writer, /수정할 파일과 심볼/);
-  assert.match(writer, /건드리지 말아야 할 범위/);
-  assert.match(writer, /완료 조건/);
-  assert.match(writer, /검증 체크리스트/);
-  assert.match(writer, /## 11\. 리뷰 한계와 질문/);
+  assert.match(writer, /Never use ASCII or box-drawing diagrams/);
+  assert.match(writer, /Draw only relationships confirmed in the actual code/);
+  assert.match(writer, /Files and symbols to change/);
+  assert.match(writer, /Scope not to touch/);
+  assert.match(writer, /Completion criteria/);
+  assert.match(writer, /Verification checklist/);
+  assert.match(writer, /## 11\. Review limits and questions/);
 });
