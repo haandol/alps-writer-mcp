@@ -31,14 +31,14 @@ codex plugin add alps-writer@alps-writer
 codex plugin add adr-writer@alps-writer
 ```
 
-Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust the ADR Writer hook when Codex prompts you.
+Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-review`, `$adr-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust the ADR Writer hook when Codex prompts you.
 
 **Claude Code**
 
 ```
 /plugin marketplace add haandol/alps-writer-plugins
 /plugin install alps-writer@alps-writer   # PRD authoring (MCP server + /alps-init, /feature-to-adr)
-/plugin install adr-writer@alps-writer    # ADR cycle (/adr-new, /adr-impl, /adr-impl-review, /adr-sync, hooks)
+/plugin install adr-writer@alps-writer    # ADR cycle (/adr-new, /adr-impl, /adr-impl-review, /adr-review, /adr-sync, hooks)
 ```
 
 > `/feature-to-adr` (in alps-writer) delegates ADR authoring to `/adr-new` (in adr-writer), so install **both** if you want the ALPS → ADR bridge. adr-writer on its own works without any ALPS PRD.
@@ -95,7 +95,7 @@ alps-writer-plugins/                 # marketplace root (this repo)
     └── adr-writer/                  # ADR plugin (standalone, ALPS-agnostic)
         ├── .codex-plugin/plugin.json
         ├── .claude-plugin/plugin.json
-        ├── skills/                  # /adr-new, /adr-impl, /adr-impl-review, /adr-sync, /adr-rollup
+        ├── skills/                  # /adr-new, /adr-impl, /adr-impl-review, /adr-review, /adr-sync, /adr-rollup
         ├── agents/                  # ADR authoring + isolated implementation review roles
         ├── hooks/                   # ADR-first directive hook (UserPromptSubmit)
         └── templates/adr/           # README + authoring-rules + structure + mapping.schema.json

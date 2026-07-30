@@ -68,6 +68,39 @@ test("adr-impl-review advertises the argument its own procedure parses", () => {
   assert.match(source, /--base/);
 });
 
+// Three commands review, and picking the wrong one wastes a lot or answers the
+// wrong question: /adr-review judges how the ADR is WRITTEN (no code read),
+// /adr-sync judges ADR↔code, /adr-impl-review judges the implementation. The
+// sweep is also the one command that can fan a misjudgment across every ADR at
+// once, so its report-only stance and its per-ADR isolation are load-bearing.
+test("adr-review sweeps ADR documents, report-only, and stays out of the code", () => {
+  const review = read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md"));
+  // no argument sweeps everything; the recursive walk is what makes that true
+  assert.match(review, /\*\*No argument\*\* → every ADR on disk/);
+  assert.match(review, /recursively/);
+  // it delegates the rules rather than restating them — one reviewer per ADR
+  assert.match(review, /adr-reviewer/);
+  assert.match(review, /Never batch several ADRs into one reviewer call/);
+  // report-only: a sweep that edited would fan one bad call across the set
+  assert.match(review, /Report-only/);
+  assert.match(review, /Never edit an ADR/);
+  // the boundary that keeps a clean sweep from reading as "matches the code"
+  assert.match(review, /Do not open the codebase/);
+  assert.match(review, /Never report a clean sweep as "the ADRs are correct"/);
+  // and it must not re-introduce the failure mode the plugin guards hardest
+  assert.match(review, /Never propose deleting a requirement value/);
+
+  // the three review commands cross-reference each other, so a user landing on
+  // any one of them can find the right one
+  assert.match(review, /\/adr-sync/);
+  assert.match(review, /\/adr-impl-review/);
+  const sync = read(path.join(ADR_ROOT, "skills", "adr-sync", "SKILL.md"));
+  assert.match(sync, /use `\/adr-review` instead/);
+  // the reviewer agent names the sweep as one of its invocation paths
+  const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  assert.match(reviewer, /Via `\/adr-review`/);
+});
+
 // Every user-facing prompt / seeded template that could carry a diagram: the
 // skills, the agent definitions, the ADR docs copied into docs/adr/, and the
 // ALPS explainer.
@@ -186,6 +219,44 @@ test("the authoring rules gate requirements ahead of the code-readthrough filter
   // the old blanket ban on constants must be gone — it swept requirements away
   assert.doesNotMatch(rules, /구현 상수\/튜닝값/);
   assert.doesNotMatch(rules, /no constants in an ADR/i);
+});
+
+// An ADR is read under time pressure by someone deciding whether to trust it, so
+// padding costs the reader attention the decision needed, and the passive voice
+// hides the actor — which in a decision record is often the whole point. The rule
+// is therefore stated once in authoring-rules and applied at authoring time and at
+// review time. Its danger is that "make it shorter" reads as license to delete, so
+// every surface must also carry the never-cut-content guard, and the review side
+// must keep it advisory so a style nit cannot outweigh a missing requirement.
+test("prose style is stated once, applied at authoring and review, and never cuts content", () => {
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  assert.match(rules, /## Prose style/);
+  assert.match(rules, /Active voice by default/);
+  assert.match(rules, /Cut the words that carry no information/);
+  assert.match(rules, /One idea per sentence/);
+  // the guard, and the test that separates padding from a constraint
+  assert.match(rules, /Never trade completeness for brevity/);
+  assert.match(rules, /if a sentence can lose a word without losing meaning/);
+  // it is on the review checklist too
+  assert.match(rules, /- \[ \] \*\*Prose style\*\*/);
+
+  // authoring applies it while drafting
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+  assert.match(adrNew, /active voice/i);
+  assert.match(adrNew, /never shorten by deleting content/i);
+
+  // the reviewer owns it as R20, advisory so it cannot block or outrank a real defect
+  const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  assert.match(reviewer, /R20/);
+  assert.match(reviewer, /advisory and never blocks/);
+  assert.match(reviewer, /Never propose a cut that removes content/);
+  assert.match(reviewer, /### Prose style \(R20, advisory\)/);
+
+  // the sweep reports it as ONE grouped finding — N per-ADR style nags would bury
+  // the findings that matter
+  const sweep = read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md"));
+  assert.match(sweep, /one grouped finding for the whole sweep/);
+  assert.match(sweep, /never propose a cut that removes content/i);
 });
 
 // Requirements do not arrive only as numbers. An allowed value set, a mandatory

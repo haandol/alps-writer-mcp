@@ -1,6 +1,6 @@
 {
   "name": "adr-writer",
-  "version": "0.4.28",
+  "version": "0.4.29",
   "description": "Run an ADR-first development cycle that authors, implements, reviews, synchronizes, and rolls up architecture decisions.",
   "author": {
     "name": "haandol",
@@ -30,6 +30,7 @@
     "defaultPrompt": [
       "Write an ADR for this architectural decision.",
       "Implement the next proposed ADR and verify it.",
+      "Review my existing ADRs for quality and abstraction level.",
       "Adversarially review this ADR implementation and produce a junior repair guide.",
       "Audit the current ADRs against the shipping code."
     ],

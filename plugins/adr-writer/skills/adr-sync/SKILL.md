@@ -21,6 +21,8 @@ The default is **deep mode**: read every ADR body in scope and compare every cla
 
 If the argument is a category, target only that category (`/adr-sync auth`).
 
+> **If the question is only about how the ADRs are written, use `/adr-review` instead.** This command's job is ADR ↔ code consistency, so it greps the codebase for every ADR — expensive, and pointless when the code does not exist yet. `/adr-review` sweeps the same ADRs against the authoring rules (R1-R20: abstraction level, requirement preservation, alternatives, prose style) without opening the code, and reports rather than edits.
+
 > **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the ADR body in the language the user writes in (`authoring-rules.md` "Conventions"). Any user-facing phrasing below is a guide, not a literal string.
 
 ## Workflow

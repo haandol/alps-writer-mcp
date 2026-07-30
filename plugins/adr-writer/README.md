@@ -22,13 +22,14 @@ codex plugin add adr-writer@alps-writer
 
 ## Slash commands
 
-| Command                          | Role                                                                                                                                            |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/adr-new <category>`            | Author a new ADR directly — the default authoring path                                                                                          |
-| `/adr-impl [category]`           | Implement an ADR in code (including tests). With no argument, lists Proposed ADRs and asks which to build                                       |
-| `/adr-impl-review [category]`    | Explain the implementation, then run independent necessity/sufficiency reviews and tests; emit a Mermaid-rich junior repair guide (report-only) |
-| `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                                              |
-| `/adr-rollup [category]`         | Consolidate ADR groups whose evolution history of one logical decision is split (no arg → all categories)                                       |
+| Command                          | Role                                                                                                                                                                          |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/adr-new <category>`            | Author a new ADR directly — the default authoring path                                                                                                                        |
+| `/adr-impl [category]`           | Implement an ADR in code (including tests). With no argument, lists Proposed ADRs and asks which to build                                                                     |
+| `/adr-impl-review [category]`    | Explain the implementation, then run independent necessity/sufficiency reviews and tests; emit a Mermaid-rich junior repair guide (report-only)                               |
+| `/adr-review [category]`         | Review existing ADRs **as documents** against the authoring rules (abstraction level, requirement preservation, alternatives) — no code read, report-only. No arg → every ADR |
+| `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                                                                            |
+| `/adr-rollup [category]`         | Consolidate ADR groups whose evolution history of one logical decision is split (no arg → all categories)                                                                     |
 
 The shared authoring rules and procedures (category-split, Status transitions, finding the code an ADR governs) live in `docs/adr/` (`README.md`, `authoring-rules.md`, `structure.md`) — seeded from this plugin's `templates/adr/` on first run. Every command reads them as the single source of truth.
 
