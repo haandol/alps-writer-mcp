@@ -15,7 +15,7 @@
 //   node scripts/bump-version.mjs 0.4.23     set an explicit version
 //   node scripts/bump-version.mjs patch      bump the patch component
 //   node scripts/bump-version.mjs minor|major
-//   node scripts/bump-version.mjs --check    verify the five sites agree (exit 1 if not)
+//   node scripts/bump-version.mjs --check    verify every site agrees (exit 1 if not)
 //
 // Exit: 0 = done / in sync, 1 = drift found (--check), 2 = usage error.
 
@@ -47,6 +47,19 @@ const MARKETPLACE = ".claude-plugin/marketplace.json";
 const SERVER = "plugins/alps-writer/src/index.ts";
 const SERVER_RE = /(name:\s*"alps-writer",\s*version:\s*")([^"]+)(")/;
 
+// The rules-version stamp in each seeded ADR rule doc. adr-structure-lint compares
+// a project's seeded copy against the installed plugin version to warn that rules
+// added upstream are missing from that repo (rules-doc-stale). So the stamp has to
+// move with the release: leave it behind and the plugin reports its OWN templates
+// as stale on the next bump — the check would cry wolf on every consumer at once.
+const RULE_DOCS = [
+  "plugins/adr-writer/templates/adr/README.md",
+  "plugins/adr-writer/templates/adr/authoring-rules.md",
+  "plugins/adr-writer/templates/adr/structure.md",
+  "plugins/adr-writer/templates/adr/decision-log.template.md",
+];
+const STAMP_RE = /(<!--\s*adr-writer:rules-version\s+)(\d+\.\d+\.\d+)/;
+
 const read = (rel) => readFileSync(path.join(REPO, rel), "utf8");
 const write = (rel, text) => writeFileSync(path.join(REPO, rel), text);
 
@@ -74,6 +87,7 @@ function collect() {
   }
 
   sites.push([SERVER, read(SERVER).match(SERVER_RE)?.[2]]);
+  for (const rel of RULE_DOCS) sites.push([rel, read(rel).match(STAMP_RE)?.[2]]);
   return sites;
 }
 
@@ -106,6 +120,12 @@ function bump(version) {
   const server = read(SERVER);
   if (!SERVER_RE.test(server)) die(`could not find the serverInfo version literal in ${SERVER}`);
   write(SERVER, server.replace(SERVER_RE, `$1${version}$3`));
+
+  for (const rel of RULE_DOCS) {
+    const text = read(rel);
+    if (!STAMP_RE.test(text)) die(`could not find the rules-version stamp in ${rel}`);
+    write(rel, text.replace(STAMP_RE, `$1${version}`));
+  }
 }
 
 function main() {

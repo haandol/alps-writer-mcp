@@ -51,6 +51,8 @@ import {
   validateMappingShape,
   sectionRange,
   numberingGaps,
+  rulesVersion,
+  compareVersions,
 } from "./adr-lint-lib.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -436,6 +438,56 @@ function main() {
           "decision-log-link-broken",
           rel,
           `decision-log link target does not exist: ${target} (after a rollup renumber, repoint the "current ADR" pointer to the new path)`,
+        );
+      }
+    }
+  }
+
+  // ── seeded rule docs trail the installed plugin ───────────────────────
+  // /adr-new seeds these only when absent, so a repo seeded once keeps the rule
+  // set it got that day forever. Every rule added upstream then stops existing
+  // for that repo — and because the docs ARE the source of truth every reviewer
+  // reads, the axis does not fail loudly, it just goes unjudged. Warning rather
+  // than error: stale rules do not make an ADR wrong, and a repo may deliberately
+  // pin or hand-edit its copy. Reported once for the doc set, not per ADR.
+  {
+    const installed = readSafe(path.join(HERE, "..", ".claude-plugin", "plugin.json"));
+    let pluginVersion = null;
+    if (installed !== null) {
+      try {
+        pluginVersion = JSON.parse(installed).version ?? null;
+      } catch {
+        pluginVersion = null; // an unreadable manifest is not the linted repo's fault
+      }
+    }
+    if (pluginVersion) {
+      const stale = [];
+      let present = 0;
+      let stamped = 0;
+      for (const doc of ["README.md", "authoring-rules.md", "structure.md"]) {
+        const body = readSafe(path.join(adrRoot, doc));
+        if (body === null) continue; // absent docs are /adr-new's seeding step, not this check
+        present++;
+        const seeded = rulesVersion(body);
+        if (seeded === null) continue; // hand-written or pre-stamp copy — nothing to compare
+        stamped++;
+        if (compareVersions(seeded, pluginVersion) < 0) stale.push(`${doc} (${seeded})`);
+      }
+      if (stale.length) {
+        rep.warn(
+          "rules-doc-stale",
+          `docs/adr`,
+          `seeded rule docs trail the installed plugin (${pluginVersion}): ${stale.join(", ")}. ` +
+            `Rules added upstream since then are absent from this repo, so reviewers cannot judge those axes ` +
+            `against its own source of truth. Re-seed from \${CLAUDE_PLUGIN_ROOT}/templates/adr/, keeping any ` +
+            `local edits you meant to keep.`,
+        );
+      } else if (present > 0 && stamped === 0) {
+        rep.warn(
+          "rules-doc-unstamped",
+          `docs/adr`,
+          `no rule doc carries an adr-writer:rules-version stamp, so staleness cannot be detected. ` +
+            `These docs predate the stamp — re-seed from \${CLAUDE_PLUGIN_ROOT}/templates/adr/ to pick it up.`,
         );
       }
     }

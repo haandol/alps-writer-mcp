@@ -32,6 +32,7 @@ The caller passes:
   - `README.md` — "What an ADR covers — the gray zone between business and code" (R12, and the "Dependencies run one way" subsection under it for R15/R17) and "Status" + "Automatic transition rules" (R1). **Skip the `## ADR template` block and everything after it** — the template is for authoring, not reviewing, and nothing below R1-R20 cites it.
   - `structure.md` — "Directory structure" and "Anti-pattern categories" (R5). Nothing else in it is cited: the mapping registry policy, the sub-folder split procedure, the decision-log convention, and "Finding the related code" all belong to skills that edit or grep, which this agent never does.
   - Read a skipped section on demand if a specific ADR turns out to need it, and say so in the report's Notes. Guessing at a rule whose section you chose not to read is the one failure this narrowing must not cause.
+- **If a rule below cites a section the repo's own docs do not contain, say so in Notes and mark that rule's findings advisory.** The repo's copy may predate the rule (the harness reports this as `rules-doc-stale` / `rules-doc-unstamped`). Reading the plugin's `${CLAUDE_PLUGIN_ROOT}/templates/adr/` copy to apply the rule anyway is allowed and often right — but **name it in Notes**, because a `FIX_REQUIRED` against a rule the project never adopted reads as a defect when it is really a docs-refresh signal. Route the refresh to `/adr-new` (its step 1 offers it) rather than editing the docs yourself.
 - That category's entry in `docs/adr/.mapping.json`
 
 ### 2. Rule checks

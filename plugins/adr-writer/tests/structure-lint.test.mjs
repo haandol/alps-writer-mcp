@@ -5,7 +5,9 @@
 // fires on a bad fixture and passes a clean one.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { withTmp, write, runStructureLint, parseLint } from "./helpers.mjs";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { withTmp, write, runStructureLint, parseLint, PLUGIN_ROOT } from "./helpers.mjs";
 import {
   classifyStatus,
   checkFilename,
@@ -20,6 +22,8 @@ import {
   validateMappingShape,
   checkCategoryKey,
   numberingGaps,
+  rulesVersion,
+  compareVersions,
 } from "../scripts/adr-lint-lib.mjs";
 
 // ── unit: classifyStatus ────────────────────────────────────────────────
@@ -707,5 +711,108 @@ test("CLI: the decision-log seed at the ADR root is scaffolding, not a category 
     );
     const r = parseLint(dir);
     assert.equal(r.code, 0, JSON.stringify(r.errors));
+  });
+});
+
+// ── seeded rule-doc staleness ───────────────────────────────────────────
+// /adr-new seeds the rule docs only when they are ABSENT, so a repo seeded once
+// keeps that day's rule set forever while every rule added upstream stops
+// existing for it. The docs are the source of truth each reviewer reads, so the
+// new axis is not failed loudly — it goes unjudged across the whole ADR set at
+// once. A warning, never an error: stale rules do not make an ADR wrong, and a
+// project may pin or hand-edit its copy deliberately.
+function stampedDoc(version) {
+  return `# rules\n\nbody\n\n<!-- adr-writer:rules-version ${version} -->\n`;
+}
+
+test("rulesVersion reads the stamp and ignores unstamped or malformed docs", () => {
+  assert.equal(rulesVersion(stampedDoc("0.4.30")), "0.4.30");
+  assert.equal(rulesVersion("# rules\n\nno stamp here\n"), null);
+  // a non-triple must not parse as a version — otherwise compareVersions gets NaN
+  assert.equal(rulesVersion("<!-- adr-writer:rules-version 0.4 -->"), null);
+  assert.equal(rulesVersion(""), null);
+  assert.equal(rulesVersion(null), null);
+});
+
+test("compareVersions orders by numeric component, not lexically", () => {
+  assert.ok(compareVersions("0.4.9", "0.4.10") < 0); // lexical compare would invert this
+  assert.ok(compareVersions("0.4.30", "0.4.30") === 0);
+  assert.ok(compareVersions("1.0.0", "0.9.9") > 0);
+});
+
+test("CLI: rule docs stamped behind the plugin version warn once for the doc set", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    for (const doc of ["README.md", "authoring-rules.md", "structure.md"]) {
+      write(dir, `docs/adr/${doc}`, stampedDoc("0.0.1"));
+    }
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, "staleness is advisory — it must not fail the lint");
+    const stale = r.warnings.filter((w) => w.rule === "rules-doc-stale");
+    assert.equal(stale.length, 1, "reported once for the set, not once per doc");
+    // the message has to name which docs lag, or the user cannot act on it
+    for (const doc of ["README.md", "authoring-rules.md", "structure.md"]) {
+      assert.match(stale[0].msg, new RegExp(doc));
+    }
+  });
+});
+
+test("CLI: rule docs at the current plugin version produce no staleness warning", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    const current = JSON.parse(
+      readFileSync(path.join(PLUGIN_ROOT, ".claude-plugin", "plugin.json"), "utf8"),
+    ).version;
+    for (const doc of ["README.md", "authoring-rules.md", "structure.md"]) {
+      write(dir, `docs/adr/${doc}`, stampedDoc(current));
+    }
+    const r = parseLint(dir);
+    assert.equal(r.warnings.filter((w) => w.rule === "rules-doc-stale").length, 0);
+    assert.equal(r.warnings.filter((w) => w.rule === "rules-doc-unstamped").length, 0);
+  });
+});
+
+test("CLI: rule docs with no stamp at all warn separately (they predate the stamp)", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    for (const doc of ["README.md", "authoring-rules.md", "structure.md"]) {
+      write(dir, `docs/adr/${doc}`, "# rules\n\nhand-written, no stamp\n");
+    }
+    const r = parseLint(dir);
+    assert.equal(r.code, 0);
+    assert.equal(r.warnings.filter((w) => w.rule === "rules-doc-unstamped").length, 1);
+    // unstamped is a distinct signal from stale — it means "cannot compare"
+    assert.equal(r.warnings.filter((w) => w.rule === "rules-doc-stale").length, 0);
+  });
+});
+
+// A repo with no rule docs at all has not been seeded yet — that is /adr-new
+// step 1's job, and reporting it here would fire on every fresh repo before the
+// first ADR exists. Absence is silence; only a doc that IS there and cannot be
+// compared (unstamped) or lags (stale) is worth a word.
+test("CLI: absent rule docs are /adr-new's seeding job, not a staleness finding", () => {
+  withTmp((dir) => {
+    // deliberately not seedClean() — that writes an (unstamped) README, which is
+    // the different case covered by the unstamped test above
+    write(
+      dir,
+      "docs/adr/auth/0001-x.md",
+      `# ADR 0001: x\n\n## Status\nProposed\n\n## Context\nc\n\n## Decision Drivers\n- a\n- b\n- c\n\n## Decision\nd\n\n### 대안 검토\n- A\n- B\n\n## Consequences\nok\n`,
+    );
+    write(
+      dir,
+      "docs/adr/.mapping.json",
+      JSON.stringify({
+        categories: {
+          auth: {
+            feature: "인증",
+            adrs: [{ path: "docs/adr/auth/0001-x.md", status: "Proposed", summary: "x" }],
+          },
+        },
+      }),
+    );
+    const r = parseLint(dir);
+    assert.equal(r.warnings.filter((w) => w.rule === "rules-doc-stale").length, 0);
+    assert.equal(r.warnings.filter((w) => w.rule === "rules-doc-unstamped").length, 0);
   });
 });

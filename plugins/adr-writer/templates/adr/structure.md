@@ -226,3 +226,5 @@ When `/adr-sync`, `/adr-impl`, `/adr-rollup`, and others verify an ADR's code al
 3. Cross-check that the scope you found matches the ADR's Decision, then verify within that scope. Reuse a scope once found only for the duration of that command, and never persist it in the mapping.
 
 **No guessing**: never assert a scope without having looked at the codebase — always confirm the real structure with `Glob`/`Grep` before verifying.
+
+<!-- adr-writer:rules-version 0.4.31 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

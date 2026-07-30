@@ -82,6 +82,7 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 
 - **`decision-log.md`** in each category, if present — the harness already verifies its ADR pointers resolve (`decision-log-link-broken`), so trust that and only check by eye that no old ADR number is embedded in the prose, no PRD is cited, and it holds no duplicated current state or implementation constants (`authoring-rules.md` "Decision log").
 - **Index hygiene** is fully covered by the step 2 harness (mapping↔disk, status↔body, `dependsOn` integrity) — report its result rather than re-checking.
+- **Stale rule docs (`rules-doc-stale` / `rules-doc-unstamped`) lead the report, above the per-ADR findings.** A sweep is the one command that reveals this as a set-wide fact: if the repo's rules predate an upstream rule, every reviewer in this run judged that axis against a document the project does not have, so the axis is unjudged across all N ADRs at once — a far larger hole than any single ADR's finding. Report which docs lag, which rules that costs, and route the refresh to `/adr-new` (its step 1 offers it, and asks before overwriting hand-edits). Never refresh them here — this command is report-only.
 - **Do not open the codebase.** R1's code-reality half and R17 (code→ADR back-references) need code, so they are out of scope here — say so explicitly in the report and route them to `/adr-sync`. Suppressing that boundary would let a reader mistake a clean `/adr-review` for "the ADRs match the code".
 
 ### 6. Report
@@ -91,6 +92,7 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 
 ### Scope
 - ADRs reviewed: <n> (categories: <list>)
+- Rule docs: <in sync at X.Y.Z | STALE — <docs> lag the installed X.Y.Z, so <rules> went unjudged across all <n> ADRs → refresh via /adr-new>
 - Harness: <pass | n errors, m warnings>
 - Not covered here: ADR↔code consistency (R1 code-reality, R17) → /adr-sync
 

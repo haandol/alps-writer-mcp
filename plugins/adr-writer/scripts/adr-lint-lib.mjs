@@ -590,3 +590,29 @@ export function decisionLogLinkTargets(body) {
   }
   return out;
 }
+
+// ── seeded rule-doc version ────────────────────────────────────────────────
+// /adr-new copies the rule docs into docs/adr/ only when they are ABSENT, so a
+// project seeded once never sees a later rule again. That is not cosmetic: the
+// docs are the source of truth every reviewer reads, so a rule added upstream
+// (R20 prose style, non-numeric requirements) is simply not enforceable in that
+// repo — a reviewer either misses the axis or silently reaches for the plugin's
+// own copy, judging by a rule the repo does not contain. The stamp gives the
+// harness something to compare, since a rule doc otherwise carries no version.
+export const RULES_VERSION_RE = /<!--\s*adr-writer:rules-version\s+([0-9]+\.[0-9]+\.[0-9]+)/;
+
+export function rulesVersion(body) {
+  const m = RULES_VERSION_RE.exec(body ?? "");
+  return m ? m[1] : null;
+}
+
+// Semver compare limited to the numeric triples the stamp regex admits.
+// Returns negative when a < b, 0 when equal, positive when a > b.
+export function compareVersions(a, b) {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if (pa[i] !== pb[i]) return pa[i] - pb[i];
+  }
+  return 0;
+}
