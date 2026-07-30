@@ -26,7 +26,12 @@ The caller passes:
 ### 1. Load context
 
 - Read the entire target ADR file
-- `docs/adr/README.md`, `docs/adr/authoring-rules.md`, `docs/adr/structure.md` — **the source of truth for authoring rules** (fall back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`). README holds concepts only; authoring rules live in authoring-rules, directory and mapping policy in structure. Check R8 index consistency against `.mapping.json` (path/status/summary) — README carries no separate ADR list
+- The rule documents under `docs/adr/` — **the source of truth for authoring rules** (fall back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`). README holds concepts only; authoring rules live in authoring-rules, directory and mapping policy in structure. Check R8 index consistency against `.mapping.json` (path/status/summary) — README carries no separate ADR list
+- **Load only the sections the rules below actually cite.** A sweep (`/adr-review`) runs one instance of this agent per ADR, so every line loaded here is paid once per ADR — reading a section no rule cites multiplies straight through the set. Which sections:
+  - `authoring-rules.md` — **read it whole.** Twelve of the rules below cite it (R2·R3·R4·R6·R7·R9·R11·R13·R14·R18·R19·R20), so section-picking would cost more in re-reads than it saves.
+  - `README.md` — "What an ADR covers — the gray zone between business and code" (R12, and the "Dependencies run one way" subsection under it for R15/R17) and "Status" + "Automatic transition rules" (R1). **Skip the `## ADR template` block and everything after it** — the template is for authoring, not reviewing, and nothing below R1-R20 cites it.
+  - `structure.md` — "Directory structure" and "Anti-pattern categories" (R5). Nothing else in it is cited: the mapping registry policy, the sub-folder split procedure, the decision-log convention, and "Finding the related code" all belong to skills that edit or grep, which this agent never does.
+  - Read a skipped section on demand if a specific ADR turns out to need it, and say so in the report's Notes. Guessing at a rule whose section you chose not to read is the one failure this narrowing must not cause.
 - That category's entry in `docs/adr/.mapping.json`
 
 ### 2. Rule checks

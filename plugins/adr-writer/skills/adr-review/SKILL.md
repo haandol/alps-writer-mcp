@@ -33,7 +33,12 @@ Review ADRs that already exist **as documents** and return a punch list. With no
 - `decision-log.md` is a convention file, not an ADR (`structure.md` "Decision log") — exclude it from the sweep. It gets its own lightweight check in step 5.
 - If there are no ADRs at all, say so and suggest `/adr-new <category>`, then finish.
 
-Then load the rule documents once and reuse them for every ADR: `docs/adr/README.md`, `authoring-rules.md`, `structure.md` (falling back to `${CLAUDE_PLUGIN_ROOT}/templates/adr/`), plus `docs/adr/.mapping.json`.
+Then load `docs/adr/.mapping.json`, plus **only the rule-document sections this session itself needs** (falling back to `${CLAUDE_PLUGIN_ROOT}/templates/adr/`):
+
+- `authoring-rules.md` — "Decision log" (step 5's by-eye check) and "Requirements live in the code and in the ADR" (the step 7 routing and the Prohibited guard).
+- `structure.md` — "Anti-pattern categories" (the step 4 duplication finding) and "Decision log" (the step 1 exclusion).
+
+**Do not load the rule documents whole here.** `adr-reviewer` owns R1-R20 and reads its own sections per ADR (see its step 1), so a full copy in this session buys nothing but pays for every token again — and the same division of labor is why step 3 tells you not to restate the reviewer's criteria. Read a further section on demand if an aggregation finding turns on it.
 
 **Announce the scope before starting a full sweep.** For more than a handful of ADRs, print the count and the per-category breakdown and confirm once ("Reviewing 23 ADRs across 6 categories. Proceed?"). A sweep spends one subagent per ADR, so the user should see the size first.
 
