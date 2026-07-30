@@ -93,6 +93,15 @@ Check whether the gray zone the ADR decided appears verbatim in the code's behav
 - Record two axes for each cleanup — **weight** (`now` | `next-cycle`, the _timing_) and **impact** (an effort×payoff pair such as `low-effort/high-payoff`, the _value_). They are different axes: distinguishing cheap/high-impact cleanups from expensive/low-impact ones is what lets the user decide what to touch first. Weight alone tells them "when" but not "why first."
 - Ground cleanups in _which code hurts and why_, as in D3 — never leave generic advice like "extract function."
 
+**D4-b. Do the code and tests carry the explanation, rather than long comments?**
+
+`/adr-impl` step 4 requires comments of roughly three lines or fewer: past that, a one- or two-line summary of the _why_ stays at the site and the _what_ moves into tests, because prose drifts silently while a test fails loudly. Check the result of that here.
+
+- **A comment block over ~3 lines that enumerates behavior** — boundary or edge cases, an ordering or state-transition sequence, why an input is rejected, failure and fallback paths, or a requirement value explained in prose. Check whether a test covers each enumerated case; where one is missing, record `[Test gap]` naming the case, and where they are all covered, record `[Refactor]` to shorten the comment to the _why_. Never propose deleting a comment whose cases are **not** covered — that would delete the knowledge.
+- **A test that cannot serve as documentation** — a name that does not read as the behavior it proves (`test transition 3`), or one test asserting many unrelated behaviors so a failure does not name the broken rule. Record `[Refactor]`, since this is the load step 4 handed to the tests.
+- **A comment that merely restates what the line does** — `[Refactor]` (delete rather than shorten). Conversely, a comment holding a _why_ that code cannot express (an external constraint, a spec quirk, an upstream API's behavior, a trap that looks safe) is correct **even beyond three lines** — never flag it, and never propose replacing it with a test, since a test cannot state a rationale.
+- Judge project conventions and the surrounding files' comment density first (D3's primary basis). Where the sibling code already settles the question, that wins over this axis.
+
 **D5. Test coverage — is the decided behavior verified?**
 
 - For each gray-zone decision in the ADR (domain rules, state transitions, fallback, boundary conditions), is there a test that holds it? If only the happy path is covered and the core of the decision (e.g. revoking the family on reuse detection, the fallback path) is untested, record a gap.

@@ -52,6 +52,8 @@ Look for these first:
 
 Do not report style preferences, naming tastes, or unjustified "YAGNI".
 
+**A test that documents a decided behavior is not removable scope.** `/adr-impl` step 4 requires that an explanation growing past ~3 comment lines move out of prose and into tests, so tests covering boundaries, ordering and state transitions, rejected inputs, failure and fallback paths, or a requirement value are carrying the contract — filing them as `[Unnecessary change]` would delete that knowledge and is the same misdiagnosis as removing the code that enforces a requirement value. A test for behavior the ADR never decided is a legitimate deletion candidate, but say so as `[Simpler alternative]`/`[Unnecessary change]` on the _behavior_, not on the fact that it is tested.
+
 ## Finding categories
 
 - `[Unnecessary change]`: there is evidence the contract holds after removal.

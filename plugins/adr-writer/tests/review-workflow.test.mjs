@@ -75,6 +75,44 @@ test("sufficiency reviewer tests the tests — mutation and static analysis as v
   assert.match(skill, /whether the tests actually catch defects/);
 });
 
+// Comments drift silently as code changes; a test fails loudly. So /adr-impl caps
+// comments at ~3 lines and moves the enumerated behavior into tests, and the review
+// side checks that the move actually happened. The dangerous half of this rule is the
+// reverse direction: told only "shorten long comments", a reviewer deletes prose whose
+// cases nothing covers, destroying the knowledge. Every stage must therefore carry both
+// the cap AND the test-first ordering, plus the exemption for a *why* code cannot state.
+test("the comment cap moves explanation into tests without ever dropping it", () => {
+  const impl = read("skills/adr-impl/SKILL.md");
+  // the cap, and that it is the WHAT that moves while a short WHY stays
+  assert.match(impl, /three lines or fewer/);
+  assert.match(impl, /move the [*_]what[*_] into tests/);
+  // tests must read as documentation, or they cannot carry what the comment held
+  assert.match(impl, /Write the tests so they read as the documentation/);
+  // the guard: never trade coverage for brevity
+  assert.match(impl, /Never trade coverage for brevity/);
+
+  // the reviewers apply the same axis, and both know the ordering
+  const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
+  const skill = read("skills/adr-impl-review/SKILL.md");
+  for (const source of [sufficiency, skill]) {
+    assert.match(source, /Do the code and tests carry the explanation/);
+    // a comment whose cases are uncovered is a Test gap, never a delete-me
+    // (the reviewer emphasizes the "not" as **not**, so allow the markup)
+    assert.match(source, /[Nn]ever propose deleting a comment whose cases are \*{0,2}not\*{0,2}/);
+    // a rationale code cannot express stays, even past the cap
+    assert.match(source, /even beyond three lines/);
+  }
+
+  // the necessity pass must not treat these tests as removable scope — the mirror of
+  // the rule that code enforcing a requirement value is contract, not excess
+  const necessity = read("agents/adr-impl-necessity-reviewer.md");
+  assert.match(necessity, /is not removable scope/);
+
+  // and the merge checklist grounds Maintainability in that evidence
+  const writer = read("agents/adr-impl-review-report-writer.md");
+  assert.match(writer, /add the test first, then shorten the comment/);
+});
+
 test("junior repair report ends with a seven-axis merge-fitness checklist", () => {
   const writer = read("agents/adr-impl-review-report-writer.md");
   const skill = read("skills/adr-impl-review/SKILL.md");
