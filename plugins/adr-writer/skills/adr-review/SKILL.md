@@ -10,7 +10,7 @@ Review ADRs that already exist **as documents** and return a punch list. With no
 
 > **This is the document-quality axis.** It asks "is this ADR written at the right abstraction level, and is every requirement it must carry still in it?" — never "does the code match?" Pick the right command:
 >
-> Both halves of that question come from one principle (`docs/adr/AGENTS.md` "The abstraction ladder"): **PRD, ADR, and code are the same system at three resolutions**, and an ADR earns its place only while it can be read alone to answer "why this decision, and what must the result honor?" Detail pulled up from the code level makes it untrustworthy alone; a requirement pushed out of it lands in no level at all. Every R1-R20 finding is one of those two leaks, so read the sweep's findings as **"which ADRs stopped being readable at their own level"** rather than as a style audit.
+> Both halves of that question come from one principle (`concepts.md` "The abstraction ladder"): **PRD, ADR, and code are the same system at three resolutions**, and an ADR earns its place only while it can be read alone to answer "why this decision, and what must the result honor?" Detail pulled up from the code level makes it untrustworthy alone; a requirement pushed out of it lands in no level at all. Every R1-R20 finding is one of those two leaks, so read the sweep's findings as **"which ADRs stopped being readable at their own level"** rather than as a style audit.
 >
 > | Question                                                                      | Command                                              |
 > | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
@@ -86,7 +86,7 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 - **Index hygiene** is fully covered by the step 2 harness (mapping↔disk, status↔body, `dependsOn` integrity) — report its result rather than re-checking.
 - **Rule-doc health leads the report, above the per-ADR findings.** A sweep is the one command that reveals this as a set-wide fact: if the repo's rules predate an upstream rule, every reviewer in this run judged that axis against a document the project does not have, so the axis is unjudged across all N ADRs at once — a far larger hole than any single ADR's finding. Two kinds, both from the step 2 harness:
   - **Version lag** (`rules-doc-stale` / `rules-doc-unstamped`) — report which docs lag and which rules that costs.
-  - **Layout lag** (`rules-doc-layout-legacy` / `rules-doc-layout-duplicated`) — the repo predates the `README.md` (index) / `AGENTS.md` (working model) split, or half-migrated and left duplicate sections behind. Say so plainly: the reviewers still found the material (they fall back to `README.md`), but a duplicated copy can drift from the one `AGENTS.md` holds, so a rule may have been judged against the stale half.
+  - **Layout lag** (`rules-doc-layout-legacy` / `rules-doc-layout-duplicated`) — the repo predates the `README.md` (index) / `concepts.md` (working model) split, or half-migrated and left duplicate sections behind. Say so plainly: the reviewers still found the material (they fall back to `README.md`), but a duplicated copy can drift from the one `concepts.md` holds, so a rule may have been judged against the stale half.
 
   Route the fix to `/adr-new` (its step 1 owns both and asks before overwriting hand-edits). Never refresh them here — this command is report-only.
 
@@ -100,7 +100,7 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 ### Scope
 - ADRs reviewed: <n> (categories: <list>)
 - Rule docs: <in sync at X.Y.Z | STALE — <docs> lag the installed X.Y.Z, so <rules> went unjudged across all <n> ADRs → refresh via /adr-new>
-- Doc layout: <README index + AGENTS working model | PRE-SPLIT — no AGENTS.md, reviewers fell back to README.md → /adr-new | DUPLICATED — README.md still holds <sections> that AGENTS.md owns, so a rule may have been judged against the stale copy → /adr-new>
+- Doc layout: <README index + concepts working model | PRE-SPLIT — no concepts.md, reviewers fell back to README.md → /adr-new | DUPLICATED — README.md still holds <sections> that concepts.md owns, so a rule may have been judged against the stale copy → /adr-new>
 - Harness: <pass | n errors, m warnings>
 - Not covered here: ADR↔code consistency (R1 code-reality, R17) → /adr-sync
 

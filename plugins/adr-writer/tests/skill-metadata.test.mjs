@@ -305,38 +305,48 @@ test("the rules state requirements live in both layers, ADR first when changing 
   // the ordering, and the explicit ban on the reverse
   assert.match(rules, /ADR first, code second/);
   assert.match(rules, /Never change the code first and reconcile the ADR later/);
-  // AGENTS.md must carry the same framing where the gray-zone model is read —
+  // concepts.md must carry the same framing where the gray-zone model is read —
   // it owns the principle and the cycle; README.md is the directory index.
-  const agents = read(path.join(ADR_ROOT, "templates", "adr", "AGENTS.md"));
-  assert.match(agents, /Requirements live in both the ADR and the code/);
+  const concepts = read(path.join(ADR_ROOT, "templates", "adr", "concepts.md"));
+  assert.match(concepts, /Requirements live in both the ADR and the code/);
   // and the code-readthrough filter must not be readable as a reason to drop it
-  assert.match(agents, /is not grounds for dropping a requirement that passed the gate/);
+  assert.match(concepts, /is not grounds for dropping a requirement that passed the gate/);
 });
 
 // The seeded docs split by role, mirroring the ladder they describe: README.md
 // is the index (what an ADR is, the template, where the list lives) and
-// AGENTS.md is the working model (the principle, the dependency model, Status).
-// The link runs ONE WAY — AGENTS may cite README, README must not cite AGENTS —
-// so README stays the stable entry point a human or GitHub lands on, and the
-// volatile "how it works" doc can be reorganized without touching it.
-test("README is the index and AGENTS holds the principle, linked one way", () => {
+// concepts.md is the working model (the principle, the dependency model, Status).
+//
+// README MUST link concepts.md, and prominently. The whole point of the split is
+// that an agent opening docs/adr/ reaches the principle — a reader who stops at
+// the index gets the rules with no ground for them, which is how "why can't I
+// put the field types here" turns into arbitrary-looking pushback. The naming
+// follows the sibling files (authoring-rules, structure) rather than AGENTS.md,
+// which would collide with a team's own docs/adr/AGENTS.md and with the project
+// root's conventions file that the impl prompts cite.
+test("README is the index and links to concepts.md, which holds the principle", () => {
   const dir = path.join(ADR_ROOT, "templates", "adr");
   const readme = read(path.join(dir, "README.md"));
-  const agents = read(path.join(dir, "AGENTS.md"));
-  // the principle lives in AGENTS, with the named applications of its test
-  assert.match(agents, /## The abstraction ladder/);
-  assert.match(agents, /single-level read test/);
+  const concepts = read(path.join(dir, "concepts.md"));
+  // the principle lives in concepts, with the named applications of its test
+  assert.match(concepts, /## The abstraction ladder/);
+  assert.match(concepts, /single-level read test/);
   for (const name of [/Regeneration test/, /Requirement gate/, /Stability gradient/]) {
-    assert.match(agents, name, `AGENTS.md must name ${name}`);
+    assert.match(concepts, name, `concepts.md must name ${name}`);
   }
   // README keeps the index role: the template, and no ADR list of its own
   assert.match(readme, /## ADR template/);
   assert.match(readme, /Where the ADR index lives/);
-  // README must not depend on AGENTS — it is the more stable of the two
-  assert.doesNotMatch(readme, /AGENTS\.md/);
-  // the principle is stated once, in AGENTS, not duplicated into the index
+  // ...and routes the reader to the principle before the rules
+  assert.match(readme, /\[`concepts\.md`\]\(\.\/concepts\.md\)/);
+  assert.match(readme, /Read \[`concepts\.md`\]\(\.\/concepts\.md\) before writing or reviewing/);
+  // the principle is stated once, in concepts, not duplicated into the index
   assert.doesNotMatch(readme, /single-level read test/);
   assert.doesNotMatch(readme, /## The abstraction ladder/);
+  // the seeded docs must not be named AGENTS.md — a team may already have its
+  // own docs/adr/AGENTS.md, and seeding would silently overwrite it
+  assert.doesNotMatch(readme, /\bAGENTS\.md\b/);
+  assert.doesNotMatch(concepts, /^#{1,3}.*\bAGENTS\.md\b/m);
 });
 
 // The per-turn hook is the only guard when a user just says "bump 7 turns to 10"
@@ -393,9 +403,9 @@ test("every stage that filters an ADR body names the requirement-value rule", ()
     ],
     "agents/adr-impl-explainer.md": [/What the ADR specifies vs what the code does/],
     "agents/adr-impl-review-report-writer.md": [/Contract compliance/],
-    // AGENTS.md owns the principle and the completeness standard; README.md is
+    // concepts.md owns the principle and the completeness standard; README.md is
     // the directory index, so the regeneration test is asserted there instead.
-    "templates/adr/AGENTS.md": [/regeneration test/],
+    "templates/adr/concepts.md": [/regeneration test/],
   };
   for (const [rel, patterns] of Object.entries(stages)) {
     const source = read(path.join(ADR_ROOT, rel));

@@ -10,7 +10,7 @@ tools: Read, Grep, Glob, Bash
 
 Do not read the caller's plain-language explanation or the necessity reviewer's result. Judge from the original ADR, the raw diff, the code, the tests, and `human-baseline.md` alone, so you do not inherit another agent's assumptions.
 
-**The abstraction ladder decides every call you make here.** PRD, ADR, and code are the same system at three resolutions — like C4's context / container / component zoom (`authoring-rules.md` / `docs/adr/AGENTS.md` "The abstraction ladder"). The ADR level owns "why this decision, and what must the result honor?"; the code level owns "how is it done?" So your whole job is to ask, for each disagreement, **which level owns this fact**:
+**The abstraction ladder decides every call you make here.** PRD, ADR, and code are the same system at three resolutions — like C4's context / container / component zoom (`authoring-rules.md` / `concepts.md` "The abstraction ladder"). The ADR level owns "why this decision, and what must the result honor?"; the code level owns "how is it done?" So your whole job is to ask, for each disagreement, **which level owns this fact**:
 
 - The ADR owns it → the code must change (`[Spec violation]`).
 - The code owns it → the ADR must change (`[Impl-fact mismatch]`, routed to `/adr-sync`).
@@ -46,7 +46,7 @@ The caller passes:
 ### 1. Load context
 
 - Read the entire target ADR body — Context / Decision Drivers / Decision / alternatives / Consequences / Implementation Notes (if present). Extract the **gray-zone decisions** (adoption rationale, business rules translated into system behavior, domain rules, state transitions, external-dependency fallback, the intent behind the key design) as spec items — they are the baseline you compare the code against.
-- Confirm the vertical-slice model, source-of-truth scope, and dependency model from `docs/adr/AGENTS.md`, `authoring-rules.md`, and `structure.md` (falling back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`).
+- Confirm the vertical-slice model, source-of-truth scope, and dependency model from `concepts.md`, `authoring-rules.md`, and `structure.md` (falling back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`).
 - That category's entry in `docs/adr/.mapping.json` (`status`, `dependsOn`, `tableDocs`).
 - **Project convention documents** (`AGENTS.md`, `CONTRIBUTING.md`, `CLAUDE.md`) — the **primary** basis for best-practice judgments. Project-defined conventions outrank language or framework generalities.
 

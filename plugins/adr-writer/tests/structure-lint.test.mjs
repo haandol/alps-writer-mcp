@@ -817,35 +817,35 @@ test("CLI: absent rule docs are /adr-new's seeding job, not a staleness finding"
   });
 });
 
-// ── 0.5.0 seeded-doc layout: README = index, AGENTS = working model ────────
+// ── 0.5.0 seeded-doc layout: README = index, concepts = working model ────────
 // Two migration states need catching, and the stale-stamp checks above catch
 // NEITHER: staleness only compares docs that are present (so an absent
-// AGENTS.md is invisible to it) and never looks at content (so a section left
+// concepts.md is invisible to it) and never looks at content (so a section left
 // behind in README is invisible too). Both get named rules instead.
 const LAYOUT = "rules-doc-layout-legacy";
 const DUPED = "rules-doc-layout-duplicated";
-const AGENTS_MIN = "# How ADRs work here\n\n## The abstraction ladder\n\nx\n";
+const CONCEPTS_MIN = "# How ADRs work here\n\n## The abstraction ladder\n\nx\n";
 
-test("CLI: a repo with README but no AGENTS.md is flagged as the pre-split layout", () => {
+test("CLI: a repo with README but no concepts.md is flagged as the pre-split layout", () => {
   withTmp((dir) => {
-    seedClean(dir); // writes docs/adr/README.md and no AGENTS.md — the old layout
+    seedClean(dir); // writes docs/adr/README.md and no concepts.md — the old layout
     const r = parseLint(dir);
     assert.equal(r.code, 0, "a layout lag is advisory — the old layout still reads fine");
     const hit = r.warnings.filter((w) => w.rule === LAYOUT);
     assert.equal(hit.length, 1, "reported once for the directory, not per doc");
     // must name the file to create and the command that creates it, or the
     // reader cannot act on it
-    assert.match(hit[0].msg, /AGENTS\.md/);
+    assert.match(hit[0].msg, /concepts\.md/);
     assert.match(hit[0].msg, /\/adr-new/);
     // ...and must say the old layout still works, so it doesn't read as broken
     assert.match(hit[0].msg, /falls back/);
   });
 });
 
-test("CLI: seeding AGENTS.md clears the layout warning", () => {
+test("CLI: seeding concepts.md clears the layout warning", () => {
   withTmp((dir) => {
     seedClean(dir);
-    write(dir, "docs/adr/AGENTS.md", AGENTS_MIN);
+    write(dir, "docs/adr/concepts.md", CONCEPTS_MIN);
     const r = parseLint(dir);
     assert.equal(r.warnings.filter((w) => w.rule === LAYOUT).length, 0);
     assert.equal(r.warnings.filter((w) => w.rule === DUPED).length, 0);
@@ -858,7 +858,7 @@ test("CLI: seeding AGENTS.md clears the layout warning", () => {
 test("CLI: a README still holding moved sections is flagged as duplicated", () => {
   withTmp((dir) => {
     seedClean(dir);
-    write(dir, "docs/adr/AGENTS.md", AGENTS_MIN);
+    write(dir, "docs/adr/concepts.md", CONCEPTS_MIN);
     write(
       dir,
       "docs/adr/README.md",
@@ -882,7 +882,7 @@ test("CLI: a README still holding moved sections is flagged as duplicated", () =
 test("CLI: a heading inside README's fenced ADR template is not a duplication hit", () => {
   withTmp((dir) => {
     seedClean(dir);
-    write(dir, "docs/adr/AGENTS.md", AGENTS_MIN);
+    write(dir, "docs/adr/concepts.md", CONCEPTS_MIN);
     write(
       dir,
       "docs/adr/README.md",
@@ -902,7 +902,7 @@ test("CLI: a heading inside README's fenced ADR template is not a duplication hi
 test("CLI: the shipped template pair passes both layout checks", () => {
   withTmp((dir) => {
     seedClean(dir);
-    for (const doc of ["README.md", "AGENTS.md", "authoring-rules.md", "structure.md"]) {
+    for (const doc of ["README.md", "concepts.md", "authoring-rules.md", "structure.md"]) {
       write(dir, `docs/adr/${doc}`, readFileSync(path.join(TEMPLATES, doc), "utf8"));
     }
     const r = parseLint(dir);

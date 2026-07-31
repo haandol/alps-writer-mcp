@@ -2,8 +2,11 @@
 
 This directory documents the project's major architectural decisions. An ADR is the rationale behind the code implementation, and new decisions are written directly with `/adr-new <category>`. In a project that also has an ALPS (PRD), each Section 7 feature can be converted into an ADR in one pass with the `/feature-to-adr` helper.
 
-This document is the directory's index — what an ADR is, the template to write one from, and where the ADR list lives. The rules and the directory layout live in sub-documents.
+This document is the directory's index — what an ADR is, the template to write one from, and where the ADR list lives. The principle, the rules, and the layout live in sub-documents.
 
+> **Read [`concepts.md`](./concepts.md) before writing or reviewing an ADR.** It holds the one principle every rule here follows from — PRD, ADR, and code are the same system at three resolutions, and each level earns its place by what it refuses to show — plus the gray zone, the regeneration test, the requirement gate, the dependency model, and how Status moves. The rules below are that principle applied case by case, so they read as arbitrary without it.
+
+- [`concepts.md`](./concepts.md) — how ADRs work here: the abstraction ladder, the gray zone, the regeneration test, the requirement gate, the one-way dependency model, Status and its automatic transitions
 - [`authoring-rules.md`](./authoring-rules.md) — what goes into an ADR body and what stays out: the requirement gate and two filters, requirement values vs implementation tuning values, code-reference depth, DB changes as one unit, prose style, and the review checklist
 - [`structure.md`](./structure.md) — the DDD domain (bounded context) × feature directory layout, feature sub-folder splitting, subdomain classification, and the [`ADR registry`](./structure.md#the-adr-registry-mappingjson) (`.mapping.json` policy)
 
@@ -17,7 +20,7 @@ An Architecture Decision Record (ADR) documents an important architectural decis
 - **Alternatives**: **at least two** realistic alternatives and why they were not adopted
 - **Consequences**: the positive and negative effects of the decision
 
-An ADR records only the **gray zone** between business requirements and code — the rationale a reader cannot recover from the code, plus the requirement contract the result must honor. What to keep and what to leave out is in [`authoring-rules.md`](./authoring-rules.md).
+An ADR records only the **gray zone** between business requirements and code — the rationale a reader cannot recover from the code, plus the requirement contract the result must honor. Why that boundary sits where it does is in [`concepts.md`](./concepts.md#what-an-adr-covers--the-gray-zone-between-business-and-code); what to keep and what to leave out is in [`authoring-rules.md`](./authoring-rules.md).
 
 ## ADR template
 

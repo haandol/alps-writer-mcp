@@ -4,7 +4,7 @@
 같은 핵심 요소·같은 관점을 공유하는지 점검한 결과와, 그에 따른 수정 항목.
 
 - 대상 플러그인 버전: **adr-writer 0.5.0** (최초 검토 시점 0.4.31)
-- 규칙 원본: `plugins/adr-writer/templates/adr/` 의 `AGENTS.md`(원리·의존모델·Status), `authoring-rules.md`,
+- 규칙 원본: `plugins/adr-writer/templates/adr/` 의 `concepts.md`(원리·의존모델·Status), `authoring-rules.md`,
   `structure.md`, `README.md`(인덱스)
 - 이 문서는 유지보수자용 작업 계획이라 한국어로 적는다. 배포되는 harness 프롬프트(`skills/`, `agents/`)는
   기존 규약대로 영어를 유지한다.
@@ -12,7 +12,7 @@
 > **진행 상황 (2026-07-31 갱신, adr-writer 0.5.0)**
 >
 > 아래 2절의 진단은 최초 검토 시점 기준이다. 그 뒤 **추상화 레벨 원리를 정본화하는 작업**을 진행하면서
-> ①②③이 함께 해소됐고, seed 문서가 `README.md`(인덱스) / `AGENTS.md`(동작 방식)로 분리됐다.
+> ①②③이 함께 해소됐고, seed 문서가 `README.md`(인덱스) / `concepts.md`(동작 방식)로 분리됐다.
 >
 > | 항목                             | 상태                                                                         |
 > | -------------------------------- | ---------------------------------------------------------------------------- |
@@ -193,7 +193,7 @@ Accepted ADR의 결정이 바뀌면 Status를 Proposed로 되돌린다는 `templ
 
 - `plugins/adr-writer/.claude-plugin/plugin.json`의 `version` 및 seed 문서 하단
   `<!-- adr-writer:rules-version X.Y.Z -->` 스탬프 갱신. **4절 작업으로 `templates/adr/`가 변경됐으므로
-  이번에는 `pnpm bump`로 스탬프까지 함께 올려야 한다** (신규 `AGENTS.md`도 스탬프 대상에 등록됨).
+  이번에는 `pnpm bump`로 스탬프까지 함께 올려야 한다** (신규 `concepts.md`도 스탬프 대상에 등록됨).
 - `pnpm test` 회귀 확인 — seed 문서 분리는 `skill-metadata.test.mjs`가 지킨다.
 - 축 A–K 표를 기준으로 재점검: 각 축이 세 스킬에서 **같은 이름**으로 불리는지.
 
@@ -213,7 +213,7 @@ Accepted ADR의 결정이 바뀌면 Status를 Proposed로 되돌린다는 `templ
 
 ### 4-2. 정본 위치와 원리
 
-`templates/adr/AGENTS.md` **"The abstraction ladder — the principle every rule follows from"** 이 정본이다.
+`templates/adr/concepts.md` **"The abstraction ladder — the principle every rule follows from"** 이 정본이다.
 
 - PRD/ADR/코드 = 세 주제의 세 문서가 아니라 **한 시스템의 세 해상도**(C4의 context/container/component 줌)
 - 레벨의 가치는 **보여주지 않는 것**에서 나온다
@@ -225,16 +225,15 @@ Accepted ADR의 결정이 바뀌면 Status를 Proposed로 되돌린다는 `templ
 기존 명칭들을 이 원리의 파생으로 재배치 — 재생성 테스트(ADR 레벨에 적용), 요구사항 게이트+2필터(사실을
 레벨로 라우팅), stability gradient(사후 탐지), `Spec violation`/`Impl-fact mismatch`(소유 레벨 판정).
 
-### 4-3. seed 문서 분리 — README(인덱스) / AGENTS(동작 방식)
+### 4-3. seed 문서 분리 — README(인덱스) / concepts(동작 방식)
 
-seed 문서가 4개 → **5개**가 됐다. 링크는 **한 방향** — `AGENTS.md`는 `README.md`를 인용하되
-**`README.md`는 `AGENTS.md`를 알지 못한다.** README가 더 안정적인 진입점(GitHub 렌더링 대상)이므로,
-변동이 잦은 "동작 방식" 문서를 재구성해도 README를 건드릴 필요가 없다.
+seed 문서가 4개 → **5개**가 됐다. `README.md`는 상단에서 `concepts.md`로 라우팅하고, 형제 파일들도
+필요한 섹션을 인용한다.
 
 | 파일                 | 역할                                                                                               |
 | -------------------- | -------------------------------------------------------------------------------------------------- |
 | `README.md`          | 디렉터리 인덱스 — ADR이란 무엇인가, ADR 템플릿, 인덱스가 어디 사는가                               |
-| `AGENTS.md`          | **동작 방식** — 추상화 래더, 그레이존, 재생성 테스트, 요구사항 게이트, 의존 모델, Status 자동 전이 |
+| `concepts.md`        | **동작 방식** — 추상화 래더, 그레이존, 재생성 테스트, 요구사항 게이트, 의존 모델, Status 자동 전이 |
 | `authoring-rules.md` | 본문 포함/배제 규칙과 리뷰 체크리스트                                                              |
 | `structure.md`       | 디렉터리·매핑 정책                                                                                 |
 
@@ -242,10 +241,20 @@ seed 문서가 4개 → **5개**가 됐다. 링크는 **한 방향** — `AGENTS
 대상, 사이트 12 → 13), `tests/helpers.mjs`(`RULE_DOCS`), `adr-invariants.sh`(주석), 그리고 프롬프트 31곳의
 인용 경로.
 
-**이름 충돌 주의** — `AGENTS.md`는 이 플러그인에서 두 가지를 가리킨다: (a) `docs/adr/AGENTS.md`(ADR 동작
-방식) (b) **프로젝트 루트의 규약 파일**(`adr-impl` step 4의 주석 밀도, sufficiency reviewer D3의 best-practice
-1차 근거, 테스트 커맨드 출처). 그래서 ADR 문서를 가리키는 인용은 전부 **`docs/adr/AGENTS.md`로 경로를
-붙였다.** 새 인용을 추가할 때도 같은 규칙을 지켜야 한다 — 경로 없는 `AGENTS.md`는 프로젝트 규약을 뜻한다.
+**파일명 선정** — 처음에는 `AGENTS.md`로 두었으나 `concepts.md`로 바꿨다. 세 가지 이유가 있다.
+(a) **사용자 파일과 충돌** — 팀이 이미 자기 `docs/adr/AGENTS.md`(그 폴더 작업 규칙)를 갖고 있으면 harness가
+경고 없이 clean으로 통과하고, seed가 그 파일을 덮어쓴다. 실측으로 확인한 조용한 실패다.
+(b) **프롬프트 내 중의성** — 프로젝트 루트 `AGENTS.md`(주석 밀도, best-practice 1차 근거, 테스트 커맨드
+출처)와 이름이 같아 매 인용마다 경로 수식이 필요했다.
+(c) **클라이언트 자동 로드** — `AGENTS.md`는 디렉터리 스코프 지시 파일 규약이라 의도치 않게 주입될 수 있다.
+
+`concepts.md`는 형제 파일(`authoring-rules.md`, `structure.md`)과 같은 "역할 설명형 케밥" 계열이고, README가
+스스로를 "conceptual index"라 부르던 것과도 이어진다. 이름 충돌이 없어져 경로 수식도 전부 걷어냈다.
+
+**링크 방향** — `README.md`가 `concepts.md`를 인용한다(그 반대가 아니다). 처음에는 "README는 더 안정적이므로
+concepts를 몰라야 한다"고 두었지만, 그러면 `docs/adr/`를 여는 에이전트가 인덱스에서 멈춰 원리에 도달하지
+못한다. 규칙의 근거가 없으면 규칙이 임의적으로 읽히므로, README 상단에서 "작성·리뷰 전에 읽어라"로
+라우팅한다.
 
 ### 4-3-a. 기존 프로젝트 마이그레이션 — harness가 결정론적으로 잡는다
 
@@ -254,7 +263,7 @@ seed 문서가 4개 → **5개**가 됐다. 링크는 **한 방향** — `AGENTS
 
 | 규칙                          | 조건                                          | 왜 별도 규칙인가                                                                            |
 | ----------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `rules-doc-layout-legacy`     | `README.md`는 있고 `AGENTS.md`가 없음         | stale 스탬프 검사는 **present한 문서만** 비교하므로 부재 파일을 영원히 못 본다              |
+| `rules-doc-layout-legacy`     | `README.md`는 있고 `concepts.md`가 없음       | stale 스탬프 검사는 **present한 문서만** 비교하므로 부재 파일을 영원히 못 본다              |
 | `rules-doc-layout-duplicated` | 둘 다 있는데 `README.md`에 이동한 섹션이 잔존 | 미마이그레이션보다 **더 나쁨** — 한 규칙의 사본 둘이 갈라지면 어느 쪽이 최신인지 알 수 없다 |
 
 - 판정은 **heading 위치**에서만 하고(`## Status` 등), **fenced block을 먼저 제거**한다. README가 정당하게
@@ -265,15 +274,15 @@ seed 문서가 4개 → **5개**가 됐다. 링크는 **한 방향** — `AGENTS
 - 검증: 0.4.31 시점의 실제 seed 문서로 리포를 구성해 `rules-doc-stale` + `rules-doc-layout-legacy` 2건 동시
   발생을 확인했고, 신규 레이아웃은 clean exit 0.
 
-**하위 호환**: `AGENTS.md`가 없는 구버전 리포는 그 내용이 `README.md`에 있다. `adr-reviewer`·`/adr-sync`는
-`AGENTS.md` 부재 시 `README.md`에서 읽으므로 **동작이 깨지지 않는다** — 경고는 "정리하라"이지
+**하위 호환**: `concepts.md`가 없는 구버전 리포는 그 내용이 `README.md`에 있다. `adr-reviewer`·`/adr-sync`·
+`/adr-impl`·`/adr-impl-review`는 `concepts.md` 부재 시 `README.md`에서 읽으므로 **동작이 깨지지 않는다** — 경고는 "정리하라"이지
 "고장났다"가 아니다.
 
 ### 4-4. 각 스킬에 심은 인용
 
 | 파일                                      | 추가 내용                                                                                      |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `AGENTS.md` (리포 루트)                   | 최상단에 "The design principle — an abstraction ladder, C4-style". 레벨×소유 플러그인 표       |
+| `AGENTS.md` (리포 루트, ADR 문서 아님)    | 최상단에 "The design principle — an abstraction ladder, C4-style". 레벨×소유 플러그인 표       |
 | `authoring-rules.md`                      | 서두에 "모든 규칙은 해상도 제약" + 정본 링크                                                   |
 | `skills/adr-new/SKILL.md`                 | Procedure 앞에 3층 Mermaid + 두 누수. step 3에 게이트→통독→리트머스 **순서**를 라우팅 규칙으로 |
 | `skills/adr-review/SKILL.md`              | R1–R20 findings를 "어느 ADR이 자기 레벨 단독 가독성을 잃었나"로 프레이밍                       |

@@ -464,7 +464,7 @@ function main() {
       const stale = [];
       let present = 0;
       let stamped = 0;
-      for (const doc of ["README.md", "AGENTS.md", "authoring-rules.md", "structure.md"]) {
+      for (const doc of ["README.md", "concepts.md", "authoring-rules.md", "structure.md"]) {
         const body = readSafe(path.join(adrRoot, doc));
         if (body === null) continue; // absent docs are /adr-new's seeding step, not this check
         present++;
@@ -493,19 +493,19 @@ function main() {
     }
 
     // 0.5.0 split the seeded docs by role: README.md is the directory index,
-    // AGENTS.md is the working model (the abstraction ladder, the gray zone,
+    // concepts.md is the working model (the abstraction ladder, the gray zone,
     // the dependency model, Status transitions). A repo seeded before that has
-    // all of it inside README.md and no AGENTS.md at all.
+    // all of it inside README.md and no concepts.md at all.
     //
     // The stale-stamp check above cannot catch this: it only compares docs that
     // are PRESENT, and skips an absent one as "/adr-new's seeding job". So the
     // one doc a reader is told to open first would go unreported precisely when
-    // it does not exist. Call it out by name instead — reviewers cite AGENTS.md
+    // it does not exist. Call it out by name instead — reviewers cite concepts.md
     // sections, and against the old layout every one of those citations misses.
     const readmeBody = readSafe(path.join(adrRoot, "README.md"));
     if (readmeBody !== null) {
-      const agentsBody = readSafe(path.join(adrRoot, "AGENTS.md"));
-      // Headings that moved to AGENTS.md in 0.5.0. Matched at heading position
+      const conceptsBody = readSafe(path.join(adrRoot, "concepts.md"));
+      // Headings that moved to concepts.md in 0.5.0. Matched at heading position
       // so a passing mention in prose ("see the gray zone") is not a hit.
       const MOVED = [
         [/^#{2,3}\s+.*gray zone/im, "the gray zone"],
@@ -518,29 +518,29 @@ function main() {
       // copy. Matching it would flag the correct layout as duplicated.
       const readmeProse = readmeBody.replace(/^```[\s\S]*?^```/gm, "");
       const leftover = MOVED.filter(([re]) => re.test(readmeProse)).map(([, name]) => name);
-      if (agentsBody === null) {
+      if (conceptsBody === null) {
         rep.warn(
           "rules-doc-layout-legacy",
           `docs/adr`,
-          `AGENTS.md is missing: this repo predates the README/AGENTS split. The working model ` +
+          `concepts.md is missing: this repo predates the README/concepts split. The working model ` +
             `(abstraction ladder, gray zone, dependency model, Status transitions) now lives in ` +
-            `docs/adr/AGENTS.md while README.md is the index — so prompts citing "AGENTS.md <section>" ` +
-            `find nothing here. Run /adr-new to seed AGENTS.md and shrink README.md to the index, ` +
+            `docs/adr/concepts.md while README.md is the index — so prompts citing "concepts.md <section>" ` +
+            `find nothing here. Run /adr-new to seed concepts.md and shrink README.md to the index, ` +
             `carrying over any hand-edits in the moved sections. Until then every reader falls back ` +
             `to README.md, so nothing breaks.`,
         );
       } else if (leftover.length) {
-        // Both files exist but README still holds sections AGENTS.md now owns.
+        // Both files exist but README still holds sections concepts.md now owns.
         // This is worse than the not-yet-migrated case: two copies of the same
         // rule can disagree, and a reader has no way to tell which went stale —
         // the exact duplication the abstraction ladder forbids.
         rep.warn(
           "rules-doc-layout-duplicated",
           `docs/adr`,
-          `README.md still holds sections that AGENTS.md now owns (${leftover.join(", ")}). ` +
+          `README.md still holds sections that concepts.md now owns (${leftover.join(", ")}). ` +
             `Two copies of one rule can drift apart with no way to tell which is current. ` +
             `Delete them from README.md — keep it as the index (what an ADR is, the template, ` +
-            `where the ADR list lives) — after checking AGENTS.md carries any edits you made here.`,
+            `where the ADR list lives) — after checking concepts.md carries any edits you made here.`,
         );
       }
     }

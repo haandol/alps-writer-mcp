@@ -1,4 +1,4 @@
-# How ADRs work in this project
+# ADR concepts — how ADRs work in this project
 
 **This is the document to read before writing, reviewing, or changing an ADR.** It states the principle the authoring rules follow from, how a decision moves through the cycle, and which artifact owns which fact. [`README.md`](./README.md) is the directory's index (what an ADR is, the template, where the ADR list lives); the detailed rules live in [`authoring-rules.md`](./authoring-rules.md) and [`structure.md`](./structure.md).
 
