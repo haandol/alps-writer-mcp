@@ -139,7 +139,9 @@ The directive tells the model: when a request adds or changes behavior, read the
 
 ## Deterministic self-test
 
-Two dependency-free scripts under the adr-writer plugin verify ADR well-formedness without an LLM judgment call, so reviewer subagents only spend tokens on judgment rules. Claude Code uses named reviewer definitions when available; Codex loads the matching definitions into generic subagents because Codex plugin manifests do not package `agents/*.md` as named components. The skills invoke the scripts at their verification steps: `/adr-new` before its reviewer, `/adr-impl` after Status promotion, and `/adr-sync` at the start of deep verification.
+Two dependency-free scripts under the adr-writer plugin verify ADR well-formedness without an LLM judgment call, so reviewer subagents only spend tokens on judgment rules. Claude Code uses named reviewer definitions when available; Codex loads the matching definitions into generic subagents because Codex plugin manifests do not package `agents/*.md` as named components. The skills invoke the scripts at their verification steps: `/adr-new` before its own R1-R20 pass, `/adr-impl` after Status promotion, `/adr-review` once for the whole sweep, and `/adr-sync` at the start of deep verification.
+
+**A fresh draft is not reviewed twice.** `/adr-new` authors under the same rules the reviewer applies (R1-R20), so it self-checks at its step 6 and saves rather than spawning a reviewer — a review one turn after being handed the rules re-derives a judgment just made, and its punch list is mostly items the author already got right. `/adr-review` is the independent read, and it exists because that authoring context does not survive the session: an ADR **edited by hand or by another session** has nobody who knows what its author was told. Run it on request, on an inherited ADR set, or after hand-editing — not automatically after `/adr-new`.
 
 ```bash
 node <adr-writer-plugin>/scripts/adr-structure-lint.mjs [category]   # structure + invariants

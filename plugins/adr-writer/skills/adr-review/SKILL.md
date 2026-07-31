@@ -12,14 +12,16 @@ Review ADRs that already exist **as documents** and return a punch list. With no
 >
 > Both halves of that question come from one principle (`concepts.md` "The abstraction ladder"): **PRD, ADR, and code are the same system at three resolutions**, and an ADR earns its place only while it can be read alone to answer "why this decision, and what must the result honor?" Detail pulled up from the code level makes it untrustworthy alone; a requirement pushed out of it lands in no level at all. Every R1-R20 finding is one of those two leaks, so read the sweep's findings as **"which ADRs stopped being readable at their own level"** rather than as a style audit.
 >
-> | Question                                                                      | Command                                              |
-> | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
-> | Is the ADR written correctly? (abstraction level, requirements, alternatives) | **`/adr-review`** (this one)                         |
-> | Does the ADR match the shipping code, and fix the drift?                      | `/adr-sync [category]`                               |
-> | Did the implemented code honor the ADR?                                       | `/adr-impl-review [category]`                        |
-> | Reviewing a brand-new draft before saving it                                  | `/adr-new` (calls the reviewer itself in its step 6) |
+> | Question                                                                      | Command                                                          |
+> | ----------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+> | Is the ADR written correctly? (abstraction level, requirements, alternatives) | **`/adr-review`** (this one)                                     |
+> | Does the ADR match the shipping code, and fix the drift?                      | `/adr-sync [category]`                                           |
+> | Did the implemented code honor the ADR?                                       | `/adr-impl-review [category]`                                    |
+> | Reviewing a brand-new draft before saving it                                  | `/adr-new` (judges its own draft in step 6 — no separate review) |
 >
 > Reach for this one when you want ADR quality judged **without reading code** — a periodic audit, an inherited ADR set, or a check after hand-editing several ADRs. Since it never opens the codebase, it is far cheaper than `/adr-sync` and does not care whether the code exists yet.
+>
+> **This is the review path for an ADR nobody holds an authoring context for.** `/adr-new` does not call a reviewer: its author was walked through these same rules one turn before writing, so it self-checks at its step 6 and saves. That context dies with the session — so the moment an ADR is **edited by hand, changed by another session, or inherited**, nobody knows what its author was told, and this command is what supplies the missing independent read. Run it when the user asks, not on a schedule.
 
 > **Report-only**: never edit an ADR, `.mapping.json`, or code. Return findings and let the user decide. That is what makes a full sweep safe — a sweep that also edited would fan one misjudgment across every ADR at once.
 

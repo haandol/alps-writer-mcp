@@ -66,7 +66,7 @@ Even when an ALPS feature name includes a technical layer, refine the ADR catego
 
 ### 3. Delegate to /adr-new
 
-**Invoke `/adr-new <category>`** with the category you decided, passing that feature's ALPS Section 7 excerpt along as context. Drafting the ADR, the automated review (adr-reviewer), writing the `.mapping.json` index record (the adrs[] path, status, summary), saving as `Proposed`, and the user approval are **all handled by `/adr-new` (→ adr-writer).** Do not restate the ADR authoring rules in this skill.
+**Invoke `/adr-new <category>`** with the category you decided, passing that feature's ALPS Section 7 excerpt along as context. Drafting the ADR, verifying it (the `adr-structure-lint` harness plus `/adr-new`'s own R1-R20 pass — it calls no review subagent), writing the `.mapping.json` index record (the adrs[] path, status, summary), saving as `Proposed`, and the user approval are **all handled by `/adr-new` (→ adr-writer).** Do not restate the ADR authoring rules in this skill.
 
 The input handed to `/adr-new`:
 

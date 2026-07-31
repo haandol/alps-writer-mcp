@@ -62,9 +62,22 @@ not run (bad `--only`, agent produced nothing).
    `expectText(output, /the transition is forbidden/)` breaks on a synonym.
 5. `--runs 10` and read the rate.
 6. After a fix, run again — **and run the paired scenario.** Most of these come
-   in pairs (`review-requirement-value-preserved` ↔ `review-catches-blurred-value`)
-   because a prompt can be made to pass one by breaking the other: telling the
-   reviewer "never touch a number" fixes the first and disables the second.
+   in pairs because a prompt can be made to pass one by breaking the other:
+   - `review-requirement-value-preserved` ↔ `review-catches-blurred-value` —
+     telling the reviewer "never touch a number" fixes the first and disables the
+     second.
+   - `author-keeps-values-and-lints` ↔ `author-self-checks-missing-value` — the
+     first gives the author every value and checks they survive; the second gives
+     it none and checks it says so. Pushing the author toward "always record a
+     requirement value" passes the first and makes the second invent one.
+
+   The two axes also split by pipeline stage, and that split is deliberate.
+   `/adr-new` no longer calls `adr-reviewer` (it self-checks at its step 6(b)), so
+   the `review-*` scenarios now cover only the `/adr-review` path — a hand-edited
+   or inherited ADR read by a fresh agent. `author-self-checks-missing-value` is
+   what covers the same axis at authoring time. A change to step 6(b), or to the
+   `authoring-rules.md` checklist it delegates to, needs the author-side pair;
+   a change to `agents/adr-reviewer.md` needs the review-side pair.
 
 ## Scenario shape
 

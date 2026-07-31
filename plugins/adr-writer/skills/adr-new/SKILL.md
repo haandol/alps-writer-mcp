@@ -130,9 +130,11 @@ Follow `concepts.md`, `authoring-rules.md`, and `structure.md` under `docs/adr/`
 
 The ADR index is `docs/adr/.mapping.json` — the README no longer holds an ADR list. The `adrs[]` record pushed in step 4 (path + `status:"Proposed"` + summary) _is_ the index entry: its `summary` is the entry point for the next `/adr-sync --quick` and the one index line the UserPromptSubmit hook renders every turn. So the index was already updated in step 4 with no separate edit, and all you need here is to confirm (a) that the one-line `summary` accurately compresses the Decision and (b) that `status` matches the body's `## Status` (= `Proposed`) — see step 4. The README remains a conceptual index only (what an ADR is, the gray zone, the dependency model, the template), so leave it untouched here.
 
-### 6. Automated review — the deterministic harness first, then adr-reviewer
+### 6. Verify before saving — the deterministic harness, then your own R1-R20 pass
 
-Verify in two stages just before saving. **Run the deterministic harness first** to filter out mechanical rules, then hand **only the judgment rules to adr-reviewer** — so the LLM review does not spend tokens on obvious things like filenames, the Status enum, or section presence.
+Verify in two stages just before saving: **the deterministic harness settles the mechanical rules, and you carry the judgment rules yourself** — this command does not delegate to a review subagent.
+
+Why it does not: you wrote this draft one turn after step 3 walked you through the abstraction ladder, the requirement gate, the regeneration test, the level filters, and the prose rules — which is the same rule set R1-R20 tests. A separate reviewer would re-derive a judgment you just made, and its punch list would be mostly items you already got right, which is how a user learns to skim findings. So **you hold the reviewer's perspective while drafting, and prove it at the gate below.** `/adr-review` stays available for the case that perspective cannot cover: an ADR edited later, by hand or by another session, where nobody knows what its author was told (step 8 points there).
 
 **(a) The deterministic harness — `adr-structure-lint`**:
 
@@ -148,24 +150,26 @@ This harness parses the `docs/adr/` this ADR lives in and mechanically verifies 
 - Internally it calls `adr-invariants.sh` to also check code→ADR and ADR→PRD back-references (R15/R17)
 - Seeded-doc health, reported once for the directory rather than per ADR: version lag (`rules-doc-stale` / `rules-doc-unstamped`) and layout lag (`rules-doc-layout-legacy` / `rules-doc-layout-duplicated`) — all four route back to step 1, which owns the seeding and the refresh question
 
-If there is an `error`, fix it in this session before moving to the save in step 7 (usually resolved by editing the ADR body or the mapping). Handle `warning`s (alternative/driver counts, suspected code references, and the like) together with adr-reviewer's judgment.
+If there is an `error`, fix it in this session before moving to the save in step 7 (usually resolved by editing the ADR body or the mapping). Carry the `warning`s (alternative/driver counts, suspected code references, and the like) into the (b) pass and rule on each there — a warning is where the harness found the shape but cannot judge the substance.
 
-**(b) Delegating to adr-reviewer — the rules that need judgment**: once the harness passes (or leaves only warnings), run the reviewer subagent in this order.
+**(b) Your own pass over the judgment rules**: once the harness passes (or leaves only warnings), walk the **ADR review checklist** in `docs/adr/authoring-rules.md` (falling back to `${CLAUDE_PLUGIN_ROOT}/templates/adr/`) over the draft you just wrote. That checklist is the same rule set the reviewer agent applies as R1-R20, so it is the authority here — do not work from memory of it.
 
-1. If the current client can discover the `adr-reviewer` named subagent, invoke it.
-2. If no named subagent exists, read `${CLAUDE_PLUGIN_ROOT}/agents/adr-reviewer.md` and run a single **general read-only subagent** with its full text passed as the reviewer instructions. Codex plugins do not register `agents/*.md` as components, so this fallback is the default path.
-3. Only on clients where subagents are unavailable at all should the main session carry out the same reviewer instructions itself, noting in one line that isolated review was unavailable.
+Skip the items the harness already proved (Status format, required sections, filename, driver and alternative counts, Related links, mapping consistency, code and PRD back-references) and spend the pass on **what the harness structurally cannot see** — it never flags a bare number, judges substance, or reads a sentence:
 
-The reviewer **focuses on the judgment rules** the harness cannot catch — the requirement gate / code-readthrough / litmus filters (R4), gray-zone substance (R12), whether the alternatives are strawmen (R14's quality half), whether the Decision Drivers are discriminating facts rather than opinions (R13's quality half), implementation-detail creep (R3), vertical-slice cohesion (R5's latter half), **missing requirement values and tuning-value intrusion (R18)**, and **the regeneration test (R19 — can requirement-honoring code be rebuilt from the ADR alone once the code is deleted?)**. Since the harness never looks at bare numbers, only the reviewer catches a missing requirement value. It also returns **prose-style suggestions (R20 — voice, padding, sentence length)**, which are advisory: apply the easy rewrites, but never let them block the save, and never accept a cut that drops content.
+- **Missing requirement values and non-numeric requirements (R18a)** — is any limit, quota, cycle, retention period, cap, or target implied by Context/Drivers/Decision blurred into "appropriately", "is limited", or "a certain period"? Is any allowed value set, mandatory field, permission or visibility rule, ordering or uniqueness constraint, unit, or forbidden transition missing?
+- **The regeneration test (R19)** — delete all code, keep only this ADR: could requirement-honoring code be rebuilt? Name every contract a rebuild would have to honor, and say which are absent.
+- **Tuning-value intrusion (R18b)** and **implementation-detail creep (R3)** — a value a developer may change without violating a requirement, a code snippet, a field-type table, an env var name, pseudocode.
+- **The level filters (R4)** in gate-then-filters order — the requirement gate first, and only then the code-readthrough and litmus tests. Applying a filter before the gate is how a requirement gets deleted for being "visible in the code", and it is this skill's most expensive mistake.
+- **Gray-zone substance (R12)**, **discriminating Drivers (R13's quality half)**, **strawman alternatives (R14's quality half)**, **vertical-slice cohesion (R5's latter half)**, **one ADR = one decision (R11)**.
+- **Prose style (R20)** — advisory. Apply the easy rewrites and never accept a cut that drops content.
 
-- Input: the ADR file path, the mapping entry before/after, an ALPS Section 7 excerpt (if any), and **a summary of the harness result (passes and remaining warnings)**
-- Output: a `PASS` / `FIX_REQUIRED` / `BLOCK` punch list
+**Two of these you cannot check as well as a fresh reader, so make them explicit rather than assumed.** The values were in this conversation and the alternatives are yours, so a draft missing a requirement still reads as complete to you, and your own alternatives never look like strawmen. So for **R18a and R19, write the check out** — list the contracts a rebuild must honor and mark each present or absent, instead of concluding "the contract is complete". Anything absent goes back to the user as a question in step 7; **never invent a number to close the gap.**
 
-If it is not `PASS`, summarize the result for the user and patch the `FIX_REQUIRED` items directly in this session. On `BLOCK`, the ADR needs splitting or a companion document must be updated in the same change, so return to step 3 rather than proceeding to step 7.
+Fix what the pass finds before step 7. If the draft needs splitting, or a DB schema change needs `docs/tables/` updated in the same change, return to step 3. **Report the pass in one line at step 7** ("harness passed; R18a/R19 self-checked, no reviewer subagent — run `/adr-review <category>` for an independent read"), so the user knows which axes were self-judged and can ask for a second opinion.
 
 ### 7. User confirmation
 
-Show the reviewed ADR and mapping in this shape and ask for approval:
+Show the verified ADR and mapping in this shape and ask for approval:
 
 ```
 ## ADR <NNNN>: <title>
@@ -176,6 +180,7 @@ Show the reviewed ADR and mapping in this shape and ask for approval:
 **Requirement contract**: <the values and rules the result must honor — verbatim, with their basis. "none" if there are none>
 **Alternatives considered**: <N options — the adopted one plus those rejected>
 **Prerequisites**: <dependency ADRs, or none>
+**Verification**: <harness: pass | n warnings> · self-checked R1-R20 (no reviewer subagent) — `/adr-review <category>` for an independent read
 
 Save this as `Proposed` (unimplemented) and move on to implementation (/adr-impl)? Once implementation and tests pass, `/adr-impl` switches it to `Accepted` automatically.
 ```
@@ -190,5 +195,6 @@ After saving, offer the next step in one line:
 
 - "Continue straight into implementation with `/adr-impl <category>`?" — the common flow.
 - "If there are more ADRs to write alongside this decision, call `/adr-new <category>` again for the same category."
+- Offer `/adr-review <category>` only when the user asks for a second opinion, or when step 6(b) left an axis you could not settle — it is the path for an ADR nobody has an authoring context for, which is what a hand-edited ADR becomes. Do not run it automatically here; the draft was just judged against the same rules.
 
 > **Note**: if an ALPS Section 7 feature already exists and you want to bulk-convert it into ADRs, use `/feature-to-adr`. `/adr-new` is the path for authoring a single decision directly, as it comes up.

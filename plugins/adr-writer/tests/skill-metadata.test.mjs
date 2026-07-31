@@ -101,6 +101,124 @@ test("adr-review sweeps ADR documents, report-only, and stays out of the code", 
   assert.match(reviewer, /Via `\/adr-review`/);
 });
 
+// /adr-new authors under the same rules adr-reviewer applies, so reviewing the
+// draft it just wrote re-derives a judgment made one turn earlier — and a punch
+// list of items the author already got right is how a user learns to skim the
+// findings that matter. So the reviewer subagent runs only from /adr-review, on
+// ADRs whose authoring context is gone (hand-edited, inherited, another session).
+//
+// The danger of removing that call is silent: the reviewer was the only stage
+// carrying R18a (a missing requirement value) and R19 (the regeneration test),
+// and those are exactly the axes self-review is weakest on — the value was in
+// the conversation, so an incomplete draft reads as complete to its author. If
+// /adr-new drops the delegation without picking the axes up explicitly, nothing
+// fails; the requirement just disappears from the pipeline. Hence both halves.
+test("/adr-new verifies its own draft instead of delegating to adr-reviewer", () => {
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+
+  // it must not spawn the reviewer, by name or by the generic-subagent fallback
+  assert.doesNotMatch(adrNew, /invoke it|adr-reviewer\.md/);
+  assert.match(adrNew, /this command does not delegate to a review subagent/);
+  // ...and it must say why, or the next editor reads the removal as an oversight
+  assert.match(adrNew, /same rule set R1-R20 tests/);
+
+  // the absence axes the reviewer used to own, now carried here explicitly
+  assert.match(adrNew, /ADR review checklist/);
+  assert.match(adrNew, /R18a/);
+  assert.match(adrNew, /regeneration test \(R19\)/i);
+  // self-review is structurally weak on these two, so they are written out
+  // rather than concluded — a checklist item silently marked done is the failure
+  assert.match(adrNew, /for \*\*R18a and R19, write the check out\*\*/);
+  assert.match(adrNew, /never invent a number/i);
+  // the requirement gate still precedes the filters that would delete a value
+  assert.match(adrNew, /Applying a filter before the gate/);
+
+  // the user is told which axes were self-judged, and how to get a second opinion
+  assert.match(adrNew, /self-checked R1-R20 \(no reviewer subagent\)/);
+
+  // the reviewer agent names /adr-review as its path, and disclaims /adr-new
+  const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  assert.match(reviewer, /\*\*Not from `\/adr-new`\.\*\*/);
+  assert.match(reviewer, /nobody holds an authoring context for/);
+  // the sweep owns the independent read, and runs on request rather than always
+  const sweep = read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md"));
+  assert.match(sweep, /`\/adr-new` does not call a reviewer/);
+  assert.match(sweep, /edited by hand, changed by another session, or inherited/);
+});
+
+// Removing the reviewer call made /adr-new's step 6(b) DEPEND on the seeded
+// checklist — it says "walk the ADR review checklist, it is the authority here"
+// instead of restating the rules. That is the right call (one source, no drift),
+// but it moves the failure mode: trimming an item from the checklist now silently
+// removes an axis from every /adr-new run, and nothing else in the pipeline
+// re-checks it. So the checklist must carry every axis step 6(b) delegates to it.
+test("the seeded checklist carries every axis /adr-new delegates to it", () => {
+  const checklist = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md")).slice(
+    read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md")).indexOf(
+      "## ADR review checklist",
+    ),
+  );
+  assert.ok(checklist.startsWith("## ADR review checklist"), "the checklist section must exist");
+
+  // The judgment axes /adr-new step 6(b) spends its pass on. Each is an axis the
+  // deterministic harness cannot settle, so the checklist is the only thing
+  // standing behind it once the reviewer is out of the authoring path.
+  for (const axis of [
+    /\*\*Regeneration test\*\*/,
+    /\*\*Requirement values appear verbatim\*\*/,
+    /\*\*Non-numeric requirements survived too\*\*/,
+    /\*\*No tuning values\*\*/,
+    /\*\*Code-readthrough test\*\*/,
+    /\*\*Gray-zone check\*\*/,
+    /\*\*Decision Drivers\*\*/,
+    /\*\*At least two alternatives\*\*/,
+    /\*\*One ADR = one decision\*\*/,
+    /\*\*No forbidden items\*\*/,
+    /\*\*Prose style\*\*/,
+  ]) {
+    assert.match(checklist, axis, `the checklist must keep ${axis} — /adr-new step 6(b) needs it`);
+  }
+
+  // ...and /adr-new must actually point at it by name, or it is working from
+  // remembered rules and the coupling above proves nothing.
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+  assert.match(adrNew, /\*\*ADR review checklist\*\* in `docs\/adr\/authoring-rules\.md`/);
+  assert.match(adrNew, /do not work from memory of it/);
+});
+
+// The stale-wiring guard. Four documents used to say the automated review happens
+// inside /adr-new; each was a separate place a reader (or a future edit) could
+// restore the delegation from. Nothing pinned them, which is why they all drifted
+// together — so pin the invariant at the surface a user reads.
+test("no document tells a user /adr-new runs the reviewer subagent", () => {
+  const surfaces = [
+    path.join(ADR_ROOT, "README.md"),
+    path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"),
+    path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md"),
+    path.join(ADR_ROOT, "agents", "adr-reviewer.md"),
+    path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md"),
+    path.join(PLUGINS_ROOT, "..", "docs", "usage.md"),
+    path.join(PLUGINS_ROOT, "..", "docs", "adr-process.md"),
+  ];
+  for (const file of surfaces) {
+    const source = read(file);
+    const label = path.basename(file);
+    // the two phrasings the old wiring used, plus the shape a re-introduction
+    // would most likely take ("/adr-new ... calls the reviewer")
+    assert.doesNotMatch(source, /automated review \(adr-reviewer\)/, `${label}: stale wiring`);
+    assert.doesNotMatch(
+      source,
+      /`?\/adr-new`? \(calls the reviewer/,
+      `${label}: says /adr-new calls the reviewer`,
+    );
+    assert.doesNotMatch(
+      source,
+      /\/adr-new` before its reviewer/,
+      `${label}: orders the harness before a reviewer /adr-new no longer runs`,
+    );
+  }
+});
+
 // Every user-facing prompt / seeded template that could carry a diagram: the
 // skills, the agent definitions, the ADR docs copied into docs/adr/, and the
 // ALPS explainer.

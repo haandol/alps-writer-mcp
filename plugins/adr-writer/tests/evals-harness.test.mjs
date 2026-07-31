@@ -179,6 +179,187 @@ test("the requirement-value scorer catches the delete-my-value defect", () => {
   assert.match(out, /✗.*no prose advice to remove a value/);
 });
 
+// ── the author-side scorer must discriminate too ───────────────────────────
+// author-self-checks-missing-value scores an ARTIFACT, not just a reply, so its
+// stub has to write the ADR the way a real run would. That makes it the one
+// scenario whose scorer could pass vacuously: most of its checks assert the
+// ABSENCE of a bad value in the body, and an empty body satisfies every one of
+// them. The "an ADR was written" check exists for that reason, and these two
+// tests pin that it actually carries the weight.
+//
+// The pair matters as much here as it does on the review side. A stub that
+// blurs the contract must fail, and a stub that names the gaps must pass — a
+// scorer tuned to catch only one of those directions would greenlight the
+// behaviour that reintroduces the defect.
+const AUTHOR_ADR_PATH = "docs/adr/pricing/0001-free-plan-session-limit.md";
+
+// The correct behaviour: contracts the brief never gave are named as open
+// questions, nothing is invented, tuning values stay out.
+const GOOD_AUTHOR_ADR = `# ADR 0001: 무료 플랜 채팅 세션 제한
+
+Date: 2026-07-01
+
+## Status
+
+Proposed
+
+## Context
+
+무료 사용자의 LLM 호출 비용이 예측 불가능하게 늘고 있다. 재무팀이 원가 상한을 승인했다.
+
+## Decision Drivers
+
+- 무료 플랜 1인당 월 LLM 원가를 통제해야 한다
+- 상한에 걸린 사용자의 이탈을 최소화해야 한다
+- 서버가 세션 상태를 오래 들고 있지 않아야 한다
+
+## Decision
+
+세션 단위로 대화 길이를 제한하고, 상한에 도달하면 새 세션을 시작하도록 안내한다.
+
+### Requirement contract
+
+- 세션당 대화 길이 상한: **아직 정해지지 않았다 — 오너에게 확인 필요**
+- 세션 기록 보관 기간: **미정, 확인 필요**
+- 세션의 허용 상태 집합: 브리프가 어떤 상태인지 말하지 않아 **미정, 확인 필요**
+
+## Consequences
+
+### Positive
+
+원가가 예측 가능해진다.
+
+### Negative
+
+긴 대화가 필요한 사용자는 맥락을 다시 제공해야 한다.
+
+### Alternatives
+
+- **토큰 총량 제한**: 원가와 정확히 연동되지만 남은 양을 예측할 수 없다.
+- **월 누적 턴 수 제한**: 단순하지만 서버가 누적치를 들고 있어야 해 운영 제약에 어긋난다.
+`;
+
+// The pre-fix behaviour: the hole is written into the ADR as "적절히", the state
+// set is summarized away, and the draft is reported clean.
+const BAD_AUTHOR_ADR = GOOD_AUTHOR_ADR.replace(
+  /### Requirement contract[\s\S]*?\n\n## Consequences/,
+  `### Requirement contract
+
+- 한 세션의 대화 길이는 적절히 제한된다
+- 세션 기록은 일정 기간 보관 후 삭제된다
+- 세션에는 몇 가지 상태가 있으며 상태 전이를 관리한다
+- 세션 캐시 TTL은 300초다
+
+## Consequences`,
+);
+
+// A stub that writes the ADR into its cwd (the fixture) and then prints a reply.
+// The runner passes cwd=fixture, which is what makes an author-side stub possible.
+function stubAuthor(adrBody, reply) {
+  const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-author-stub-"));
+  const bodyFile = path.join(dir, "adr.md");
+  writeFileSync(bodyFile, adrBody);
+  const script = path.join(dir, "stub.sh");
+  writeFileSync(
+    script,
+    `#!/bin/bash\ncat > /dev/null\n` +
+      `mkdir -p "$(dirname ${AUTHOR_ADR_PATH})"\ncp ${bodyFile} ${AUTHOR_ADR_PATH}\n` +
+      `cat <<'ADREOF'\n${reply}\nADREOF\n`,
+  );
+  chmodSync(script, 0o755);
+  return script;
+}
+
+const GOOD_AUTHOR_REPLY = `step 6(a) 하네스: 통과.
+
+step 6(b) 자기 점검 — R19 재생성 테스트를 적어냅니다.
+
+재구축이 지켜야 할 계약:
+- 세션당 대화 길이 상한 — **없음. 브리프에 숫자가 없어 확인 필요**
+- 세션 기록 보관 기간 — **없음, 미정이라 물어봐야 합니다**
+- 허용 상태 집합 — **어떤 상태인지 정해지지 않았습니다**
+
+숫자를 만들어 넣지 않았고, 캐시 TTL과 워커 수는 튜닝값이라 본문에서 제외했습니다.
+
+=== EVAL-VERDICT: FIX_REQUIRED ===
+=== EVAL-FINDINGS ===
+R18a | 세션당 대화 길이 상한이 브리프에 없어 미정 — 오너 확인 필요
+R19 | 보관 기간과 허용 상태 집합이 비어 재구축 불가
+=== EVAL-END ===`;
+
+const BAD_AUTHOR_REPLY = `ADR을 작성했고 하네스도 통과했습니다. 계약은 완전합니다.
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+NONE
+=== EVAL-END ===`;
+
+test("the author self-check scorer passes a draft that names its gaps", () => {
+  const { code, out } = runEvals(
+    ["--only", "author-self-checks"],
+    stubAuthor(GOOD_AUTHOR_ADR, GOOD_AUTHOR_REPLY),
+  );
+  assert.equal(code, 0);
+  assert.doesNotMatch(out, /✗/, `a compliant author run must fail no check:\n${out}`);
+});
+
+test("the author self-check scorer catches a blurred contract reported as clean", () => {
+  const { code, out } = runEvals(
+    ["--only", "author-self-checks"],
+    stubAuthor(BAD_AUTHOR_ADR, BAD_AUTHOR_REPLY),
+  );
+  assert.equal(code, 0, "a failing check is a finding, not a harness error");
+  // the exact pre-fix behaviour: the hole written in as 적절히 / 일정 기간
+  assert.match(out, /✗.*does not blur the missing contract/);
+  // a self-reviewer's default conclusion — "the contract is complete"
+  assert.match(out, /✗.*does not report a clean pass while contracts are unresolved/);
+  // the gaps went unnamed, so the open-question checks must fail rather than
+  // being satisfied by the ADR merely mentioning the subject
+  assert.match(out, /✗.*names the missing retention period as an open question/);
+  // and the tuning value pulled up into the body is still scored
+  assert.match(out, /✗.*leaves the cache TTL out/);
+});
+
+// The costliest failure this scenario watches for: a value the brief never gave,
+// written into the ADR as though approved. /adr-impl enforces ADR values at face
+// value, so a fabricated cap becomes a real product limit nobody signed off on.
+//
+// This test exists because the check's first version silently passed it. JS `\b`
+// is defined over ASCII word characters, so it never matches after a Hangul
+// syllable: `/\d+\s*(턴|일)\b/` does not match "최대 20턴으로" or "30일 후". The
+// scenario reported green on an ADR that had invented both numbers — the same
+// defect class as the Korean word-order bug this file's header describes, and the
+// reason a scorer needs its own adversarial fixture rather than just a good one.
+test("the invented-value check fires on Korean units, where \\b does not apply", () => {
+  const invented = GOOD_AUTHOR_ADR.replace(
+    /### Requirement contract[\s\S]*?\n\n## Consequences/,
+    `### Requirement contract
+
+- 한 세션은 최대 20턴으로 제한된다
+- 세션 기록은 30일 후 삭제된다
+
+## Consequences`,
+  );
+  const { code, out } = runEvals(
+    ["--only", "author-self-checks"],
+    stubAuthor(invented, BAD_AUTHOR_REPLY),
+  );
+  assert.equal(code, 0);
+  assert.match(out, /✗.*invents no requirement value the brief never gave/);
+});
+
+// The vacuous-pass guard. Most of this scenario's checks assert an ABSENCE, so an
+// agent that writes no ADR at all satisfies them — which would report a run that
+// produced nothing as mostly green. The "an ADR was written" check must fail, and
+// the open-question checks must not be satisfied by an empty artifact.
+test("an author run that writes no ADR fails rather than passing vacuously", () => {
+  const { code, out } = runEvals(["--only", "author-self-checks"], stubAgent(GOOD_AUTHOR_REPLY));
+  assert.equal(code, 0);
+  assert.match(out, /✗.*an ADR was written/);
+  // the brief's alternatives can only be scored against a body, so this one too
+  assert.match(out, /✗.*records the token-quota alternative/);
+});
+
 // A reply with no tail block is a result, not a crash: the agent ignored a
 // format instruction, and the run should say so rather than throw.
 test("a reply with no tail block is reported, not fatal", () => {

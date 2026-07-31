@@ -10,10 +10,11 @@ Inspect an ADR draft and its mapping change in an isolated context and return on
 
 ## When this is invoked
 
-- Right after `/adr-new` writes an ADR draft, before asking the user for approval (the canonical path — `/adr-new` is what calls the reviewer)
-- Via `/feature-to-adr` — it delegates ADR authoring to `/adr-new`, so the reviewer call happens inside that `/adr-new`
-- Via `/adr-review` — the sweep over existing ADRs runs one instance of this agent per ADR, so a full-set audit is just this review repeated in isolation
+- Via `/adr-review` — the canonical path. The sweep over existing ADRs runs one instance of this agent per ADR, so a full-set audit is just this review repeated in isolation
 - When a human hand-edited an ADR and wants a second opinion
+- When the user asks for an independent read of an ADR `/adr-new` just wrote
+
+**Not from `/adr-new`.** That command judges its own draft against the same rules (its step 6(b) walks the `authoring-rules.md` review checklist), because its author was walked through those rules one turn earlier — a review there re-derives a judgment just made. So the ADRs reaching this agent are ones **nobody holds an authoring context for**: edited by hand, written by another session, or inherited. Assume nothing about what the author was told, and evaluate every rule below.
 
 The caller passes:
 
@@ -47,7 +48,7 @@ Mark each item below pass or fail. For each rule's detailed criteria, treat the 
 >
 > The rest set up those two: R12/R13/R14 ask whether the ADR's own resolution (rationale) is present at all, R5/R11 ask whether the level is sliced along the right boundary, R15/R17 keep the levels from pointing at each other physically, and R20 is about how a sentence reads once its content is right. When a finding is ambiguous, ask which leak it is — a diagnosis that fits neither is usually taste, and taste stays out of the report.
 
-> **Division of labor with the deterministic harness**: the caller (`/adr-new` step 6) already ran `scripts/adr-structure-lint.mjs` before invoking the reviewer and passes a summary of the result. Trust the harness for the **format, existence, and consistency half** of the rules it covers mechanically, and focus on the **half that needs judgment**:
+> **Division of labor with the deterministic harness**: the caller (`/adr-review` step 2) already ran `scripts/adr-structure-lint.mjs` over the whole scope and passes you this ADR's slice of the result. Trust the harness for the **format, existence, and consistency half** of the rules it covers mechanically, and focus on the **half that needs judgment**:
 >
 > | Rule                                      | Offloaded to the harness (deterministic)                                    | Reviewer judges                                                                                                                                                                       |
 > | ----------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
