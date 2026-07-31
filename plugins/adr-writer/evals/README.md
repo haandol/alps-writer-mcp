@@ -102,6 +102,39 @@ result.
   judgement at all: the ADR must pass the same deterministic lint a hand-written
   one faces.
 
+## Reviewing a real repository
+
+`review-real-repo-adr` points the reviewer at a shipped ADR instead of a planted
+fixture. Synthetic fixtures make scoring sharp but are tidier than anything real;
+a shipped ADR mixes genuine requirement values with detail that crept in, and
+that mix is where the requirement-vs-detail call actually gets hard.
+
+```bash
+ADR_EVAL_REPO=~/git/pixelbank \
+ADR_EVAL_ADR=docs/adr/token/0002-free-trial.md \
+ADR_EVAL_VALUES="2회,3회,1회" \
+ADR_EVAL_CMD="claude -p --allowedTools 'Read Grep Glob'" \
+  node evals/run.mjs --only review-real-repo-adr --runs 3 --out /tmp/report.md
+```
+
+The ADR, its sibling category, the repo's own rule docs, and **everything the ADR
+links to** are copied into a throwaway directory. The source repo is only read.
+
+Scoring is necessarily thinner here: nobody knows the whole correct answer for a
+real ADR. It checks what is knowable regardless of content — the values named in
+`ADR_EVAL_VALUES` must survive, and the report must reach a verdict — then prints
+the findings for a human to read. Treat a real-repo run as a reproduction aid,
+not a graded exam.
+
+**Copy what the ADR links to, or you manufacture findings.** The first pixelbank
+run reported `../../FREE_USAGE.md` as a broken link when the file exists — the
+fixture had simply not copied it. That is worse than noise: it trains the reader
+to discount R10. Fixing it also _gained_ a real finding, because the reviewer
+could then read that document and spot that its free-usage counts (3/5/2)
+contradict the ADR's table (2/3/1/1) — a genuine drift invisible while the file
+was absent. A fixture that omits context does not just add false findings, it
+hides true ones.
+
 ## What this does not prove
 
 Be honest about the gap when reading a result.

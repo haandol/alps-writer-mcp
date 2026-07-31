@@ -10,7 +10,7 @@
 // are written in. These tests pin the discriminating power that fixed it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, writeFileSync, chmodSync, mkdtempSync } from "node:fs";
+import { readdirSync, writeFileSync, chmodSync, mkdtempSync, mkdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -27,6 +27,13 @@ function scenarioFiles() {
 
 async function loadScenario(file) {
   return (await import(path.join(EVALS, "scenarios", file))).default;
+}
+
+// A scenario that reads its target out of the environment (the real-repo one)
+// throws from build() when it is unset. That is correct behaviour — a silent
+// empty fixture would be worse — so the sweep tests skip it and it gets its own.
+function needsEnv(scenario) {
+  return scenario.name === "review-real-repo-adr";
 }
 
 // A stub "agent": ignores stdin, prints the canned reply. Stands in for the real
@@ -75,6 +82,9 @@ test("--list names every scenario without invoking an agent", () => {
 test("prompts embed the real skill/agent text, not a paraphrase", async () => {
   for (const file of scenarioFiles()) {
     const s = await loadScenario(file);
+    // Scenarios that point at a repo supplied via the environment cannot build
+    // without it; the real-repo one has its own test below.
+    if (needsEnv(s)) continue;
     const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-shape-"));
     const prompt = await s.build(dir);
     assert.ok(prompt.length > 5000, `${s.name}: prompt is too short to hold a real skill body`);
@@ -95,8 +105,9 @@ test("review fixtures are valid repos by the shipped lint", async () => {
   for (const file of scenarioFiles()) {
     const s = await loadScenario(file);
     // author-* scenarios start from an empty mapping on purpose — there is no
-    // ADR yet, which is the point of the scenario.
-    if (s.name.startsWith("author-")) continue;
+    // ADR yet, which is the point of the scenario. Env-driven ones lint whatever
+    // the target repo holds, which is not this harness's business.
+    if (s.name.startsWith("author-") || needsEnv(s)) continue;
     const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-lint-"));
     await s.build(dir);
     const r = spawnSync("node", [lint, "--no-invariants", "--json"], {
@@ -207,3 +218,67 @@ test("an agent that produces nothing is an error, not a silent pass", () => {
   assert.equal(code, 2);
   assert.match(out, /agent never produced output|did not run/);
 });
+
+// The real-repo scenario copies a shipped ADR into a throwaway fixture. If it
+// copies the ADR but not what the ADR LINKS to, every outbound link reads as
+// broken and the reviewer spends R10 findings on the fixture's own trimming.
+// The first pixelbank run did exactly that: it reported ../../FREE_USAGE.md as
+// missing when the file exists. A fixture that manufactures findings is worse
+// than a noisy one — it teaches the reader to discount that rule.
+test("the real-repo fixture resolves the ADR's own local links", async (t) => {
+  const scenario = await loadScenario("review-real-repo-adr.mjs");
+
+  // Build a miniature "real repo": an ADR that links to a sibling and to a doc
+  // outside docs/adr/, plus a link that is genuinely absent.
+  const repo = mkdtempSync(path.join(tmpdir(), "adr-eval-fakerepo-"));
+  const w = (rel, body) => {
+    const full = path.join(repo, rel);
+    require$mkdir(path.dirname(full));
+    writeFileSync(full, body);
+  };
+  w("docs/adr/README.md", "# ADR\n");
+  w("docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
+  w("docs/FREE_USAGE.md", "# free usage\n");
+  w("docs/adr/token/0001-billing.md", "# ADR 0001: billing\n\n## Status\n\nProposed\n");
+  w(
+    "docs/adr/token/0002-free-trial.md",
+    `# ADR 0002: free trial\n\nDate: 2026-01-01\n\n## Status\n\nProposed\n\n## Context\n\nc\n\n## Decision\n\nd\n\n## Consequences\n\nok\n\n## Related\n\n- [0001](./0001-billing.md)\n- [FREE_USAGE.md](../../FREE_USAGE.md)\n- [gone](../../NOPE.md)\n- [external](https://example.com/x.md)\n`,
+  );
+
+  // The scenario reads its target from the environment, so drive it that way.
+  const prev = { repo: process.env.ADR_EVAL_REPO, adr: process.env.ADR_EVAL_ADR };
+  process.env.ADR_EVAL_REPO = repo;
+  process.env.ADR_EVAL_ADR = "docs/adr/token/0002-free-trial.md";
+  t.after(() => {
+    if (prev.repo === undefined) delete process.env.ADR_EVAL_REPO;
+    else process.env.ADR_EVAL_REPO = prev.repo;
+    if (prev.adr === undefined) delete process.env.ADR_EVAL_ADR;
+    else process.env.ADR_EVAL_ADR = prev.adr;
+  });
+
+  // Re-import with a cache-busting query so the module re-reads the env.
+  const fresh = (
+    await import(
+      `${path.join(EVALS, "scenarios", "review-real-repo-adr.mjs")}?repo=${encodeURIComponent(repo)}`
+    )
+  ).default;
+  const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-real-"));
+  await fresh.build(dir);
+
+  const exists = (rel) => existsSync(path.join(dir, rel));
+  assert.ok(exists("docs/adr/token/0002-free-trial.md"), "the ADR itself must be copied");
+  assert.ok(exists("docs/adr/token/0001-billing.md"), "a sibling ADR link must resolve");
+  assert.ok(exists("docs/FREE_USAGE.md"), "a link outside docs/adr/ must resolve");
+  // A link with no target stays absent — that is a real finding, not an artifact.
+  assert.ok(!exists("NOPE.md"), "a genuinely missing target must stay missing");
+  // The real repo is read-only from here.
+  assert.ok(
+    !existsSync(path.join(repo, "docs", "adr", "concepts.md")),
+    "must not write to the source repo",
+  );
+  assert.equal(scenario.name, "review-real-repo-adr");
+});
+
+function require$mkdir(dir) {
+  mkdirSync(dir, { recursive: true });
+}
