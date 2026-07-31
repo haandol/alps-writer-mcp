@@ -102,6 +102,7 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 - Rule docs: <in sync at X.Y.Z | STALE — <docs> lag the installed X.Y.Z, so <rules> went unjudged across all <n> ADRs → refresh via /adr-new>
 - Doc layout: <README index + concepts working model | PRE-SPLIT — no concepts.md, reviewers fell back to README.md → /adr-new | DUPLICATED — README.md still holds <sections> that concepts.md owns, so a rule may have been judged against the stale copy → /adr-new>
 - Harness: <pass | n errors, m warnings>
+- Unjudged axes: <none | <rules> — <why: the repo's rule docs lack that section, a reviewer could not reach it, or the scope was batched>, so those rules went unjudged across <n> ADRs>
 - Not covered here: ADR↔code consistency (R1 code-reality, R17) → /adr-sync
 
 ### Verdict
@@ -127,6 +128,8 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 ```
 
 Order the per-ADR section **worst first** (BLOCK, then FIX_REQUIRED, then PASS) so the reader meets the expensive problems first, and keep PASS entries to one line each.
+
+**A `PASS` count is not a clean bill of health while an axis went unjudged.** The per-ADR verdict stays the reviewer's three values (`PASS` / `FIX_REQUIRED` / `BLOCK`) — do not invent a fourth — but an ADR can only be judged against the rules its reviewer could actually reach, so a rule nobody evaluated silently rides along inside `PASS`. That is why `Unjudged axes` sits in Scope, above the verdict: when it is non-empty, **say in the chat summary that the PASS count excludes those rules** rather than reporting "N passed" flat. This is the same discipline `/adr-impl-review` applies with `INCONCLUSIVE` — unverified must never read as verified — expressed without disturbing the reviewer's verdict vocabulary.
 
 **Summarize in chat rather than dumping the whole report**: the verdict counts, the cross-ADR findings, and the two or three ADRs that need attention most. For a large sweep, write the full report to a file and give the path.
 

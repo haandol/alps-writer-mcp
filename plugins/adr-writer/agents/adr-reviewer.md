@@ -108,7 +108,7 @@ Respond in this format only — never rewrite the ADR body.
 PASS | FIX_REQUIRED | BLOCK
 
 ### Findings
-- [R<number>] <short diagnosis> — <ADR location or a 1-2 line quote>
+- [R<number>] <short diagnosis> (confidence: high|medium|low) — <ADR location or a 1-2 line quote>
   Suggested fix: <one line>
 
 ### Regeneration check (R19)
@@ -128,6 +128,8 @@ PASS | FIX_REQUIRED | BLOCK
 ```
 
 `Regeneration check` is a fixed section holding R19's result — record "none" even when nothing is missing, so the report shows this axis was actually examined.
+
+**Every finding carries a `confidence` of `high`, `medium`, or `low`** — the same three-level vocabulary the implementation reviewers use, so one project never runs two confidence scales. Most rules here are judgment calls read by someone deciding whether to spend an edit, and a hedged guess presented at the same weight as a quoted violation is what makes a punch list get ignored wholesale. Use `high` when you can quote the offending text and the rule it breaks, `medium` when the rule clearly applies but the call is a matter of degree (is this driver discriminating enough? is this alternative a strawman?), and `low` when you are inferring intent you cannot see — a suspected missing requirement, for instance, where only the author knows whether a value is a contract. **A `low`-confidence finding is a question, so phrase its fix as one** ("ask whether the 30-day window is a policy or a tuning choice"), and never let one carry a `BLOCK`.
 
 Verdict criteria:
 

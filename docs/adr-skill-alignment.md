@@ -19,11 +19,11 @@
 > | ① R 번호 체계 (R18/R19/R20 공백) | **완료** — sufficiency reviewer를 `R1–R16, R19–R20`으로 수정 + R18 방향 분할 |
 > | ② 재생성 테스트 명칭 부재        | **완료** — 게이트 Q3를 "사람에게 묻는 재생성 테스트"로 명명                  |
 > | ③ necessity reviewer 규칙 미인용 | **완료** — Input에 규칙 문서 추가, step 1을 해상도 판정으로 규정             |
-> | ④ impl-review의 rules-doc stale  | 미착수                                                                       |
-> | ⑤ 문서 축 미판정 verdict         | 미착수                                                                       |
-> | ⑥ decision-log 라우팅 누락       | 미착수 (Status 복귀는 불필요 — 3절 주석 참조)                                |
-> | ⑦ 문서 축 confidence / 반증 강도 | 미착수                                                                       |
-> | ⑧ edit-in-place 소유자 미정      | 미착수 — 여전히 가장 큰 동작 구멍                                            |
+> | ④ impl-review의 rules-doc stale  | **완료** — step 1 준비물에 규칙 문서 + review limits에 lag 기록              |
+> | ⑤ 문서 축 미판정 verdict         | **완료** — Scope에 `Unjudged axes` 줄 (verdict 3값은 유지)                   |
+> | ⑥ decision-log 라우팅 누락       | **완료** — 로그 1줄 + 소유 커맨드 명시 (Status 복귀는 불필요)                |
+> | ⑦ 문서 축 confidence             | **완료** — high/medium/low, validator와 동일 척도 (반증 강도 상향은 보류)    |
+> | ⑧ edit-in-place 소유자           | **완료** — 진단이 틀렸음. 소유자는 이미 존재했고 라우팅 문구만 문제였다      |
 > | ⑨ 추상화 레벨 원리 부재          | **완료** — 아래 4절                                                          |
 
 ---
@@ -292,3 +292,63 @@ concepts를 몰라야 한다"고 두었지만, 그러면 `docs/adr/`를 여는 �
 | `agents/adr-impl-necessity-reviewer.md`   | Input에 규칙 문서; step 1을 해상도 판정으로 규정                                               |
 | `agents/adr-impl-explainer.md`            | side-by-side 표의 목적 = 두 해상도를 나란히 놓아 사람이 Q3를 답하게                            |
 | `agents/adr-impl-review-report-writer.md` | Contract compliance에 "어느 레벨이 바뀌어야 하는지" 명시 + ADR 값을 코드에 맞추는 fix 금지     |
+
+---
+
+## 5. 완료된 작업 — ④⑤⑥⑦⑧
+
+### 5-1. ⑧의 진단 정정 — "막다른 길"이 아니었다
+
+최초 검토에서 "edit-in-place 절차를 어느 스킬도 소유하지 않는다"고 적었는데 **사실이 아니다.**
+두 커맨드가 이미 소유하고 있었다:
+
+- `skills/adr-impl/SKILL.md` step 1 — 요구값·결정 변경 시 본문 in-place 갱신 + Status를 `Proposed`로 복귀
+  - major면 `decision-log.md` 1줄
+- `skills/adr-impl/SKILL.md` step 4 — 구현 중 그레이존 결정 변경 시 같은 절차, 같은 커밋
+- `skills/adr-sync/SKILL.md` "An intended decision change" 분기 — 코드가 이미 서 있고 ADR만 따라가는 경우
+
+**실제 갭은 라우팅 문구가 그 커맨드 이름을 대지 않는다는 것**이었다("edit-in-place"라고만 씀). 따라서
+전용 `/adr-edit` 신설(구 10번 항목)은 불필요하고, 한 줄 수정으로 끝난다. 두 소유자의 역할 분담:
+
+| 상황                                       | 소유 커맨드            |
+| ------------------------------------------ | ---------------------- |
+| 같은 사이클에서 코드까지 다시 작업         | `/adr-impl <category>` |
+| 코드는 이미 서 있고 ADR만 따라가야 함      | `/adr-sync <category>` |
+| 결정 주제가 분기해 구 결정이 별도로 남아야 | `/adr-new` (supersede) |
+
+### 5-2. ⑤ 미판정 축 — verdict 어휘는 건드리지 않는다
+
+`INCONCLUSIVE`를 4번째 값으로 추가하는 안을 검토했으나 **채택하지 않았다.** `adr-reviewer`의 verdict
+기준·보고 포맷을 동시에 고쳐야 하고 새 판정 조건을 정의해야 하는데, 얻는 것은 어휘 통일뿐이다.
+대신 스윕 보고서 Scope에 **`Unjudged axes` 줄**을 추가하고, 비어 있지 않으면 채팅 요약에서
+"PASS 카운트가 그 규칙들을 제외한 수치"임을 밝히게 했다. ADR당 판정은 3값을 유지한다.
+
+### 5-3. ⑥ decision-log — 로그가 작업의 일부임을 명시
+
+`Decision changed in code`로 ADR을 갱신하기로 하면 **정의상 major**이므로 `decision-log.md` 1줄이 함께
+필요하다(본문을 현재 상태로 덮어쓰면 구 접근의 근거가 사라지므로). 라우팅에 이 사실 + 소유 커맨드를
+넣었고, sufficiency reviewer의 Branch 출력 줄에도 같은 내용을 반영했다.
+
+**Status 복귀는 넣지 않았다** — `README.md`의 복귀 규칙은 "새 결정이 코드·테스트에 반영되기 전까지"인데,
+`Decision changed in code`는 코드가 이미 새 결정을 갖고 있다. ADR을 갱신하면 양쪽이 일치하고 코드를
+되돌리면 원래대로 일치하므로, 어느 분기도 복귀가 필요 없다.
+
+### 5-4. ⑦ confidence — 척도를 하나로
+
+`adr-reviewer` findings에 `confidence: high|medium|low`를 추가했다. **`adr-impl-review-validate.mjs`가
+findings JSON에 이미 같은 3단계를 강제**하고 있어서, 다른 어휘(`certain`/`likely` 등)를 쓰면 한 프로젝트에
+두 신뢰도 체계가 생긴다. 사용 기준(인용 가능=high / 정도 문제=medium / 의도 추론=low)과 함께
+"low는 질문이므로 fix도 질문으로 쓰고, BLOCK을 달지 않는다"를 명시했다.
+
+**⑦의 근본(문서 축 반증 강도 상향)은 보류**했다. adr-reviewer를 다관점으로 쪼개거나 R19를 별도 반증
+패스로 돌리는 방안은 스윕 비용이 ADR 수에 선형이라 비용-효과 판단이 먼저 필요하다.
+
+### 5-5. 회귀 고정
+
+`tests/skill-metadata.test.mjs`에 4개 테스트를 추가했다(총 162개).
+
+- impl-review 라우팅이 세 커맨드를 이름으로 대는지 + 로그/major 언급 + report-only 유지
+- validator와 adr-reviewer가 **같은 confidence 어휘**를 쓰는지, low가 BLOCK을 달 수 없는지
+- 스윕이 `Unjudged axes`를 보고하면서 **verdict 3값을 포크하지 않는지**
+- `/adr-impl`·`/adr-sync`가 edit-in-place 절차를 실제로 보유하는지(로그·Status 포함) — 라우팅 대상이
+  사라지면 report-only 커맨드가 막다른 길이 되므로

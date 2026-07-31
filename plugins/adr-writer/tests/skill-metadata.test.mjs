@@ -491,3 +491,72 @@ test("the decision-log format has one source: the seed file", () => {
   // The old inline copy of the file header must be gone, or the two can drift.
   assert.doesNotMatch(rules, /# Decision Log: <category>/);
 });
+
+// ── routing and confidence invariants ─────────────────────────────────────
+// An ADR edit has owners: /adr-impl (reworking code in the same cycle),
+// /adr-sync (code already stands, ADR catches up), /adr-new (the topic forked,
+// so supersede). /adr-impl-review is report-only, so when it surfaces a decision
+// disagreement it must NAME one of those rather than saying "edit-in-place" and
+// leaving the user to guess which command does it.
+test("impl-review routes ADR edits to the commands that own them", () => {
+  const skill = read(path.join(ADR_ROOT, "skills", "adr-impl-review", "SKILL.md"));
+  const decisionChanged = skill.slice(skill.indexOf("- `Decision changed in code` →"));
+  const block = decisionChanged.slice(0, decisionChanged.indexOf("- `Impl-fact mismatch`"));
+  for (const cmd of [/\/adr-impl /, /\/adr-sync/, /\/adr-new/]) {
+    assert.match(block, cmd, `the Decision-changed routing must name ${cmd}`);
+  }
+  // a decision change of this kind is major, so the log line is part of the job —
+  // without it the old approach's rationale is lost when the body is overwritten
+  assert.match(block, /decision-log\.md/);
+  assert.match(block, /major/);
+  // and the command stays report-only regardless
+  assert.match(skill, /This command itself remains report-only/);
+});
+
+// The plugin must not run two confidence scales. The impl-review validator
+// hard-enforces high|medium|low on findings JSON, so the document reviewer uses
+// the same three words rather than inventing certain/likely/possible.
+test("one confidence vocabulary across document and implementation review", () => {
+  const validator = read(path.join(ADR_ROOT, "scripts", "adr-impl-review-validate.mjs"));
+  const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  // the validator is the machine-checked end of the scale
+  assert.match(validator, /ALLOWED_CONFIDENCE/);
+  for (const level of ["high", "medium", "low"]) {
+    assert.match(validator, new RegExp(`"${level}"`), `validator must allow ${level}`);
+  }
+  // ...and the document reviewer reports on the same scale
+  assert.match(reviewer, /\(confidence: high\|medium\|low\)/);
+  assert.match(reviewer, /the same three-level vocabulary/);
+  // a hedge must not be able to block a save
+  assert.match(reviewer, /never let one carry a `BLOCK`/);
+});
+
+// A PASS count is only as good as the rules the reviewer could reach. If the
+// repo's docs lag, or the sweep batched, some rule went unevaluated across the
+// whole set — and it rides along inside PASS unless the report says otherwise.
+// The reviewer's three verdict values stay untouched (a fourth would fork the
+// vocabulary); the sweep reports the gap in Scope instead.
+test("the sweep reports unjudged axes without forking the verdict vocabulary", () => {
+  const sweep = read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md"));
+  assert.match(sweep, /- Unjudged axes:/);
+  assert.match(sweep, /PASS count excludes those rules/);
+  // the per-ADR verdict stays three-valued
+  assert.match(sweep, /<n> PASS · <n> FIX_REQUIRED · <n> BLOCK/);
+  assert.match(sweep, /do not invent a fourth/);
+  const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  assert.doesNotMatch(reviewer, /^PASS \| FIX_REQUIRED \| INCONCLUSIVE/m);
+});
+
+// /adr-impl and /adr-sync are the two commands that may rewrite an ADR body to
+// current state, so the procedure each owns has to actually be there — the
+// report-only commands route to them by name and would otherwise dead-end.
+test("the edit-in-place procedure has owners, with the log and Status handling", () => {
+  const impl = read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md"));
+  assert.match(impl, /edit-in-place/);
+  assert.match(impl, /decision-log\.md/);
+  // /adr-impl is the one that reverts Status while the code is reworked
+  assert.match(impl, /revert Status to `Proposed`/);
+  const sync = read(path.join(ADR_ROOT, "skills", "adr-sync", "SKILL.md"));
+  assert.match(sync, /An intended decision change/);
+  assert.match(sync, /decision-log/);
+});
