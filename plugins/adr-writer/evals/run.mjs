@@ -1,0 +1,276 @@
+#!/usr/bin/env node
+// run.mjs — run ADR behaviour scenarios against a real agent, N times each, and
+// report per-check hit rates.
+//
+// This is a REPRODUCTION tool, not a CI gate. It exists so that when someone
+// reports "the reviewer told me to delete my requirement value" you can encode
+// that situation once, run it 10 times, and see whether it reproduces 1/10 or
+// 8/10. A pass/fail verdict would throw that number away, and the number is the
+// whole finding: an LLM defect that appears half the time is a different bug
+// from one that appears always, and they get different fixes.
+//
+// Usage:
+//   node evals/run.mjs                          # every scenario, 1 run each
+//   node evals/run.mjs --runs 10                # 10 runs each (rates)
+//   node evals/run.mjs --only requirement-value # one scenario (substring match)
+//   node evals/run.mjs --list                   # names, no agent calls
+//   node evals/run.mjs --dry-run                # build fixtures + print prompts
+//   node evals/run.mjs --out report.md          # write a shareable report
+//
+// Env:
+//   ADR_EVAL_CMD   agent command; prompt arrives on stdin
+//                  (default: claude -p --allowedTools '')
+//
+// Exit: 0 = ran (even with failing checks — a failure is the finding, not an
+//       error), 2 = usage / no scenario matched / agent never ran.
+
+import { readdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { DEFAULT_CMD, runAgent } from "./lib/harness.mjs";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+function parseArgs(argv) {
+  const o = { runs: 1, only: null, list: false, dryRun: false, out: null, cmd: DEFAULT_CMD };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--runs") o.runs = Number(argv[++i]);
+    else if (a === "--only") o.only = argv[++i];
+    else if (a === "--list") o.list = true;
+    else if (a === "--dry-run") o.dryRun = true;
+    else if (a === "--out") o.out = argv[++i];
+    else if (a === "--cmd") o.cmd = argv[++i];
+    else if (a === "-h" || a === "--help") {
+      process.stdout.write(readHelp());
+      process.exit(0);
+    } else die(`unknown argument: ${a}`);
+  }
+  if (!Number.isInteger(o.runs) || o.runs < 1) die(`--runs must be a positive integer`);
+  return o;
+}
+
+function readHelp() {
+  return `adr evals — run behaviour scenarios against a real agent
+
+  node evals/run.mjs [--runs N] [--only <substring>] [--list] [--dry-run]
+                     [--out report.md] [--cmd '<agent command>']
+
+Scenarios live in evals/scenarios/*.mjs. Each exports { name, description,
+bugReport?, build(dir) -> prompt, score({tail, output, dir}) -> checks[] }.
+`;
+}
+
+function die(msg, code = 2) {
+  process.stderr.write(`adr-evals: ${msg}\n`);
+  process.exit(code);
+}
+
+async function loadScenarios() {
+  const dir = path.join(HERE, "scenarios");
+  const out = [];
+  for (const f of readdirSync(dir)
+    .filter((f) => f.endsWith(".mjs"))
+    .sort()) {
+    const mod = await import(path.join(dir, f));
+    if (!mod.default) die(`${f} has no default export`);
+    out.push({ file: f, ...mod.default });
+  }
+  return out;
+}
+
+// ── one run of one scenario ───────────────────────────────────────────────
+async function runOnce(scenario, opts) {
+  const { mkFixture } = await import("./lib/harness.mjs");
+  const dir = mkFixture(`adr-eval-${scenario.name}-`);
+  let prompt;
+  try {
+    prompt = await scenario.build(dir);
+  } catch (e) {
+    return { fixture: dir, error: `build failed: ${e.message}`, checks: [] };
+  }
+
+  if (opts.dryRun) return { fixture: dir, prompt, dry: true, checks: [] };
+
+  const res = runAgent(prompt, { cmd: opts.cmd, cwd: dir });
+  // Empty output is an error whatever the exit code. A command that exits 0
+  // saying nothing (a wrong ADR_EVAL_CMD, a CLI that needs a flag it did not
+  // get) would otherwise be scored as a real run — and since most checks here
+  // assert the ABSENCE of a bad finding, an empty reply passes them all
+  // vacuously and the report reads green. Scoring silence is worse than no eval.
+  if (!res.stdout.trim()) {
+    return {
+      fixture: dir,
+      error:
+        `agent produced no output (status ${res.status}${res.error ? `: ${res.error}` : ""}). ` +
+        `Check ADR_EVAL_CMD accepts a prompt on stdin and prints the reply to stdout. ` +
+        `${res.stderr.slice(0, 300)}`,
+      checks: [],
+      ms: res.ms,
+    };
+  }
+
+  const { parseTail } = await import("./lib/harness.mjs");
+  const tail = parseTail(res.stdout);
+  let checks;
+  try {
+    checks = (await scenario.score({ tail, output: res.stdout, dir })) ?? [];
+  } catch (e) {
+    return { fixture: dir, error: `scoring threw: ${e.message}`, checks: [], ms: res.ms };
+  }
+  return { fixture: dir, tail, checks, ms: res.ms, output: res.stdout };
+}
+
+// ── aggregate ─────────────────────────────────────────────────────────────
+function aggregate(runs) {
+  const byLabel = new Map();
+  for (const r of runs) {
+    for (const c of r.checks) {
+      if (!byLabel.has(c.label))
+        byLabel.set(c.label, { label: c.label, passed: 0, total: 0, details: [] });
+      const e = byLabel.get(c.label);
+      e.total++;
+      if (c.pass) e.passed++;
+      else e.details.push(c.detail);
+    }
+  }
+  return [...byLabel.values()];
+}
+
+function rate(passed, total) {
+  return total === 0 ? "n/a" : `${passed}/${total}`;
+}
+
+function main() {
+  const opts = parseArgs(process.argv.slice(2));
+  loadScenarios().then(async (all) => {
+    const scenarios = opts.only ? all.filter((s) => s.name.includes(opts.only)) : all;
+    if (!scenarios.length)
+      die(opts.only ? `no scenario matches "${opts.only}"` : `no scenarios found`);
+
+    if (opts.list) {
+      for (const s of all) process.stdout.write(`${s.name}\n  ${s.description}\n`);
+      return;
+    }
+
+    process.stdout.write(
+      `adr evals — ${scenarios.length} scenario(s) × ${opts.runs} run(s)\n` +
+        `agent: ${opts.dryRun ? "(dry run, not invoked)" : opts.cmd}\n\n`,
+    );
+
+    const results = [];
+    let agentRan = false;
+
+    for (const s of scenarios) {
+      process.stdout.write(`## ${s.name}\n${s.description}\n`);
+      const runs = [];
+      for (let i = 0; i < opts.runs; i++) {
+        process.stdout.write(`  run ${i + 1}/${opts.runs} … `);
+        const r = await runOnce(s, opts);
+        runs.push(r);
+        if (r.dry) {
+          process.stdout.write(`fixture ${r.fixture}\n`);
+          process.stdout.write(
+            `\n--- prompt (${r.prompt.length} chars) ---\n${r.prompt}\n--- end ---\n`,
+          );
+          continue;
+        }
+        if (r.error) {
+          process.stdout.write(`ERROR — ${r.error}\n`);
+          continue;
+        }
+        agentRan = true;
+        const failed = r.checks.filter((c) => !c.pass).length;
+        process.stdout.write(
+          `${r.checks.length - failed}/${r.checks.length} checks` +
+            `${r.tail?.verdict ? `, verdict ${r.tail.verdict}` : ", NO TAIL BLOCK"}` +
+            ` (${(r.ms / 1000).toFixed(0)}s)\n`,
+        );
+      }
+
+      if (!opts.dryRun) {
+        const agg = aggregate(runs);
+        for (const c of agg) {
+          const ok = c.passed === c.total;
+          process.stdout.write(`  ${ok ? "✔" : "✗"} ${rate(c.passed, c.total)}  ${c.label}\n`);
+          if (!ok) {
+            // one representative failure — the rest are usually the same shape
+            process.stdout.write(`       ${c.details[0]}\n`);
+          }
+        }
+      }
+      results.push({ scenario: s, runs });
+      process.stdout.write("\n");
+    }
+
+    if (opts.out && !opts.dryRun) {
+      writeFileSync(opts.out, renderReport(results, opts));
+      process.stdout.write(`report written: ${opts.out}\n`);
+    }
+
+    if (!opts.dryRun && !agentRan) {
+      die(
+        `the agent never produced output. Check ADR_EVAL_CMD (currently: ${opts.cmd}) — ` +
+          `it must accept a prompt on stdin and print the reply to stdout.`,
+      );
+    }
+  });
+}
+
+// A report you can paste into a bug thread: what was asked, what came back, and
+// how often. Deliberately includes the fixture paths and one full transcript —
+// the first thing anyone asks about an LLM defect is "what exactly did it see?"
+function renderReport(results, opts) {
+  const lines = [
+    `# ADR eval report`,
+    ``,
+    `- agent: \`${opts.cmd}\``,
+    `- runs per scenario: ${opts.runs}`,
+    ``,
+    `> Rates, not pass/fail. A check failing 3/10 is a real but intermittent`,
+    `> defect; one failing 10/10 is deterministic. They need different fixes.`,
+    ``,
+  ];
+  for (const { scenario, runs } of results) {
+    lines.push(`## ${scenario.name}`, ``, scenario.description, ``);
+    if (scenario.bugReport) lines.push(`**Reported as**: ${scenario.bugReport}`, ``);
+    const agg = aggregate(runs);
+    if (agg.length) {
+      lines.push(`| rate | check |`, `| --- | --- |`);
+      for (const c of agg) lines.push(`| ${rate(c.passed, c.total)} | ${c.label} |`);
+      lines.push(``);
+      const failing = agg.filter((c) => c.passed < c.total);
+      if (failing.length) {
+        lines.push(`### Failures`, ``);
+        for (const c of failing) {
+          lines.push(`- **${c.label}** (${rate(c.passed, c.total)})`);
+          for (const d of [...new Set(c.details)].slice(0, 3)) lines.push(`  - ${d}`);
+        }
+        lines.push(``);
+      }
+    }
+    const errored = runs.filter((r) => r.error);
+    if (errored.length) {
+      lines.push(`### Runs that could not be scored`, ``);
+      for (const r of errored) lines.push(`- ${r.error}`);
+      lines.push(``);
+    }
+    lines.push(`Fixtures: ${runs.map((r) => `\`${r.fixture}\``).join(", ")}`, ``);
+    const sample = runs.find((r) => r.output);
+    if (sample) {
+      lines.push(
+        `<details><summary>One full agent reply</summary>`,
+        ``,
+        "```",
+        sample.output.trim(),
+        "```",
+        ``,
+        `</details>`,
+        ``,
+      );
+    }
+  }
+  return lines.join("\n");
+}
+
+main();

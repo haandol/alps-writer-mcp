@@ -58,6 +58,8 @@ Build (inside `plugins/alps-writer/`) runs `tsc --noEmit` (typecheck), then esbu
 
 Tests use Node's built-in test runner. ALPS TypeScript tests run through `tsx`; ADR tests are dependency-free `.mjs` tests. Run all suites with `pnpm test`.
 
+**Behaviour evals** (`plugins/adr-writer/evals/`) are separate and NOT in `pnpm test`. `pnpm test` proves a prompt _says_ something; the evals check whether an agent given that prompt _does_ it, by running real scenarios against a live model and reporting per-check hit rates. They cost money, take minutes, and are non-deterministic, so they never gate CI — their job is reproducing a reported defect (`node evals/run.mjs --only <name> --runs 10`) and telling you whether it happens 3/10 or 10/10, which decides the fix. The harness itself _is_ covered by `pnpm test` via a stub agent, because an eval whose scorer cannot tell a bad reply from a good one reports green and is worse than no eval. See `plugins/adr-writer/evals/README.md`.
+
 ## Repository Structure
 
 ```
@@ -94,6 +96,10 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 ├── README.md
 ├── skills/               # adr-new, adr-impl, adr-impl-review, adr-sync, adr-rollup
 ├── agents/               # ADR authoring reviewer + isolated impl explainer/review/report roles
+├── evals/                # behaviour evals (real model; NOT in pnpm test)
+│   ├── run.mjs           # runner — N runs per scenario, hit rates, shareable report
+│   ├── lib/harness.mjs   # fixture builder + scorers; passes the REAL skill/agent text
+│   └── scenarios/        # one reproducible situation each
 ├── hooks/
 │   ├── hooks.json        # UserPromptSubmit registration
 │   └── surface-adr-context.mjs  # UserPromptSubmit — inject ADR-first directive + mapping snapshot
