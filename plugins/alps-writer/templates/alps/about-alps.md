@@ -79,5 +79,5 @@ The chain is a one-way dependency (PRD → ADR → code): a change to ALPS shoul
 ## Further reading
 
 - Project README — installation and command reference
-- `templates/adr/README.md` — ADR authoring rules used after `/feature-to-adr`
+- `templates/adr/AGENTS.md` — how the ADR cycle works, read after `/feature-to-adr`
 - `get_alps_overview` MCP tool — runtime conversation guide consumed by the agent

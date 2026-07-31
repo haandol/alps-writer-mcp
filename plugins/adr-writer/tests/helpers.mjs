@@ -35,9 +35,11 @@ export function write(dir, rel, content) {
   return full;
 }
 
-// The three seeded rule docs a real repo gets on first /adr-new. Several
-// fixtures need them present so the harness / invariants (b) behave; seed once.
-export const RULE_DOCS = ["README.md", "structure.md", "authoring-rules.md"];
+// The seeded rule docs a real repo gets on first /adr-new. Several fixtures
+// need them present so the harness / invariants (b) behave; seed once.
+// README.md is the index; AGENTS.md holds the principle and the cycle's
+// mechanics (README links to it, never the reverse).
+export const RULE_DOCS = ["README.md", "AGENTS.md", "structure.md", "authoring-rules.md"];
 export function seedRuleDocs(dir) {
   for (const f of RULE_DOCS) copyFileSync(path.join(TEMPLATES, f), write(dir, `docs/adr/${f}`, ""));
 }

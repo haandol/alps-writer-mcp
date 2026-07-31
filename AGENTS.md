@@ -4,6 +4,33 @@
 
 **Tech Stack**: TypeScript 5.9+, Node.js >= 20, pnpm workspace, MCP SDK (`@modelcontextprotocol/sdk`), Zod
 
+## The design principle — an abstraction ladder, C4-style
+
+Everything in this repo serves one idea, so weigh changes against it.
+
+**PRD, ADR, and code are not three documents about three topics. They are the same system at three resolutions** — the way a C4 diagram shows one architecture at context, container, and component zoom. What gives a level its value is what it **refuses to show**: a context diagram that also drew every class would answer no question better than the code already does.
+
+| Level        | Artifact                  | The one question it answers                                                | Owner           |
+| ------------ | ------------------------- | -------------------------------------------------------------------------- | --------------- |
+| **Zoom out** | ALPS PRD (`*.alps.xml`)   | WHAT / WHY — the user's problem                                            | **alps-writer** |
+| **Middle**   | ADR (`docs/adr/`)         | HOW (architecture) — the decision, its rationale, the requirement contract | **adr-writer**  |
+| **Zoom in**  | Code / AGENTS.md / README | HOW (detail) — structure, names, signatures, tuning values                 | the user's repo |
+
+**The goal is selective reading: a reader loads one level, gets its question answered, and stops.** "Why is the refresh window 7 days?" is answered by the ADR without opening a source file; "how is rotation implemented?" is answered by the code without reading the PRD. That only holds while each level carries **its own resolution and no other** — which is why the plugins constrain what may be written at each level as strictly as they do.
+
+Two leaks break it, and nearly every rule in `plugins/adr-writer/templates/adr/` exists to catch one of them:
+
+- **Detail pulled up from a lower level** (signatures, field types, pool sizes, pseudocode, file paths in an ADR) — the level stops being trustworthy alone, because it asserts things the level below may already have changed. A reader must open the code to learn which half still holds.
+- **A requirement pushed out of a level** ("the code has the number, so drop it from the ADR") — worse, because the fact now lives at **no** level: the code shows the value but not that it is a contract, and the PRD is too coarse to name it. This is the failure mode the plugin guards hardest, and why the requirement gate is asked before any exclusion filter.
+
+Both reduce to one test, and it is the test to apply when reviewing a change to any prompt, template, or rule here:
+
+> **The single-level read test**: can this level be read alone and answer its own question — with nothing in it that belongs to a level below, and nothing missing that no other level holds?
+
+Named applications of the same test, all defined in `templates/adr/`: the **regeneration test** (the test applied to the ADR level: delete all code, can requirement-honoring code be rebuilt?), the **requirement gate + code-readthrough + litmus** filters (routing one fact to its level), the **stability gradient** `Code >> ADR >> PRD` (detecting a violation after the fact — a code change dragging an ADR edit means the ADR held a resolution that was never its own), and the **`Spec violation` vs `Impl-fact mismatch`** split in impl-review (which level owns a disagreement). When editing any skill or agent prompt, keep these names — they are how the levels stay aligned across separately-running subagents.
+
+The source of truth for the principle is `plugins/adr-writer/templates/adr/AGENTS.md` "The abstraction ladder"; `docs/dependency-model.md` covers the reference rules that follow from it.
+
 ## Commands
 
 Root is a private pnpm workspace; the MCP server package lives in `plugins/alps-writer/`. Root scripts proxy to it.

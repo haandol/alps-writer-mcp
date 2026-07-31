@@ -51,7 +51,7 @@ When the judgment is ambiguous, do not merge. Staying separate is safer — a wr
 
 ### 1. Load the index and mapping
 
-- Read `docs/adr/README.md` (the conceptual index plus the gray-zone model — no ADR list), `docs/adr/authoring-rules.md` (the include/exclude rules), and `docs/adr/structure.md` (category policy).
+- Read `docs/adr/AGENTS.md` (the abstraction ladder plus the gray-zone model), `docs/adr/authoring-rules.md` (the include/exclude rules), and `docs/adr/structure.md` (category policy).
 - Read `docs/adr/.mapping.json` — the single ADR index (categories → adrs[] with path, status, summary) plus `dependsOn`. Since the mapping holds neither code paths nor a PRD reference, find the code needed for alignment verification by reading the ADR's Decision and using `Glob`/`Grep` (`structure.md` "Finding the related code"). If the mapping is absent, infer categories from the `docs/adr/<category>/` directory names on disk and proceed.
 - Decide the target categories: with no argument, every `docs/adr/<category>/` on disk.
 
@@ -123,7 +123,7 @@ Date: <today>
 4. **Keep the important decisions**: state transitions, behavioral rules, entity relationships, integration mechanisms, business logic.
    4-a. **Carry the requirement contract over without loss**: every **requirement value** (limits, quotas, cycles, retention, caps, targets), **non-numeric requirement** (allowed value sets, transition rules, mandatory fields, ordering, uniqueness, units — `authoring-rules.md` "Non-numeric requirements"), permission rule, and required validation condition that lived in any ADR of the chain moves into the consolidated ADR **without a single omission.** If a value changed within the chain, write **the latest value** in the body and leave that transition in `decision-log.md` via the step 9 harvest. Consolidation is compression, not requirement loss — after writing the consolidated ADR, verify it once with the [regeneration test](../../templates/adr/authoring-rules.md) ("with the code deleted, can requirement-honoring code be rebuilt from this ADR alone?").
 5. **Preserve Mermaid diagrams**: consolidate or amend the currently valid ones and keep them.
-6. **Exclude implementation detail**: apply the "What to exclude from an ADR" table in `authoring-rules.md` (plus its "exception when it is a requirement" column) and the "code-readthrough test" in `README.md` — if items that are obvious from the code and **also not requirements** (function responsibilities, field types, env var names, pseudocode, implementation tuning values, and so on) were mixed into the old ADRs, remove them from the consolidated ADR. **Items that passed the requirement gate are not removal targets** (see 4-a above).
+6. **Exclude implementation detail**: apply the "What to exclude from an ADR" table in `authoring-rules.md` (plus its "exception when it is a requirement" column) and the "code-readthrough test" in `docs/adr/AGENTS.md` — if items that are obvious from the code and **also not requirements** (function responsibilities, field types, env var names, pseudocode, implementation tuning values, and so on) were mixed into the old ADRs, remove them from the consolidated ADR. **Items that passed the requirement gate are not removal targets** (see 4-a above).
 7. **Keep the error-handling strategy**: architecture-level handling such as graceful degradation and fallback stays.
 
 ### 5. Code alignment verification (performed by this skill directly)

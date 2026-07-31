@@ -305,11 +305,38 @@ test("the rules state requirements live in both layers, ADR first when changing 
   // the ordering, and the explicit ban on the reverse
   assert.match(rules, /ADR first, code second/);
   assert.match(rules, /Never change the code first and reconcile the ADR later/);
-  // the README must carry the same framing where the gray-zone model is read
-  const readme = read(path.join(ADR_ROOT, "templates", "adr", "README.md"));
-  assert.match(readme, /Requirements live in both the ADR and the code/);
+  // AGENTS.md must carry the same framing where the gray-zone model is read —
+  // it owns the principle and the cycle; README.md is the directory index.
+  const agents = read(path.join(ADR_ROOT, "templates", "adr", "AGENTS.md"));
+  assert.match(agents, /Requirements live in both the ADR and the code/);
   // and the code-readthrough filter must not be readable as a reason to drop it
-  assert.match(readme, /is not grounds for dropping a requirement that passed the gate/);
+  assert.match(agents, /is not grounds for dropping a requirement that passed the gate/);
+});
+
+// The seeded docs split by role, mirroring the ladder they describe: README.md
+// is the index (what an ADR is, the template, where the list lives) and
+// AGENTS.md is the working model (the principle, the dependency model, Status).
+// The link runs ONE WAY — AGENTS may cite README, README must not cite AGENTS —
+// so README stays the stable entry point a human or GitHub lands on, and the
+// volatile "how it works" doc can be reorganized without touching it.
+test("README is the index and AGENTS holds the principle, linked one way", () => {
+  const dir = path.join(ADR_ROOT, "templates", "adr");
+  const readme = read(path.join(dir, "README.md"));
+  const agents = read(path.join(dir, "AGENTS.md"));
+  // the principle lives in AGENTS, with the named applications of its test
+  assert.match(agents, /## The abstraction ladder/);
+  assert.match(agents, /single-level read test/);
+  for (const name of [/Regeneration test/, /Requirement gate/, /Stability gradient/]) {
+    assert.match(agents, name, `AGENTS.md must name ${name}`);
+  }
+  // README keeps the index role: the template, and no ADR list of its own
+  assert.match(readme, /## ADR template/);
+  assert.match(readme, /Where the ADR index lives/);
+  // README must not depend on AGENTS — it is the more stable of the two
+  assert.doesNotMatch(readme, /AGENTS\.md/);
+  // the principle is stated once, in AGENTS, not duplicated into the index
+  assert.doesNotMatch(readme, /single-level read test/);
+  assert.doesNotMatch(readme, /## The abstraction ladder/);
 });
 
 // The per-turn hook is the only guard when a user just says "bump 7 turns to 10"
@@ -366,7 +393,9 @@ test("every stage that filters an ADR body names the requirement-value rule", ()
     ],
     "agents/adr-impl-explainer.md": [/What the ADR specifies vs what the code does/],
     "agents/adr-impl-review-report-writer.md": [/Contract compliance/],
-    "templates/adr/README.md": [/regeneration test/],
+    // AGENTS.md owns the principle and the completeness standard; README.md is
+    // the directory index, so the regeneration test is asserted there instead.
+    "templates/adr/AGENTS.md": [/regeneration test/],
   };
   for (const [rel, patterns] of Object.entries(stages)) {
     const source = read(path.join(ADR_ROOT, rel));

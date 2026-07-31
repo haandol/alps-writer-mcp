@@ -25,6 +25,26 @@ This procedure is not a proof of mathematical necessity and sufficiency. It is *
 
 > **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the review artifacts in the language the user writes in (`authoring-rules.md` "Conventions"). Any user-facing phrasing below is a guide, not a literal string.
 
+## The abstraction ladder — which level owns each disagreement
+
+Most findings in this review are a disagreement between the ADR and the code, and **every routing call below is really the question "which level owns this fact?"** So hold the principle (`authoring-rules.md` / `docs/adr/AGENTS.md` "The abstraction ladder") while reading the findings.
+
+PRD, ADR, and code are the same system at three resolutions — like C4's context / container / component zoom — and each level exists to be **read alone**. The ADR's question is "why this decision, and what must the result honor?"; the code's is "how is it done?" That split decides every category:
+
+| Disagreement                                       | Level that owns it          | Category                   | Route                                |
+| -------------------------------------------------- | --------------------------- | -------------------------- | ------------------------------------ |
+| The ADR's contract is not honored in code          | ADR (the contract)          | `Spec violation`           | fix the code                         |
+| Names, signatures, wire form, field names differ   | Code (implementation facts) | `Impl-fact mismatch`       | fix the ADR via `/adr-sync`          |
+| The code does something no level decided           | neither yet                 | `Undecided behavior`       | user: raise it to the ADR, or remove |
+| The code implemented a different coherent decision | contested                   | `Decision changed in code` | user rules, then log it              |
+
+So the recurring judgment is **not "is the code good?" but "at which resolution does this belong?"** Two guards follow, and they are the same guards `/adr-new` writes under, seen from the other side:
+
+- **Never absorb a contract violation as an implementation fact.** An allowed value set or transition rule differing is `Spec violation` (the ADR owns it); only the identifier name or representation is `Impl-fact mismatch`. Routing a set difference to `/adr-sync` silently rewrites the contract to match whatever the code did.
+- **Never treat code that enforces a contract as removable.** Cap checks, transition guards, permission checks, and required-field validation are the code level's job of honoring the ADR level's contract, so "it passes without this" is not evidence.
+
+A note on scope: `/adr-impl-review` judges the **code** level against the ADR level. Whether the ADR itself is written at the right resolution is `/adr-review`'s question, and whether the decision is the right one to make is the human's at the section 2 gate. Never rewrite an ADR from inside this command to make a finding go away.
+
 ## Invariant principles
 
 - **Report-only**: never auto-modify code, ADRs, or the mapping. Write only the Markdown/JSON/HTML review artifacts.
@@ -72,7 +92,11 @@ Give the explainer only the ADR, the raw diff, the changed code scope, and the r
 2. Is the behavior described the intended implementation? (did the implementation follow the spec?)
 3. Does this ADR decision (the spec) itself capture the real user problem — are any requirements, risks, or risk-tolerance criteria missing? (spec fitness)
 
-The first two questions ask "did the code follow the spec?", but the third asks "is the spec right?" — code that satisfies necessity and sufficiency can still make a bad product if the spec itself is incomplete, so only a human can judge this axis and it is never delegated to a reviewer agent. Record the intent the user corrected and their risk-tolerance criteria in `human-baseline.md`. **Never proceed to the adversarial reviews before explicit confirmation.** If it is not understandable, fix the explanation; if the code and the intent differ, record that difference in the baseline. **If the spec itself falls short**, do not fix code inside impl-review — record it in the baseline and route to an ADR update (`/adr-new`, edit-in-place) or to `adr-reviewer` before implementation. Do not touch the code yet.
+The first two questions ask "did the code follow the spec?", but the third asks "is the spec right?" — code that satisfies necessity and sufficiency can still make a bad product if the spec itself is incomplete, so only a human can judge this axis and it is never delegated to a reviewer agent.
+
+Question 3 is **the regeneration test asked of a human** (`authoring-rules.md` "What an ADR must satisfy — the regeneration test"): if all this code were deleted and only the ADR survived, could requirement-honoring code be rebuilt from it? Frame it that way when you ask, because it turns a vague "is the spec good?" into a checkable list — are any requirement values, allowed value sets, permission rules, required validations, state transitions, or failure guarantees missing from the ADR? The reviewer agents cannot ask this: they take the ADR as authoritative by construction, so an incomplete ADR reads to them as a complete one. This gate is the only place that gap surfaces.
+
+Record the intent the user corrected and their risk-tolerance criteria in `human-baseline.md`. **Never proceed to the adversarial reviews before explicit confirmation.** If it is not understandable, fix the explanation; if the code and the intent differ, record that difference in the baseline. **If the spec itself falls short**, do not fix code inside impl-review — record it in the baseline and route it out: `/adr-review [category]` for a full read of how the ADR is written, or an ADR update (`/adr-new`, edit-in-place) when the user already knows what is missing. Do not touch the code yet.
 
 ## 3. Run the two independent reviews in parallel
 

@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { withTmp, write, runStructureLint, parseLint, PLUGIN_ROOT } from "./helpers.mjs";
+import { withTmp, write, runStructureLint, parseLint, PLUGIN_ROOT, TEMPLATES } from "./helpers.mjs";
 import {
   classifyStatus,
   checkFilename,
@@ -814,5 +814,99 @@ test("CLI: absent rule docs are /adr-new's seeding job, not a staleness finding"
     const r = parseLint(dir);
     assert.equal(r.warnings.filter((w) => w.rule === "rules-doc-stale").length, 0);
     assert.equal(r.warnings.filter((w) => w.rule === "rules-doc-unstamped").length, 0);
+  });
+});
+
+// ── 0.5.0 seeded-doc layout: README = index, AGENTS = working model ────────
+// Two migration states need catching, and the stale-stamp checks above catch
+// NEITHER: staleness only compares docs that are present (so an absent
+// AGENTS.md is invisible to it) and never looks at content (so a section left
+// behind in README is invisible too). Both get named rules instead.
+const LAYOUT = "rules-doc-layout-legacy";
+const DUPED = "rules-doc-layout-duplicated";
+const AGENTS_MIN = "# How ADRs work here\n\n## The abstraction ladder\n\nx\n";
+
+test("CLI: a repo with README but no AGENTS.md is flagged as the pre-split layout", () => {
+  withTmp((dir) => {
+    seedClean(dir); // writes docs/adr/README.md and no AGENTS.md — the old layout
+    const r = parseLint(dir);
+    assert.equal(r.code, 0, "a layout lag is advisory — the old layout still reads fine");
+    const hit = r.warnings.filter((w) => w.rule === LAYOUT);
+    assert.equal(hit.length, 1, "reported once for the directory, not per doc");
+    // must name the file to create and the command that creates it, or the
+    // reader cannot act on it
+    assert.match(hit[0].msg, /AGENTS\.md/);
+    assert.match(hit[0].msg, /\/adr-new/);
+    // ...and must say the old layout still works, so it doesn't read as broken
+    assert.match(hit[0].msg, /falls back/);
+  });
+});
+
+test("CLI: seeding AGENTS.md clears the layout warning", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    write(dir, "docs/adr/AGENTS.md", AGENTS_MIN);
+    const r = parseLint(dir);
+    assert.equal(r.warnings.filter((w) => w.rule === LAYOUT).length, 0);
+    assert.equal(r.warnings.filter((w) => w.rule === DUPED).length, 0);
+  });
+});
+
+// Half-migrated is worse than un-migrated: two copies of one rule can drift
+// apart with no way to tell which is current — the duplication the abstraction
+// ladder exists to forbid. So it gets its own rule rather than sharing LAYOUT.
+test("CLI: a README still holding moved sections is flagged as duplicated", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    write(dir, "docs/adr/AGENTS.md", AGENTS_MIN);
+    write(
+      dir,
+      "docs/adr/README.md",
+      "# ADR\n\nADR 인덱스는 .mapping.json 참조.\n\n## Status\n\nold copy\n\n## Dependencies run one way\n\nold copy\n",
+    );
+    const r = parseLint(dir);
+    assert.equal(r.code, 0);
+    const hit = r.warnings.filter((w) => w.rule === DUPED);
+    assert.equal(hit.length, 1);
+    // must name WHICH sections — "tidy your README" is not actionable on a file
+    // with a dozen headings
+    assert.match(hit[0].msg, /Status/);
+    assert.match(hit[0].msg, /dependency model/);
+  });
+});
+
+// README legitimately keeps the ADR template, and that fenced block holds a
+// literal "## Status" heading for authors to copy. Matching inside the fence
+// would flag the CORRECT layout as duplicated — the one state that must stay
+// silent. Regression: the first cut of this check did exactly that.
+test("CLI: a heading inside README's fenced ADR template is not a duplication hit", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    write(dir, "docs/adr/AGENTS.md", AGENTS_MIN);
+    write(
+      dir,
+      "docs/adr/README.md",
+      "# ADR\n\nADR 인덱스는 .mapping.json 참조.\n\n## ADR template\n\n```markdown\n# ADR XXXX: title\n\n## Status\n\nProposed\n\n## Context\n\nbackground\n```\n",
+    );
+    const r = parseLint(dir);
+    assert.equal(
+      r.warnings.filter((w) => w.rule === DUPED).length,
+      0,
+      "the template fence is index material, not a duplicated section",
+    );
+  });
+});
+
+// The shipped templates are what every repo is seeded from, so if they trip
+// either layout rule, every consumer inherits the warning on day one.
+test("CLI: the shipped template pair passes both layout checks", () => {
+  withTmp((dir) => {
+    seedClean(dir);
+    for (const doc of ["README.md", "AGENTS.md", "authoring-rules.md", "structure.md"]) {
+      write(dir, `docs/adr/${doc}`, readFileSync(path.join(TEMPLATES, doc), "utf8"));
+    }
+    const r = parseLint(dir);
+    assert.equal(r.warnings.filter((w) => w.rule === LAYOUT).length, 0);
+    assert.equal(r.warnings.filter((w) => w.rule === DUPED).length, 0);
   });
 });

@@ -169,7 +169,7 @@ fi
 
 # (b) ADR → PRD reverse references: numbered ADR bodies must not cite ALPS
 # paths / Section numbers / feature-ids. Seeded rule docs (README,
-# structure, authoring-rules) legitimately mention ALPS, so scope to
+# AGENTS, structure, authoring-rules) legitimately mention ALPS, so scope to
 # NNNN-*.md only.
 if [ "$RUN_PRD" -eq 1 ]; then
   # Every alternative is ALPS-specific so an ADR body citing an unrelated spec
@@ -178,7 +178,7 @@ if [ "$RUN_PRD" -eq 1 ]; then
   # on RFC/spec citations; scope it to an ALPS-qualified form. The remaining
   # alternatives (`.alps.xml`, `ALPS Section`, the F-XXX-N feature-id) are
   # already ALPS-only. `--include` scopes to numbered ADR bodies so seeded rule
-  # docs (README/structure/authoring-rules) that legitimately mention ALPS are
+  # docs (README/AGENTS/structure/authoring-rules) that legitimately mention ALPS are
   # exempt.
   hits="$(grep -rnE "\.alps\.xml|ALPS Section|ALPS.*Section [0-9]+\.[0-9]|Section [0-9]+\.[0-9].*ALPS|F-[A-Z]+-[0-9]" \
     --include='[0-9][0-9][0-9][0-9]-*.md' -- "$ADR_DIR" 2>/dev/null)"; rc=$?

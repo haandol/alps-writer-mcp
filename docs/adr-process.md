@@ -89,7 +89,7 @@ flowchart TD
 
 ## 2. ADR Status transitions
 
-Status is not a value a human sets by hand but one the cycle updates automatically. For the detailed rules see `docs/adr/README.md` "Status" + "Automatic transition rules".
+Status is not a value a human sets by hand but one the cycle updates automatically. For the detailed rules see `docs/adr/AGENTS.md` "Status" + "Automatic transition rules".
 
 ```mermaid
 stateDiagram-v2

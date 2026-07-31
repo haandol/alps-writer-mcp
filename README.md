@@ -98,7 +98,7 @@ alps-writer-plugins/                 # marketplace root (this repo)
         ├── skills/                  # /adr-new, /adr-impl, /adr-impl-review, /adr-review, /adr-sync, /adr-rollup
         ├── agents/                  # ADR authoring + isolated implementation review roles
         ├── hooks/                   # ADR-first directive hook (UserPromptSubmit)
-        └── templates/adr/           # README + authoring-rules + structure + mapping.schema.json
+        └── templates/adr/           # README + AGENTS + authoring-rules + structure + mapping.schema.json
 ```
 
 ## Development

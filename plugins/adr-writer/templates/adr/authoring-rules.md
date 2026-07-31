@@ -1,8 +1,10 @@
 # ADR authoring rules and review checklist
 
-What goes into an ADR body and what stays out. Directory and mapping policy: [`structure.md`](./structure.md). Concepts and the dependency model: [`README.md`](./README.md).
+What goes into an ADR body and what stays out. The principle these rules follow from, the gray zone, and the dependency model: [`AGENTS.md`](./AGENTS.md). Directory and mapping policy: [`structure.md`](./structure.md). The directory index and the ADR template: [`README.md`](./README.md).
 
 An ADR records an architectural decision (Context, Decision, Consequences). To keep code changes from dragging ADR edits behind them, **implementation detail stays out of the ADR.**
+
+**Every rule in this document is one constraint on resolution.** PRD, ADR, and code are the same system at three zoom levels (like C4's context / container / component), and the point of a level is what it refuses to show — so that a reader can load one level, get its question answered, and stop. Each keep/drop call below is therefore the same question in different clothes: _does this fact belong to this level's resolution?_ Detail from a lower level makes the ADR untrustworthy alone; a requirement pushed out of it lands in no level at all. For the full principle see [`AGENTS.md` "The abstraction ladder"](./AGENTS.md#the-abstraction-ladder--the-principle-every-rule-follows-from).
 
 ## What an ADR must satisfy — the regeneration test
 
@@ -90,7 +92,7 @@ Changing a requirement value or rule **changes a system behavior requirement.** 
 2. Record the transition as one line in the category's `decision-log.md` — a requirement value or rule change is major at minimum ([logging criteria](#what-to-log--minor-vs-major)).
 3. **Bring the code to that value in the same change unit.**
 
-**Never change the code first and reconcile the ADR later.** That lets a code change redefine the requirement after the fact, inverting the PRD → ADR → code direction ([stability gradient](./README.md#dependencies-run-one-way-references-are-written-in-neither-direction)). This holds even when the edit looks like "one constant" — the order is set by **whether it is a contract**, not by the size of the change.
+**Never change the code first and reconcile the ADR later.** That lets a code change redefine the requirement after the fact, inverting the PRD → ADR → code direction ([stability gradient](./AGENTS.md#dependencies-run-one-way-references-are-written-in-neither-direction)). This holds even when the edit looks like "one constant" — the order is set by **whether it is a contract**, not by the size of the change.
 
 By contrast, **tuning values absent from the ADR** (pool sizes, backoff, cache TTL, worker counts) carry no such order. Change them freely in code, and do not write them back up into the ADR.
 
@@ -106,7 +108,7 @@ When an ADR points at code, **folder (directory) granularity is the limit.** Nev
 
 This applies equally to prose, tables, and Mermaid diagrams. Inside diagrams, describe the behavior rather than naming functions or method calls — Bad: `stats.IncrementSourceCount("chat")`; Good: `increment sourceCounts.<source>`. That holds for sequenceDiagram, stateDiagram, and flowchart alike. If a decision truly requires quoting a function, class, or file name, reconsider whether it belongs in a docstring, README, or inline comment instead of an ADR.
 
-Symmetrically, **code must not carry ADR IDs or paths** — not in comments, constants, or imports. Likewise, **an ADR body must not carry PRD (ALPS) paths, section numbers, or feature IDs** (Context and Related included): adr-writer is standalone, so an ADR absorbs the PRD's motivation once at import time and never points back at it, and the mapping stores no PRD reference either. The category → ADR → (searched-for) code link lives in exactly one place, [`.mapping.json`](./structure.md#the-adr-registry-mappingjson). Full rationale: [the dependency model](./README.md#dependencies-run-one-way-references-are-written-in-neither-direction).
+Symmetrically, **code must not carry ADR IDs or paths** — not in comments, constants, or imports. Likewise, **an ADR body must not carry PRD (ALPS) paths, section numbers, or feature IDs** (Context and Related included): adr-writer is standalone, so an ADR absorbs the PRD's motivation once at import time and never points back at it, and the mapping stores no PRD reference either. The category → ADR → (searched-for) code link lives in exactly one place, [`.mapping.json`](./structure.md#the-adr-registry-mappingjson). Full rationale: [the dependency model](./AGENTS.md#dependencies-run-one-way-references-are-written-in-neither-direction).
 
 ## What to exclude from an ADR
 
@@ -332,4 +334,4 @@ For the PR reviewer or the author before merge.
 - [ ] **One ADR = one decision** holds (no split signals)
 - [ ] **`.mapping.json`** has the matching category entry including the new ADR
 
-<!-- adr-writer:rules-version 0.4.31 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.5.0 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

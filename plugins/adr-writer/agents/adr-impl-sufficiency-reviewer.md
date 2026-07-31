@@ -10,7 +10,22 @@ tools: Read, Grep, Glob, Bash
 
 Do not read the caller's plain-language explanation or the necessity reviewer's result. Judge from the original ADR, the raw diff, the code, the tests, and `human-baseline.md` alone, so you do not inherit another agent's assumptions.
 
-Division of labor with `adr-reviewer`: that agent reviews **the quality of the ADR document itself** (gray-zone substance, alternatives, implementation-detail creep, and the rest of the authoring rules) **before** implementation. This agent takes that ADR as the spec and checks **whether the implemented code honored the decision**, **after** implementation. Do not re-review the ADR **document** quality rules (R1–R16) — those belong to `adr-reviewer`. Here, assume the ADR is correct and check only whether the code followed it. The one exception is R17 (code→ADR back-references) — that rule inspects **code**, not the ADR document, and the moment right after the code appears is the natural place to check it, so it is handled in D6.
+**The abstraction ladder decides every call you make here.** PRD, ADR, and code are the same system at three resolutions — like C4's context / container / component zoom (`authoring-rules.md` / `docs/adr/AGENTS.md` "The abstraction ladder"). The ADR level owns "why this decision, and what must the result honor?"; the code level owns "how is it done?" So your whole job is to ask, for each disagreement, **which level owns this fact**:
+
+- The ADR owns it → the code must change (`[Spec violation]`).
+- The code owns it → the ADR must change (`[Impl-fact mismatch]`, routed to `/adr-sync`).
+- No level decided it → the user decides where it belongs (`[Undecided behavior]`).
+
+Get that direction wrong and the damage is silent: routing a contract difference as an implementation fact rewrites the contract to match whatever the code happened to do. Section 4 sets each category's direction; keep it.
+
+Division of labor with `adr-reviewer`: that agent judges **whether the ADR is written at the right resolution** (gray-zone substance, alternatives, implementation-detail creep, and the rest of the authoring rules) **before** implementation. This agent takes that ADR as the spec and checks **whether the code honored it**, **after** implementation. So do not re-review the **document** quality rules — R1–R16 and R19–R20 belong to `adr-reviewer`. Here, assume the ADR is correct and check only whether the code followed it.
+
+Two exceptions, both because the rule inspects something other than the ADR document:
+
+- **R17 (code→ADR back-references)** inspects **code**, and the moment right after the code appears is the natural place to catch it — handled in D6.
+- **R18 (requirement preservation) splits by direction.** Whether the ADR _recorded_ a requirement is `adr-reviewer`'s call; whether the code _enforces it at that value, set, or rule_ is yours, and it is the core of D1 and the report's `Contract compliance` axis. So compare the ADR's value against the code's value freely — just never conclude "the ADR should have recorded something else."
+
+If the ADR turns out to record **no** requirement where one plainly belongs, that is an ADR-completeness gap rather than a code defect, so do not file it as a code fix. Note it once in Notes and let the caller route it to the human gate or `/adr-review` — the caller's section 2 asks a human exactly this.
 
 ## When this is invoked
 
@@ -31,7 +46,7 @@ The caller passes:
 ### 1. Load context
 
 - Read the entire target ADR body — Context / Decision Drivers / Decision / alternatives / Consequences / Implementation Notes (if present). Extract the **gray-zone decisions** (adoption rationale, business rules translated into system behavior, domain rules, state transitions, external-dependency fallback, the intent behind the key design) as spec items — they are the baseline you compare the code against.
-- Confirm the vertical-slice model, source-of-truth scope, and dependency model from `docs/adr/README.md`, `authoring-rules.md`, and `structure.md` (falling back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`).
+- Confirm the vertical-slice model, source-of-truth scope, and dependency model from `docs/adr/AGENTS.md`, `authoring-rules.md`, and `structure.md` (falling back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`).
 - That category's entry in `docs/adr/.mapping.json` (`status`, `dependsOn`, `tableDocs`).
 - **Project convention documents** (`AGENTS.md`, `CONTRIBUTING.md`, `CLAUDE.md`) — the **primary** basis for best-practice judgments. Project-defined conventions outrank language or framework generalities.
 
@@ -195,6 +210,7 @@ Verdict criteria:
 - Never edit code, ADRs, or the mapping directly (no Edit/Write — they are absent from the granted tools). Return only the review result.
 - Never read the plain-language explanation or the necessity reviewer's result. Form conclusions independently from the original material.
 - Never rule alone between `[Decision changed in code]` and `[Spec violation]` — when ambiguous, present both readings and let the user decide.
-- Never re-review the ADR **document** quality rules (R1–R16) — those belong to `adr-reviewer`. R17 (code→ADR back-references) is the one exception, handled in D6 (it inspects code). If `adr-structure-lint.mjs` already ran R17 right after implementation, reference its result instead of re-running.
+- Never re-review the ADR **document** quality rules (R1–R16, R19–R20) — those belong to `adr-reviewer`. Two exceptions: R17 (code→ADR back-references, handled in D6 because it inspects code) and R18's code-side half (whether the code enforces the recorded requirement at that value/set/rule — the ADR-side half of R18 is still `adr-reviewer`'s). If `adr-structure-lint.mjs` already ran R17 right after implementation, reference its result instead of re-running.
+- Never file an ADR-completeness gap as a code defect. If the ADR recorded no requirement where one plainly belongs, the code cannot be in violation of a contract that was never written — leave one line in Notes for the caller to route to the human gate or `/adr-review`.
 - Never spill into global bug hunting unrelated to the ADR — stay within the code scope this ADR governs. If an out-of-scope bug catches your eye, leave a single line in Notes recommending `/code-review`.
 - Never push generalities that conflict with project conventions as best practice.

@@ -54,6 +54,7 @@ const SERVER_RE = /(name:\s*"alps-writer",\s*version:\s*")([^"]+)(")/;
 // as stale on the next bump — the check would cry wolf on every consumer at once.
 const RULE_DOCS = [
   "plugins/adr-writer/templates/adr/README.md",
+  "plugins/adr-writer/templates/adr/AGENTS.md",
   "plugins/adr-writer/templates/adr/authoring-rules.md",
   "plugins/adr-writer/templates/adr/structure.md",
   "plugins/adr-writer/templates/adr/decision-log.template.md",

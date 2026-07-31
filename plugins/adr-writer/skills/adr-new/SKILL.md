@@ -10,9 +10,34 @@ Author an ADR directly. Works without an ALPS PRD — this is the plugin's canon
 
 > When to use: whenever a decision must be recorded before changing code — a new feature, an infrastructure choice, an architectural direction. The ADR you write can go straight into `/adr-impl`.
 >
-> **Refactoring is out of scope** — a structural change that does not alter behavior is left to the coding agent's planning step rather than turned into an ADR (`README.md` "What an ADR is not"). If the user tries to record a refactor as an ADR, ask once: "Does this change alter behavior or a decision (the adopted alternative, a state transition, the key design)? If it is pure structural cleanup, planning without an ADR is the better path." If a decision does change, it is not a refactor, so proceed.
+> **Refactoring is out of scope** — a structural change that does not alter behavior is left to the coding agent's planning step rather than turned into an ADR (`docs/adr/AGENTS.md` "What an ADR is not"). If the user tries to record a refactor as an ADR, ask once: "Does this change alter behavior or a decision (the adopted alternative, a state transition, the key design)? If it is pure structural cleanup, planning without an ADR is the better path." If a decision does change, it is not a refactor, so proceed.
 
 > **Language**: this skill and every other harness prompt are written in English, but **talk to the user and write the ADR body in the language the user writes in** (`authoring-rules.md` "Conventions"). The prompts below are phrasing guides, not literal strings to paste.
+
+## What you are actually writing — one level of an abstraction ladder
+
+Every keep/drop call in this skill follows from one idea, so hold it while you write.
+
+**PRD, ADR, and code are the same system at three resolutions** — like C4's context / container / component zoom, not three documents about three topics. The value of a level is what it **refuses** to show, because that is what lets a reader load one level, get its question answered, and stop.
+
+```mermaid
+flowchart TD
+    PRD["ALPS / PRD — WHAT / WHY<br/>the user's problem and target"]
+    ADR["ADR — HOW (architecture)<br/>the decision, its rationale,<br/>and the requirement contract"]
+    Code["Code / AGENTS.md — HOW (detail)<br/>structure, names, signatures,<br/>tuning values"]
+    PRD --> ADR --> Code
+```
+
+So an ADR answers exactly one question: **"why this decision, and what must the result honor?"** Two ways to get that wrong, and you are guarding both directions at once:
+
+- **Pulling detail up from the code level** (signatures, field types, pool sizes, pseudocode, file paths) — the ADR stops being trustworthy on its own, because it asserts things the code may already have changed. The reader must open the code to learn which half still holds, and the level no longer answers its question.
+- **Pushing a requirement out** ("the code will hold that number") — now **no level holds it.** The code shows the value but not that it is a contract; the PRD is too coarse to name it. This is the more expensive failure, which is why step 2 makes you ask about requirement values even unprompted.
+
+The one test behind both, applied when you finish the draft:
+
+> **Can this ADR be read alone and answer its own question — with nothing in it that belongs to the code level, and nothing missing that no other level holds?**
+
+The regeneration test in step 3 is that test's second half; the "record only the gray zone" bullet is its first half. Full principle: `docs/adr/AGENTS.md` "The abstraction ladder".
 
 ## Procedure
 
@@ -29,7 +54,11 @@ Author an ADR directly. Works without an ALPS PRD — this is the plugin's canon
 Check the mapping state:
 
 - Create `docs/adr/` if it does not exist.
-- If `docs/adr/README.md` (and `authoring-rules.md`, `structure.md`, `decision-log.template.md`) are absent, copy all four of the same files from `${CLAUDE_PLUGIN_ROOT}/templates/adr/`. `decision-log.template.md` is a **read-only seed** — copy it to `docs/adr/<category>/decision-log.md` when that category gets its first major decision change; do not pre-create it in the category folder now (the log exists only after there is a transition to record).
+- If `docs/adr/README.md` (and `AGENTS.md`, `authoring-rules.md`, `structure.md`, `decision-log.template.md`) are absent, copy all five of the same files from `${CLAUDE_PLUGIN_ROOT}/templates/adr/`. `decision-log.template.md` is a **read-only seed** — copy it to `docs/adr/<category>/decision-log.md` when that category gets its first major decision change; do not pre-create it in the category folder now (the log exists only after there is a transition to record).
+- **Reconcile the doc layout — `README.md` is the index, `AGENTS.md` is the working model.** 0.5.0 split them: the abstraction ladder, the gray zone, the dependency model, and Status transitions moved out of `README.md` into `AGENTS.md`, leaving `README.md` with what an ADR is, the ADR template, and where the index lives. The harness names each half-state, so **run the step 6(a) harness now if you have not, and act on whichever it reports**:
+  - **`rules-doc-layout-legacy`** (a `README.md` with no `AGENTS.md`) — the repo predates the split. Offer to seed `AGENTS.md` from `${CLAUDE_PLUGIN_ROOT}/templates/adr/` and cut the moved sections out of `README.md`. **Diff before overwriting**: those sections may carry hand-edits (a translation, a tightened rule, a house convention), so carry them into the new `AGENTS.md` rather than dropping them. If the user declines, continue — every skill and agent falls back to reading those sections out of `README.md`, so the old layout still works.
+  - **`rules-doc-layout-duplicated`** (both files exist, but `README.md` still holds sections `AGENTS.md` now owns) — worse than the un-migrated case, because two copies of one rule can drift apart and no reader can tell which went stale. Confirm `AGENTS.md` carries any edits made in the `README.md` copy, then offer to delete those sections from `README.md`.
+  - Both are warnings, not errors: a lagging layout does not make an ADR wrong. Ask once, and never rewrite the docs without approval.
 - **If they are present but stale, offer to refresh them.** Each seeded doc carries an `<!-- adr-writer:rules-version X.Y.Z -->` stamp; the harness reports a lag as `rules-doc-stale` (or `rules-doc-unstamped` for a copy predating the stamp). Seeding once and never again is how a repo keeps the rule set it got on day one while every rule added upstream stops existing for it — and since these docs are the source of truth every reviewer reads, that axis is not failed loudly, it goes unjudged. So when the stamp trails the installed plugin, **say which docs lag and ask once** before overwriting. Two things make this a question rather than an automatic copy: a project may have **hand-edited** its rules on purpose (translated them, tightened a rule, added a house convention), and an overwrite loses that silently. Diff first, name what a refresh would drop, and carry those edits into the new copy. If the user declines, continue with the existing docs — the ADR you are about to write is judged by the rules the repo actually holds.
 - If `docs/adr/.mapping.json` is absent, create it as an empty skeleton (`{ "categories": {} }`).
 
@@ -52,14 +81,15 @@ If the user answers everything at once, take it as given; if they answer briefly
 
 ### 3. Draft the ADR
 
-Follow `README.md`, `authoring-rules.md`, and `structure.md` under `docs/adr/` strictly (falling back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`).
+Follow `AGENTS.md`, `authoring-rules.md`, and `structure.md` under `docs/adr/` strictly (the ADR-directory AGENTS.md, not the project root's) (falling back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`).
 
 - Category directory: `docs/adr/<category>/` (create it if absent; for flat-structure projects use `docs/adr/` alone)
 - Assign the next number within the category. Filename: `NNNN-kebab-title.md` — always canonical form. **Never put an ALPS Feature ID in the filename** (no `0001-f1-...`) — Feature IDs are stored nowhere, and `/adr-impl` matches targets by category key.
 - **Fill the `Date:` at the top of the body with the authoring date (`YYYY-MM-DD`)** — it records when the ADR was written and is separate from the Status transition date (`Accepted (YYYY-MM-DD)`). A `Proposed` Status line carries no date.
-- **Status always starts as `Proposed`** (`/adr-impl` switches it to `Accepted` automatically after implementation and tests). Never ask the user about promotion — see `README.md` "Automatic transition rules".
+- **Status always starts as `Proposed`** (`/adr-impl` switches it to `Accepted` automatically after implementation and tests). Never ask the user about promotion — see `docs/adr/AGENTS.md` "Automatic transition rules".
 - Body structure: Status / Context / Decision Drivers / Decision / alternatives / Consequences / (optional) Implementation Notes / Related. **The four required sections are Status, Context, Decision, and Consequences**, and `adr-structure-lint` hard-checks their presence. Decision Drivers and the alternatives section are strongly recommended (a warning when absent), and Implementation Notes is an optional section kept only when there are architecture-level implementation considerations (matching README's `## ADR template`).
-- **Record only the gray zone** — leave out anything discoverable by reading the code that is also not a requirement (function responsibilities, module dependencies, field types, error message wording, logs, env var names, pseudocode, implementation tuning values). The body's center of gravity should be "the motivation behind the decision that the code cannot show": adoption rationale, business rules translated into system behavior, domain rules and state transitions, external-dependency fallback — see `README.md` "What an ADR covers — the gray zone between business and code".
+- **Record only the gray zone** — leave out anything discoverable by reading the code that is also not a requirement (function responsibilities, module dependencies, field types, error message wording, logs, env var names, pseudocode, implementation tuning values). Each of those belongs to the level below, and copying it up is what makes an ADR unreadable alone. The body's center of gravity should be "the motivation behind the decision that the code cannot show": adoption rationale, business rules translated into system behavior, domain rules and state transitions, external-dependency fallback — see `docs/adr/AGENTS.md` "What an ADR covers — the gray zone between business and code".
+- **Route each fact to its level before writing it** (`authoring-rules.md` "The requirement gate and two filters", in this order). (0) **Requirement gate** — "if this were missing, could code rebuilt from the ADR alone violate a requirement?" YES keeps it unconditionally, and no filter below applies. (1) **Code-readthrough test** — for a fact that failed the gate, "would an agent reading this code discover it?" YES sends it down to the code level. (2) **Litmus test** — "if this value changed, would the decision itself change?" NO sends it down too. Asking (1) before (0) is how a requirement gets deleted for being "visible in the code", which is this skill's most expensive mistake.
 - **Record requirement values verbatim** — put the limits, cycles, caps, and targets collected in step 2 into the `Decision`'s requirement contract (the README template's `### Requirement contract`) with the number and its basis. Do not blur them into "is limited" or "within a reasonable time," and equally do not write them as constant or environment-variable names (`MAX_TURNS = 20` ✗ / "a chat session is capped at 20 turns — pricing policy" ✓). **Record non-numeric requirements in the same place** — allowed value sets, mandatory fields, permissions, visibility, ordering, uniqueness, and units go in as domain sentences, never as enum identifiers (`Status = ["PAID","SHIPPED"]` ✗ / "an order is paid, shipping, delivered, or cancelled, and a cancelled order never moves to shipping" ✓). For the detailed criteria see `authoring-rules.md` "Concrete numbers" and "Non-numeric requirements".
 - **Put yourself through the regeneration test once** — after finishing the draft, ask "if all this code were deleted and only this ADR survived, could requirement-honoring code be rebuilt from it alone?" A different implementation is normal, but if a contract that must be honored is missing (requirement values, permission rules, required validation, state transitions, guaranteed behavior on failure), ask the user right there and fill it in — the reviewer's R19 in step 6 checks the same thing.
 - **Describe the Decision as a vertical slice** — connect user action → API → data change without a break, in one paragraph or a sequenceDiagram. Covering the UI/API/Data decisions of one feature (the leaf — a feature sub-folder or a single-feature context) together is normal; never split into per-layer ADRs. When async flow or state transitions are central, use stateDiagram-v2 or flowchart.
@@ -110,12 +140,13 @@ Verify in two stages just before saving. **Run the deterministic harness first**
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <the category key of the ADR you just wrote>
 ```
 
-This harness parses the `docs/adr/` this ADR lives in and mechanically verifies the following (grounded in `authoring-rules.md`, `README.md`, and `structure.md`):
+This harness parses the `docs/adr/` this ADR lives in and mechanically verifies the following (grounded in `authoring-rules.md`, `docs/adr/AGENTS.md`, and `structure.md`):
 
 - The Status enum and date format (the first half of R1), presence of the required sections (Status/Context/Decision/Consequences), canonical filename (`NNNN-kebab.md`, no stale `fN-` prefix), title number = filename number, path depth ≤ 2 segments
 - Anti-pattern category segments (the first half of R5), Decision Drivers count 3-5 (R13), alternatives ≥ 2 (R14), Related links resolving (R10), whether a value is written in code-constant form (R18's format half — the `value-as-constant` warning)
 - The `.mapping.json` schema and `dependsOn` integrity (dangling / self-edge / cycles — R16), mapping↔disk consistency (R8), plus the mapping `adrs` record shape (path/status/summary) and status↔body agreement
 - Internally it calls `adr-invariants.sh` to also check code→ADR and ADR→PRD back-references (R15/R17)
+- Seeded-doc health, reported once for the directory rather than per ADR: version lag (`rules-doc-stale` / `rules-doc-unstamped`) and layout lag (`rules-doc-layout-legacy` / `rules-doc-layout-duplicated`) — all four route back to step 1, which owns the seeding and the refresh question
 
 If there is an `error`, fix it in this session before moving to the save in step 7 (usually resolved by editing the ADR body or the mapping). Handle `warning`s (alternative/driver counts, suspected code references, and the like) together with adr-reviewer's judgment.
 

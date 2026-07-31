@@ -1,6 +1,6 @@
 {
   "name": "alps-writer",
-  "version": "0.4.31",
+  "version": "0.5.0",
   "description": "Author ALPS product requirement documents through a guided MCP workflow and hand features off to ADR authoring.",
   "author": {
     "name": "haandol",
