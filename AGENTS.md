@@ -208,9 +208,19 @@ Verify before completing any task:
 These are automated in two places, so the list above is what you run locally to
 avoid a round trip — not the only thing standing between a bad commit and `main`:
 
-- **`.husky/pre-push`** — typecheck + `bump:check` + `pnpm test`, all blocking.
-  `SKIP_TESTS=1 git push …` bypasses only the suite (for a knowingly-red WIP
-  branch); the typecheck and version check always run.
+- **`.husky/pre-push`** — everything CI runs, all blocking, ~20s: typecheck,
+  `pnpm test`, `lint`, `format:check`, `bump:check`, the committed-bundle boot and
+  hook-start checks, and the dist-drift rebuild. The rule is **if CI fails on it,
+  pre-push fails on it** — the two were split before, so a push could be green
+  locally and red on GitHub over a lint or formatting problem already sitting in
+  the tree. `SKIP_TESTS=1 git push …` bypasses only the slow suite (for a
+  knowingly-red WIP branch); every other check always runs.
+
+  Ordering matters in one place: the bundle-boot check runs **before** the
+  `pnpm build` rebuild, so it judges the bundle being pushed rather than one just
+  regenerated. With the checks the other way round a hand-edited or truncated
+  `dist/` passed, because the file under test was no longer the file in the commit.
+
 - **`.github/workflows/ci.yaml`** — three jobs, all on Node 24. `test` runs the
   suite; `build` adds lint, `format:check`, `bump:check`, and a rebuild that fails
   if the committed `plugins/alps-writer/dist/` differs; `runtime` re-runs what a

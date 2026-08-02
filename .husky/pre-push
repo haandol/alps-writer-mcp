@@ -1,36 +1,88 @@
-# pre-push — run the checks that are cheap enough to gate every push and whose
-# failure means the pushed tree is broken, not merely unformatted.
+# pre-push — run everything CI runs, so a red CI is something you learn in ~20s
+# here instead of after the push.
 #
-# Why here and not pre-commit: the suite takes ~7s, which is too slow to pay on
-# every commit of a series but well worth paying once per push. Formatting stays
-# in pre-commit (lint-staged fixes it in place); correctness lands here.
+# The rule this file follows: if CI fails on it, this hook fails on it. The gates
+# were split before, and the gap was not hypothetical — CI checks lint,
+# format:check and dist-drift that the hook never did, so a push could be green
+# locally and red on GitHub for a reason already sitting in the working tree.
 #
-# `pnpm test` covers both plugins: the alps-writer MCP server (tsx) and the
-# dependency-free adr-writer suites. `bump:check` is included because the release
-# version lives in 13 places and only 8 of them are covered by a test — the five
-# rules-version stamps in templates/adr/ are checked nowhere else, and a stamp
-# left behind makes the plugin report its own templates as stale to every user.
+# Formatting still belongs to pre-commit as well (lint-staged fixes it in place);
+# checking it again here is what catches a commit made with --no-verify.
 #
-# Bypass: SKIP_TESTS=1 git push … (for a WIP branch you know is red). It does not
-# skip the typecheck or the version check, which are fast and catch different
-# failures.
+# Mirrors .github/workflows/ci.yaml:
+#   test job     → pnpm test
+#   build job    → pnpm lint, pnpm format:check, pnpm bump:check, pnpm build +
+#                  the committed-bundle drift check
+#   runtime job  → the bundle answers MCP initialize, and the hook starts, both
+#                  under a bare `node` with no node_modules in play
+#
+# Bypass: SKIP_TESTS=1 git push … skips only the slow suite, for a WIP branch you
+# know is red. Everything else always runs — those checks are seconds each and
+# each one catches a distinct way the pushed tree can be broken.
 
-pnpm --filter alps-writer exec tsc --noEmit || exit 1
+set -u
 
-pnpm bump:check || {
+fail() {
   echo ""
-  echo "[pre-push] ✗ the release version drifted between sites."
-  echo "    Fix with: pnpm bump <version>  (then pnpm build to refresh dist/)"
+  echo "[pre-push] ✗ $1"
+  [ $# -gt 1 ] && echo "    $2"
+  echo "    (CI would fail on this too — fix it, or see .husky/pre-push for the bypass.)"
   exit 1
 }
 
+# ── typecheck ──────────────────────────────────────────────────────────────
+pnpm --filter alps-writer exec tsc --noEmit ||
+  fail "typecheck failed."
+
+# ── the suite ──────────────────────────────────────────────────────────────
 if [ "${SKIP_TESTS:-}" = "1" ]; then
   echo "[pre-push] ⚠ SKIP_TESTS=1 — skipping the test suite."
 else
-  pnpm test || {
-    echo ""
-    echo "[pre-push] ✗ tests failed — push stopped."
-    echo "    Fix the failures, or push a known-red WIP branch with: SKIP_TESTS=1 git push …"
-    exit 1
-  }
+  pnpm test ||
+    fail "tests failed." "Push a known-red WIP branch with: SKIP_TESTS=1 git push …"
 fi
+
+# ── lint + formatting (CI build job) ───────────────────────────────────────
+pnpm lint ||
+  fail "ESLint reported problems." "Auto-fix what it can: pnpm --filter alps-writer lint:fix"
+
+pnpm format:check ||
+  fail "files are not Prettier-formatted." "Fix with: pnpm format"
+
+# ── release version across all 13 sites ────────────────────────────────────
+# Only 8 are covered by a test; the five rules-version stamps in templates/adr/
+# are checked nowhere else, and a stamp left behind makes the plugin report its
+# own templates as stale to every consumer at once.
+pnpm bump:check ||
+  fail "the release version drifted between sites." "Fix with: pnpm bump <version>"
+
+# ── what a consumer runs, with no node_modules (CI runtime job) ────────────
+# A marketplace install ships no dependencies: the MCP server is a bundle with
+# them inlined, and the adr-writer hook is Node built-ins only. Both are executed
+# by `node` directly, so `pnpm test` passing says nothing about them starting.
+#
+# This runs BEFORE the rebuild below, on purpose: it must judge the bundle being
+# pushed, not one `pnpm build` just regenerated. Checking after the rebuild made
+# this vacuous — a hand-edited or truncated dist/ passed, because the file under
+# test was no longer the file in the commit.
+INIT='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"pre-push","version":"0"}}}'
+printf '%s\n' "$INIT" | node plugins/alps-writer/dist/index.js 2>/dev/null | head -1 |
+  grep -q '"name":"alps-writer"' ||
+  fail "the committed MCP bundle did not answer initialize." "Try it by hand: node plugins/alps-writer/dist/index.js"
+
+echo '{}' | node plugins/adr-writer/hooks/surface-adr-context.mjs >/dev/null ||
+  fail "the adr-writer UserPromptSubmit hook failed to run." "It runs on every user turn, so this breaks the plugin immediately."
+
+# ── the committed bundle matches src (CI build job) ────────────────────────
+# plugins/alps-writer/dist/ is committed and a marketplace install runs it
+# directly, so a stale bundle ships old code. pre-commit rebuilds it when src is
+# staged, but --no-verify defeats that; this is the backstop.
+pnpm build >/dev/null ||
+  fail "build failed."
+
+if ! git diff --quiet -- plugins/alps-writer/dist; then
+  git diff --stat -- plugins/alps-writer/dist
+  fail "the committed bundle is stale." "Stage the rebuild: git add plugins/alps-writer/dist"
+fi
+
+echo "[pre-push] ✓ all checks passed (same set as CI)"

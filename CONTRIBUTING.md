@@ -176,9 +176,12 @@ pnpm bump:check  # every release-version site agrees (13 of them)
 
 Automated in two places, so you rarely have to remember:
 
-- **`.husky/pre-push`** blocks a push on typecheck, `bump:check`, and `pnpm test`
-  (~8s). For a WIP branch you know is red: `SKIP_TESTS=1 git push …` — that skips
-  only the suite, never the typecheck or version check.
+- **`.husky/pre-push`** runs the whole CI set locally (~20s) and blocks the push on
+  any failure: typecheck, `pnpm test`, `lint`, `format:check`, `bump:check`, a boot
+  check on the committed MCP bundle and the adr-writer hook, and a rebuild that
+  fails if `plugins/alps-writer/dist/` is stale. If CI would fail on it, this fails
+  on it first. For a WIP branch you know is red: `SKIP_TESTS=1 git push …` — that
+  skips only the test suite, nothing else.
 - **`.github/workflows/ci.yaml`** runs the same commands plus `lint`,
   `format:check`, and a rebuild that fails if the committed
   `plugins/alps-writer/dist/` is stale. A separate `runtime` job re-runs what a
