@@ -30958,10 +30958,6 @@ var StdioServerTransport = class {
   }
 };
 
-// src/tools/templates/service.ts
-import fs from "fs";
-import path2 from "path";
-
 // src/constants.ts
 import path from "path";
 import { fileURLToPath } from "url";
@@ -30986,8 +30982,15 @@ var SECTION_REFERENCES = {
   7: [6],
   8: [2, 6]
 };
+var SECTION_NUMBERS = Object.keys(SECTION_TITLES).map((key) => Number.parseInt(key, 10)).sort((a, b) => a - b);
+var FIRST_SECTION = SECTION_NUMBERS[0];
+var LAST_SECTION = SECTION_NUMBERS[SECTION_NUMBERS.length - 1];
+var SECTION_RANGE = `${FIRST_SECTION}-${LAST_SECTION}`;
+var NOT_STARTED = "<!-- Not started -->";
 
 // src/tools/templates/service.ts
+import fs from "fs";
+import path2 from "path";
 var TemplateService = class {
   xmlToMarkdown(content, includeExamples) {
     const lines = [];
@@ -31114,6 +31117,21 @@ import fs3 from "fs";
 import path4 from "path";
 import os from "os";
 
+// src/xml.ts
+function decodeXml(value) {
+  return value.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
+}
+function escapeXmlAttribute(value) {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&apos;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function escapeXmlText(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function attribute(attributes, name) {
+  const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`));
+  return match ? decodeXml(match[1]) : null;
+}
+
 // src/tools/templates/registry.ts
 import fs2 from "fs";
 import path3 from "path";
@@ -31128,8 +31146,8 @@ var TemplateRegistry = class {
       const subsectionRe = /<subsection\b([^>]*)>/g;
       let match;
       while ((match = subsectionRe.exec(xml)) !== null) {
-        const id = this.attribute(match[1], "id");
-        const title = this.attribute(match[1], "title");
+        const id = attribute(match[1], "id");
+        const title = attribute(match[1], "title");
         if (id && title) subsections.set(id, { id, title });
       }
       this.definitions.set(section, subsections);
@@ -31171,31 +31189,22 @@ var TemplateRegistry = class {
     }
     return { ok: true, fullId };
   }
-  attribute(attributes, name) {
-    const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`));
-    return match?.[1] ?? null;
-  }
 };
 
 // src/tools/documents/service.ts
+var bySubsectionId = ([a], [b]) => a.localeCompare(b, void 0, { numeric: true });
 var DocumentService = class {
   workingDoc = null;
   templates;
   constructor(templates = new TemplateRegistry()) {
     this.templates = templates;
   }
-  decodeXml(value) {
-    return value.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
-  }
-  escapeXmlAttribute(value) {
-    return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&apos;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  escapeXmlText(value) {
-    return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
   attribute(attributes, name) {
-    const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`));
-    return match ? this.decodeXml(match[1]) : null;
+    return attribute(attributes, name);
+  }
+  // A section is unwritten when it holds nothing but the placeholder.
+  isNotStarted(sectionContent) {
+    return !sectionContent || sectionContent.includes(NOT_STARTED);
   }
   parseSections(content) {
     const sections = /* @__PURE__ */ new Map();
@@ -31215,7 +31224,7 @@ var DocumentService = class {
       const id = this.attribute(m[1], "id");
       const title = this.attribute(m[1], "title");
       if (!id || title == null || !id.startsWith(`${sectionId}.`)) continue;
-      subs.set(id, { title, content: this.decodeXml(m[2].trim()) });
+      subs.set(id, { title, content: decodeXml(m[2].trim()) });
     }
     return subs;
   }
@@ -31224,19 +31233,19 @@ var DocumentService = class {
     return remainder.length > 0;
   }
   buildSubsection(subId, title, content) {
-    return `<subsection id="${this.escapeXmlAttribute(subId)}" title="${this.escapeXmlAttribute(title)}">
-${this.escapeXmlText(content)}
+    return `<subsection id="${escapeXmlAttribute(subId)}" title="${escapeXmlAttribute(title)}">
+${escapeXmlText(content)}
 </subsection>`;
   }
   buildSection(sectionId, content) {
-    return `<section id="${sectionId}" title="${this.escapeXmlAttribute(SECTION_TITLES[sectionId])}">
+    return `<section id="${sectionId}" title="${escapeXmlAttribute(SECTION_TITLES[sectionId])}">
 ${content}
 </section>`;
   }
   buildDocument(projectName, sections) {
-    const lines = [`<alps-document project="${this.escapeXmlAttribute(projectName)}">`];
-    for (let i = 1; i <= 9; i++) {
-      lines.push(this.buildSection(i, sections.get(i) || "<!-- Not started -->"));
+    const lines = [`<alps-document project="${escapeXmlAttribute(projectName)}">`];
+    for (const i of SECTION_NUMBERS) {
+      lines.push(this.buildSection(i, sections.get(i) || NOT_STARTED));
     }
     lines.push("</alps-document>");
     return lines.join("\n\n");
@@ -31348,7 +31357,7 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
   }
   saveSection(section, subsectionId, title, content) {
     if (!(section in SECTION_TITLES)) {
-      return `Invalid section number: ${section}. Must be 1-9.`;
+      return `Invalid section number: ${section}. Must be ${SECTION_RANGE}.`;
     }
     const subsection = this.templates.validateSubsection(section, subsectionId, title);
     if (!subsection.ok) return `Invalid subsection: ${subsection.message}`;
@@ -31364,7 +31373,7 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
     const subId = subsection.fullId;
     const existing = this.parseSubsections(sectionContent, section);
     existing.set(subId, { title, content });
-    const parts = [...existing.entries()].sort(([a], [b]) => a.localeCompare(b, void 0, { numeric: true })).map(([k, v]) => this.buildSubsection(k, v.title, v.content));
+    const parts = [...existing.entries()].sort(bySubsectionId).map(([k, v]) => this.buildSubsection(k, v.title, v.content));
     sections.set(section, parts.join("\n"));
     this.writeAtomic(this.workingDoc, this.buildDocument(projectName, sections));
     return `\u2705 Saved ${subId}. ${title}
@@ -31390,7 +31399,7 @@ ${content}
 ${sub.content}`;
       return `Subsection ${subId} not found.`;
     }
-    const display = !content || content.includes("<!-- Not started -->") ? "*Not yet written*" : this.contentToMarkdown(content, section);
+    const display = this.isNotStarted(content) ? "*Not yet written*" : this.contentToMarkdown(content, section);
     return `## Section ${section}. ${SECTION_TITLES[section]}
 
 ${display}`;
@@ -31407,7 +31416,7 @@ ${display}`;
       const content = sections.get(section) || "";
       const subsections = this.parseSubsections(content, section);
       let status;
-      if (subsections.size === 0 && (!content || content.includes("<!-- Not started -->"))) {
+      if (subsections.size === 0 && this.isNotStarted(content)) {
         status = "\u2B1C Not started";
       } else if (section === 7) {
         const expectedFeatures = this.countFeatureIds(sections.get(6) || "");
@@ -31436,7 +31445,7 @@ ${display}`;
   contentToMarkdown(content, section) {
     const subs = this.parseSubsections(content, section);
     if (subs.size === 0) return content;
-    return [...subs.entries()].sort(([a], [b]) => a.localeCompare(b, void 0, { numeric: true })).map(([id, data]) => `### ${id}. ${data.title}
+    return [...subs.entries()].sort(bySubsectionId).map(([id, data]) => `### ${id}. ${data.title}
 
 ${data.content}`).join("\n\n");
   }
@@ -31448,9 +31457,9 @@ ${data.content}`).join("\n\n");
     const sections = this.parseSections(docContent);
     const lines = [`# ${projectName} ALPS
 `];
-    for (let i = 1; i <= 9; i++) {
+    for (const i of SECTION_NUMBERS) {
       const content = sections.get(i) || "";
-      const md = !content || content.includes("<!-- Not started -->") ? "*Not yet written*" : this.contentToMarkdown(content, i);
+      const md = this.isNotStarted(content) ? "*Not yet written*" : this.contentToMarkdown(content, i);
       lines.push(`## Section ${i}. ${SECTION_TITLES[i]}
 
 ${md}
@@ -31561,7 +31570,7 @@ server.tool(
   "get_alps_section",
   "Get a specific ALPS template section by number.",
   {
-    section: external_exports.number().min(1).max(9).describe("Section number (1-9)"),
+    section: external_exports.number().min(FIRST_SECTION).max(LAST_SECTION).describe(`Section number (${SECTION_RANGE})`),
     include_examples: external_exports.boolean().default(false).describe("Include example content")
   },
   ({ section, include_examples }) => ({
@@ -31579,7 +31588,9 @@ server.tool(
 server.tool(
   "get_alps_section_guide",
   "Get conversation guide for writing a specific ALPS section. Use this before starting each section.",
-  { section: external_exports.number().min(1).max(9).describe("Section number (1-9)") },
+  {
+    section: external_exports.number().min(FIRST_SECTION).max(LAST_SECTION).describe(`Section number (${SECTION_RANGE})`)
+  },
   ({ section }) => ({
     content: [{ type: "text", text: tc.getAlpsSectionGuide(section) }]
   })
@@ -31616,7 +31627,7 @@ server.tool(
 2. Ask them to confirm it ("Is there anything you want to change?")
 3. Call this tool only after the user has confirmed`,
   {
-    section: external_exports.number().min(1).max(9).describe("Section number (1-9)"),
+    section: external_exports.number().min(FIRST_SECTION).max(LAST_SECTION).describe(`Section number (${SECTION_RANGE})`),
     subsection_id: external_exports.string().min(1).describe(
       'Subsection ID \u2014 the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. For Sections 1-6 and 8-9 it must match the XML template. For dynamic Section 7, pass the positive feature number ("1" for 7.1).'
     ),
@@ -31633,7 +31644,7 @@ server.tool(
   "read_alps_section",
   "Read the current content of a section or subsection.",
   {
-    section: external_exports.number().min(1).max(9).describe("Section number (1-9)"),
+    section: external_exports.number().min(FIRST_SECTION).max(LAST_SECTION).describe(`Section number (${SECTION_RANGE})`),
     subsection_id: external_exports.string().optional().describe('Subsection ID (e.g., "1" for X.1). If omitted, returns entire section.')
   },
   ({ section, subsection_id }) => ({

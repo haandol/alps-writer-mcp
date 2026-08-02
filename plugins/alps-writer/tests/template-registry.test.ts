@@ -1,0 +1,96 @@
+// The template registry decides which subsection IDs and titles save_alps_section
+// accepts, so its reading of the chapter XML is a user-facing contract: a title it
+// misreads is a title the author cannot save.
+
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, test } from "node:test";
+import { CHAPTERS_DIR } from "../src/constants.js";
+import { TemplateRegistry } from "../src/tools/templates/registry.js";
+
+const temporaryDirectories: string[] = [];
+
+// A copy of the shipped chapters with one subsection title rewritten, so the test
+// exercises real templates rather than a stub whose shape could drift from them.
+function chaptersWithTitle(section: number, subsectionId: string, title: string): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "alps-registry-test-"));
+  temporaryDirectories.push(dir);
+  fs.cpSync(CHAPTERS_DIR, dir, { recursive: true });
+
+  const file = fs
+    .readdirSync(dir)
+    .find((name) => name.startsWith(String(section).padStart(2, "0") + "-"));
+  assert.ok(file, `no chapter file for section ${section}`);
+
+  const full = path.join(dir, file);
+  const source = fs.readFileSync(full, "utf8");
+  const pattern = new RegExp(
+    `(<subsection\\b[^>]*id="${subsectionId.replace(".", "\\.")}"[^>]*title=")([^"]*)(")`,
+  );
+  assert.match(source, pattern, `no subsection ${subsectionId} to rewrite`);
+  fs.writeFileSync(full, source.replace(pattern, `$1${title}$3`));
+  return dir;
+}
+
+afterEach(() => {
+  for (const dir of temporaryDirectories.splice(0)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// Regression: the registry used to read the title as raw markup while the
+// document layer decoded it. A template title written with a legal XML entity
+// then demanded the entity form back — validateSubsection rejected the
+// "Risks & Limits" an author writes and reported that the title 'must be
+// "Risks &amp; Limits"', which is not a string any author would type.
+test("a template title written with an XML entity accepts the plain text it denotes", () => {
+  const registry = new TemplateRegistry(chaptersWithTitle(9, "9.1", "Risks &amp; Limits"));
+
+  const expected = registry.expectedSubsections(9).find((d) => d.id === "9.1");
+  assert.equal(expected?.title, "Risks & Limits", "the registry must expose the decoded title");
+
+  assert.deepEqual(registry.validateSubsection(9, "1", "Risks & Limits"), {
+    ok: true,
+    fullId: "9.1",
+  });
+});
+
+test("every entity form is decoded, not just the ampersand", () => {
+  const registry = new TemplateRegistry(
+    chaptersWithTitle(9, "9.1", "&quot;Scope&quot; &lt;out&gt; &amp; &apos;in&apos;"),
+  );
+
+  assert.equal(
+    registry.expectedSubsections(9).find((d) => d.id === "9.1")?.title,
+    `"Scope" <out> & 'in'`,
+  );
+});
+
+// The flip side: a title that merely looks like markup must still round-trip. The
+// decode is a single pass, so "&amp;lt;" denotes the literal "&lt;" and must not
+// be double-decoded into "<".
+test("a single decode pass leaves an escaped entity literal intact", () => {
+  const registry = new TemplateRegistry(chaptersWithTitle(9, "9.1", "Limit &amp;lt; 3s"));
+
+  assert.equal(registry.expectedSubsections(9).find((d) => d.id === "9.1")?.title, "Limit &lt; 3s");
+});
+
+test("the shipped templates expose the titles the tools advertise", () => {
+  const registry = new TemplateRegistry();
+
+  // Section 7 is dynamic (one entry per feature), so it declares no fixed set.
+  assert.deepEqual(registry.expectedSubsections(7), []);
+
+  for (const section of [1, 2, 3, 4, 5, 6, 8, 9]) {
+    const definitions = registry.expectedSubsections(section);
+    assert.ok(definitions.length > 0, `section ${section} declares no subsections`);
+    for (const { id, title } of definitions) {
+      assert.ok(id.startsWith(`${section}.`), `${id} is not a section-${section} id`);
+      assert.ok(title.trim(), `${id} has an empty title`);
+      // A title that still carries an entity means the decode did not happen.
+      assert.doesNotMatch(title, /&(amp|lt|gt|quot|apos);/, `${id} title was not decoded`);
+    }
+  }
+});

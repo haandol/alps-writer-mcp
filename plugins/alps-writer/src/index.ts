@@ -3,6 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { FIRST_SECTION, LAST_SECTION, SECTION_RANGE } from "./constants.js";
 import { TemplateService } from "./tools/templates/service.js";
 import { TemplateController } from "./tools/templates/controller.js";
 import { DocumentService } from "./tools/documents/service.js";
@@ -78,7 +79,11 @@ server.tool(
   "get_alps_section",
   "Get a specific ALPS template section by number.",
   {
-    section: z.number().min(1).max(9).describe("Section number (1-9)"),
+    section: z
+      .number()
+      .min(FIRST_SECTION)
+      .max(LAST_SECTION)
+      .describe(`Section number (${SECTION_RANGE})`),
     include_examples: z.boolean().default(false).describe("Include example content"),
   },
   ({ section, include_examples }) => ({
@@ -98,7 +103,13 @@ server.tool(
 server.tool(
   "get_alps_section_guide",
   "Get conversation guide for writing a specific ALPS section. Use this before starting each section.",
-  { section: z.number().min(1).max(9).describe("Section number (1-9)") },
+  {
+    section: z
+      .number()
+      .min(FIRST_SECTION)
+      .max(LAST_SECTION)
+      .describe(`Section number (${SECTION_RANGE})`),
+  },
   ({ section }) => ({
     content: [{ type: "text", text: tc.getAlpsSectionGuide(section) }],
   }),
@@ -142,7 +153,11 @@ server.tool(
 2. Ask them to confirm it ("Is there anything you want to change?")
 3. Call this tool only after the user has confirmed`,
   {
-    section: z.number().min(1).max(9).describe("Section number (1-9)"),
+    section: z
+      .number()
+      .min(FIRST_SECTION)
+      .max(LAST_SECTION)
+      .describe(`Section number (${SECTION_RANGE})`),
     subsection_id: z
       .string()
       .min(1)
@@ -166,7 +181,11 @@ server.tool(
   "read_alps_section",
   "Read the current content of a section or subsection.",
   {
-    section: z.number().min(1).max(9).describe("Section number (1-9)"),
+    section: z
+      .number()
+      .min(FIRST_SECTION)
+      .max(LAST_SECTION)
+      .describe(`Section number (${SECTION_RANGE})`),
     subsection_id: z
       .string()
       .optional()

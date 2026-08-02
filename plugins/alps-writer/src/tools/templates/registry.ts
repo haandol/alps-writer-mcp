@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { CHAPTERS_DIR } from "../../constants.js";
+import { attribute } from "../../xml.js";
 
 export interface SubsectionDefinition {
   id: string;
@@ -22,8 +23,8 @@ export class TemplateRegistry {
       const subsectionRe = /<subsection\b([^>]*)>/g;
       let match: RegExpExecArray | null;
       while ((match = subsectionRe.exec(xml)) !== null) {
-        const id = this.attribute(match[1], "id");
-        const title = this.attribute(match[1], "title");
+        const id = attribute(match[1], "id");
+        const title = attribute(match[1], "title");
         if (id && title) subsections.set(id, { id, title });
       }
       this.definitions.set(section, subsections);
@@ -72,10 +73,5 @@ export class TemplateRegistry {
       };
     }
     return { ok: true, fullId };
-  }
-
-  private attribute(attributes: string, name: string): string | null {
-    const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`));
-    return match?.[1] ?? null;
   }
 }

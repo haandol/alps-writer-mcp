@@ -1,8 +1,14 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { SECTION_TITLES } from "../../constants.js";
+import { NOT_STARTED, SECTION_NUMBERS, SECTION_RANGE, SECTION_TITLES } from "../../constants.js";
+import { attribute, decodeXml, escapeXmlAttribute, escapeXmlText } from "../../xml.js";
 import { TemplateRegistry } from "../templates/registry.js";
+
+// Subsection IDs sort by their numeric components ("7.10" after "7.9"), not
+// lexically. Used wherever subsections are rendered in order.
+const bySubsectionId = ([a]: [string, unknown], [b]: [string, unknown]) =>
+  a.localeCompare(b, undefined, { numeric: true });
 
 export class DocumentService {
   private workingDoc: string | null = null;
@@ -12,31 +18,13 @@ export class DocumentService {
     this.templates = templates;
   }
 
-  private decodeXml(value: string): string {
-    return value
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&gt;/g, ">")
-      .replace(/&lt;/g, "<")
-      .replace(/&amp;/g, "&");
-  }
-
-  private escapeXmlAttribute(value: string): string {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&apos;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-
-  private escapeXmlText(value: string): string {
-    return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-
   private attribute(attributes: string, name: string): string | null {
-    const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`));
-    return match ? this.decodeXml(match[1]) : null;
+    return attribute(attributes, name);
+  }
+
+  // A section is unwritten when it holds nothing but the placeholder.
+  private isNotStarted(sectionContent: string): boolean {
+    return !sectionContent || sectionContent.includes(NOT_STARTED);
   }
 
   private parseSections(content: string): Map<number, string> {
@@ -61,7 +49,7 @@ export class DocumentService {
       const id = this.attribute(m[1], "id");
       const title = this.attribute(m[1], "title");
       if (!id || title == null || !id.startsWith(`${sectionId}.`)) continue;
-      subs.set(id, { title, content: this.decodeXml(m[2].trim()) });
+      subs.set(id, { title, content: decodeXml(m[2].trim()) });
     }
     return subs;
   }
@@ -69,23 +57,26 @@ export class DocumentService {
   private hasUnparsedContent(sectionContent: string): boolean {
     const remainder = sectionContent
       .replace(/<subsection\b[^>]*>\s*[\s\S]*?\s*<\/subsection>/g, "")
+      // Whitespace-tolerant on purpose: this strips the NOT_STARTED placeholder
+      // from a file that may have been reformatted by hand, where isNotStarted's
+      // exact-substring test would not match.
       .replace(/<!--\s*Not started\s*-->/g, "")
       .trim();
     return remainder.length > 0;
   }
 
   private buildSubsection(subId: string, title: string, content: string): string {
-    return `<subsection id="${this.escapeXmlAttribute(subId)}" title="${this.escapeXmlAttribute(title)}">\n${this.escapeXmlText(content)}\n</subsection>`;
+    return `<subsection id="${escapeXmlAttribute(subId)}" title="${escapeXmlAttribute(title)}">\n${escapeXmlText(content)}\n</subsection>`;
   }
 
   private buildSection(sectionId: number, content: string): string {
-    return `<section id="${sectionId}" title="${this.escapeXmlAttribute(SECTION_TITLES[sectionId])}">\n${content}\n</section>`;
+    return `<section id="${sectionId}" title="${escapeXmlAttribute(SECTION_TITLES[sectionId])}">\n${content}\n</section>`;
   }
 
   private buildDocument(projectName: string, sections: Map<number, string>): string {
-    const lines = [`<alps-document project="${this.escapeXmlAttribute(projectName)}">`];
-    for (let i = 1; i <= 9; i++) {
-      lines.push(this.buildSection(i, sections.get(i) || "<!-- Not started -->"));
+    const lines = [`<alps-document project="${escapeXmlAttribute(projectName)}">`];
+    for (const i of SECTION_NUMBERS) {
+      lines.push(this.buildSection(i, sections.get(i) || NOT_STARTED));
     }
     lines.push("</alps-document>");
     return lines.join("\n\n");
@@ -216,7 +207,7 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
 
   saveSection(section: number, subsectionId: string, title: string, content: string): string {
     if (!(section in SECTION_TITLES)) {
-      return `Invalid section number: ${section}. Must be 1-9.`;
+      return `Invalid section number: ${section}. Must be ${SECTION_RANGE}.`;
     }
     const subsection = this.templates.validateSubsection(section, subsectionId, title);
     if (!subsection.ok) return `Invalid subsection: ${subsection.message}`;
@@ -236,7 +227,7 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
     existing.set(subId, { title, content });
 
     const parts = [...existing.entries()]
-      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .sort(bySubsectionId)
       .map(([k, v]) => this.buildSubsection(k, v.title, v.content));
     sections.set(section, parts.join("\n"));
 
@@ -266,10 +257,9 @@ ${content}
       return `Subsection ${subId} not found.`;
     }
 
-    const display =
-      !content || content.includes("<!-- Not started -->")
-        ? "*Not yet written*"
-        : this.contentToMarkdown(content, section);
+    const display = this.isNotStarted(content)
+      ? "*Not yet written*"
+      : this.contentToMarkdown(content, section);
     return `## Section ${section}. ${SECTION_TITLES[section]}\n\n${display}`;
   }
 
@@ -286,7 +276,7 @@ ${content}
       const content = sections.get(section) || "";
       const subsections = this.parseSubsections(content, section);
       let status: string;
-      if (subsections.size === 0 && (!content || content.includes("<!-- Not started -->"))) {
+      if (subsections.size === 0 && this.isNotStarted(content)) {
         status = "⬜ Not started";
       } else if (section === 7) {
         const expectedFeatures = this.countFeatureIds(sections.get(6) || "");
@@ -321,7 +311,7 @@ ${content}
     const subs = this.parseSubsections(content, section);
     if (subs.size === 0) return content;
     return [...subs.entries()]
-      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .sort(bySubsectionId)
       .map(([id, data]) => `### ${id}. ${data.title}\n\n${data.content}`)
       .join("\n\n");
   }
@@ -334,12 +324,11 @@ ${content}
     const sections = this.parseSections(docContent);
 
     const lines = [`# ${projectName} ALPS\n`];
-    for (let i = 1; i <= 9; i++) {
+    for (const i of SECTION_NUMBERS) {
       const content = sections.get(i) || "";
-      const md =
-        !content || content.includes("<!-- Not started -->")
-          ? "*Not yet written*"
-          : this.contentToMarkdown(content, i);
+      const md = this.isNotStarted(content)
+        ? "*Not yet written*"
+        : this.contentToMarkdown(content, i);
       lines.push(`## Section ${i}. ${SECTION_TITLES[i]}\n\n${md}\n\n---\n`);
     }
 
