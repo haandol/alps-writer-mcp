@@ -6,6 +6,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, copyFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { SEEDED_RULE_DOCS } from "../scripts/adr-lint-lib.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const PLUGIN_ROOT = path.resolve(HERE, "..");
@@ -38,8 +39,9 @@ export function write(dir, rel, content) {
 // The seeded rule docs a real repo gets on first /adr-new. Several fixtures
 // need them present so the harness / invariants (b) behave; seed once.
 // README.md is the index and links to concepts.md, which holds the principle
-// and the cycle mechanics.
-export const RULE_DOCS = ["README.md", "concepts.md", "structure.md", "authoring-rules.md"];
+// and the cycle mechanics. Taken from the lint lib so a fixture is always seeded
+// with exactly the doc set the harness judges against.
+export const RULE_DOCS = SEEDED_RULE_DOCS;
 export function seedRuleDocs(dir) {
   for (const f of RULE_DOCS) copyFileSync(path.join(TEMPLATES, f), write(dir, `docs/adr/${f}`, ""));
 }

@@ -65,10 +65,10 @@
 //     "notes": "…"                                        // optional free text
 //   }
 //
-// Recognized categories (drive color, authority direction, default follow-up):
-//   Unnecessary change · Simpler alternative · Spec violation ·
-//   Decision changed in code · Undecided behavior · Impl-fact mismatch ·
-//   Best practice · Refactor · Test gap · Unverified risk · Contradiction
+// Recognized categories — the vocabulary, its colors, authority direction,
+// default follow-up, and remediation order all live in
+// scripts/adr-impl-review-categories.mjs, which adr-impl-review-validate.mjs
+// validates against so the two cannot drift.
 //
 // The download (feedback.json) echoes every finding field back alongside the
 // reviewer's ruling, so the main session can route follow-ups (fix / /adr-sync /
@@ -77,131 +77,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-
-// ── category metadata ───────────────────────────────────────────────────────
-// label → { hue, blurb, authority, defaultDecision }.
-//   hue             severity accent (left rule + tag).
-//   authority       which side the confrontation resolves toward — this drives
-//                   the direction indicator AND matches the SKILL routing:
-//                     "adr"        ADR is the spec → fix the code
-//                     "minimality" smaller diff is authoritative
-//                     "code"       code is authoritative on this fact → fix ADR
-//                     "contested"  a real decision change → user must rule
-//                     "convention" measured against project conventions
-//                     "advisory"   decision-neutral, no ADR↔code tension
-//   defaultDecision seeds the radio so the common follow-up is pre-selected
-//                   while the user stays in control.
-const CATEGORIES = {
-  "Unnecessary change": {
-    hue: "#a92f27",
-    blurb: "A change removable while keeping the ADR goal — shrink the diff.",
-    authority: "minimality",
-    defaultDecision: "fix",
-  },
-  "Simpler alternative": {
-    hue: "#8a4f0f",
-    blurb:
-      "The same contract is met by a smaller existing structure — simplify after checking the trade-off.",
-    authority: "contested",
-    defaultDecision: "defer",
-  },
-  "Spec violation": {
-    hue: "#c0362c",
-    blurb: "The code did not honor the ADR decision — the ADR is the spec, so fix the code.",
-    authority: "adr",
-    defaultDecision: "fix",
-  },
-  "Decision changed in code": {
-    hue: "#b4690e",
-    blurb:
-      "The code implemented a different but coherent decision — update the ADR vs revert the code; user decides.",
-    authority: "contested",
-    defaultDecision: "defer",
-  },
-  "Undecided behavior": {
-    hue: "#c77b0e",
-    blurb:
-      "The code does something the ADR never decided (scope creep) — add the decision to the ADR vs remove it from the code; user decides.",
-    authority: "contested",
-    defaultDecision: "defer",
-  },
-  "Impl-fact mismatch": {
-    hue: "#6b3fa0",
-    blurb:
-      "The ADR's implementation facts differ from the code — code is authoritative; correct the ADR via /adr-sync.",
-    authority: "code",
-    defaultDecision: "defer",
-  },
-  "Best practice": {
-    hue: "#1f5fa8",
-    blurb:
-      "Violates project conventions (primary) or general patterns (secondary) — a code-improvement candidate.",
-    authority: "convention",
-    defaultDecision: "fix",
-  },
-  Refactor: {
-    hue: "#2e7d4f",
-    blurb: "An opportunity to tidy up without changing the decision.",
-    authority: "advisory",
-    defaultDecision: "defer",
-  },
-  "Test gap": {
-    hue: "#566173",
-    blurb: "The decided behavior is not verified by tests.",
-    authority: "advisory",
-    defaultDecision: "defer",
-  },
-  "Unverified risk": {
-    hue: "#7a5b14",
-    blurb:
-      "A concrete failure hypothesis without execution or call-path evidence — reproduce it first.",
-    authority: "contested",
-    defaultDecision: "defer",
-  },
-  Contradiction: {
-    hue: "#7b3f91",
-    blurb: "The independent reviews' premises conflict — a human must confirm which premise holds.",
-    authority: "contested",
-    defaultDecision: "defer",
-  },
-};
-
-// authority → the center indicator between ADR and code.
-const AUTHORITY = {
-  adr: { glyph: "→", label: "ADR is the basis", hint: "the code must follow the decision" },
-  minimality: {
-    glyph: "−",
-    label: "Minimal change",
-    hint: "shrink the code while keeping the contract",
-  },
-  code: { glyph: "←", label: "Code is the basis", hint: "correct the ADR to match the code" },
-  contested: { glyph: "⇄", label: "Needs a ruling", hint: "decide which side is right" },
-  convention: {
-    glyph: "▸",
-    label: "Convention is the basis",
-    hint: "compare against project conventions",
-  },
-  advisory: { glyph: "·", label: "Advisory", hint: "decision-neutral" },
-};
-
-const VERDICTS = {
-  PASS: {
-    hue: "#2e7d4f",
-    note: "No removable change and no confirmed counterexample; the decision ledger and targeted tests are closed.",
-  },
-  FIX_REQUIRED: {
-    hue: "#b4690e",
-    note: "Follow-up needed — remove unnecessary changes, fix code, correct the ADR, strengthen tests, or get a human ruling.",
-  },
-  INCONCLUSIVE: {
-    hue: "#7a5b14",
-    note: "An important path could not be executed or the scope not pinned down, so there is not enough evidence to rule PASS or FIX.",
-  },
-  BLOCK: {
-    hue: "#c0362c",
-    note: "Fragmented vertical slice, anti-pattern category, or a forked decision — restructuring needed.",
-  },
-};
+import { CATEGORIES, AUTHORITY, VERDICTS } from "./adr-impl-review-categories.mjs";
 
 // ── arg parse ────────────────────────────────────────────────────────────────
 function parseArgs(argv) {
@@ -244,24 +120,6 @@ function inlineScriptJson(value) {
   });
 }
 
-// Remediation priority — lower sorts first. Code must-fix (Spec violation,
-// Undecided behavior, Best practice) rises above ADR-side actions (Decision
-// changed, Impl-fact mismatch) and advisory (Refactor, Test gap), so the docket
-// reads top-to-bottom as "fix these first". Mirrors SKILL step 7 routing.
-const PRIORITY = {
-  "Spec violation": 0,
-  "Unnecessary change": 1,
-  "Undecided behavior": 2,
-  "Best practice": 3,
-  "Decision changed in code": 4,
-  "Impl-fact mismatch": 5,
-  "Simpler alternative": 6,
-  "Test gap": 7,
-  "Unverified risk": 8,
-  Contradiction: 9,
-  Refactor: 10,
-};
-
 function normalizeFindings(data) {
   const findings = Array.isArray(data.findings) ? data.findings : [];
   const known = Object.prototype.hasOwnProperty.bind(CATEGORIES);
@@ -301,8 +159,8 @@ function normalizeFindings(data) {
   return mapped
     .map((f, i) => ({ f, i }))
     .sort((a, b) => {
-      const pa = a.f.unknownCat ? -1 : (PRIORITY[a.f.category] ?? 99);
-      const pb = b.f.unknownCat ? -1 : (PRIORITY[b.f.category] ?? 99);
+      const pa = a.f.unknownCat ? -1 : (CATEGORIES[a.f.category]?.priority ?? 99);
+      const pb = b.f.unknownCat ? -1 : (CATEGORIES[b.f.category]?.priority ?? 99);
       return pa - pb || a.i - b.i;
     })
     .map((x) => x.f);

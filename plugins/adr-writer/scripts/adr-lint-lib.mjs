@@ -57,6 +57,20 @@ export const KNOWN_ENTRY_FIELDS = new Set([
 export const KNOWN_ADR_ITEM_FIELDS = new Set(["path", "status", "summary"]);
 
 export const SUBDOMAIN_TYPES = new Set(["core", "supporting", "generic"]);
+
+// ── the seeded rule-doc set ───────────────────────────────────────────────
+// The docs /adr-new copies into a project's docs/adr/. These are what the
+// staleness check below compares against the installed plugin version, and what
+// a test/eval fixture must seed to be judged by the rules a real repo holds.
+// One list, because four copies of it drifted in ordering already and a repo
+// linted against a shorter set has axes that simply go unjudged.
+export const SEEDED_RULE_DOCS = ["README.md", "concepts.md", "authoring-rules.md", "structure.md"];
+
+// The docs that carry a rules-version stamp — the seeded set PLUS the decision
+// log template. The log template is stamped (bump-version rewrites it) but is
+// NOT part of the staleness comparison: it is scaffolding a category copies and
+// edits, so a project's copy is expected to diverge from the plugin's.
+export const STAMPED_RULE_DOCS = [...SEEDED_RULE_DOCS, "decision-log.template.md"];
 const CONTROL_CHAR_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 
 // Sections the README ADR template marks as the load-bearing spine. HARD =
@@ -323,13 +337,12 @@ export function countAlternatives(body) {
   return { present: true, count };
 }
 
-// ── Related-link targets (R10) ────────────────────────────────────────────
-// markdown links inside the ## Related section. Returns local (non-URL)
-// targets with their anchors stripped, for the CLI to resolve against disk.
-export function relatedLinkTargets(body) {
-  const sec = sectionRange(body, (h) => h.text.trim() === "Related");
-  if (!sec) return [];
-  const text = sec.lines.slice(sec.start + 1, sec.end).join("\n");
+// ── local markdown link targets ───────────────────────────────────────────
+// Every markdown link in `text` that points at something on disk: external and
+// in-page targets are skipped and anchors stripped, leaving a path the CLI can
+// resolve. Shared by the two link checks below (R10's Related section and the
+// decision log), which differ only in what they scan and what they exclude.
+function localLinkTargets(text) {
   const out = [];
   const re = /\[[^\]]*\]\(([^)]+)\)/g;
   let m;
@@ -340,6 +353,15 @@ export function relatedLinkTargets(body) {
     if (target) out.push(target);
   }
   return out;
+}
+
+// ── Related-link targets (R10) ────────────────────────────────────────────
+// markdown links inside the ## Related section only — a link elsewhere in the
+// body is not an R10 subject.
+export function relatedLinkTargets(body) {
+  const sec = sectionRange(body, (h) => h.text.trim() === "Related");
+  if (!sec) return [];
+  return localLinkTargets(sec.lines.slice(sec.start + 1, sec.end).join("\n"));
 }
 
 // ── code-reference depth (R2 — advisory heuristic) ────────────────────────
@@ -572,23 +594,13 @@ function pathIsAbsoluteOrTraverses(value) {
 // pointing at a deleted path with a green harness.
 //
 // Returns every local link target in the file (anchors stripped, URLs skipped)
-// so the CLI can resolve them against disk. Deliberately not limited to the
-// "current ADR" line: a log should only ever link to live ADRs, so any dangling
-// local link in it is the same defect.
+// so the CLI can resolve them against disk. Scans the WHOLE body, not one
+// section: a log should only ever link to live ADRs, so any dangling local link
+// in it is the same defect.
 export function decisionLogLinkTargets(body) {
-  const out = [];
-  const re = /\[[^\]]*\]\(([^)]+)\)/g;
-  let m;
-  while ((m = re.exec(body))) {
-    let target = m[1].trim();
-    if (/^(https?:|mailto:|#)/i.test(target)) continue;
-    target = target.split("#")[0].trim();
-    // Skip the seed's placeholder so an unedited copy of
-    // decision-log.template.md does not read as a broken link.
-    if (!target || target.includes("NNNN")) continue;
-    out.push(target);
-  }
-  return out;
+  // Skip the seed's placeholder so an unedited copy of
+  // decision-log.template.md does not read as a broken link.
+  return localLinkTargets(body).filter((target) => !target.includes("NNNN"));
 }
 
 // ── seeded rule-doc version ────────────────────────────────────────────────

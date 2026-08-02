@@ -38,6 +38,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import {
+  ANTIPATTERN_SEGMENTS,
+  SEEDED_RULE_DOCS,
   classifyStatus,
   checkFilename,
   categoryDepth,
@@ -119,11 +121,12 @@ class Report {
   }
 }
 
-// ── ADR file discovery (recursive, capped at the ≤2-segment key depth) ────
-// Enumerate docs/adr/**/NNNN-*.md. Recursive so 2-segment feature sub-folder
-// ADRs (identity/login/0001.md) are found — the flat glob docs/adr/*/*.md
-// would miss them.
-function findAdrFiles(root) {
+// ── file discovery (recursive, capped at the ≤2-segment key depth) ────────
+// Recursive so 2-segment feature sub-folder ADRs (identity/login/0001.md) are
+// found — the flat glob docs/adr/*/*.md would miss them. An unreadable directory
+// is skipped rather than fatal: a permission error on one sub-tree should not
+// abort a whole-repo lint.
+function findFiles(root, matches) {
   const out = [];
   const walk = (dir) => {
     let entries;
@@ -135,36 +138,22 @@ function findAdrFiles(root) {
     for (const e of entries) {
       const full = path.join(dir, e.name);
       if (e.isDirectory()) walk(full);
-      else if (e.isFile() && /^[0-9]{4}-.*\.md$/.test(e.name)) out.push(full);
+      else if (e.isFile() && matches(e.name)) out.push(full);
     }
   };
   walk(root);
   return out.sort();
 }
 
-// Enumerate the per-category decision-log.md files. Kept separate from
-// findAdrFiles so the log is never treated as an ADR (it stays out of the index,
-// numbering, orphan and per-ADR section checks) — the only thing checked is that
-// its ADR pointers still resolve. The seed at the ADR root
-// (decision-log.template.md) is excluded: it is scaffolding, not a category log.
-function findDecisionLogs(root) {
-  const out = [];
-  const walk = (dir) => {
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      const full = path.join(dir, e.name);
-      if (e.isDirectory()) walk(full);
-      else if (e.isFile() && e.name === "decision-log.md") out.push(full);
-    }
-  };
-  walk(root);
-  return out.sort();
-}
+// docs/adr/**/NNNN-*.md — the ADRs themselves.
+const isAdrFile = (name) => /^[0-9]{4}-.*\.md$/.test(name);
+
+// The per-category decision-log.md. Matched separately from an ADR so the log is
+// never treated as one (it stays out of the index, numbering, orphan and per-ADR
+// section checks) — the only thing checked is that its ADR pointers still
+// resolve. The seed at the ADR root (decision-log.template.md) does not match
+// this name, so scaffolding is excluded for free.
+const isDecisionLog = (name) => name === "decision-log.md";
 
 function readSafe(p) {
   try {
@@ -215,7 +204,7 @@ function main() {
   }
 
   // ── discover ADR files on disk ────────────────────────────────────────
-  const files = findAdrFiles(adrRoot);
+  const files = findFiles(adrRoot, isAdrFile);
   // paths relative to repo root (docs/adr/...), forward-slashed for matching
   const relFromRepo = (p) => path.relative(process.cwd(), p).split(path.sep).join("/");
   const diskAdrs = new Set(files.map(relFromRepo));
@@ -274,7 +263,7 @@ function main() {
     // R5a: anti-pattern segment on the directory path (works without mapping)
     const dirSegs = relFromAdr.split("/").slice(0, -1);
     for (const seg of dirSegs)
-      if (isAntiPattern(seg))
+      if (ANTIPATTERN_SEGMENTS.has(seg))
         rep.error(
           "anti-pattern-dir",
           where,
@@ -427,7 +416,7 @@ function main() {
   // "<cat>/NNNN" token form while the log links relatively ("./0001-x.md"), and
   // R10 only reads NNNN-*.md bodies. Error, not warning: a log whose pointer is
   // dead has lost the one reference that makes the entry traceable.
-  for (const logFile of findDecisionLogs(adrRoot)) {
+  for (const logFile of findFiles(adrRoot, isDecisionLog)) {
     const rel = relFromRepo(logFile);
     if (!inScope(rel)) continue;
     const body = readSafe(logFile);
@@ -464,7 +453,7 @@ function main() {
       const stale = [];
       let present = 0;
       let stamped = 0;
-      for (const doc of ["README.md", "concepts.md", "authoring-rules.md", "structure.md"]) {
+      for (const doc of SEEDED_RULE_DOCS) {
         const body = readSafe(path.join(adrRoot, doc));
         if (body === null) continue; // absent docs are /adr-new's seeding step, not this check
         present++;
@@ -582,24 +571,6 @@ function main() {
 // ── helpers ────────────────────────────────────────────────────────────────
 function escapeRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function isAntiPattern(seg) {
-  return [
-    "frontend",
-    "backend",
-    "mobile",
-    "web",
-    "api",
-    "ui",
-    "db",
-    "cache",
-    "controllers",
-    "services",
-    "repositories",
-    "bugfix",
-    "refactor",
-  ].includes(seg);
 }
 
 function firstNonEmpty(lines, start, end) {

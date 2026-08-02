@@ -2,21 +2,13 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { CATEGORY_NAMES, VERDICT_NAMES } from "./adr-impl-review-categories.mjs";
 
-const ALLOWED_VERDICTS = new Set(["PASS", "FIX_REQUIRED", "INCONCLUSIVE", "BLOCK"]);
-const ALLOWED_CATEGORIES = new Set([
-  "Unnecessary change",
-  "Simpler alternative",
-  "Spec violation",
-  "Decision changed in code",
-  "Undecided behavior",
-  "Impl-fact mismatch",
-  "Test gap",
-  "Best practice",
-  "Refactor",
-  "Unverified risk",
-  "Contradiction",
-]);
+// The category and verdict vocabularies come from the shared table the HTML
+// renderer draws from, so a findings.json this validator accepts is always one
+// the report can render (and rank) — the two lists used to be separate copies.
+const ALLOWED_VERDICTS = VERDICT_NAMES;
+const ALLOWED_CATEGORIES = CATEGORY_NAMES;
 const ALLOWED_PERSPECTIVES = new Set(["necessity", "sufficiency", "both"]);
 const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
 const REQUIRED_REPORT_TEXT = [

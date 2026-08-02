@@ -52,6 +52,12 @@ const SERVER_RE = /(name:\s*"alps-writer",\s*version:\s*")([^"]+)(")/;
 // added upstream are missing from that repo (rules-doc-stale). So the stamp has to
 // move with the release: leave it behind and the plugin reports its OWN templates
 // as stale on the next bump — the check would cry wolf on every consumer at once.
+//
+// This list must equal STAMPED_RULE_DOCS in
+// plugins/adr-writer/scripts/adr-lint-lib.mjs (the seeded set plus the decision-log
+// template). It is spelled out rather than imported because this script bumps the
+// repo and must not depend on plugin internals; tests/stamped-docs.test.mjs asserts
+// the two agree, so a doc added to one and not the other fails the build.
 const RULE_DOCS = [
   "plugins/adr-writer/templates/adr/README.md",
   "plugins/adr-writer/templates/adr/concepts.md",
