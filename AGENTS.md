@@ -2,7 +2,7 @@
 
 `alps-writer-plugins` — a Codex and Claude Code marketplace shipping two independent plugins: **alps-writer** (ALPS/PRD authoring via an MCP server) and **adr-writer** (ADR-driven development cycle). Both install from the marketplace alone — no npm. The alps-writer MCP server is bundled with esbuild (dependencies inlined) and the bundle is committed at `plugins/alps-writer/dist/`, so the plugin runs straight from a marketplace install.
 
-**Tech Stack**: TypeScript 5.9+, Node.js >= 20, pnpm workspace, MCP SDK (`@modelcontextprotocol/sdk`), Zod
+**Tech Stack**: TypeScript 5.9+, Node.js >= 24, pnpm workspace, MCP SDK (`@modelcontextprotocol/sdk`), Zod
 
 ## The design principle — an abstraction ladder, C4-style
 
@@ -57,7 +57,7 @@ The release version lives in **13 sites** that must agree, in four groups: the f
 
 Both `package.json` files are **deliberately pinned to `0.0.0`** and are not part of the release version — they are `private: true`, so their version reaches no consumer. Don't "resync" them; `version-consistency.test.ts` asserts the pin.
 
-Build (inside `plugins/alps-writer/`) runs `tsc --noEmit` (typecheck), then esbuild bundles `src/index.ts` → `dist/index.js` with deps inlined (ESM, node20 target), then copies static assets `cp -r src/templates dist/ && cp -r src/guides dist/`. The asset copy is required because the server reads XML templates / MD guides at runtime via `fs.readFileSync` (`import.meta.url`-relative). **`dist/` is committed** — regenerate and commit it whenever `src/` changes.
+Build (inside `plugins/alps-writer/`) runs `tsc --noEmit` (typecheck), then esbuild bundles `src/index.ts` → `dist/index.js` with deps inlined (ESM, node24 target), then copies static assets `cp -r src/templates dist/ && cp -r src/guides dist/`. The asset copy is required because the server reads XML templates / MD guides at runtime via `fs.readFileSync` (`import.meta.url`-relative). **`dist/` is committed** — regenerate and commit it whenever `src/` changes.
 
 Tests use Node's built-in test runner. ALPS TypeScript tests run through `tsx`; ADR tests are dependency-free `.mjs` tests. Run all suites with `pnpm test`.
 
@@ -171,7 +171,7 @@ codex plugin add adr-writer@alps-writer
 - **alps-writer** runs its MCP server from the committed bundle plus its local `skills/`. No hooks, no npm/npx.
 - **adr-writer** ships local `skills/`, `agents/`, `hooks/`, and `templates/adr/`. Codex requires users to review and trust the bundled hook before it runs. No MCP.
 
-The hook script (in adr-writer) is Node ESM (`.mjs`) and reads NDJSON events from stdin per the Claude Code hooks spec. It uses only Node built-ins (no extra deps), so the plugin requires nothing beyond a Node.js >= 20 runtime.
+The hook script (in adr-writer) is Node ESM (`.mjs`) and reads NDJSON events from stdin per the Claude Code hooks spec. It uses only Node built-ins (no extra deps), so the plugin requires nothing beyond a Node.js >= 24 runtime.
 
 ### Cycle hooks layout (adr-writer)
 
@@ -186,7 +186,7 @@ The directive is re-injected every turn (UserPromptSubmit) instead of once at Se
 ## Conventions
 
 - TypeScript strict mode, ES modules (`"type": "module"`)
-- Node.js >= 20
+- Node.js >= 24
 - pnpm as package manager
 - Conventional Commits (details: CONTRIBUTING.md)
 - Scopes: `server`, `templates`, `documents`, `guides`, `adr`, `plugin`, `deps`
@@ -211,23 +211,27 @@ avoid a round trip — not the only thing standing between a bad commit and `mai
 - **`.husky/pre-push`** — typecheck + `bump:check` + `pnpm test`, all blocking.
   `SKIP_TESTS=1 git push …` bypasses only the suite (for a knowingly-red WIP
   branch); the typecheck and version check always run.
-- **`.github/workflows/ci.yaml`** — three jobs. `test` and `build` run the same
-  commands as above on the toolchain's Node, plus a step that rebuilds the bundle
-  and fails if the committed `plugins/alps-writer/dist/` differs. `runtime` is the
-  one that guards `engines.node`. The hooks only exist for someone who ran
-  `pnpm install` and can be skipped with `--no-verify`, so CI is the gate that
+- **`.github/workflows/ci.yaml`** — three jobs, all on Node 24. `test` runs the
+  suite; `build` adds lint, `format:check`, `bump:check`, and a rebuild that fails
+  if the committed `plugins/alps-writer/dist/` differs; `runtime` re-runs what a
+  consumer executes with **no install step**. The hooks only exist for someone who
+  ran `pnpm install` and can be skipped with `--no-verify`, so CI is the gate that
   actually holds.
 
-**Two Node versions, on purpose.** `pnpm@11` requires Node >= 22.13 (it imports
-`node:sqlite`), so the toolchain cannot run on the `engines.node` floor of 20 — a
-CI matrix spanning both fails at `pnpm install`, which proves nothing about
-compatibility. What a consumer runs needs no pnpm at all: a marketplace install
-ships no `node_modules`, because the MCP server is an esbuild bundle with
-dependencies inlined and the adr-writer scripts/hook/tests use Node built-ins
-only. So the `runtime` job runs, under a bare `node` with no install step on 20 /
-22 / 24: the dependency-free adr-writer suite, an MCP `initialize` round-trip
-against the committed bundle, and the `UserPromptSubmit` hook. That is the claim
-`engines.node` actually makes, and the pnpm-based jobs can never check it.
+**Why `engines.node` is 24 and CI runs no older matrix.** The floor used to read
+`>= 20`, and nothing could check it: `pnpm@11` needs Node >= 22.13 (it imports
+`node:sqlite`) and `node --test`'s glob support landed in 21, so a Node 20 leg
+fails at `pnpm install` or at collecting the test files — neither is a real
+incompatibility finding. Rather than keep an unverifiable claim, the declaration
+was moved to match reality (`engines.node >= 24`, esbuild `--target=node24`).
+
+The `runtime` job still exists because installing is not the same as shipping: a
+marketplace install has no `node_modules` at all — the MCP server is a bundle with
+dependencies inlined, and the adr-writer scripts, hook, and tests use Node
+built-ins only. It runs the dependency-free adr-writer suite, an MCP `initialize`
+round-trip against the committed bundle, and the `UserPromptSubmit` hook, all
+under a bare `node`. The pnpm-based jobs cannot catch a break there, since they
+always have a populated `node_modules`.
 
 ### Shared vocabularies
 

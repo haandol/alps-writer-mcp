@@ -21,7 +21,7 @@ Then register the absolute path:
 }
 ```
 
-The bundle inlines its dependencies, so it runs with a plain Node.js >= 20 — no `npm install` in the target location.
+The bundle inlines its dependencies, so it runs with a plain Node.js >= 24 — no `npm install` in the target location.
 
 ## Environment variables
 

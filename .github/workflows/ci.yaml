@@ -5,12 +5,16 @@ name: CI
 # 여기서 한 번 더 막는다. 로컬과 같은 스크립트(pnpm test / build / format:check /
 # bump:check)를 실행하므로 두 곳의 결과가 항상 일치한다.
 #
-# job 세 개, Node 버전은 둘로 나뉜다:
-#   test·build — 툴체인용 Node. pnpm 11 이 node:sqlite 를 쓰므로 >= 22.13 이 필요하다.
-#   runtime    — 소비자가 실제로 실행하는 것(번들·스크립트·훅)을 install 없이
-#                engines.node 하한까지 내려가 검증한다. 마켓플레이스 설치본에는
-#                node_modules 가 없으므로 pnpm 이 필요 없고, 그래서 위 두 job 으로는
-#                이 주장을 검증할 수 없다.
+# Node 는 전부 24 로 통일한다(engines.node ">= 24"). 낮은 버전을 매트릭스로 돌려봤자
+# pnpm 11 은 node:sqlite 때문에 >= 22.13 을, `node --test` 의 glob 은 21+ 을 요구해서
+# 설치·실행 자체가 안 되기 때문이다 — 검증되지 않는 하한을 선언해 두는 대신 선언을
+# 실제에 맞췄다.
+#
+# job 세 개:
+#   test·build — 워크스페이스를 설치하고 로컬과 같은 스크립트를 돌린다.
+#   runtime    — 소비자가 실제로 실행하는 것(번들·스크립트·훅)을 install 없이 검증한다.
+#                마켓플레이스 설치본에는 node_modules 가 없으므로, 위 두 job 이 통과해도
+#                이쪽이 깨질 수 있다.
 on:
   workflow_dispatch:
   pull_request:
@@ -23,11 +27,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The full suite, on the Node the repo develops against. pnpm 11 itself
-  # requires Node >= 22.13 (it imports node:sqlite), so the toolchain cannot run
-  # on anything older — a matrix down to the engines.node floor fails at
-  # `pnpm install`, not at a real incompatibility. The floor is covered by the
-  # `runtime` job below instead.
+  # The full suite, exactly as `pnpm test` runs it locally.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -44,9 +44,6 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          # Not node-version-file: package.json — that reads engines.node
-          # (">= 20"), which pnpm 11 cannot run on. This is the toolchain's Node,
-          # deliberately decoupled from the consumer floor the `runtime` job pins.
           node-version: "24"
           cache: "pnpm"
 
@@ -56,19 +53,13 @@ jobs:
       - name: Test
         run: pnpm test
 
-  # What a CONSUMER actually runs, on the oldest Node we promise to support.
-  # A marketplace install ships no node_modules: the MCP server is an esbuild
-  # bundle with its dependencies inlined, and the adr-writer scripts, hook, and
-  # tests are Node built-ins only. So both must work under a bare `node` with no
-  # install step — which is exactly what engines.node ">= 20" claims and what
-  # the pnpm-based job above can never check.
+  # What a CONSUMER actually runs. A marketplace install ships no node_modules:
+  # the MCP server is an esbuild bundle with its dependencies inlined, and the
+  # adr-writer scripts, hook, and tests are Node built-ins only. So all of it must
+  # work under a bare `node` with no install step — something the pnpm-based jobs
+  # cannot tell us, since they always have a populated node_modules.
   runtime:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node: ["20", "22", "24"]
-    name: runtime (node ${{ matrix.node }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -76,7 +67,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: "24"
 
       - name: Assert this Node satisfies the declared engines range
         run: |
@@ -129,7 +120,6 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          # The toolchain's Node, as in the `test` job — pnpm 11 needs >= 22.13.
           node-version: "24"
           cache: "pnpm"
 

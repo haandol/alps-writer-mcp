@@ -8,7 +8,7 @@
   "main": "dist/index.js",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "bundle": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/index.js",
     "build": "pnpm typecheck && pnpm bundle && cp -r src/templates dist/ && cp -r src/guides dist/",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
@@ -34,7 +34,7 @@
   },
   "author": "haandol",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

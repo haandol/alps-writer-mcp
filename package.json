@@ -32,7 +32,7 @@
   "author": "haandol",
   "packageManager": "pnpm@11.4.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "lint-staged": {
     "*.{ts,js,json,md,yaml}": [
