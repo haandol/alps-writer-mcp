@@ -179,10 +179,14 @@ Automated in two places, so you rarely have to remember:
 - **`.husky/pre-push`** blocks a push on typecheck, `bump:check`, and `pnpm test`
   (~8s). For a WIP branch you know is red: `SKIP_TESTS=1 git push …` — that skips
   only the suite, never the typecheck or version check.
-- **`.github/workflows/ci.yaml`** runs the same commands on Node 20 and 22, plus
-  `lint`, `format:check`, and a rebuild that fails if the committed
-  `plugins/alps-writer/dist/` is stale. Hooks can be skipped with `--no-verify`;
-  CI cannot.
+- **`.github/workflows/ci.yaml`** runs the same commands plus `lint`,
+  `format:check`, and a rebuild that fails if the committed
+  `plugins/alps-writer/dist/` is stale. A separate `runtime` job checks Node 20 /
+  22 / 24 with **no install step** — the dependency-free adr-writer suite, an MCP
+  `initialize` round-trip against the committed bundle, and the hook — because
+  that is what a marketplace install actually executes, and `pnpm@11` itself needs
+  Node >= 22.13 so the toolchain jobs cannot run on the `engines.node` floor.
+  Hooks can be skipped with `--no-verify`; CI cannot.
 
 Behaviour evals (`plugins/adr-writer/evals/`) are **not** part of `pnpm test` —
 they call a real model, cost money, and are non-deterministic. Run them by hand

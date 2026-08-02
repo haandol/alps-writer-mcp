@@ -4,6 +4,13 @@ name: CI
 # `pnpm install`을 한 사람에게만 설치되고 `--no-verify`로 우회할 수 있다.
 # 여기서 한 번 더 막는다. 로컬과 같은 스크립트(pnpm test / build / format:check /
 # bump:check)를 실행하므로 두 곳의 결과가 항상 일치한다.
+#
+# job 세 개, Node 버전은 둘로 나뉜다:
+#   test·build — 툴체인용 Node. pnpm 11 이 node:sqlite 를 쓰므로 >= 22.13 이 필요하다.
+#   runtime    — 소비자가 실제로 실행하는 것(번들·스크립트·훅)을 install 없이
+#                engines.node 하한까지 내려가 검증한다. 마켓플레이스 설치본에는
+#                node_modules 가 없으므로 pnpm 이 필요 없고, 그래서 위 두 job 으로는
+#                이 주장을 검증할 수 없다.
 on:
   workflow_dispatch:
   pull_request:
@@ -16,17 +23,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The full suite, on the Node the repo develops against. pnpm 11 itself
+  # requires Node >= 22.13 (it imports node:sqlite), so the toolchain cannot run
+  # on anything older — a matrix down to the engines.node floor fails at
+  # `pnpm install`, not at a real incompatibility. The floor is covered by the
+  # `runtime` job below instead.
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # package.json declares engines.node >= 20. Run the floor and current
-        # LTS: the suite spawns bare `node` for the adr-writer scripts, so a
-        # built-in that only exists in a newer runtime would pass locally and
-        # break for a user on the documented minimum.
-        node: ["20", "22"]
-    name: test (node ${{ matrix.node }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,7 +44,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          # Not node-version-file: package.json — that reads engines.node
+          # (">= 20"), which pnpm 11 cannot run on. This is the toolchain's Node,
+          # deliberately decoupled from the consumer floor the `runtime` job pins.
+          node-version: "24"
           cache: "pnpm"
 
       - name: Install dependencies
@@ -49,6 +55,65 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  # What a CONSUMER actually runs, on the oldest Node we promise to support.
+  # A marketplace install ships no node_modules: the MCP server is an esbuild
+  # bundle with its dependencies inlined, and the adr-writer scripts, hook, and
+  # tests are Node built-ins only. So both must work under a bare `node` with no
+  # install step — which is exactly what engines.node ">= 20" claims and what
+  # the pnpm-based job above can never check.
+  runtime:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22", "24"]
+    name: runtime (node ${{ matrix.node }})
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Assert this Node satisfies the declared engines range
+        run: |
+          node -e '
+            const {engines} = require("./package.json");
+            const min = engines.node.replace(/[^0-9.]/g, "").split(".").map(Number);
+            const cur = process.versions.node.split(".").map(Number);
+            const ok = cur[0] > min[0] || (cur[0] === min[0] && (cur[1] ?? 0) >= (min[1] ?? 0));
+            if (!ok) { console.error(`node ${process.versions.node} is below engines.node ${engines.node}`); process.exit(1); }
+            console.log(`node ${process.versions.node} satisfies engines.node ${engines.node}`);
+          '
+
+      # The dependency-free suite, run the way a contributor without pnpm would.
+      - name: adr-writer suite (no install)
+        run: node --test "plugins/adr-writer/tests/**/*.test.mjs"
+
+      # The committed bundle is what a marketplace install executes. Boot it over
+      # stdio and require a well-formed MCP initialize result — a bundle that
+      # merely parses is not evidence it runs on this Node.
+      - name: alps-writer MCP bundle boots and answers initialize
+        run: |
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            | timeout 30 node plugins/alps-writer/dist/index.js > /tmp/init.json
+          node -e '
+            const fs = require("fs");
+            const line = fs.readFileSync("/tmp/init.json", "utf8").split("\n").find(Boolean);
+            if (!line) { console.error("the server produced no response"); process.exit(1); }
+            const res = JSON.parse(line);
+            const info = res?.result?.serverInfo;
+            if (info?.name !== "alps-writer") { console.error("unexpected initialize result:", line.slice(0, 200)); process.exit(1); }
+            console.log(`bundle answered initialize as ${info.name} ${info.version}`);
+          '
+
+      # The hook runs on every user turn in a consumer repo, so a runtime it
+      # cannot start on breaks the plugin for that user on turn one.
+      - name: adr-writer hook runs
+        run: echo '{}' | node plugins/adr-writer/hooks/surface-adr-context.mjs
 
   build:
     runs-on: ubuntu-latest
@@ -64,7 +129,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          # The toolchain's Node, as in the `test` job — pnpm 11 needs >= 22.13.
+          node-version: "24"
           cache: "pnpm"
 
       - name: Install dependencies

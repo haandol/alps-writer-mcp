@@ -211,11 +211,23 @@ avoid a round trip — not the only thing standing between a bad commit and `mai
 - **`.husky/pre-push`** — typecheck + `bump:check` + `pnpm test`, all blocking.
   `SKIP_TESTS=1 git push …` bypasses only the suite (for a knowingly-red WIP
   branch); the typecheck and version check always run.
-- **`.github/workflows/ci.yaml`** — the same commands on Node 20 and 22 (the
-  `engines.node` floor and current LTS), plus a step that rebuilds the bundle and
-  fails if the committed `plugins/alps-writer/dist/` differs. The hooks only exist
-  for someone who ran `pnpm install` and can be skipped with `--no-verify`, so CI
-  is the gate that actually holds.
+- **`.github/workflows/ci.yaml`** — three jobs. `test` and `build` run the same
+  commands as above on the toolchain's Node, plus a step that rebuilds the bundle
+  and fails if the committed `plugins/alps-writer/dist/` differs. `runtime` is the
+  one that guards `engines.node`. The hooks only exist for someone who ran
+  `pnpm install` and can be skipped with `--no-verify`, so CI is the gate that
+  actually holds.
+
+**Two Node versions, on purpose.** `pnpm@11` requires Node >= 22.13 (it imports
+`node:sqlite`), so the toolchain cannot run on the `engines.node` floor of 20 — a
+CI matrix spanning both fails at `pnpm install`, which proves nothing about
+compatibility. What a consumer runs needs no pnpm at all: a marketplace install
+ships no `node_modules`, because the MCP server is an esbuild bundle with
+dependencies inlined and the adr-writer scripts/hook/tests use Node built-ins
+only. So the `runtime` job runs, under a bare `node` with no install step on 20 /
+22 / 24: the dependency-free adr-writer suite, an MCP `initialize` round-trip
+against the committed bundle, and the `UserPromptSubmit` hook. That is the claim
+`engines.node` actually makes, and the pnpm-based jobs can never check it.
 
 ### Shared vocabularies
 
