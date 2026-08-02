@@ -1,1 +1,36 @@
-pnpm --filter alps-writer exec tsc --noEmit
+# pre-push — run the checks that are cheap enough to gate every push and whose
+# failure means the pushed tree is broken, not merely unformatted.
+#
+# Why here and not pre-commit: the suite takes ~7s, which is too slow to pay on
+# every commit of a series but well worth paying once per push. Formatting stays
+# in pre-commit (lint-staged fixes it in place); correctness lands here.
+#
+# `pnpm test` covers both plugins: the alps-writer MCP server (tsx) and the
+# dependency-free adr-writer suites. `bump:check` is included because the release
+# version lives in 13 places and only 8 of them are covered by a test — the five
+# rules-version stamps in templates/adr/ are checked nowhere else, and a stamp
+# left behind makes the plugin report its own templates as stale to every user.
+#
+# Bypass: SKIP_TESTS=1 git push … (for a WIP branch you know is red). It does not
+# skip the typecheck or the version check, which are fast and catch different
+# failures.
+
+pnpm --filter alps-writer exec tsc --noEmit || exit 1
+
+pnpm bump:check || {
+  echo ""
+  echo "[pre-push] ✗ the release version drifted between sites."
+  echo "    Fix with: pnpm bump <version>  (then pnpm build to refresh dist/)"
+  exit 1
+}
+
+if [ "${SKIP_TESTS:-}" = "1" ]; then
+  echo "[pre-push] ⚠ SKIP_TESTS=1 — skipping the test suite."
+else
+  pnpm test || {
+    echo ""
+    echo "[pre-push] ✗ tests failed — push stopped."
+    echo "    Fix the failures, or push a known-red WIP branch with: SKIP_TESTS=1 git push …"
+    exit 1
+  }
+fi

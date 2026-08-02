@@ -37,6 +37,7 @@ Root is a private pnpm workspace; the MCP server package lives in `plugins/alps-
 
 ```bash
 pnpm install          # Install dependencies (whole workspace)
+pnpm test             # Both suites (alps-writer via tsx + adr-writer .mjs); blocks pre-push
 pnpm build            # Bundle the alps-writer MCP server (pnpm --filter alps-writer build)
 pnpm lint             # ESLint the MCP server
 pnpm format           # Prettier across the repo
@@ -50,7 +51,9 @@ pnpm --filter alps-writer start   # Run built bundle (node dist/index.js)
 
 ### Versioning
 
-The release version lives in **five** places that must agree: the four plugin manifests (`.claude-plugin/` + `.codex-plugin/` for both plugins), the `marketplace.json` entries, and the `serverInfo` literal in `plugins/alps-writer/src/index.ts` — that last one is what an MCP client reports, and `tsconfig`'s `rootDir: "src"` prevents importing the version from `package.json`. Always bump with `pnpm bump <version>`, then `pnpm build` so the committed `dist/` carries the new `serverInfo`; bumping by hand has drifted twice (0.3.0 and 0.4.20 both shipped with a stale server version).
+The release version lives in **13 sites** that must agree, in four groups: the four plugin manifests (`.claude-plugin/` + `.codex-plugin/` for both plugins), the three `marketplace.json` versions (metadata + one per plugin entry), the `serverInfo` literal in `plugins/alps-writer/src/index.ts`, and the five `adr-writer:rules-version` stamps in `plugins/adr-writer/templates/adr/`. The `serverInfo` literal is what an MCP client reports, and `tsconfig`'s `rootDir: "src"` prevents importing the version from `package.json`. The stamps are what `adr-structure-lint` compares a consumer's seeded docs against, so a stamp left behind makes the plugin report its own templates as stale to everyone at once. Always bump with `pnpm bump <version>`, then `pnpm build` so the committed `dist/` carries the new `serverInfo`; bumping by hand has drifted twice (0.3.0 and 0.4.20 both shipped with a stale server version).
+
+`version-consistency.test.ts` covers the first eight sites; the five stamps are covered only by `pnpm bump:check`, which is why pre-push and CI both run it.
 
 Both `package.json` files are **deliberately pinned to `0.0.0`** and are not part of the release version — they are `private: true`, so their version reaches no consumer. Don't "resync" them; `version-consistency.test.ts` asserts the pin.
 
@@ -69,8 +72,10 @@ Tests use Node's built-in test runner. ALPS TypeScript tests run through `tsx`; 
 └── marketplace.json      # Codex marketplace manifest
 package.json              # Private workspace root (prettier/husky/lint-staged); version pinned 0.0.0
 pnpm-workspace.yaml       # packages: plugins/alps-writer
+.github/workflows/
+└── ci.yaml               # test (node 20/22) + lint/format/bump:check/build + dist-drift gate
 scripts/
-└── bump-version.mjs      # Set/verify the release version across all five sites
+└── bump-version.mjs      # Set/verify the release version across all 13 sites
 
 plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 ├── .claude-plugin/plugin.json   # mcpServers only (node dist/index.js); skills/ (alps-init, feature-to-adr) are auto-discovered
@@ -80,7 +85,8 @@ plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 ├── tsconfig.json, eslint.config.mjs
 ├── src/
 │   ├── index.ts          # MCP server entry point + tool registration
-│   ├── constants.ts      # Section titles, dependencies, file paths
+│   ├── constants.ts      # Section titles/range, dependencies, file paths, NOT_STARTED
+│   ├── xml.ts            # regex XML helpers shared by both tool layers
 │   ├── tools/
 │   │   ├── templates/    # Template tools (controller + service)
 │   │   └── documents/    # Document tools (controller + service)
@@ -100,6 +106,13 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 │   ├── run.mjs           # runner — N runs per scenario, hit rates, shareable report
 │   ├── lib/harness.mjs   # fixture builder + scorers; passes the REAL skill/agent text
 │   └── scenarios/        # one reproducible situation each
+├── scripts/              # deterministic checkers (Node built-ins / bash only)
+│   ├── adr-invariants.sh          # one-way dependency oracle (code→ADR, ADR→PRD, rollup)
+│   ├── adr-structure-lint.mjs     # per-ADR + mapping structure CLI; shells out to the above
+│   ├── adr-lint-lib.mjs           # pure checkers + the shared vocabularies the CLI and tests read
+│   ├── adr-impl-review-categories.mjs  # finding-category table shared by the validator + renderer
+│   ├── adr-impl-review-validate.mjs    # /adr-impl-review artifact validator
+│   └── adr-impl-review-report.mjs      # renders findings.json → standalone review HTML
 ├── hooks/
 │   ├── hooks.json        # UserPromptSubmit registration
 │   └── surface-adr-context.mjs  # UserPromptSubmit — inject ADR-first directive + mapping snapshot
@@ -123,7 +136,9 @@ ADR folders are organized along two axes — a DDD **bounded context** (top-leve
 - `src/tools/templates/` — Read-only access to ALPS templates and conversation guides
 - `src/tools/documents/` — Document CRUD (init, load, save, read, export) with state management
 
-**Constants** (`src/constants.ts`) — Centralized section metadata: titles (1-9), dependency graph (`SECTION_REFERENCES`), `__dirname`-based filesystem paths.
+**Constants** (`src/constants.ts`) — Centralized section metadata: titles (1-9), dependency graph (`SECTION_REFERENCES`), `__dirname`-based filesystem paths. The section range is **derived** from `SECTION_TITLES` (`SECTION_NUMBERS`, `FIRST_SECTION`, `LAST_SECTION`, `SECTION_RANGE`) rather than written as a literal at each use — the Zod `.min`/`.max` bounds, the argument descriptions, and the build/export loops all read it, so a tenth section cannot be half-added. `NOT_STARTED` is the placeholder an unwritten section carries.
+
+**XML helpers** (`src/xml.ts`) — `attribute`, `decodeXml`, `escapeXmlAttribute`, `escapeXmlText`, shared by the document and template layers (this project parses XML with regex by design — see Do-Not Rules). `attribute()` always returns the **decoded** value: an attribute's value is its decoded text, and both callers compare it against plain text.
 
 **Static assets** (read from filesystem at runtime):
 
@@ -182,11 +197,42 @@ The directive is re-injected every turn (UserPromptSubmit) instead of once at Se
 
 Verify before completing any task:
 
-1. `pnpm build` succeeds
-2. `pnpm lint` passes
-3. `pnpm format:check` passes
-4. If `src/` changed: the regenerated `plugins/alps-writer/dist/` is committed alongside it
-5. Related docs (README, AGENTS.md, CONTRIBUTING.md) are up to date
+1. `pnpm test` passes
+2. `pnpm build` succeeds
+3. `pnpm lint` passes
+4. `pnpm format:check` passes
+5. `pnpm bump:check` reports every version site in sync
+6. If `src/` changed: the regenerated `plugins/alps-writer/dist/` is committed alongside it
+7. Related docs (README, AGENTS.md, CONTRIBUTING.md) are up to date
+
+These are automated in two places, so the list above is what you run locally to
+avoid a round trip — not the only thing standing between a bad commit and `main`:
+
+- **`.husky/pre-push`** — typecheck + `bump:check` + `pnpm test`, all blocking.
+  `SKIP_TESTS=1 git push …` bypasses only the suite (for a knowingly-red WIP
+  branch); the typecheck and version check always run.
+- **`.github/workflows/ci.yaml`** — the same commands on Node 20 and 22 (the
+  `engines.node` floor and current LTS), plus a step that rebuilds the bundle and
+  fails if the committed `plugins/alps-writer/dist/` differs. The hooks only exist
+  for someone who ran `pnpm install` and can be skipped with `--no-verify`, so CI
+  is the gate that actually holds.
+
+### Shared vocabularies
+
+Several tables are read by more than one consumer, and each one previously existed
+as hand-synced copies. They now have a single home, and
+`plugins/adr-writer/tests/shared-vocab.test.mjs` fails the build if a consumer
+grows its own copy again:
+
+| Table                                    | Home                                     | Read by                                                      |
+| ---------------------------------------- | ---------------------------------------- | ------------------------------------------------------------ |
+| `ANTIPATTERN_SEGMENTS`                   | `scripts/adr-lint-lib.mjs`               | mapping-key check + on-disk directory check in the lint CLI  |
+| `SEEDED_RULE_DOCS` / `STAMPED_RULE_DOCS` | `scripts/adr-lint-lib.mjs`               | lint staleness check, test fixtures, eval fixtures, `bump`   |
+| `CATEGORIES` (hue/authority/priority)    | `scripts/adr-impl-review-categories.mjs` | impl-review validator allow-list + HTML report render & sort |
+
+`scripts/bump-version.mjs` is the one deliberate exception — it spells the stamped
+doc list out rather than importing plugin internals, because it is a repo-level
+release script. The test asserts the two agree.
 
 ## Do-Not Rules
 

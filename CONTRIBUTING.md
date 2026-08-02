@@ -167,6 +167,29 @@ pnpm format:check                  # Check formatting without writing
 - ESLint config: `plugins/alps-writer/eslint.config.mjs` (flat config with typescript-eslint)
 - Prettier config: `.prettierrc` (repo root)
 
+### Tests
+
+```bash
+pnpm test        # both suites: alps-writer (tsx) + adr-writer (node:test, dep-free)
+pnpm bump:check  # every release-version site agrees (13 of them)
+```
+
+Automated in two places, so you rarely have to remember:
+
+- **`.husky/pre-push`** blocks a push on typecheck, `bump:check`, and `pnpm test`
+  (~8s). For a WIP branch you know is red: `SKIP_TESTS=1 git push …` — that skips
+  only the suite, never the typecheck or version check.
+- **`.github/workflows/ci.yaml`** runs the same commands on Node 20 and 22, plus
+  `lint`, `format:check`, and a rebuild that fails if the committed
+  `plugins/alps-writer/dist/` is stale. Hooks can be skipped with `--no-verify`;
+  CI cannot.
+
+Behaviour evals (`plugins/adr-writer/evals/`) are **not** part of `pnpm test` —
+they call a real model, cost money, and are non-deterministic. Run them by hand
+when reproducing a reported LLM defect: `node evals/run.mjs --only <name> --runs 10`.
+
+Do not delete or weaken a test to make it pass — fix the code instead.
+
 ### Prettier Rules
 
 | Rule            | Value   |

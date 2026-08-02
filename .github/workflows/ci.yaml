@@ -1,0 +1,99 @@
+name: CI
+
+# 테스트·빌드·포맷 게이트. pre-push 훅이 같은 검사를 로컬에서 돌리지만, 훅은
+# `pnpm install`을 한 사람에게만 설치되고 `--no-verify`로 우회할 수 있다.
+# 여기서 한 번 더 막는다. 로컬과 같은 스크립트(pnpm test / build / format:check /
+# bump:check)를 실행하므로 두 곳의 결과가 항상 일치한다.
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # package.json declares engines.node >= 20. Run the floor and current
+        # LTS: the suite spawns bare `node` for the adr-writer scripts, so a
+        # built-in that only exists in a newer runtime would pass locally and
+        # break for a user on the documented minimum.
+        node: ["20", "22"]
+    name: test (node ${{ matrix.node }})
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # No version here on purpose — the action reads packageManager from
+          # package.json. Pinning both makes it fail with a version mismatch.
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      # The release version lives in 13 sites; the five rules-version stamps in
+      # templates/adr/ are covered by no test. A stamp left behind makes the
+      # plugin report its own templates as stale to every consumer at once.
+      - name: Check version consistency
+        run: pnpm bump:check
+
+      # plugins/alps-writer/dist/ is committed — the marketplace installs run it
+      # directly. Rebuild and fail if the result differs from what was pushed,
+      # which is exactly the "src changed but dist/ wasn't rebuilt" case the
+      # pre-commit hook handles locally and --no-verify defeats.
+      - name: Build
+        run: pnpm build
+
+      - name: Verify the committed bundle is up to date
+        run: |
+          if ! git diff --quiet -- plugins/alps-writer/dist; then
+            echo "::error::plugins/alps-writer/dist/ is stale — run 'pnpm build' and commit the result."
+            git diff --stat -- plugins/alps-writer/dist
+            exit 1
+          fi
+          echo "committed bundle matches a fresh build"
