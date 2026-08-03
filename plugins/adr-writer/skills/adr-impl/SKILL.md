@@ -2,7 +2,6 @@
 name: adr-impl
 description: Implement an ADR — check dependencies first, implement prerequisites in topological order, write code, run tests, then auto-promote ADR Status from Proposed to Accepted. Enforces the ADR-first development cycle. Use when the user invokes /adr-impl or asks to implement an ADR / a Proposed feature whose decision is already recorded. Keywords - "/adr-impl", "ADR 구현", "implement ADR", "Proposed ADR 코드 반영".
 argument-hint: "[adr-path-or-category]"
-disable-model-invocation: true
 ---
 
 # adr-impl
