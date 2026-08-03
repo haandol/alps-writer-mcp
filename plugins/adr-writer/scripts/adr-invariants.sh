@@ -12,6 +12,12 @@
 # --exclude-dir; on such minimal images (e.g. Alpine CI) install GNU grep
 # before wiring this into a hard gate, or the exclude flags fail.
 #
+# Whole-tree scans cover only files a human authors, never generated trees
+# (dependency installs, build output, build caches, tool caches, coverage). In a
+# git repo the scope comes from git, so `.gitignore` decides; outside git it
+# falls back to the EXCLUDES basename list. See scan_tree below for both paths
+# and why a repo-indexing build cache in particular has to be off the scan.
+#
 # Usage:
 #   adr-invariants.sh [--adr-dir DIR] [--code-only|--prd-only|--rollup-only]
 #                     [--removed "<cat>/<NNNN> ..."]
@@ -83,28 +89,127 @@ ADR_DIR="${ADR_DIR%/}"
 
 found=0
 
-# Common excludes for whole-tree scans. grep --exclude-dir matches a
-# directory BASENAME glob, never a path — so we must NOT exclude the ADR dir
-# by its basename here: a basename like "adr" would also prune unrelated code
-# dirs (src/adr/, lib/adr/) and their genuine code→ADR violations would never
-# reach the post-filter (which can only drop lines grep already emitted).
-# ADR↔ADR Related links inside "$ADR_DIR" are instead excluded purely by the
-# full-path post-filter "(^|/)${ADR_DIR}/" applied to each check below.
+# ── what the whole-tree checks actually scan ──────────────────────────────
+#
+# Only **files a human authors** are in scope. Generated trees are not: a build
+# cache that indexes the repo (Nx, Turbo) stores the ADR file list verbatim, so
+# scanning it reports every ADR path in the repo as a violation and the real
+# hits drown in hundreds of noise lines. That is worse than a false negative —
+# an oracle whose output nobody reads is an oracle nobody wires into CI. And a
+# hit inside generated output is never actionable anyway: the fix belongs in
+# whatever source produced it.
+#
+# In a git repo, `.gitignore` already IS the "generated vs authored" declaration
+# the repo's own maintainers wrote, so the scope comes from git rather than from
+# a list this script guesses. `--cached --others --exclude-standard` = tracked
+# files plus untracked-but-not-ignored ones, which is exactly "authored": a new
+# file the user just wrote is still checked before it is staged, while anything
+# ignored is skipped without this script needing to know that Nx calls its cache
+# `.nx` or that uv calls its venv `.venv`. New tooling gets excluded for free the
+# moment the repo ignores it.
+#
+# The EXCLUDES list below is only the fallback for when git can't answer (no git
+# installed, or a plain directory that was never `git init`ed). It covers the
+# common generated basenames, and being a basename match it is necessarily
+# coarser than `.gitignore` — a real source dir named `build/` or `target/` gets
+# pruned. That is acceptable for a fallback, and is the reason the git path is
+# preferred whenever it's available.
+#
+# Both scanning sites (check (a) and the rollup citation scan) go through
+# scan_tree so the two can never drift to different scopes.
 EXCLUDES=(
   --exclude-dir=.git
   --exclude-dir=node_modules
   --exclude-dir=dist
   --exclude-dir=build
   --exclude-dir=vendor
+  # build output / caches that index the repo file tree
+  --exclude-dir=.nx
+  --exclude-dir=.turbo
+  --exclude-dir=.next
+  --exclude-dir=.nuxt
+  --exclude-dir=.output
+  --exclude-dir=.svelte-kit
+  --exclude-dir=.gradle
+  --exclude-dir=target
+  --exclude-dir=cdk.out
+  --exclude-dir=.terraform
+  # language / tool caches and vendored virtualenvs
+  --exclude-dir=.venv
+  --exclude-dir=venv
+  --exclude-dir=__pycache__
+  --exclude-dir=.mypy_cache
+  --exclude-dir=.pytest_cache
+  --exclude-dir=.ruff_cache
+  --exclude-dir=.tox
+  --exclude-dir=.bundle
+  --exclude-dir=.pnpm-store
+  --exclude-dir=.yarn
+  --exclude-dir=.cache
+  --exclude-dir='*.egg-info'
+  # coverage / test output
+  --exclude-dir=coverage
+  --exclude-dir=htmlcov
+  --exclude-dir=.nyc_output
 )
 
-# Fail CLOSED on a genuine grep error. grep's exit codes are 0=match,
-# 1=no-match, 2=error (unsupported flag on busybox — see the header note —, a
-# broken regex, an unreadable file). The old `... 2>/dev/null || true` idiom
-# swallowed 2 along with the benign 1, so a grep that never actually ran was
-# reported as "clean" (exit 0) — a silent false-negative in a CI gate. Callers
-# capture the scanning grep's own status (never a pipe's, which pipefail can
-# mask when a later stage exits 1) and pass it here BEFORE inspecting hits.
+# Scan the authored files for one regex. Emits grep's "path:lineno:content"
+# lines on stdout and returns grep's own rc so the caller can fail closed.
+#
+# git path: feed the authored file list to grep via -z/xargs -0 so paths with
+# spaces survive. `grep -H` forces the filename prefix even when xargs happens
+# to batch a single file (without it, that batch's lines would carry no path and
+# the post-filter — which anchors on the path — would mis-handle them). Paths
+# come out relative and unprefixed ("src/x.ts:3:…"), which is why the
+# post-filters below accept an optional "./".
+#
+# xargs runs grep once per batch, so its rc is the LAST batch's: 1 (no match) on
+# a final clean batch would mask a real error in an earlier one. Set -o pipefail
+# is already on, and `xargs` itself returns 123 if any invocation exits 1-125 —
+# so a genuine grep error (2) and a benign no-match (1) both surface as 123 and
+# can't be told apart. Hence we don't rely on xargs' rc: `-r` (skip empty input)
+# plus checking whether grep produced output gives 0/1, and a real grep failure
+# is caught by the explicit rc=2 probe on the first batch.
+scan_tree() { # $1=extended regex → stdout: hits; return: 0=hits 1=none 2=error
+  local re="$1" hits rc
+  if [ -z "${AUTHORED_FILES_MODE:-}" ]; then
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      AUTHORED_FILES_MODE=git
+    else
+      AUTHORED_FILES_MODE=tree
+    fi
+  fi
+  if [ "$AUTHORED_FILES_MODE" = git ]; then
+    # Probe grep itself first so an unusable grep (busybox) still fails closed
+    # rather than looking like "no matches" through xargs' rc collapsing.
+    printf '' | grep -nE "$re" >/dev/null 2>&1; rc=$?
+    if [ "$rc" -ge 2 ]; then
+      printf ''
+      return 2
+    fi
+    hits="$(git ls-files -z --cached --others --exclude-standard \
+      | xargs -0 -r grep -HnE "$re" 2>/dev/null)"
+  else
+    hits="$(grep -rnE "$re" "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
+    if [ "$rc" -ge 2 ]; then
+      printf ''
+      return 2
+    fi
+  fi
+  if [ -n "$hits" ]; then
+    printf '%s' "$hits"
+    return 0
+  fi
+  printf ''
+  return 1
+}
+
+# Fail CLOSED on a genuine grep error. scan_tree preserves grep's convention:
+# 0=match, 1=no-match, 2=error (unsupported flag on busybox — see the header
+# note —, a broken regex, an unreadable file). The old `... 2>/dev/null || true`
+# idiom swallowed 2 along with the benign 1, so a grep that never actually ran
+# was reported as "clean" (exit 0) — a silent false-negative in a CI gate.
+# Callers pass scan_tree's status here BEFORE inspecting hits.
 check_grep_rc() { # $1=rc  $2=check label
   if [ "$1" -ge 2 ]; then
     echo "adr-invariants: grep failed (rc=$1) during ${2} — cannot verify, failing closed (exit 2)" >&2
@@ -122,22 +227,21 @@ check_grep_rc() { # $1=rc  $2=check label
 # from false-positiving as the suffix of a longer surviving id (removing
 # "auth/0002" must not flag "oauth/0002-token.md"); the "ADR <id>" and
 # "<adr-dir>/<id>" branches are already left-anchored by their literal prefixes.
-# EXCLUDES (not an ad-hoc list) so dist/build/vendor artifacts don't leak noise,
-# matching check (a)'s scan policy. Prints the matching lines; caller frames the
-# message and sets `found`.
+# Goes through scan_tree (not an ad-hoc grep) so generated output can't leak
+# noise and the rollup scope always matches check (a)'s. Prints the matching
+# lines; caller frames the message and sets `found`.
 scan_citation() { # $1=id token → stdout: file:line:content hits (may be empty)
   local pat
   pat="$(printf '%s' "$1" | sed 's/[].[\*^$/(){}+?|]/\\&/g')"
   local hits rc
-  hits="$(grep -rnE "ADR ${pat}|${ADR_DIR}/${pat}|(^|[^A-Za-z0-9_-])${pat}(-[A-Za-z0-9-]*)?\.md" \
-    "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
+  hits="$(scan_tree "ADR ${pat}|${ADR_DIR}/${pat}|(^|[^A-Za-z0-9_-])${pat}(-[A-Za-z0-9-]*)?\.md")"; rc=$?
   check_grep_rc "$rc" "rollup citation scan for '$1'"
   printf '%s' "$hits"
 }
 
 # (a) code → ADR reverse references: no ADR ID / path / ADR_REF in code or
-# non-ADR docs. Layout-agnostic: scans the whole tree minus excludes rather
-# than a hardcoded packages/apps/src list. The post-filter drops any hit
+# non-ADR docs. Layout-agnostic: scans every authored file (see scan_tree)
+# rather than a hardcoded packages/apps/src list. The post-filter drops any hit
 # still under "$ADR_DIR/" so legitimate ADR↔ADR links are not flagged, while
 # code dirs that merely share the ADR basename (src/adr/, lib/adr/) are still
 # scanned — they are never pruned up front.
@@ -147,12 +251,12 @@ if [ "$RUN_CODE" -eq 1 ]; then
   # flat one-segment form ("ADR auth/0002"). Without it, check (a) would be
   # strictly weaker than the rollup checks (c)/(d), which already match the
   # two-segment text form the plugin emits today.
-  raw="$(grep -rnE "ADR [A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)?/[0-9]{4}|${ADR_DIR}/[A-Za-z0-9_-]+|ADR_REF" \
-    "${EXCLUDES[@]}" . 2>/dev/null)"; rc=$?
+  raw="$(scan_tree "ADR [A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)?/[0-9]{4}|${ADR_DIR}/[A-Za-z0-9_-]+|ADR_REF")"; rc=$?
   check_grep_rc "$rc" "check (a) code→ADR scan"
   # Drop hits whose FILE lives under the ADR dir (legit ADR↔ADR Related links).
-  # grep -rn from '.' emits "./<path>:<lineno>:<content>", so the file path is
-  # at the LINE START — anchor the post-filter there. The old whole-line
+  # Hits arrive as "<path>:<lineno>:<content>" — "./"-prefixed on the fallback
+  # tree scan, bare on the git-listed one — so the file path is at the LINE
+  # START and the filter anchors there with an optional "./". The old whole-line
   # `-vE "(^|/)${ADR_DIR}/"` also matched the pattern in the CONTENT field, so a
   # genuine code→ADR ref whose text merely contains "docs/adr/" (e.g. a comment
   # "see ../docs/adr/identity/login/0001.md") was silently dropped.

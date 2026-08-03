@@ -269,6 +269,136 @@ test("custom --adr-dir with a trailing slash is honored and normalized", () => {
   });
 });
 
+// ── scan scope: authored files only ───────────────────────────────────────
+// A repo-indexing build cache (Nx, Turbo) stores the ADR file list verbatim, so
+// scanning it reports every ADR path in the repo as a code→ADR violation and the
+// real hits drown in noise. In a git repo the scope comes from git, so
+// .gitignore — the repo's own "generated vs authored" declaration — decides.
+
+// The generated dirs a real consumer repo ignores. .gitignore is what makes them
+// out of scope, so the fixture must declare them the way a real repo does.
+const GENERATED_DIRS = [
+  ".nx/workspace-data",
+  ".turbo",
+  "cdk.out",
+  ".venv/lib/site-packages",
+  "__pycache__",
+  ".pytest_cache",
+  "coverage",
+  ".output",
+  "target",
+  "node_modules/pkg",
+];
+
+for (const genDir of GENERATED_DIRS) {
+  test(`gitignored tree '${genDir}' is out of scope for the code→ADR scan`, () => {
+    withTmp((dir) => {
+      seedCanonicalRepo(dir);
+      write(dir, ".gitignore", GENERATED_DIRS.map((d) => `${d.split("/")[0]}/`).join("\n") + "\n");
+      // The shape a build cache actually stores: the repo's own file list.
+      write(dir, `${genDir}/file-map.json`, '{"file":"docs/adr/infra/0001-deploy-topology.md"}\n');
+      const { code, stdout } = runInvariants(dir, ["--code-only"]);
+      assert.equal(code, 0, stdout);
+      assert.doesNotMatch(stdout, /file-map\.json/);
+    });
+  });
+}
+
+test("narrowing the scan does NOT weaken (a) for authored files", () => {
+  withTmp((dir) => {
+    seedCanonicalRepo(dir);
+    write(dir, ".gitignore", ".nx/\n");
+    // A cache hit is out of scope…
+    write(dir, ".nx/workspace-data/file-map.json", '{"file":"docs/adr/infra/0001-x.md"}\n');
+    // …but a real ref in authored code is still caught in the same run.
+    write(dir, "src/features/login/notes.ts", '\nconst r = "ADR infra/0001";\n');
+    const { code, stdout } = runInvariants(dir, ["--code-only"]);
+    assert.equal(code, 1, "authored ref must still fire");
+    assert.match(stdout, /notes\.ts/);
+    assert.doesNotMatch(stdout, /file-map\.json/);
+  });
+});
+
+test("an UNTRACKED but non-ignored new file is in scope (checked before staging)", () => {
+  withTmp((dir) => {
+    seedCanonicalRepo(dir);
+    // --others: a file the user just wrote is checked before `git add`, or the
+    // gate would pass on exactly the change under review.
+    write(dir, "src/features/login/fresh.ts", '\nconst x = "ADR infra/0001";\n');
+    const { code, stdout } = runInvariants(dir, ["--code-only"]);
+    assert.equal(code, 1);
+    assert.match(stdout, /fresh\.ts/);
+  });
+});
+
+test("a hand-authored doc outside docs/adr/ citing an ADR is still flagged", () => {
+  withTmp((dir) => {
+    seedCanonicalRepo(dir);
+    // Human-written docs are NOT generated output — a stale citation here is a
+    // real finding after a rollup renumbers, so scope narrowing must not cover it.
+    write(dir, "docs/architecture-review.md", "판정 근거는 ADR infra/0001 을 따른다.\n");
+    const { code, stdout } = runInvariants(dir, ["--code-only"]);
+    assert.equal(code, 1);
+    assert.match(stdout, /architecture-review\.md/);
+  });
+});
+
+test("a real source dir merely NAMED like a cache is still scanned when not ignored", () => {
+  withTmp((dir) => {
+    seedCanonicalRepo(dir);
+    // The git path keys off .gitignore, not basenames, so a source dir named
+    // 'build/' stays in scope — the precision the basename fallback can't give.
+    write(dir, "build/tooling/thing.ts", '\nconst x = "ADR infra/0001";\n');
+    const { code, stdout } = runInvariants(dir, ["--code-only"]);
+    assert.equal(code, 1, stdout);
+    assert.match(stdout, /build\/tooling\/thing\.ts/);
+  });
+});
+
+test("a path with spaces survives the authored-file listing", () => {
+  withTmp((dir) => {
+    seedCanonicalRepo(dir);
+    write(dir, "src/my notes/ref.ts", '\nconst x = "ADR infra/0001";\n');
+    const { code, stdout } = runInvariants(dir, ["--code-only"]);
+    assert.equal(code, 1, stdout);
+    assert.match(stdout, /my notes\/ref\.ts/);
+  });
+});
+
+test("rollup checks (c)/(d) use the same narrowed scope as (a)", () => {
+  withTmp((dir) => {
+    seedCanonicalRepo(dir);
+    write(dir, ".gitignore", ".nx/\n");
+    // A stale citation inside generated output is not actionable, so (c) must
+    // not report it either — the two scan sites share one scope by construction.
+    write(dir, ".nx/workspace-data/file-map.json", '{"f":"docs/adr/identity/login/0002-old.md"}\n');
+    const { code, stdout } = runInvariants(dir, ["--removed", "identity/login/0002"]);
+    assert.equal(code, 0, stdout);
+    assert.doesNotMatch(stdout, /file-map\.json/);
+  });
+});
+
+// ── fallback: no git available ────────────────────────────────────────────
+
+test("outside a git repo, the basename EXCLUDES fallback still skips generated trees", () => {
+  withTmp((dir) => {
+    // Deliberately NOT initRepo: exercises the non-git path. Seed by hand since
+    // seedCanonicalRepo git-inits.
+    seedRuleDocs(dir);
+    write(
+      dir,
+      "docs/adr/infra/0001-deploy-topology.md",
+      "# 0001. 배포\n\n## Status\nAccepted (2026-07-02)\n\n## Decision\n단일 리전.\n",
+    );
+    write(dir, ".nx/workspace-data/file-map.json", '{"file":"docs/adr/infra/0001-x.md"}\n');
+    write(dir, "src/x.ts", '\nconst r = "ADR infra/0001";\n');
+    const { code, stdout } = runInvariants(dir, ["--code-only"]);
+    assert.equal(code, 1, stdout);
+    assert.match(stdout, /src\/x\.ts/, "authored ref must fire in the fallback too");
+    assert.doesNotMatch(stdout, /file-map\.json/, ".nx must be pruned by basename");
+  });
+});
+
 test("a code→ADR ref inside a src dir that shares the 'adr' basename is still scanned", () => {
   withTmp((dir) => {
     seedCanonicalRepo(dir);
