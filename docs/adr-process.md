@@ -251,7 +251,7 @@ flowchart TD
 
 ## 5. /adr-impl-review 내부: 적대적 리뷰
 
-이 리뷰의 힘은 에이전트 사이에 무엇을 공유하지 않는지에서 나온다. 세 개의 서브에이전트가 각각 새 컨텍스트에서 돌고, 어떤 리뷰어도 설명 문서나 다른 리뷰어의 결과를 보지 않는다.
+이 리뷰의 힘은 에이전트 사이에 무엇을 공유하지 않는지에서 나온다. 네 개의 서브에이전트(설명자 · 리뷰어 둘 · 리포트 작성자)가 각각 새 컨텍스트에서 돌고, 어떤 리뷰어도 설명 문서나 다른 리뷰어의 결과를 보지 않는다.
 
 ```mermaid
 flowchart TD
@@ -357,10 +357,9 @@ stateDiagram-v2
     Proposed --> Accepted: /adr-impl 테스트 통과
     Accepted --> Proposed: 결정 변경 → 재구현 대기
     Accepted --> Deprecated: 대체 없이 폐기
-    Accepted --> Superseded: 새 ADR로 대체
-    Proposed --> Superseded: 새 ADR로 대체
-    Superseded --> [*]
+    Accepted --> Superseded: 결정 주제가 갈라짐
     Deprecated --> [*]
+    Superseded --> [*]
 
     note right of Accepted
         괄호에는 전이 날짜만 넣는다

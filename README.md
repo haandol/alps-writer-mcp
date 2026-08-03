@@ -48,7 +48,7 @@ Two entry flows, driven by `$skill-name` in Codex or `/skill-name` in Claude Cod
 - **PRD-first** — `/alps-init` → `/feature-to-adr` → `/adr-impl` → `/adr-impl-review` → `/adr-sync`
 - **ADR-only** — `/adr-new` → `/adr-impl` → `/adr-impl-review` → `/adr-sync`
 
-See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash commands, hook behavior, and the mapping file.
+See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash commands, hook behavior, and the mapping file, or the [ADR process overview](./docs/adr-process.md) for the same cycle drawn as diagrams.
 
 ## Features
 
@@ -71,6 +71,7 @@ See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash c
 ## Documentation
 
 - [Usage guide](./docs/usage.md) — development cycle, walkthroughs, slash commands, hook, mapping file
+- [ADR process overview](./docs/adr-process.md) — the whole cycle as eight diagrams, one per command's internals (Korean)
 - [Dependency model](./docs/dependency-model.md) — how PRD → ADR → code stay decoupled (the design core)
 - [MCP server](./docs/mcp-server.md) — run the alps-writer MCP server in other clients, env vars, tool reference
 - [`about-alps.md`](./plugins/alps-writer/templates/alps/about-alps.md) — ALPS format design rationale
