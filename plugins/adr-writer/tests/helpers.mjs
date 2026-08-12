@@ -14,6 +14,7 @@ export const INVARIANTS = path.join(PLUGIN_ROOT, "scripts", "adr-invariants.sh")
 export const HOOK = path.join(PLUGIN_ROOT, "hooks", "surface-adr-context.mjs");
 export const TEMPLATES = path.join(PLUGIN_ROOT, "templates", "adr");
 export const STRUCTURE_LINT = path.join(PLUGIN_ROOT, "scripts", "adr-structure-lint.mjs");
+export const STATUS_TRANSITION = path.join(PLUGIN_ROOT, "scripts", "adr-status-transition.mjs");
 
 // Make a fresh temp dir; caller removes it (or use withTmp).
 export function mkTmp(prefix = "adr-test-") {
@@ -88,6 +89,10 @@ export function runStructureLint(dir, extraArgs = [], { json = true } = {}) {
   const args = [STRUCTURE_LINT, ...extraArgs];
   if (json && !extraArgs.includes("--json")) args.push("--json");
   return runCapture("node", args, dir);
+}
+
+export function runStatusTransition(dir, args) {
+  return runCapture("node", [STATUS_TRANSITION, ...args], dir);
 }
 
 // Run the lint with --json and return {code, ...parsed report}. The default

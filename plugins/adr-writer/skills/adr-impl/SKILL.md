@@ -47,6 +47,14 @@ Implements the specified ADR in code, and once the implementation and tests pass
 
    Once the target ADR is identified, check its current Status — this command handles the `Proposed → Accepted` transition automatically. If an ADR that is already `Accepted` is given as the implementation target, confirm once with the user whether the intent is a partial change / reinforcement, then proceed. At this point, if **the decision itself changed because of a requirement change** (not a mere implementation correction — for the judgment call see `authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"), reflect the new decision in the ADR body as the current state (edit-in-place), revert Status to `Proposed`, and proceed with this implementation. **A request that changes only a requirement value or rule ("max 7 turns → 10 turns", "retention 30 days → 90 days") also falls here** — even though it looks like editing a single constant in the code, a system behavior requirement has changed, so do not touch the code first; update the ADR's requirement contract to the new value first (`authoring-rules.md` "Requirements live in the code and in the ADR") (after the step 5 tests pass, step 6 will auto-promote it back to `Accepted` — `concepts.md` "Automatic transition rules"). If that decision change is **major** (swapping the adopted alternative, reversing a Driver, changing the core algorithm/architecture, a bug fix that changes behavior — `authoring-rules.md` "What to log — minor vs major"), leave a one-line entry in the category's `decision-log.md`. Judge it a supersede **only when the decision topic has branched and the old decision must coexist as a separate record**; in that case create a new ADR with `/adr-new`, leave the old one as `Superseded`, and take that new ADR as the implementation target (a supersede is also major, so log it).
 
+   **Every Status transition in this workflow must use the deterministic status script.** Do not edit a Status value with `apply_patch`, regex replacement, or a search for the first matching string — `.mapping.json` commonly contains many identical `Proposed` or dated `Accepted` values. After updating the ADR decision text, use:
+
+   ```bash
+   node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-status-transition.mjs <target-adr-path> Proposed --summary "<current one-line decision summary>"
+   ```
+
+   The script addresses the mapping record by its exact ADR `path`, requires exactly one match, refuses a pre-existing body/index mismatch, and updates the body and index together.
+
    **Once the target is identified, never go straight to step 3 (planning) under any circumstances. You must perform the step 2 dependency check first.** Whether it is a single ADR or the user picked several at once like `1,2` / `f1, f2`, step 2 is taken without exception.
 
 2. **Dependency check (prerequisite ADR gate) — a mandatory step that cannot be skipped**
@@ -101,8 +109,13 @@ Implements the specified ADR in code, and once the implementation and tests pass
 6. **Automatic Status transition (`Proposed → Accepted`)**
 
    For the detailed policy see `concepts.md` "Automatic transition rules". What this step triggers:
-   - Immediately after the step 5 tests pass, **without asking the user**, change the Status line in the target ADR body to `Accepted (YYYY-MM-DD)`
-   - Update the `status` of the corresponding `adrs[]` record in `.mapping.json` to `Accepted (YYYY-MM-DD)` at the same time (`status` is in lockstep with the body — and update the summary too if the decision changed)
+   - Immediately after the step 5 tests pass, **without asking the user**, run the deterministic transition command:
+
+     ```bash
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-status-transition.mjs <target-adr-path> "Accepted (YYYY-MM-DD)" --summary "<current one-line decision summary>"
+     ```
+
+   - The script updates the Status line in the target ADR body and the `status` of the exact matching `adrs[]` record in `.mapping.json` together. It fails instead of guessing when the path is absent, duplicated, or already inconsistent.
    - If several ADRs in one category were implemented together, update all of them
    - Tell the user about the change in one line ("Updated ADR auth/0003 Status to Accepted")
 
@@ -125,3 +138,4 @@ Implements the specified ADR in code, and once the implementation and tests pass
 - Do not implement a new feature without an ADR.
 - Reflect any decision change discovered during implementation in the ADR before modifying the code.
 - Do not promote an ADR to `Accepted` when tests have not passed — Status is a fact about code behavior, not a declaration of intent.
+- Do not edit ADR Status fields or mapping statuses manually. Always use `adr-status-transition.mjs` with the exact target ADR path.

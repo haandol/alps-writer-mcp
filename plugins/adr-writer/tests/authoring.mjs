@@ -18,7 +18,7 @@
 // deterministic contract changes, this file is the one place to update.
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { write, seedRuleDocs } from "./helpers.mjs";
+import { runStatusTransition, write, seedRuleDocs } from "./helpers.mjs";
 
 // /adr-new step 1 ("매핑 상태 점검") — first run in a repo with no docs/adr:
 // seed the three rule docs from templates/ and an empty mapping skeleton.
@@ -140,22 +140,7 @@ export function adrNew(dir, opts) {
 // after tests pass. Rewrites the value line under ## Status AND the mapping
 // index record's status in lockstep (adr-structure-lint asserts they agree).
 export function promote(dir, adr, date = "2026-07-02", status = `Accepted (${date})`) {
-  const p = path.join(dir, adr);
-  const src = readFileSync(p, "utf8");
-  const out = src.replace(/(##\s+Status\s*\n\s*\n)([^\n]+)/, `$1${status}`);
-  if (out === src) throw new Error(`promote: could not find Status line in ${adr}`);
-  writeFileSync(p, out);
-  // keep the index in lockstep with the body
-  const mp = path.join(dir, "docs/adr/.mapping.json");
-  const m = JSON.parse(readFileSync(mp, "utf8"));
-  let hit = false;
-  for (const entry of Object.values(m.categories || {}))
-    for (const rec of entry.adrs || [])
-      if (rec.path === adr) {
-        rec.status = status;
-        hit = true;
-      }
-  if (!hit) throw new Error(`promote: ${adr} not found in .mapping.json index`);
-  writeFileSync(mp, JSON.stringify(m, null, 2) + "\n");
-  return out;
+  const result = runStatusTransition(dir, [adr, status]);
+  if (result.code !== 0) throw new Error(`promote failed: ${result.stdout}`);
+  return readFileSync(path.join(dir, adr), "utf8");
 }
