@@ -678,3 +678,16 @@ test("the edit-in-place procedure has owners, with the log and Status handling",
   assert.match(sync, /An intended decision change/);
   assert.match(sync, /decision-log/);
 });
+
+test("every automatic Status correction uses the exact-path transition script", () => {
+  for (const skill of ["adr-impl", "adr-sync"]) {
+    const source = read(path.join(ADR_ROOT, "skills", skill, "SKILL.md"));
+    assert.match(source, /adr-status-transition\.mjs/, `${skill} must invoke the status script`);
+    assert.match(source, /exact target ADR path/, `${skill} must address the exact ADR path`);
+    assert.match(
+      source,
+      /Do not edit .*Status|Do not edit ADR Status fields/,
+      `${skill} must forbid manual Status edits`,
+    );
+  }
+});

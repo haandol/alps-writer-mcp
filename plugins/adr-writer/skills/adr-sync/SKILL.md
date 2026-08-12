@@ -61,7 +61,14 @@ For each target ADR:
 
 1. Read the entire ADR body.
 2. Extract the verifiable claims:
-   - **Status** — grep the scope narrowed by "Finding the related code" to confirm what exists in code and auto-correct Status drift (`Accepted` but absent from code → `Proposed`; `Proposed` but code plus tests exist → `Accepted (YYYY-MM-DD)`). For the status semantics and the automatic transition policy see `concepts.md` "Automatic transition rules". **When you correct the body's Status (Accepted↔Proposed drift), update the corresponding adrs[] record's `status` in `.mapping.json` to the same value in lockstep** — the two must always agree (status-index-mismatch). Record the correction under **Fixed** in the step 7 report.
+   - **Status** — grep the scope narrowed by "Finding the related code" to confirm what exists in code and auto-correct Status drift (`Accepted` but absent from code → `Proposed`; `Proposed` but code plus tests exist → `Accepted (YYYY-MM-DD)`). For the status semantics and the automatic transition policy see `concepts.md` "Automatic transition rules". **Every Status correction must use the deterministic transition script with the exact target ADR path**:
+
+     ```bash
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-status-transition.mjs <target-adr-path> "<Proposed or Accepted (YYYY-MM-DD)>"
+     ```
+
+     Do not edit the body Status or a `.mapping.json` status manually with `apply_patch`, regex replacement, or a search for the first matching value. The script updates the exact matching `adrs[]` record and body in lockstep, and refuses an absent, duplicated, or already inconsistent path. Add `--summary "<current one-line decision summary>"` only when the ADR decision changed and the index summary must change with it. Record the correction under **Fixed** in the step 7 report.
+
    - **API endpoints** — the method + path table. Grep routers and handlers.
    - **Error codes** — grep the constants.
    - **Enum / type values** — grep `oneof=...`, validate tags, TS unions.
@@ -70,6 +77,7 @@ For each target ADR:
    - **UI labels and constants** — grep user-facing strings.
    - **Source-of-truth pointers** — whether an external document path such as "see `docs/tables/auth.md` for the schema" still exists and agrees with that file itself.
    - **Related ADR links** — whether they exist and their Status is consistent.
+
 3. Identify implementation-detail bloat — **apply the requirement gate first** (`authoring-rules.md` "The requirement gate and two filters"), set aside everything that passes the gate as not-for-removal, then sweep the body with the two criteria below:
    - **The requirement gate (the do-not-remove line)**: "if this fact were missing, could code rebuilt from the ADR alone violate a requirement?" YES means **keep it** even when it looks obvious in the code — requirement values (limits, cycles, retention, caps, targets), and **non-numeric requirements** (allowed value sets, transition rules, mandatory fields, permissions, visibility, ordering, uniqueness, units — `authoring-rules.md` "Non-numeric requirements"), required validation conditions, and behavior guaranteed on failure. If sync strips requirements in the name of removing bloat, the ADR becomes a formally tidy but empty document and the next implementation loses that contract.
    - **The code-readthrough test** (`concepts.md` "What an ADR covers — the gray zone between business and code"): is a paragraph that failed the gate obvious from reading the related code? If it is, take it out of the ADR (function responsibilities, module dependency graphs, field-type tables, error message wording and UI labels, env var names, pseudocode, and the like).

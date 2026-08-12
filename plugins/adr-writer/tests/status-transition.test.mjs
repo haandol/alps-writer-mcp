@@ -130,3 +130,62 @@ test("status transition refuses duplicate mapping paths instead of guessing", ()
     assert.equal(readFileSync(adrPath, "utf8"), beforeAdr);
   });
 });
+
+test("status transition ignores Status headings inside fenced code blocks", () => {
+  withTmp((dir) => {
+    seedRepo(dir);
+    write(
+      dir,
+      "docs/adr/voicechat/0003-call-mission.md",
+      [
+        "# ADR 0003: Call mission",
+        "",
+        "## Status",
+        "",
+        "Proposed",
+        "",
+        "## Context",
+        "",
+        "```markdown",
+        "## Status",
+        "Example only",
+        "```",
+        "",
+      ].join("\n"),
+    );
+
+    const result = runStatusTransition(dir, [
+      "docs/adr/voicechat/0003-call-mission.md",
+      "Accepted (2026-08-12)",
+    ]);
+
+    assert.equal(result.code, 0, result.stdout);
+    const body = readFileSync(path.join(dir, "docs/adr/voicechat/0003-call-mission.md"), "utf8");
+    assert.match(body, /## Status\n\nAccepted \(2026-08-12\)/);
+    assert.match(body, /```markdown\n## Status\nExample only\n```/);
+  });
+});
+
+test("status transition rejects summaries that violate the mapping schema", () => {
+  withTmp((dir) => {
+    seedRepo(dir);
+    const mappingPath = path.join(dir, "docs/adr/.mapping.json");
+    const adrPath = path.join(dir, "docs/adr/voicechat/0003-call-mission.md");
+    const beforeMapping = readFileSync(mappingPath, "utf8");
+    const beforeAdr = readFileSync(adrPath, "utf8");
+
+    for (const summary of ["two\nlines", "x".repeat(241)]) {
+      const result = runStatusTransition(dir, [
+        "docs/adr/voicechat/0003-call-mission.md",
+        "Accepted (2026-08-12)",
+        "--summary",
+        summary,
+      ]);
+
+      assert.equal(result.code, 2);
+      assert.match(result.stdout, /--summary must be one line and at most 240 characters/);
+      assert.equal(readFileSync(mappingPath, "utf8"), beforeMapping);
+      assert.equal(readFileSync(adrPath, "utf8"), beforeAdr);
+    }
+  });
+});

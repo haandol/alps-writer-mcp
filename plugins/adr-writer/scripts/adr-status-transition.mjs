@@ -2,7 +2,9 @@
 
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { classifyStatus } from "./adr-lint-lib.mjs";
+import { classifyStatus, parseHeadings } from "./adr-lint-lib.mjs";
+
+const UNSAFE_SUMMARY_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 
 function usage(message) {
   if (message) console.error(`Error: ${message}`);
@@ -48,25 +50,32 @@ function normalizeAdrPath(root, adrArg) {
 
 function findStatusLine(source, adrPath) {
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
-  const lines = source.split(/\r?\n/);
-  const headings = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trim() === "## Status") headings.push(i);
-  }
+  const { lines, heads } = parseHeadings(source);
+  const headings = heads.filter(
+    (heading) => heading.level === 2 && heading.text.trim() === "Status",
+  );
   if (headings.length !== 1) {
     throw new Error(
       `${adrPath}: expected exactly one "## Status" heading, found ${headings.length}`,
     );
   }
 
-  for (let i = headings[0] + 1; i < lines.length; i++) {
+  const statusHeading = headings[0];
+  const nextHeading = heads.find(
+    (heading) => heading.line > statusHeading.line && heading.level <= statusHeading.level,
+  );
+  const sectionEnd = nextHeading?.line ?? lines.length;
+  for (let i = statusHeading.line + 1; i < sectionEnd; i++) {
     if (lines[i].trim() === "") continue;
-    if (lines[i].trim().startsWith("#")) {
-      throw new Error(`${adrPath}: Status value is missing before the next heading`);
-    }
     return { lines, index: i, value: lines[i].trim(), eol };
   }
-  throw new Error(`${adrPath}: Status value is missing`);
+  throw new Error(`${adrPath}: Status value is missing before the next heading`);
+}
+
+function validateSummary(summary) {
+  if (summary.length > 240 || UNSAFE_SUMMARY_RE.test(summary)) {
+    usage("--summary must be one line and at most 240 characters");
+  }
 }
 
 function findMappingRecord(mapping, adrPath) {
@@ -107,6 +116,7 @@ function main() {
   if (!classifyStatus(status).ok) {
     usage(`invalid ADR status: ${status}`);
   }
+  if (summary !== undefined) validateSummary(summary);
 
   const adrPath = normalizeAdrPath(root, adrArg);
   const adrFile = path.join(root, ...adrPath.split("/"));
