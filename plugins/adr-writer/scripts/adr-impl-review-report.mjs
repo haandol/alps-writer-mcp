@@ -3,10 +3,11 @@
 // self-contained HTML review page, and collect the user's per-finding
 // decisions back as feedback.json.
 //
-// This is the "show the report, get feedback as a file" half of
+// This is the full-mode "show the report, get feedback as a file" half of
 // /adr-impl-review. Independent necessity and sufficiency reviewers produce
-// evidence-backed findings; the main session serializes them to JSON and hands
-// it here. We turn that JSON into ONE standalone HTML file — no server, no
+// evidence-backed findings with reviewMode: "full"; the main session serializes
+// them to JSON and hands it here. We turn that JSON into ONE standalone HTML
+// file — no server, no
 // browser automation, no python. The page frames each finding as a docket
 // item: the ADR decision (the intended design) set against the code as built,
 // with a direction indicator that says which side is authoritative — so the

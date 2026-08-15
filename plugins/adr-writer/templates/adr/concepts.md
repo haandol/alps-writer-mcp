@@ -18,7 +18,7 @@ PRD, ADR, and code are not three documents about three topics. They are **the sa
 Two failure modes, and both cost the same thing:
 
 - **Detail leaking up from a lower level into the ADR** (signatures, field types, pool sizes, pseudocode) — now the ADR cannot be trusted alone, because it asserts things the code may already have changed. The reader has to open the code to learn which half is still true, so the level stopped answering its question.
-- **A requirement leaking out of the ADR** ("the code has the number, so drop it") — now **no level holds it.** The code shows the value but not that it is a contract; the PRD is too coarse to name it. This one is more expensive, and it is why [the requirement gate](#the-requirement-gate-comes-before-any-exclusion-filter) is asked before any exclusion filter.
+- **A requirement leaking out of the ADR** ("the PRD or code has the number, so drop it") — code shows enforcement and the PRD shows user intent, but neither explains the admitted architectural contract and rationale. This one is more expensive, and it is why [the requirement gate](#the-requirement-gate-comes-before-any-exclusion-filter) is asked before any exclusion filter.
 
 So the two are one test, asked in both directions:
 
@@ -26,9 +26,9 @@ So the two are one test, asked in both directions:
 
 Note that the ADR row's "7-day" stays intact rather than blurring into "a short window" — that value is the ADR's own resolution, so it stays verbatim, while the tuning values realizing the same decision (pool sizes, backoff) sit one level down and stay out.
 
-**Never record the same information at two levels** — a duplicate is two statements that can disagree, and a reader cannot tell which one went stale. The one deliberate exception is a requirement, which lives as a contract in the ADR and as enforcement in the code; those are [different things, not a duplicate](#requirements-live-in-both-the-adr-and-the-code--and-the-adr-comes-first).
+**Never maintain the same information as two independent authorities.** The controlled PRD → ADR handoff is a deliberate overlap: the PRD states the reproducible requirement in the user's problem context, and an admitted ADR carries the exact contract at architectural resolution. The handoff direction is one-way, and the importer reconciles later PRD changes rather than silently treating either copy as current. The other deliberate overlap is a requirement contract in the ADR and its enforcement in code; those are [different things, not a duplicate](#requirements-live-in-both-the-adr-and-the-code--and-the-adr-comes-first).
 
-Rule: never copy ALPS's user stories or acceptance criteria into an ADR — per [the dependency model](#dependencies-run-one-way-references-are-written-in-neither-direction) below, an ADR absorbs ALPS's motivation but never points at the PRD (adr-writer does not reference ALPS). Design token values go to the design docs; function signatures and file paths go to the code and its docstrings.
+Rule: never copy ALPS's user stories or acceptance-criteria prose into an ADR. Transfer only admitted motivation, decision pressures, and requirement contracts, without a PRD reference; adr-writer remains standalone. Design token values go to the design docs; function signatures and file paths go to the code and its docstrings.
 
 ### Named applications of the same test
 
@@ -214,4 +214,4 @@ An ADR body is **a requirements and architecture document describing the current
 
 **Three layers preserve different things**: the ADR body = current state / `decision-log.md` = the timeline of major changes / Git = the verbatim diff. The log is a **convention file** rather than an ADR, so it is not registered in `.mapping.json` and the deterministic harness does not check it — for the recording criteria and format see [`authoring-rules.md` "Decision log (decision-log.md)"](./authoring-rules.md#decision-log-decision-logmd), and for the directory and non-indexing policy see [`structure.md`](./structure.md#decision-log-decision-logmd--a-convention-file-not-registered-in-the-mapping).
 
-<!-- adr-writer:rules-version 0.6.2 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.6.3 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

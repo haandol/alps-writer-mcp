@@ -86,6 +86,11 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /refactor-safe-local-duplicate/);
   assert.match(out, /refactor-protected-state-transition/);
   assert.match(out, /refactor-no-subagent-proposal-only/);
+  assert.match(out, /feature-handoff-zero-or-many/);
+  assert.match(out, /impl-blocks-proposed-prerequisite/);
+  assert.match(out, /hook-admission-routing/);
+  assert.match(out, /alps-batch-preserves-mandatory-nfr/);
+  assert.match(out, /impl-review-selects-risk-mode/);
 });
 
 // The prompt has to carry the SHIPPED instruction text. If a scenario ever
@@ -101,7 +106,14 @@ test("prompts embed the real skill/agent text, not a paraphrase", async () => {
     const prompt = await s.build(dir);
     assert.ok(prompt.length > 5000, `${s.name}: prompt is too short to hold a real skill body`);
     // a distinctive line from the shipped docs, not something a summary would coin
-    assert.match(prompt, /abstraction ladder|requirement gate|Regeneration|decision ledger/i);
+    if (s.name === "alps-batch-preserves-mandatory-nfr") {
+      assert.match(prompt, /Atomic is the default|top-3 focus set|separately labeled draft/i);
+    } else {
+      assert.match(
+        prompt,
+        /abstraction ladder|requirement gate|admission gate|Regeneration|decision ledger/i,
+      );
+    }
     // and the machine-readable tail the scorer depends on
     assert.match(prompt, /EVAL-VERDICT/);
     assert.match(prompt, /EVAL-FINDINGS/);
@@ -266,6 +278,87 @@ ${finding}
     const { code, out } = runEvals(["--only", name], stubAgent(reply));
     assert.equal(code, 0, out);
     assert.doesNotMatch(out, /✗/, `${name} compliant classification failed:\n${out}`);
+  }
+});
+
+test("critical workflow scorers accept compliant classifications and reject collapsed ones", () => {
+  const cases = [
+    {
+      name: "feature-handoff-zero-or-many",
+      good: `SDK 교체는 ADR이 아니다. placeholder ADR도 만들지 않는다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+ZERO_ADR | F1 SDK와 credential 교체는 구현 디테일
+ADR_CANDIDATE | F2 export는 30일 뒤 삭제
+ADR_CANDIDATE | F2 ArchiveCo와 24시간 fallback 정책
+FEATURE_DEP_ONLY | F2가 F1 구현을 재사용하지만 ADR dependsOn은 만들지 않음
+=== EVAL-END ===`,
+      bad: `=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+ADR_CANDIDATE | F1 AWS SDK v3 선택
+=== EVAL-END ===`,
+    },
+    {
+      name: "impl-blocks-proposed-prerequisite",
+      good: `identity/login이 Accepted가 된 뒤 진행해야 한다. checkout-only 우회 구현은 허용하지 않는다.
+=== EVAL-VERDICT: BLOCK ===
+=== EVAL-FINDINGS ===
+BLOCKED | identity/login 선행 ADR이 Proposed라 downstream 구현 중단
+=== EVAL-END ===`,
+      bad: `checkout-only로 우회 구현을 허용한다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+NONE
+=== EVAL-END ===`,
+    },
+    {
+      name: "hook-admission-routing",
+      good: `=== EVAL-VERDICT: A=EXEMPT, B=ADR_FIRST ===
+=== EVAL-FINDINGS ===
+EXEMPT | SDK와 credential adapter 교체는 코드 수준
+ADR_FIRST | 업로드 quota를 5에서 3으로 바꾸는 요구사항 변경
+=== EVAL-END ===`,
+      bad: `=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+ADR_FIRST | SDK 교체를 ADR로 작성
+=== EVAL-END ===`,
+    },
+    {
+      name: "alps-batch-preserves-mandatory-nfr",
+      good: `=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+BATCH_ALLOWED | 완전한 입력과 명시적 요청으로 batch 승인
+SEPARATE_SAVE_UNIT | 각 section과 7.1, 7.2 Feature를 별도 저장
+FOCUS_SET | 선택 NFR 중 상위 3개를 집중 항목으로 표시
+MANDATORY_NFR | 결제 데이터를 저장하지 않음, GDPR 삭제는 30일 이내, WCAG 2.2 AA, 정산 API 99.9% 가용성
+=== EVAL-END ===`,
+      bad: `=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+FOCUS_SET | NFR은 최대 3개이므로 WCAG를 삭제
+=== EVAL-END ===`,
+    },
+    {
+      name: "impl-review-selects-risk-mode",
+      good: `=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+STANDARD | A private local helper consolidation; public API unchanged
+FULL | B retention 30 to 90 days and public API change
+=== EVAL-END ===`,
+      bad: `=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+STANDARD | B public API retention change
+=== EVAL-END ===`,
+    },
+  ];
+
+  for (const { name, good, bad } of cases) {
+    const goodRun = runEvals(["--only", name], stubAgent(good));
+    assert.equal(goodRun.code, 0, goodRun.out);
+    assert.doesNotMatch(goodRun.out, /✗/, `${name} rejected a compliant result:\n${goodRun.out}`);
+
+    const badRun = runEvals(["--only", name], stubAgent(bad));
+    assert.equal(badRun.code, 0, badRun.out);
+    assert.match(badRun.out, /✗/, `${name} scorer failed to reject the collapsed behavior`);
   }
 });
 

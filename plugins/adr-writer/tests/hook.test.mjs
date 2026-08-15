@@ -133,16 +133,13 @@ test("directive always carries the ADR-first cycle framing", () => {
 // of size — the earlier wording (a "behavior or structural change" trigger, "simple refactoring"
 // as the exemption) invited the model to treat a large interface-level refactor
 // as in-scope.
-test("directive exempts refactoring of any size, but not decision changes", () => {
+test("directive exempts behavior-preserving refactoring, but not decision changes", () => {
   withTmp((dir) => {
     write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
     const ctx = runHook(dir);
 
-    assert.match(ctx, /Refactoring is exempt too/);
-    assert.match(ctx, /even large ones, and even those that change interfaces or module structure/);
-    assert.match(ctx, /planning step/);
-    // The escape hatch: a "refactor" that changes a decision is not a refactor.
-    assert.match(ctx, /alters the decision itself/);
+    assert.match(ctx, /behavior-preserving refactoring of any size/);
+    assert.match(ctx, /changes the decision/);
     // The trigger must not name plain structural change, or it would re-capture
     // the very refactors the next line exempts.
     assert.doesNotMatch(ctx, /behavior or structural change/);
@@ -155,13 +152,12 @@ test("directive applies the admission gate before sending changes into the ADR c
     write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
     const ctx = runHook(dir);
 
-    assert.match(ctx, /Apply the ADR admission gate/);
+    assert.match(ctx, /Apply the ADR admission gate before code changes/);
     assert.match(ctx, /requirement contract, domain invariant, system\/data\/security boundary/);
     assert.match(ctx, /bug fix is exempt when it restores already intended behavior/);
-    assert.match(ctx, /Replaceable implementation choices are exempt/);
-    assert.match(ctx, /GPT-5\.6 through Amazon Bedrock/);
-    assert.match(ctx, /Bedrock SDK or credential\/auth adapter.*implementation detail/);
-    assert.match(ctx, /If only a replaceable implementation means changes, do not touch the ADR/);
+    assert.match(ctx, /replaceable implementation choices/i);
+    assert.match(ctx, /fix the ADR before the code/);
+    assert.match(ctx, /Proposed prerequisite blocks downstream implementation/);
     assert.doesNotMatch(ctx, /Bug fixes, lint\/formatting/);
   });
 });
@@ -173,8 +169,20 @@ test("directive makes deep adr-sync finding-driven rather than mandatory", () =>
 
     assert.match(ctx, /implementation-fact mismatch/);
     assert.match(ctx, /broad refactor or manual ADR edit/);
-    assert.match(ctx, /\/adr-sync --quick is optional/);
+    assert.match(ctx, /targeted structure checks and the selected implementation-review mode/);
     assert.doesNotMatch(ctx, /When finished, run \/adr-sync/);
+  });
+});
+
+test("directive stays compact and keeps implementation evidence out of ADR prose", () => {
+  withTmp((dir) => {
+    write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
+    const ctx = runHook(dir);
+    const staticPart = ctx.slice(0, ctx.indexOf("--- BEGIN UNTRUSTED"));
+    assert.ok(staticPart.length < 3_500, `static directive too large: ${staticPart.length}`);
+    assert.match(ctx, /Test and verification output remains implementation evidence/);
+    assert.match(ctx, /Folder-level ownership paths are allowed/);
+    assert.doesNotMatch(ctx, /Strengthen the ADR's Consequences.*test and verification results/);
   });
 });
 
@@ -260,8 +268,9 @@ test("mapping snapshot caps categories and ADR records", () => {
     }
     write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories }));
     const ctx = runHook(dir);
-    assert.match(ctx, /omitted 20 categories and 120 ADR records due to hook limits/);
-    assert.ok(ctx.length < 20_000, `hook context unexpectedly large: ${ctx.length}`);
+    assert.match(ctx, /snapshot truncated|omitted 20 categories and 120 ADR records/);
+    assert.match(ctx, /read the full docs\/adr\/\.mapping\.json before deciding/);
+    assert.ok(ctx.length < 12_000, `hook context unexpectedly large: ${ctx.length}`);
   });
 });
 

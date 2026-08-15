@@ -14,7 +14,7 @@ const server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.6.2" },
+  { name: "alps-writer", version: "0.6.3" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 
@@ -32,7 +32,7 @@ Keywords: PRD, ALPS, 기획서, 기획 문서, 제품 요구사항, 제품 스�
 <WORKFLOW>
 1. init_alps_document() or load_alps_document()
 2. get_alps_overview() - MUST call first to get conversation guide
-3. Author the sections ONE at a time in this dependency-respecting order: 1, 2, 3, 4, 6, 5, 7, 8, 9.
+3. Use atomic confirmation by default. Batch confirmation is allowed only when the user explicitly requests it or supplies a complete structured source covering multiple sections. Author in this dependency-respecting order: 1, 2, 3, 4, 6, 5, 7, 8, 9.
    (Section numbering is unchanged — Section 5 is Design, Section 6 is Requirements. Only the questioning order differs: author Requirements (6) before Design (5), because Design reuses the Feature IDs defined in Section 6.1.)
    For each section:
    a. get_alps_section_guide(N)
@@ -41,19 +41,17 @@ Keywords: PRD, ALPS, 기획서, 기획 문서, 제품 요구사항, 제품 스�
    d. Print the completed section and get explicit user confirmation
    e. save_alps_section(section, subsection_id, title, content) — all four arguments; subsection_id and title MUST match the section's XML template — only AFTER confirmation
    f. Move to the next section only after this one is confirmed
-4. Section 7 (Feature-Level Specification) is the exception that needs EXTRA care:
-   each Feature subsection (7.1, 7.2, ...) is confirmed and saved INDIVIDUALLY.
-   Never present, confirm, or save multiple Features in one batch — walk through
-   every 7.x one by one, even when they look small or similar.
+4. In batch mode, keep every section and Section 7 Feature as a separately labeled
+   approval unit and persist each with its own save_alps_section call. Never merge,
+   skip, or infer a Feature.
 5. export_alps_markdown() for final output
 </WORKFLOW>
 
 <RULES>
 - MUST call get_alps_overview() first to get detailed conversation guide
-- NEVER generate multiple sections at once
 - NEVER proceed without user confirmation
 - ALWAYS confirm progress at the SECTION level — do not skip a section without the user seeing and approving it
-- For Section 7, confirm EVERY Feature subsection (7.x) individually. Do not skim past Features in bulk; each one is a separate confirmation step.
+- Batch approval requires explicit opt-in or a complete structured source; each section and Feature remains a separate save unit.
 </RULES>`,
   },
 );

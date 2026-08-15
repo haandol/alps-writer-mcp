@@ -72,9 +72,9 @@ flowchart TD
     CODE -->|"/adr-sync"| SYNC
 ```
 
-Each ALPS feature becomes one or more ADRs; each ADR drives implementation; drift between code and ADR is detected and repaired. ALPS sits at the top of this chain — the cleaner it is, the cleaner everything downstream.
+Each ALPS feature produces zero, one, or several ADRs according to the admission gate; each ADR drives implementation; drift between code and ADR is detected and repaired. ALPS sits at the top of this chain — the cleaner it is, the cleaner everything downstream.
 
-The chain is a one-way dependency (PRD → ADR → code): a change to ALPS should propagate forward to ADRs and code, but the reverse never happens. None of the three artifacts references another in its own body — `docs/adr/.mapping.json` is the ADR index (category → ADRs) and stores no PRD reference (adr-writer is standalone), and the code an ADR governs is found by searching the repo, not stored. `/feature-to-adr` imports each Section 7 feature into an ADR **once**; after that the decision is owned at the ADR level and ALPS is no longer consulted. If the PRD later changes, carry the change into the affected ADR directly (edit it, or supersede it with a new ADR) rather than re-importing — the ADR, not the PRD, is what code is built from.
+The chain is a one-way dependency (PRD → ADR → code): a change to ALPS may propagate forward to ADRs and code, but the reverse never happens. None of the three artifacts references another in its own body — `docs/adr/.mapping.json` is the ADR index (category → ADRs) and stores no PRD reference (adr-writer is standalone), and the code an ADR governs is found by searching the repo, not stored. Re-running `/feature-to-adr` compares current Section 7 contracts with existing ADRs, reports differences, and asks the user whether a PRD change is intended before routing the ADR-first update. ADRs remain authoritative for implementation; the importer owns reconciliation without making adr-writer depend on ALPS.
 
 ## Further reading
 

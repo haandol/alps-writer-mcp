@@ -585,10 +585,7 @@ test("the per-turn directive treats a requirement-value change as in-scope", () 
   // the ordering the directive must enforce
   assert.match(hook, /fix the ADR before the code/);
   // tuning values stay exempt, so the directive does not swallow every constant
-  assert.match(
-    hook,
-    /tuning value absent from the ADR[^"]*is implementation discretion and therefore exempt/,
-  );
+  assert.match(hook, /Keep replaceable libraries, SDKs, adapters, tuning values[^"]*in code/);
 });
 
 test("the hook command accepts either Codex or Claude plugin-root variables", () => {
@@ -662,20 +659,23 @@ test("every stage that filters an ADR body names the requirement-value rule", ()
   // the ALPS-side importer must hand the numbers over instead of summarizing
   assert.match(
     read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md")),
-    /Requirement contract material/,
+    /requirement values and non-numeric rules verbatim with their basis/,
   );
 });
 
-test("feature-to-adr keeps argument-scoped conversion dependency-closed", () => {
+test("feature-to-adr separates feature order from zero-to-many ADR decisions", () => {
   const importer = read(
     path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md"),
   );
 
-  assert.match(importer, /walk its 6\.3 prerequisites transitively/);
-  assert.match(importer, /dependency-closed set in topological order/);
-  assert.match(importer, /Never persist a dangling `dependsOn`/);
-  assert.match(importer, /already has a mapping entry or was created earlier/);
-  assert.doesNotMatch(importer, /single-feature run the dangling case above is normal/);
+  assert.match(importer, /zero, one, or several ADRs/);
+  assert.match(importer, /feature implementation order/);
+  assert.match(importer, /not copied wholesale into ADR `dependsOn`/);
+  assert.match(importer, /Do not silently exclude a feature because its category already exists/);
+  assert.match(importer, /PRD contract changed/);
+  assert.match(importer, /If there are zero admitted decisions/);
+  assert.match(importer, /Never create a placeholder ADR/);
+  assert.match(importer, /decision prerequisites/);
 });
 
 test("alps-init resumes from status in the dependency-respecting section order", () => {
@@ -686,6 +686,26 @@ test("alps-init resumes from status in the dependency-respecting section order",
   assert.match(init, /first section in that order that is not `✅ Written`/);
   assert.match(init, /Do not reopen or re-confirm a completed unchanged section/);
   assert.match(init, /user requests a full review/);
+});
+
+test("alps-init defaults to atomic confirmation but supports explicit batch approval", () => {
+  const init = read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "alps-init", "SKILL.md"));
+  const nfr = read(path.join(PLUGINS_ROOT, "alps-writer", "src", "guides", "06.md"));
+  const feature = read(path.join(PLUGINS_ROOT, "alps-writer", "src", "guides", "07.md"));
+
+  assert.match(init, /Atomic is the default/);
+  assert.match(init, /Batch is opt-in/);
+  assert.match(init, /complete structured source/);
+  assert.match(init, /separately labeled draft/);
+  assert.match(init, /separate.*save_alps_section/s);
+  assert.match(feature, /Batch approval is allowed only/);
+  assert.match(feature, /separately labeled/);
+  assert.match(nfr, /top-3 focus set/);
+  assert.match(
+    nfr,
+    /Preserve every mandatory security, privacy, regulatory, accessibility, contractual/,
+  );
+  assert.doesNotMatch(nfr, /Maximum 3 non-functional requirements/);
 });
 
 // Section 7 is where a requirement value first enters the pipeline. If the guide

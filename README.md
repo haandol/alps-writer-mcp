@@ -9,7 +9,7 @@ A Codex and Claude Code **marketplace** that ships two independent plugins for s
 | **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
 | **`adr-writer`** (ADR)  | ADR-driven development: author, implement, adversarially review, and sync; an ADR-first hook runs on every turn.                 | nothing — fully standalone       |
 
-The two are split so that **adr-writer never references ALPS** — once a feature is imported, the ADR lifecycle is entirely independent of any PRD. The only coupling is one-way (`alps-writer → adr-writer`), via the `/feature-to-adr` bridge.
+The two are split so that **adr-writer never references ALPS**. The only coupling is one-way (`alps-writer → adr-writer`): `/feature-to-adr` discovers zero, one, or several durable decisions per feature and reconciles PRD contract changes before delegating ADR work.
 
 ## What is ALPS?
 
@@ -57,10 +57,10 @@ See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash c
 **alps-writer (PRD)**
 
 - 9-section ALPS (PRD) template with structured XML templates and conversation guides
-- Interactive Q&A workflow — AI asks focused questions, never auto-generates
+- Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
-- **ALPS → ADR bridge** — `/feature-to-adr` imports Section 7 features into ADRs by delegating to adr-writer's `/adr-new`
+- **ALPS → ADR bridge** — `/feature-to-adr` discovers `0..N` decisions per Section 7 feature, reconciles existing contracts, and delegates each new decision to `/adr-new`
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client (MCP server only)
 
 **adr-writer (ADR)**
@@ -68,7 +68,7 @@ See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash c
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
 - **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
-- **Adversarial implementation review** — explain the diff for a junior, independently challenge change necessity and behavioral sufficiency, run targeted tests, and generate a Mermaid-based repair guide
+- **Risk-based implementation review** — localized changes use a decision ledger, isolated sufficiency pass, and targeted tests; protected-surface changes add the human gate, independent necessity/sufficiency reviews, and a Mermaid repair guide
 - **ADR-first hook** — every user turn re-injects the admission-aware ADR directive + current `docs/adr/.mapping.json` snapshot, so the agent checks only ADR-worthy changes before coding
 - Fully standalone — no ALPS PRD required
 

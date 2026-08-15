@@ -64,6 +64,7 @@ sequenceDiagram
 
 function validFindings(dir) {
   return {
+    reviewMode: "full",
     adr: "docs/adr/streaming/0001.md",
     verdict: "FIX_REQUIRED",
     explanation: path.join(dir, "explanation.md"),
@@ -90,6 +91,29 @@ function validFindings(dir) {
       },
     ],
   };
+}
+
+function validStandardReport() {
+  return `# ADR implementation review
+
+## Review mode
+standard — localized implementation reinforcement
+
+## Scope
+src/parser.mjs
+
+## Decision ledger
+- Existing parsing behavior remains unchanged: accounted for by parser tests
+
+## Findings
+None
+
+## Tests
+node --test test/parser.test.mjs — PASS
+
+## Review limits
+One isolated sufficiency pass; no protected surface changed.
+`;
 }
 
 test("review artifact validator accepts a self-contained junior repair guide", () => {
@@ -147,5 +171,37 @@ test("review artifact validator requires internally consistent review metrics", 
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /unverifiedRiskCount is 1, expected 0/);
+  });
+});
+
+test("review artifact validator accepts concise standard-mode artifacts without Mermaid or explanation", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
+    const findings = validFindings(dir);
+    findings.reviewMode = "standard";
+    findings.verdict = "PASS";
+    findings.findings = [];
+    findings.metrics.sufficiencyFindingCount = 0;
+    delete findings.explanation;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 0, result.stderr);
+  });
+});
+
+test("standard-mode artifacts reject necessity findings and missing ledger headings", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "implementation-review.md"), "# ADR implementation review\n");
+    const findings = validFindings(dir);
+    findings.reviewMode = "standard";
+    findings.metrics.necessityFindingCount = 1;
+    delete findings.explanation;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /necessityFindingCount must be 0/);
+    assert.match(result.stderr, /missing: ## Decision ledger/);
   });
 });

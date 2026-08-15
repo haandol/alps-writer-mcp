@@ -75,9 +75,14 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   const finalReviewSkill = read("skills/adr-impl-review/SKILL.md");
   assert.match(finalReviewSkill, /Report-only/);
   assert.match(finalReviewSkill, /This command itself remains report-only/);
-  assert.match(finalReviewSkill, /full pre-promotion completion review/);
+  assert.match(finalReviewSkill, /selected pre-promotion completion review/);
+  assert.match(finalReviewSkill, /Select the review mode/);
+  assert.match(finalReviewSkill, /Use `standard` only for localized implementation/);
+  assert.match(finalReviewSkill, /Use `full` when any of these surfaces changes/);
+  assert.match(finalReviewSkill, /In full mode, the necessity and sufficiency reviews run/);
+  assert.match(finalReviewSkill, /explicit chat rulings in standard mode/);
+  assert.match(finalReviewSkill, /do not require HTML or `feedback\.json`/);
   assert.match(finalReviewSkill, /elapsed time, per-perspective finding counts/);
-  assert.match(finalReviewSkill, /A future light path requires representative history/);
 });
 
 test("no maintenance command bypasses the final review when promoting Proposed", () => {
