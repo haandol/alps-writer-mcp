@@ -1,5 +1,16 @@
 {
   "categories": {
+    "adr-authoring/current-state": {
+      "feature": "Current-state ADR authoring",
+      "adrs": [
+        {
+          "path": "docs/adr/adr-authoring/current-state/0001-record-only-the-final-decision-state.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "ADR 본문은 현재 유효한 결정과 요구사항을 직접 서술하고 선택 비교와 주요 변경 이력은 전용 위치에 기록한다"
+        }
+      ],
+      "dependsOn": []
+    },
     "alps-authoring/c4-architecture": {
       "feature": "C4 architecture diagrams",
       "adrs": [

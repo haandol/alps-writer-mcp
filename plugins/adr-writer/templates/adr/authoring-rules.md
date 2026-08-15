@@ -275,6 +275,25 @@ Reached from ②/③ of [edit-in-place vs supersede](#changing-an-adr--edit-in-p
 - The log holds **only links pointing to current ADRs** and never references code or the PRD — log → ADR, one way. An ADR body (Related included) does not link back to the log.
 - **Format lives in the seed file [`decision-log.template.md`](./decision-log.template.md)** (copied alongside into `docs/adr/`). On a category's first major transition, copy it to `docs/adr/<category>/decision-log.md` and fill in `<category>` and the entry — do not rewrite the format from memory. The `current ADR` pointer is the **only** ADR reference and always points at the live path; keeping old numbers out of the prose means a later `/adr-rollup` renumber requires fixing only that one line, and the rollup's stale-citation finder will not flag the log.
 
+## Final-state wording — record the result, not the transition
+
+When an ADR is created or edited, write the currently valid result as a direct assertion. Do not make the reader reconstruct it from the replaced name, the migration step, or a contrast with the previous choice.
+
+| Transition narration                                                           | Final-state assertion                 |
+| ------------------------------------------------------------------------------ | ------------------------------------- |
+| "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만 사용한다." | "이벤트 이름은 `CURRENT_EVENT`다."    |
+| "타임아웃을 10초에서 30초로 변경한다."                                         | "타임아웃은 30초다."                  |
+| "The service uses the primary queue rather than the legacy queue."             | "The service uses the primary queue." |
+
+Apply this rewrite to the current-state parts of Context, Decision, the requirement contract, Consequences, diagrams, and the matching `.mapping.json` summary:
+
+1. Identify the actor or subject and the currently valid behavior, value, state, or identifier.
+2. State that result directly in the present tense.
+3. Remove replaced identifiers, previous values, migration steps, and contrast carriers such as "instead of", "rather than", "no longer", "without mixing", "기존 ~ 대신", and "~와 혼용하지 않고" when they add no current contract.
+4. Keep the selection rationale in Decision Drivers and Alternatives. Put a major old → new transition in `decision-log.md`.
+
+This is not a blanket ban on negative sentences. A prohibition that the current system must still enforce is a requirement and survives the rewrite: "PII never leaves the region" and "a cancelled order never moves to shipping" state present contracts. Apply the [requirement gate](#the-requirement-gate-and-two-filters) before deleting any negative wording. The test is whether the earlier term or comparison changes what rebuilt code must honor today; if not, it is history or drafting residue, not ADR content.
+
 ## Prose style — say it in the fewest words, in the active voice
 
 An ADR is read under time pressure, by someone deciding whether to trust it. Padding costs the reader attention they would otherwise spend on the decision, and the passive voice hides **who acts**, which is exactly what a decision record exists to state. These rules are about how a sentence is written; they never license dropping content — [requirements](#requirements--what-the-result-must-honor) survive regardless of length.
@@ -283,7 +302,7 @@ An ADR is read under time pressure, by someone deciding whether to trust it. Pad
 - **Cut the words that carry no information.** Hedges ("basically", "essentially", "it is worth noting that"), throat-clearing openers ("In order to achieve this, we decided that we would"), and doubled phrasing ("각각의 개별", "future roadmap ahead"). "In order to" → "to". "Has the ability to" → "can". "At this point in time" → "now".
 - **One idea per sentence.** A sentence with three clauses chained by "and" is three sentences. This is what makes an ADR skimmable — a reader scanning for the decision should not have to parse a subordinate clause to find it.
 - **Prefer the concrete noun to the abstract one.** "The retry budget" beats "the relevant mechanism"; "the checkout handler" beats "the appropriate component." Vague nouns are where a decision quietly stops being verifiable.
-- **State the decision, do not narrate the deciding.** "Payments use an idempotency key" — not "we discussed several options and eventually came to the conclusion that payments should use an idempotency key." The rationale belongs in the Decision Drivers and the alternatives comparison, in that compressed form.
+- **State the decision, do not narrate the deciding or the transition.** "Payments use an idempotency key" — not "we discussed several options and eventually concluded that…" and not "payments no longer use the previous key strategy." The rationale belongs in Decision Drivers and Alternatives; major transition history belongs in `decision-log.md`.
 - **Never trade completeness for brevity.** Deleting a requirement value, a permission rule, or a fallback policy to shorten a paragraph is a defect, not a style improvement. Compress the wording; keep the content. Prose padding is noise, but a missing contract is a wrong product.
 
 The test: **if a sentence can lose a word without losing meaning, it should.** But if losing the word loses a constraint, it was not padding.
@@ -319,7 +338,7 @@ For the PR reviewer or the author before merge.
 - [ ] **Non-numeric requirements survived too** — allowed value sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units and formats, forbidden transitions were not dropped as "obvious from the code" ([non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering))
 - [ ] **No tuning values** — values a developer may change without violating a requirement (pool sizes, backoff, cache TTL, worker counts) are absent
 - [ ] **Code-readthrough test** — for every paragraph, asking "is this obvious from reading the code this ADR governs?", nothing obvious remains (the code is the source of truth for those). Items that passed the requirement gate stay even when obvious
-- [ ] **Current-state narration** — no evolution narration ("originally it was", "added in v2", "changed from before") remains; evolution history belongs in [`decision-log.md`](#decision-log-decision-logmd), not the body
+- [ ] **Final-state wording** — the body and `.mapping.json` summary state the current result directly. No evolution narration ("originally it was", "added in v2", "changed from before") or comparison residue ("not X but Y", "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만") remains outside Alternatives or [`decision-log.md`](#decision-log-decision-logmd). Current prohibitions and forbidden transitions that passed the requirement gate remain intact
 - [ ] **Prose style** — active voice by default (the actor is named where it matters), no hedges or throat-clearing, one idea per sentence, concrete nouns over vague ones ([Prose style](#prose-style--say-it-in-the-fewest-words-in-the-active-voice)). Tightening wording must never have dropped a requirement
 - [ ] **Gray-zone check** — the body actually contains **at least one** of: (a) adoption rationale / alternatives, (b) business rules translated into system behavior, (c) domain rules and state transitions, (d) external-dependency fallback (without these the ADR has little value)
 - [ ] **No code references below folder level** anywhere in prose, tables, or diagrams

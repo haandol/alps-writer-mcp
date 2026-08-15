@@ -10,7 +10,15 @@
 // are written in. These tests pin the discriminating power that fixed it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, writeFileSync, chmodSync, mkdtempSync, mkdirSync, existsSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  chmodSync,
+  mkdtempSync,
+  mkdirSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -207,6 +215,44 @@ ${finding}
     assert.equal(code, 0, out);
     assert.doesNotMatch(out, /✗/, `${name} compliant classification failed:\n${out}`);
   }
+});
+
+test("final-state sync scorer rejects transition residue and preserves current prohibitions", async () => {
+  const scenario = await loadScenario("sync-rewrites-final-state-only.mjs");
+
+  const badDir = mkdtempSync(path.join(tmpdir(), "adr-eval-final-state-bad-"));
+  await scenario.build(badDir);
+  const badChecks = await scenario.score({ dir: badDir, output: "", tail: null });
+  assert.ok(
+    badChecks.some((check) => !check.pass),
+    "the planted transition narration must not score as compliant",
+  );
+
+  const goodDir = mkdtempSync(path.join(tmpdir(), "adr-eval-final-state-good-"));
+  await scenario.build(goodDir);
+  const adrPath = path.join(goodDir, "docs/adr/runtime/event/0001-event-name.md");
+  const mappingPath = path.join(goodDir, "docs/adr/.mapping.json");
+  writeFileSync(
+    adrPath,
+    readFileSync(adrPath, "utf8").replace(
+      "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만 사용한다.",
+      "이벤트 이름은 `CURRENT_EVENT`다.",
+    ),
+  );
+  writeFileSync(
+    mappingPath,
+    readFileSync(mappingPath, "utf8").replace(
+      "LEGACY_EVENT와 CURRENT_EVENT를 혼용하지 않고 CURRENT_EVENT만 사용한다",
+      "이벤트 이름은 CURRENT_EVENT다",
+    ),
+  );
+
+  const goodChecks = await scenario.score({ dir: goodDir, output: "", tail: null });
+  assert.deepEqual(
+    goodChecks.filter((check) => !check.pass),
+    [],
+    `a direct final-state rewrite must pass: ${JSON.stringify(goodChecks)}`,
+  );
 });
 
 // ── the author-side scorer must discriminate too ───────────────────────────

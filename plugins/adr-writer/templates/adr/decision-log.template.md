@@ -17,6 +17,8 @@ accumulates here, newest first. Git preserves the individual diffs.
     requirements live in the ADR body, so do not copy them here. No implementation
     constants or field tables. But for a transition where a requirement value or rule
     changed, write it on the "What" line as old → new (that is the content of the transition).
+    This log and the ADR's Alternatives section are the only places where a replaced
+    identifier or previous value should be named for comparison.
   - Never reference the PRD (ALPS).
   - Never embed an ADR number in the prose — point at it only through the single
     "Current ADR" link.
