@@ -11,6 +11,17 @@
       ],
       "dependsOn": []
     },
+    "adr-authoring/decision-boundary": {
+      "feature": "ADR decision boundary",
+      "adrs": [
+        {
+          "path": "docs/adr/adr-authoring/decision-boundary/0001-admit-only-architectural-decisions.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "ADR admission gate는 요구사항 계약과 지속적인 아키텍처 경계를 바꾸는 결정만 허용하고 교체 가능한 구현 수단은 코드 수준에 둔다"
+        }
+      ],
+      "dependsOn": []
+    },
     "alps-authoring/c4-architecture": {
       "feature": "C4 architecture diagrams",
       "adrs": [

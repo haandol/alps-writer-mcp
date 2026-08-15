@@ -150,14 +150,18 @@ test("directive exempts refactoring of any size, but not decision changes", () =
   });
 });
 
-test("directive exempts only bug fixes that restore the current decision", () => {
+test("directive applies the admission gate before sending changes into the ADR cycle", () => {
   withTmp((dir) => {
     write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
     const ctx = runHook(dir);
 
-    assert.match(ctx, /bug fix is exempt only when it restores behavior/);
-    assert.match(ctx, /allowed set, state transition, permission, visibility, mandatory field/);
-    assert.match(ctx, /behavior\/decision change and follows the cycle/);
+    assert.match(ctx, /Apply the ADR admission gate/);
+    assert.match(ctx, /requirement contract, domain invariant, system\/data\/security boundary/);
+    assert.match(ctx, /bug fix is exempt when it restores already intended behavior/);
+    assert.match(ctx, /Replaceable implementation choices are exempt/);
+    assert.match(ctx, /GPT-5\.6 through Amazon Bedrock/);
+    assert.match(ctx, /Bedrock SDK or credential\/auth adapter.*implementation detail/);
+    assert.match(ctx, /If only a replaceable implementation means changes, do not touch the ADR/);
     assert.doesNotMatch(ctx, /Bug fixes, lint\/formatting/);
   });
 });

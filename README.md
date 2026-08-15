@@ -66,9 +66,10 @@ See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash c
 **adr-writer (ADR)**
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
+- **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
 - **Adversarial implementation review** — explain the diff for a junior, independently challenge change necessity and behavioral sufficiency, run targeted tests, and generate a Mermaid-based repair guide
-- **ADR-first hook** — every user turn re-injects the ADR-first directive + current `docs/adr/.mapping.json` snapshot, so the agent checks ADRs before changing behavior
+- **ADR-first hook** — every user turn re-injects the admission-aware ADR directive + current `docs/adr/.mapping.json` snapshot, so the agent checks only ADR-worthy changes before coding
 - Fully standalone — no ALPS PRD required
 
 ## Documentation

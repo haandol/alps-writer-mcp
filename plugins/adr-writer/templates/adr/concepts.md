@@ -36,10 +36,35 @@ Every rule and command name below is this one test applied at a different moment
 
 | Name                                             | The moment it applies                | What it asks                                                              |
 | ------------------------------------------------ | ------------------------------------ | ------------------------------------------------------------------------- |
+| **ADR admission gate**                           | before creating or updating an ADR   | Is this a durable decision, or only one replaceable implementation means? |
 | **Regeneration test**                            | finishing an ADR draft; reviewing it | Delete all code — can requirement-honoring code be rebuilt from this ADR? |
 | **Requirement gate → code-readthrough → litmus** | writing each line                    | Which level owns this one fact?                                           |
 | **Stability gradient** (`Code >> ADR >> PRD`)    | after the fact                       | Did a volatile-level change drag a stable level with it?                  |
 | **`Spec violation` vs `Impl-fact mismatch`**     | reviewing an implementation          | Which level must change to resolve this disagreement?                     |
+
+## The ADR admission gate — decide whether an ADR should exist
+
+The requirement gate and line-level filters cannot repair an ADR whose **core subject is already at code resolution**. Before writing a new ADR or updating one because code changed, ask whether the choice belongs at the architectural level at all.
+
+An ADR is warranted when the choice changes at least one durable constraint:
+
+- a requirement contract, domain invariant, allowed state or transition, permission, or visibility rule
+- a system boundary, deployment topology, data/key design, or security trust boundary
+- the adopted external system, provider, or model, including its fallback/degradation policy
+- an algorithm, consistency model, or operating trade-off that constrains multiple implementations
+
+Then apply the **implementation substitution test**:
+
+> Could another library, SDK, framework, module structure, credential-loading mechanism, signer, or adapter replace this one while preserving the same requirement contract, system boundaries, trust boundaries, and accepted trade-offs?
+>
+> **YES** → it is implementation discretion. Do not create or update an ADR.
+> **NO** → it may be an architectural decision. Continue with the requirement gate and line-level filters.
+
+Technology names are not automatically architectural. "Use GPT-5.6 through Amazon Bedrock" can be an ADR because it fixes an external model/provider boundary and the constraints that follow from it. "Use this Bedrock SDK, credential provider chain, signing helper, or authentication adapter" is code detail unless that choice itself establishes a required security trust boundary or policy.
+
+Apply the **stability check** as a final guard: if ordinary behavior-preserving code changes would repeatedly force this ADR to change, its subject is probably one level too low. Move the detail to code, tests, or the project's `AGENTS.md`/README instead.
+
+The admission gate also governs review and sync. Code that contains an unrecorded implementation choice is not automatically `Undecided behavior` or a `New ADR needed` finding. Raise it only when the choice passes this gate. If an existing ADR's core subject fails the gate, propose retiring the ADR and moving any useful detail down rather than polishing the document in place.
 
 ## What an ADR covers — the gray zone between business and code
 
@@ -124,15 +149,15 @@ References are **written directly on neither edge (PRD↔ADR, ADR↔code).** PRD
 
 Write an ADR when the decision falls into one of these.
 
-| Kind                     | Examples                                                                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| **Domain decisions**     | Authentication method, payment model, permission scheme, core domain entity relationships and state machines             |
-| **Infrastructure**       | Deployment topology, caching strategy, monitoring and alerting structure, CDN/image handling policy                      |
-| **Data decisions**       | DB key design (PK/SK/GSI), single-table vs multi-table, migration strategy                                               |
-| **External integration** | Choosing external services (LLM, payments, mail, push) and the graceful degradation policy                               |
-| **Security and ops**     | Secret management strategy, token rotation, audit log scope, backup/recovery RPO and RTO                                 |
-| **UX architecture**      | Routing structure, state-management library choice, design system adoption — the tokens themselves go to the design docs |
-| **Migration**            | API version transition strategy, backfill safety, acceptable downtime                                                    |
+| Kind                     | Examples                                                                                                        |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| **Domain decisions**     | Login or payment model, permission scheme, core domain entity relationships and state machines                  |
+| **Infrastructure**       | Deployment topology, cache ownership/consistency policy, monitoring boundaries, CDN/image handling policy       |
+| **Data decisions**       | DB key design (PK/SK/GSI), single-table vs multi-table, migration safety policy                                 |
+| **External integration** | Choosing an external service/provider/model (for example GPT-5.6 through Bedrock) and its degradation policy    |
+| **Security and ops**     | Security trust boundaries, token rotation policy, audit scope, backup/recovery RPO and RTO                      |
+| **UX architecture**      | Routing ownership, client/server state boundary, design system adoption — specific state libraries stay in code |
+| **Migration**            | API compatibility policy, backfill safety, acceptable downtime                                                  |
 
 ADR folders are grouped along **two axes: DDD domain (bounded context) × feature (vertical slice)** — the top-level folder (`docs/adr/<context>/`) is the domain expert's model boundary (a bounded context), and a sub-folder (`<context>/<feature>/`) is one user action's vertical slice. An ALPS Section 7 feature maps 1:1 onto that sub-folder (or onto the flat context folder when there is only one feature). For why folders are never created per technical layer, the subdomain classification (core/supporting/generic), and the conditions for using a cross-cutting context, see [`structure.md`](./structure.md#directory-structure--ddd-domain-bounded-context--feature-vertical-slice).
 
@@ -143,6 +168,7 @@ Do not turn these into ADRs. Doing so lowers ADR credibility and only increases 
 - **Bug-fix decisions** — "added a null check to this function" is not an ADR reason. The code and the commit message suffice
 - **Style/formatting changes** — Prettier or ESLint rule changes belong in the PR description or CONTRIBUTING.md
 - **Dependency patch upgrades** — `lodash 4.17.20 → 4.17.21`. A major upgrade (`React 17 → 18`) is an ADR candidate
+- **Replaceable implementation choices** — libraries, SDKs, frameworks, middleware, class/module structure, credential provider chains, signing helpers, and authentication adapters when they preserve the same requirement contract and architecture/security boundaries
 - **Refactoring** — from extracting a function or renaming to tidying an interface or relocating modules, a structural change that does not alter behavior is not an ADR target. The coding agent's planning step plans the change scope and caller impact as it goes, so there is no need to transcribe that plan into an ADR (a plan is meant to be volatile alongside the code; freezing it into an ADR drags the stable layer along with the refactor). But if a refactor **changes the decision itself** (replacing the adopted alternative, changing a state machine or key design, changing an external-dependency fallback), that is not a refactor but a decision change, so update the relevant ADR
 - **Temporary experiments and POCs** — a "we'll decide next week" stage is written as an ADR once the decision is settled
 - **Personal working guides** — conventions such as "this module always lives under internal/" belong in the project's AGENTS.md or README
@@ -178,14 +204,14 @@ Status is **not a value a human asks about and changes by hand, but one the cycl
 - When a new ADR is created by `/adr-new` (or `/feature-to-adr`, which delegates to it), it is always saved as `Proposed`. Never ask the user "shall I make it Accepted?"
 - When `/adr-impl` completes implementation, required tests, verified refactoring, and the final `/adr-impl-review` with `PASS`, that command updates the ADR's Status to `Accepted` automatically. It does not separately confirm the promotion.
 - `/adr-sync` catches invalid completion claims by comparing the code with the ADR: if an `Accepted` behavior or its tests are absent, it reverts to `Proposed`. It does **not** promote a `Proposed` ADR merely because code and tests exist, because the final review result is not persisted in the ADR or mapping; it routes that case to `/adr-impl` to complete the review gate.
-- **When a requirement change actually changes the decision of an already-`Accepted` ADR** (even an in-place edit, if the decision's direction changed — for the judgment call see [`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"](./authoring-rules.md#changing-an-adr--edit-in-place-vs-supersede)), revert Status to `Proposed` until the new decision is reflected in code, tests, and the final implementation review. `/adr-impl` then auto-promotes `Proposed → Accepted` again. For a supersede, rather than reverting, mark the old ADR `Superseded` and start the new ADR as `Proposed`. A mere implementation-fact correction (an API table, an entity name, and so on) means the decision did not change, so it is not subject to this rule — keep `Accepted`.
+- **When a requirement change actually changes the decision of an already-`Accepted` ADR** (even an in-place edit, if the decision's direction changed — for the judgment call see [`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"](./authoring-rules.md#changing-an-adr--edit-in-place-vs-supersede)), revert Status to `Proposed` until the new decision is reflected in code, tests, and the final implementation review. `/adr-impl` then auto-promotes `Proposed → Accepted` again. For a supersede, rather than reverting, mark the old ADR `Superseded` and start the new ADR as `Proposed`. Removing or correcting stale implementation detail does not change the admitted decision, so keep `Accepted`.
 - Record the date with the transition: `Accepted (YYYY-MM-DD)`, `Deprecated (YYYY-MM-DD)`. **The parentheses hold the date only** — just the single date, as in `Accepted (2026-07-09)`, with no trailing references, feature IDs, or implementation notes (`Accepted (2026-07-09) — implements F1` and `Accepted (2026-07-09, ref)` are both forbidden — `adr-structure-lint` catches them as `date-only`). `Superseded` is marked with the successor link instead of a date (`Superseded by [ADR XXXX](link)`). `Proposed` carries no date — the authoring date lives in the `Date:` at the top of the body (the time of writing, separate from the Status transition date), and the date on the Status line is recorded only on a transition.
 - Never use informal statuses such as `Implemented`, `Done`, or `Completed`.
 
 ### Where evolution history lives — decision-log.md
 
-An ADR body is **a requirements document describing the current state of the code**. State the final result directly: "the event name is `CURRENT_EVENT`", not "`LEGACY_EVENT` and `CURRENT_EVENT` are not mixed; only `CURRENT_EVENT` is used." Timeline narration, replaced identifiers, previous values, and migration steps belong outside the current-state body. When the same decision evolves, **overwriting the existing ADR to current state (edit-in-place) is the default**, and if that transition is major (replacing the adopted alternative, changing the core algorithm or architecture, inverting a Driver, retirement), leave one line, newest first, in the per-category `docs/adr/<category>/decision-log.md`. Create a new ADR (a supersede) only when the decision topic forks and the old decision must coexist as a separate record (for the judgment call see [`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"](./authoring-rules.md#changing-an-adr--edit-in-place-vs-supersede)).
+An ADR body is **a requirements and architecture document describing the current admitted decision and contract**, not the current shape of the code. State the final decision directly: "Amazon Bedrock is the external model-provider boundary", not "the direct API client was replaced by Bedrock and the old client is no longer used." Timeline narration, replaced implementation identifiers, previous values, and migration steps belong outside the current-state body. When the same decision evolves, **overwriting the existing ADR to current state (edit-in-place) is the default**, and if that transition is major (replacing the adopted alternative, changing the core algorithm or architecture, inverting a Driver, retirement), leave one line, newest first, in the per-category `docs/adr/<category>/decision-log.md`. Create a new ADR (a supersede) only when the decision topic forks and the old decision must coexist as a separate record (for the judgment call see [`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"](./authoring-rules.md#changing-an-adr--edit-in-place-vs-supersede)).
 
 **Three layers preserve different things**: the ADR body = current state / `decision-log.md` = the timeline of major changes / Git = the verbatim diff. The log is a **convention file** rather than an ADR, so it is not registered in `.mapping.json` and the deterministic harness does not check it — for the recording criteria and format see [`authoring-rules.md` "Decision log (decision-log.md)"](./authoring-rules.md#decision-log-decision-logmd), and for the directory and non-indexing policy see [`structure.md`](./structure.md#decision-log-decision-logmd--a-convention-file-not-registered-in-the-mapping).
 
-<!-- adr-writer:rules-version 0.6.1 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.6.2 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

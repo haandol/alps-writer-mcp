@@ -82,6 +82,7 @@ test("--list names every scenario without invoking an agent", () => {
   assert.equal(code, 0);
   assert.match(out, /review-requirement-value-preserved/);
   assert.match(out, /author-keeps-values-and-lints/);
+  assert.match(out, /author-rejects-implementation-detail/);
   assert.match(out, /refactor-safe-local-duplicate/);
   assert.match(out, /refactor-protected-state-transition/);
   assert.match(out, /refactor-no-subagent-proposal-only/);
@@ -188,6 +189,57 @@ test("the requirement-value scorer catches the delete-my-value defect", () => {
   // and the prose route — Korean word order (object before verb), which a
   // verb-first-only regex misses
   assert.match(out, /✗.*no prose advice to remove a value/);
+});
+
+test("the implementation-detail admission scorer distinguishes rejection from over-creation", async () => {
+  const scenario = await loadScenario("author-rejects-implementation-detail.mjs");
+
+  const goodDir = mkdtempSync(path.join(tmpdir(), "adr-eval-admission-good-"));
+  await scenario.build(goodDir);
+  const goodChecks = scenario.score({
+    tail: { verdict: "PASS", findings: [] },
+    output:
+      "ADR admission gate: AWS SDK v3와 default credential provider chain은 기존 GPT-5.6 Amazon Bedrock provider boundary를 유지하는 구현 디테일이므로 ADR을 만들지 않습니다.\n=== EVAL-VERDICT: PASS ===",
+    dir: goodDir,
+  });
+  assert.ok(
+    goodChecks.every((check) => check.pass),
+    JSON.stringify(goodChecks),
+  );
+
+  const badDir = mkdtempSync(path.join(tmpdir(), "adr-eval-admission-bad-"));
+  await scenario.build(badDir);
+  const adrDir = path.join(badDir, "docs", "adr", "llm", "bedrock-client");
+  mkdirSync(adrDir, { recursive: true });
+  writeFileSync(
+    path.join(adrDir, "0001-use-aws-sdk-v3.md"),
+    "# ADR 0001: Use AWS SDK v3\n\n## Status\n\nProposed\n",
+  );
+  writeFileSync(
+    path.join(badDir, "docs", "adr", ".mapping.json"),
+    JSON.stringify({
+      categories: {
+        "llm/bedrock-client": {
+          feature: "Bedrock client",
+          adrs: [
+            {
+              path: "docs/adr/llm/bedrock-client/0001-use-aws-sdk-v3.md",
+              status: "Proposed",
+              summary: "AWS SDK v3와 credential provider chain을 사용한다",
+            },
+          ],
+          dependsOn: [],
+        },
+      },
+    }),
+  );
+  const badChecks = scenario.score({
+    tail: { verdict: "PASS", findings: [] },
+    output: "AWS SDK v3와 credential provider chain을 위한 ADR을 작성하고 저장했습니다.",
+    dir: badDir,
+  });
+  assert.equal(badChecks.find((check) => check.label.includes("creates no ADR"))?.pass, false);
+  assert.equal(badChecks.find((check) => check.label.includes("creates no mapping"))?.pass, false);
 });
 
 test("refactor safety scorers distinguish safe, protected, and no-subagent outcomes", () => {

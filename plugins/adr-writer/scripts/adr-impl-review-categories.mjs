@@ -48,7 +48,7 @@ export const CATEGORIES = {
   "Undecided behavior": {
     hue: "#c77b0e",
     blurb:
-      "The code does something the ADR never decided (scope creep) — add the decision to the ADR vs remove it from the code; user decides.",
+      "The code adds an ADR-worthy behavior the ADR never decided — after the admission gate, add the decision vs remove the behavior.",
     authority: "contested",
     defaultDecision: "defer",
     priority: 2,
@@ -72,7 +72,7 @@ export const CATEGORIES = {
   "Impl-fact mismatch": {
     hue: "#6b3fa0",
     blurb:
-      "The ADR's implementation facts differ from the code — code is authoritative; correct the ADR via /adr-sync.",
+      "The ADR carries stale code-level facts — remove them via /adr-sync, or correct only an admitted public/architectural contract.",
     authority: "code",
     defaultDecision: "defer",
     priority: 5,
@@ -127,7 +127,11 @@ export const AUTHORITY = {
     label: "Minimal change",
     hint: "shrink the code while keeping the contract",
   },
-  code: { glyph: "←", label: "Code is the basis", hint: "correct the ADR to match the code" },
+  code: {
+    glyph: "←",
+    label: "Code is the basis",
+    hint: "remove stale code detail; correct only an admitted contract",
+  },
   contested: { glyph: "⇄", label: "Needs a ruling", hint: "decide which side is right" },
   convention: {
     glyph: "▸",

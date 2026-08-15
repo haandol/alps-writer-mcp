@@ -1,10 +1,41 @@
 # ADR authoring rules and review checklist
 
-What goes into an ADR body and what stays out. The principle these rules follow from, the gray zone, and the dependency model: [`AGENTS.md`](./AGENTS.md). Directory and mapping policy: [`structure.md`](./structure.md). The directory index and the ADR template: [`README.md`](./README.md).
+What goes into an ADR body and what stays out. The principle these rules follow from, the gray zone, and the dependency model: [`concepts.md`](./concepts.md). Directory and mapping policy: [`structure.md`](./structure.md). The directory index and the ADR template: [`README.md`](./README.md).
 
 An ADR records an architectural decision (Context, Decision, Consequences). To keep code changes from dragging ADR edits behind them, **implementation detail stays out of the ADR.**
 
 **Every rule in this document is one constraint on resolution.** PRD, ADR, and code are the same system at three zoom levels (like C4's context / container / component), and the point of a level is what it refuses to show — so that a reader can load one level, get its question answered, and stop. Each keep/drop call below is therefore the same question in different clothes: _does this fact belong to this level's resolution?_ Detail from a lower level makes the ADR untrustworthy alone; a requirement pushed out of it lands in no level at all. For the full principle see [`concepts.md` "The abstraction ladder"](./concepts.md#the-abstraction-ladder--the-principle-every-rule-follows-from).
+
+## ADR admission gate — decide whether the decision belongs here
+
+Apply this gate **before creating an ADR, before updating one because code changed, and before classifying code as an undecided decision.** The line-level filters below assume the ADR's core subject already belongs at the architectural level; they cannot rescue an ADR whose subject is merely a library or wiring choice.
+
+Keep the decision at the ADR level only when it changes at least one of:
+
+- a requirement contract, domain invariant, allowed state/transition, permission, or visibility rule
+- a system boundary, deployment topology, data/key design, or security trust boundary
+- the adopted external system, provider, or model and its fallback/degradation policy
+- an algorithm, consistency model, or operating trade-off that constrains multiple implementations
+
+Then ask the **implementation substitution test**:
+
+> Could a developer replace this library, SDK, framework, middleware, module layout, credential-loading mechanism, signer, or adapter while preserving the same requirement contract, system boundaries, trust boundaries, and accepted trade-offs?
+
+- **Yes → implementation detail.** Do not create or update an ADR. Keep the choice and its verification in code, tests, dependency metadata, or project conventions.
+- **No → architectural candidate.** Continue with the requirement gate and the two line-level filters below.
+
+Examples:
+
+| ADR-level decision                                                                | Code-level realization                                                                             |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Use GPT-5.6 through Amazon Bedrock as the external model/provider boundary        | Which AWS SDK client, wrapper library, request builder, or retry helper performs the call          |
+| Workloads authenticate across a defined trust boundary without long-lived secrets | Which credential provider chain, signer, middleware, or adapter loads and attaches the credentials |
+| Private boards are visible only to invited members                                | Which middleware function or authorization library performs the check                              |
+| Orders use optimistic concurrency because duplicate fulfillment is unacceptable   | Which ORM helper, repository method, or conditional-write wrapper implements the check             |
+
+Technology names are not sufficient evidence by themselves. A provider/model selection can be architectural because it fixes an external boundary and durable constraints; a library or authentication adapter usually remains replaceable implementation detail. If changing the choice would make ordinary behavior-preserving code work drag an ADR edit behind it, the choice fails the **stability check** and belongs one level down.
+
+If an existing ADR's core subject fails this gate, do not merely clean up its wording. Propose retiring it and move any useful implementation guidance to the code or project documentation. Likewise, code that contains an unrecorded implementation choice does not automatically need an ADR; it must pass this gate first.
 
 ## What an ADR must satisfy — the regeneration test
 
@@ -121,6 +152,8 @@ Exclude everything discoverable by reading the code, plus detail outside the gra
 | Function/class responsibilities    | "AuthService calls SessionStore"       | Code and docstrings                  | None                                                                                                                    |
 | Module/package dependency graphs   | "auth → users → notifications"         | The imports themselves               | None                                                                                                                    |
 | Design patterns used               | "Repository pattern", "DI container"   | Obvious from code structure          | None                                                                                                                    |
+| Libraries, SDKs, frameworks        | AWS SDK client, ORM, state library     | Dependency metadata and code         | Only the external provider/system boundary or a mandated platform constraint belongs in the ADR                         |
+| Credential/auth wiring             | Provider chain, signer, middleware     | Code and security configuration      | Only a required trust boundary or security policy belongs in the ADR; its plumbing does not                             |
 | Detailed entity field tables       | `phraseHash \| S \| ...`               | Delegate to `docs/tables/`           | None (key design is under "what to keep")                                                                               |
 | Field types, validation, defaults  | `email: string, required, max 255`     | Schema/zod/ORM definitions           | **Business-set limits, formats, and mandatory fields** (10-char password, 25MB attachment, required refund reason) stay |
 | Enum identifiers and wire form     | `StatusPaid`, `"PAID"`, value casing   | Type and constant definitions        | **The business-set allowed value set and transition rules** go in as domain sentences (set = ADR, name = code)          |
@@ -128,7 +161,8 @@ Exclude everything discoverable by reading the code, plus detail outside the gra
 | Env var names and config keys      | `AUTH_TOKEN_TTL`, `DB_POOL_SIZE`       | Config docs, code defaults           | Names stay banned — if the value is a requirement, write **only the value** as a sentence                               |
 | Error messages, UI labels, logs    | "Invalid credentials"                  | i18n / message catalog               | Wording stays banned — **what the user must be told** goes in                                                           |
 | Migration/ops commands             | `uv run python migrate_...`            | Document in the script itself        | None — record only constraints such as zero-downtime                                                                    |
-| Full API JSON examples             | A 20-line request/response             | Purpose and key params in 1-2 lines  | None — state only the **meaning** of required fields                                                                    |
+| API paths/method tables            | `POST /v1/auth/session`                | OpenAPI, routes, and tests           | A public compatibility contract may stay as a domain statement; internal endpoint names and paths do not                |
+| Full API JSON examples             | A 20-line request/response             | OpenAPI and schemas                  | None — state only the **meaning** of required fields                                                                    |
 | Algorithm pseudocode               | "1. verify token 2. create session..." | The function body is the truth       | If the ordering is a **domain rule**, write it as transitions and invariants                                            |
 | Directory/file naming conventions  | "handlers are `*-handler.ts`"          | AGENTS.md / CONTRIBUTING.md          | None                                                                                                                    |
 | CSS classes and Tailwind utilities | `bg-primary`, `flex-col`               | Design-token docs (DESIGN.md)        | None                                                                                                                    |
@@ -151,7 +185,7 @@ Keep only the gray zone — what code cannot reveal, or what loses its intent un
 - **Fallback / degradation policy for external dependencies** — "on LLM failure return the last cached result; if none, degrade gracefully to empty"
 - **Mermaid diagrams** — use freely for async flows, service integration, and event-driven processing. Prefer a diagram when it is clearer than prose. Inside diagrams, express domain behavior rather than function names
 - **Consequences** — positive and negative effects, intended trade-offs, risks
-- **API endpoint table** — Method / Path / one-line purpose (request and response schemas belong to the code and OpenAPI)
+- **Public interface compatibility policy** — only when consumers or a requirement depend on it. Internal methods, paths, and request/response shapes stay in OpenAPI and code
 
 ## Decision Drivers
 
@@ -233,7 +267,7 @@ The criterion is **whether "why this choice" (Context, Decision Drivers, adoptio
 **① Edit-in-place, no log (minor)** — the "why" is unchanged and only details shift:
 
 - Context / Decision Drivers / adoption rationale are **unchanged**; only details are adjusted.
-- Correcting implementation facts — Status, entity names, the API table, enum **identifiers and representation**, state-value **names**: things verifiable by reading the code. (Same direction as `/adr-sync`'s "source-of-truth scope: code is authoritative for implementation facts.") **But a changed value set or transition rule is not ①** — if allowed states are added or removed, or a forbidden transition becomes allowed, the contract changed, so treat it as ② at minimum per [non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering).
+- Removing or correcting stale implementation facts — internal API paths, entity/field names, enum **identifiers and representation**, state-value **names**: things verifiable by reading the code that should normally leave the ADR instead of being mirrored there. **But a changed value set or transition rule is not ①** — if allowed states are added or removed, or a forbidden transition becomes allowed, the contract changed, so treat it as ② at minimum per [non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering).
 - **Fine-tuning** a gray-zone decision — refining boundary or exception wording while keeping the direction.
 - Wording and structure cleanup.
 
@@ -258,14 +292,14 @@ Choosing supersede means handling, **as one change unit**: the old ADR's Status 
 
 ## Decision log (decision-log.md)
 
-An ADR body is **a requirements document describing the current state of the code** — no timeline narration ("it was X at first, then became Y"). But burying the rationale for major transitions in Git commits alone makes "why was this algorithm replaced?" hard to trace later. So **major decision changes only** go into a per-category `docs/adr/<category>/decision-log.md`, newest first, one line each. **ADR body = current state, log = timeline of major changes, Git = verbatim diff** — three layers preserving different things.
+An ADR body is **a requirements and architecture document describing the current admitted decision and contract**, not the current shape of the code — no timeline narration ("it was X at first, then became Y") and no synchronized copy of implementation identifiers. But burying the rationale for major transitions in Git commits alone makes "why was this algorithm replaced?" hard to trace later. So **major decision changes only** go into a per-category `docs/adr/<category>/decision-log.md`, newest first, one line each. **ADR body = current admitted decision, log = timeline of major changes, Git = verbatim diff** — three layers preserving different things.
 
 ### What to log — minor vs major
 
 Reached from ②/③ of [edit-in-place vs supersede](#changing-an-adr--edit-in-place-vs-supersede).
 
 - **Log it (major)** — replacing the adopted alternative, inverted Decision Drivers, a core algorithm or architecture change, a core bug fix that changes behavior, supersede, **a requirement value change** (20 turns → 30 etc., since the contract the result must honor changed), and **a non-numeric requirement change** (allowed set added or removed, mandatory → optional, changed permission or visibility rules, a formerly forbidden transition becoming allowed — see [non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering)). **Deprecating a decision with no replacement** is also a major entry.
-- **Do not log it (minor)** — correcting implementation facts (API table, enum identifiers, field names, Status), refining boundary wording, rewording. Logging these fills the log with noise and drowns the signal; Git preserves them. (Tuning-value adjustments are not in the ADR, so they never qualify.) **An enum's _name_ changing is minor, but its _allowed set_ changing is major** — see above.
+- **Do not log it (minor)** — removing/correcting implementation facts (internal API paths, enum identifiers, field names, Status), refining boundary wording, rewording. Logging these fills the log with noise and drowns the signal; Git preserves them. (Tuning-value adjustments are not in the ADR, so they never qualify.) **An enum's _name_ changing is minor, but its _allowed set_ changing is major** — see above.
 - Add the entry **at the moment the decision changes** — separate from the automatic `Accepted`/`Proposed` Status transition. The log records the _decision_; Status records the _implementation fact_.
 
 ### Location and nature
@@ -341,6 +375,7 @@ For the PR reviewer or the author before merge.
 - [ ] **Final-state wording** — the body and `.mapping.json` summary state the current result directly. No evolution narration ("originally it was", "added in v2", "changed from before") or comparison residue ("not X but Y", "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만") remains outside Alternatives or [`decision-log.md`](#decision-log-decision-logmd). Current prohibitions and forbidden transitions that passed the requirement gate remain intact
 - [ ] **Prose style** — active voice by default (the actor is named where it matters), no hedges or throat-clearing, one idea per sentence, concrete nouns over vague ones ([Prose style](#prose-style--say-it-in-the-fewest-words-in-the-active-voice)). Tightening wording must never have dropped a requirement
 - [ ] **Gray-zone check** — the body actually contains **at least one** of: (a) adoption rationale / alternatives, (b) business rules translated into system behavior, (c) domain rules and state transitions, (d) external-dependency fallback (without these the ADR has little value)
+- [ ] **ADR admission gate** — the core decision changes a requirement contract, durable system/security boundary, external provider/model/fallback, data/key design, or cross-implementation trade-off. A replaceable library, SDK, framework, credential/auth adapter, or module structure is not the ADR's subject
 - [ ] **No code references below folder level** anywhere in prose, tables, or diagrams
 - [ ] **No back-references from code** — the code this ADR governs (comments, constants, imports) carries no ADR ID or path. If the code exists, check via adr-reviewer R17 or `/adr-sync` step 5(a) grep; for a new `Proposed` with no code yet, `/adr-sync` checks after implementation
 - [ ] **No forbidden items** (code snippets, tuning values, call graphs, field-type tables, env var names, pseudocode, full JSON, migration commands) — requirement values and business limits are _not_ forbidden items
@@ -353,4 +388,4 @@ For the PR reviewer or the author before merge.
 - [ ] **One ADR = one decision** holds (no split signals)
 - [ ] **`.mapping.json`** has the matching category entry including the new ADR
 
-<!-- adr-writer:rules-version 0.6.1 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.6.2 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
