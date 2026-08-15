@@ -31193,6 +31193,22 @@ var TemplateRegistry = class {
 
 // src/tools/documents/service.ts
 var bySubsectionId = ([a], [b]) => a.localeCompare(b, void 0, { numeric: true });
+var ALLOWED_ARCHITECTURE_DIAGRAMS = /* @__PURE__ */ new Set(["C4Context", "C4Container"]);
+function architectureDiagramError(content) {
+  const diagramTypes = [...content.matchAll(/```mermaid\s*\r?\n([\s\S]*?)```/g)].map(
+    (match) => match[1].split(/\r?\n/).map((line) => line.trim()).find((line) => line && !line.startsWith("%%"))?.split(/\s+/)[0]
+  ).filter((type) => Boolean(type));
+  for (const required2 of ALLOWED_ARCHITECTURE_DIAGRAMS) {
+    if (!diagramTypes.includes(required2)) {
+      return `Section 4.1 requires a Mermaid ${required2} diagram.`;
+    }
+  }
+  const disallowed = diagramTypes.find((type) => !ALLOWED_ARCHITECTURE_DIAGRAMS.has(type));
+  if (disallowed) {
+    return `Section 4.1 allows only Mermaid C4Context and C4Container diagrams; found ${disallowed}.`;
+  }
+  return null;
+}
 var DocumentService = class {
   workingDoc = null;
   templates;
@@ -31363,6 +31379,10 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
     if (!subsection.ok) return `Invalid subsection: ${subsection.message}`;
     const document = this.readWorkingDocument();
     if ("error" in document) return document.error;
+    if (subsection.fullId === "4.1") {
+      const diagramError = architectureDiagramError(content);
+      if (diagramError) return `Invalid subsection content: ${diagramError}`;
+    }
     const docContent = document.content;
     const projectName = this.extractProjectName(docContent);
     const sections = this.parseSections(docContent);

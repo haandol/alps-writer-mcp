@@ -1,5 +1,16 @@
 {
   "categories": {
+    "alps-authoring/c4-architecture": {
+      "feature": "C4 architecture diagrams",
+      "adrs": [
+        {
+          "path": "docs/adr/alps-authoring/c4-architecture/0001-context-and-container-only-prd-architecture.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "ALPS PRD의 High-Level Architecture는 C4 Context와 Container를 모두 필수로 사용하고 그 외 C4 및 Code 수준 다이어그램은 제외한다"
+        }
+      ],
+      "dependsOn": []
+    },
     "adr-cycle/implementation-review": {
       "feature": "Implementation review",
       "adrs": [

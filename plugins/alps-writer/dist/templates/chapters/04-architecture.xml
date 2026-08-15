@@ -6,23 +6,44 @@
   </description>
   <subsection id="4.1" title="System Diagram">
     <description>
-- Provide Context and Container diagrams (C4 model) illustrating the overall system architecture of the project.
-- The Context diagram is essential; the Container diagram is optional.
-- Component and Code diagrams are excluded.
+- Provide both a Context diagram and a Container diagram using Mermaid C4 syntax.
+- The Context diagram is required. Show the people, external systems, the target system, and their relationships.
+- The Container diagram is required. Show the major independently running or deployable applications and data stores inside the target system, their responsibilities, technologies at category level, and their relationships.
+- These are the only C4 levels allowed in an ALPS PRD. Do not generate Component, Dynamic, Deployment, or Code-level C4 diagrams.
+- Keep modules, classes, functions, files, methods, and other implementation details out of both diagrams.
     </description>
     <example>
 ```mermaid
 C4Context
 
-title System Context Diagram for {Project Name}
+title System Context Diagram for Document Assistant
 
-Person(user, "User", "User")
+Person(author, "Document Author", "Creates a product document through conversation")
+System(documentAssistant, "Document Assistant", "Guides the author and produces the document")
+System_Ext(llm, "LLM Service", "Generates guided questions and draft content")
 
-System_Ext(system_ext, "System Ext", "External System")
-System(system, "System", "Target System")
+Rel(author, documentAssistant, "Authors a document with")
+Rel(documentAssistant, llm, "Requests language generation from")
+```
 
-Rel(user, system_ext, "Uses", "HTTPS")
-Rel(user, system, "Uses", "HTTPS")
+```mermaid
+C4Container
+
+title Container Diagram for Document Assistant
+
+Person(author, "Document Author", "Creates a product document through conversation")
+System_Ext(llm, "LLM Service", "Generates guided questions and draft content")
+
+System_Boundary(documentAssistant, "Document Assistant") {
+    Container(webApp, "Web Application", "Web UI", "Runs the guided authoring conversation")
+    Container(api, "Application API", "Server application", "Manages the authoring workflow and document state")
+    ContainerDb(documentStore, "Document Store", "Persistent storage", "Stores approved product documents")
+}
+
+Rel(author, webApp, "Uses")
+Rel(webApp, api, "Sends approved section content to")
+Rel(api, documentStore, "Reads and writes")
+Rel(api, llm, "Requests language generation from")
 ```
     </example>
   </subsection>
