@@ -61,10 +61,10 @@ For each target ADR:
 
 1. Read the entire ADR body.
 2. Extract the verifiable claims:
-   - **Status** — grep the scope narrowed by "Finding the related code" to confirm what exists in code and auto-correct Status drift (`Accepted` but absent from code → `Proposed`; `Proposed` but code plus tests exist → `Accepted (YYYY-MM-DD)`). For the status semantics and the automatic transition policy see `concepts.md` "Automatic transition rules". **Every Status correction must use the deterministic transition script with the exact target ADR path**:
+   - **Status** — grep the scope narrowed by "Finding the related code" to confirm what exists in code. Auto-correct an invalid completion claim (`Accepted` but absent from code or tests → `Proposed`). Do **not** promote `Proposed` merely because code and tests exist: `Accepted` also requires `/adr-impl-review` to pass, and review evidence is not persisted in the ADR or mapping. Record that case under **Suggestions** and route it to `/adr-impl <category>` to run the completion gate. For the status semantics and the automatic transition policy see `concepts.md` "Automatic transition rules". **Every Status correction must use the deterministic transition script with the exact target ADR path**:
 
      ```bash
-     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-status-transition.mjs <target-adr-path> "<Proposed or Accepted (YYYY-MM-DD)>"
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-status-transition.mjs <target-adr-path> Proposed
      ```
 
      Do not edit the body Status or a `.mapping.json` status manually with `apply_patch`, regex replacement, or a search for the first matching value. The script updates the exact matching `adrs[]` record and body in lockstep, and refuses an absent, duplicated, or already inconsistent path. Add `--summary "<current one-line decision summary>"` only when the ADR decision changed and the index summary must change with it. Record the correction under **Fixed** in the step 7 report.

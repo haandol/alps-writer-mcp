@@ -98,6 +98,45 @@ function validateFinding(finding, index, errors) {
   }
 }
 
+function validateMetrics(metrics, findings, errors) {
+  if (!metrics || typeof metrics !== "object" || Array.isArray(metrics)) {
+    errors.push("findings.json metrics must be an object");
+    return;
+  }
+
+  for (const field of ["startedAt", "completedAt"]) {
+    if (typeof metrics[field] !== "string" || !metrics[field].trim()) {
+      errors.push(`findings.json metrics.${field} must be a non-empty string`);
+    } else if (Number.isNaN(Date.parse(metrics[field]))) {
+      errors.push(`findings.json metrics.${field} must be an ISO date-time`);
+    }
+  }
+
+  for (const field of [
+    "elapsedSeconds",
+    "necessityFindingCount",
+    "sufficiencyFindingCount",
+    "unverifiedRiskCount",
+    "testCommandCount",
+  ]) {
+    if (!Number.isInteger(metrics[field]) || metrics[field] < 0) {
+      errors.push(`findings.json metrics.${field} must be a non-negative integer`);
+    }
+  }
+
+  const unverifiedRiskCount = findings.filter(
+    (finding) => finding?.category === "Unverified risk",
+  ).length;
+  if (
+    Number.isInteger(metrics.unverifiedRiskCount) &&
+    metrics.unverifiedRiskCount !== unverifiedRiskCount
+  ) {
+    errors.push(
+      `findings.json metrics.unverifiedRiskCount is ${metrics.unverifiedRiskCount}, expected ${unverifiedRiskCount}`,
+    );
+  }
+}
+
 function validateReport(report, findingCount, errors) {
   for (const text of REQUIRED_REPORT_TEXT) {
     if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
@@ -164,6 +203,7 @@ function main() {
       errors.push("findings.json findings must be an array");
     } else {
       data.findings.forEach((finding, index) => validateFinding(finding, index, errors));
+      validateMetrics(data.metrics, data.findings, errors);
     }
 
     const reportPath = resolveArtifact(artifactDir, data.report);

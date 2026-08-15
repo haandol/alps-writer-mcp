@@ -74,6 +74,9 @@ test("--list names every scenario without invoking an agent", () => {
   assert.equal(code, 0);
   assert.match(out, /review-requirement-value-preserved/);
   assert.match(out, /author-keeps-values-and-lints/);
+  assert.match(out, /refactor-safe-local-duplicate/);
+  assert.match(out, /refactor-protected-state-transition/);
+  assert.match(out, /refactor-no-subagent-proposal-only/);
 });
 
 // The prompt has to carry the SHIPPED instruction text. If a scenario ever
@@ -177,6 +180,33 @@ test("the requirement-value scorer catches the delete-my-value defect", () => {
   // and the prose route — Korean word order (object before verb), which a
   // verb-first-only regex misses
   assert.match(out, /✗.*no prose advice to remove a value/);
+});
+
+test("refactor safety scorers distinguish safe, protected, and no-subagent outcomes", () => {
+  const cases = [
+    [
+      "refactor-safe-local-duplicate",
+      "APPLY_NOW | extract current duplicate normalization into one local helper",
+    ],
+    [
+      "refactor-protected-state-transition",
+      "PROPOSE_ONLY | state-transition change touches the ADR contract",
+    ],
+    [
+      "refactor-no-subagent-proposal-only",
+      "PROPOSE_ONLY | independent reviewer unavailable, so do not auto-apply",
+    ],
+  ];
+
+  for (const [name, finding] of cases) {
+    const reply = `=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+${finding}
+=== EVAL-END ===`;
+    const { code, out } = runEvals(["--only", name], stubAgent(reply));
+    assert.equal(code, 0, out);
+    assert.doesNotMatch(out, /✗/, `${name} compliant classification failed:\n${out}`);
+  }
 });
 
 // ── the author-side scorer must discriminate too ───────────────────────────

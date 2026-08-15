@@ -8,6 +8,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -487,6 +488,32 @@ test("the per-turn directive treats a requirement-value change as in-scope", () 
   );
 });
 
+test("the hook command accepts either Codex or Claude plugin-root variables", () => {
+  const hooks = JSON.parse(read(path.join(ADR_ROOT, "hooks", "hooks.json")));
+  const command = hooks.hooks.UserPromptSubmit[0].hooks[0].command;
+
+  for (const variable of ["PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT"]) {
+    const env = { ...process.env };
+    delete env.PLUGIN_ROOT;
+    delete env.CLAUDE_PLUGIN_ROOT;
+    env[variable] = ADR_ROOT;
+
+    const result = spawnSync("/bin/sh", ["-c", command], {
+      cwd: PLUGINS_ROOT,
+      env,
+      input: "{}\n",
+      encoding: "utf8",
+    });
+
+    assert.equal(
+      result.status,
+      0,
+      `${variable}-only hook execution failed:\n${result.stderr || result.stdout}`,
+    );
+    assert.doesNotMatch(result.stderr, /Cannot find module/);
+  }
+});
+
 // Every stage that compares an ADR against code must apply the enum split, or a
 // business-defined value set gets silently rewritten to whatever the code says
 // under the banner of "implementation facts are code-authoritative".
@@ -534,6 +561,28 @@ test("every stage that filters an ADR body names the requirement-value rule", ()
     read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md")),
     /Requirement contract material/,
   );
+});
+
+test("feature-to-adr keeps argument-scoped conversion dependency-closed", () => {
+  const importer = read(
+    path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md"),
+  );
+
+  assert.match(importer, /walk its 6\.3 prerequisites transitively/);
+  assert.match(importer, /dependency-closed set in topological order/);
+  assert.match(importer, /Never persist a dangling `dependsOn`/);
+  assert.match(importer, /already has a mapping entry or was created earlier/);
+  assert.doesNotMatch(importer, /single-feature run the dangling case above is normal/);
+});
+
+test("alps-init resumes from status in the dependency-respecting section order", () => {
+  const init = read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "alps-init", "SKILL.md"));
+
+  assert.match(init, /1 → 2 → 3 → 4 → 6 → 5 → 7 → 8 → 9/);
+  assert.match(init, /get_alps_document_status/);
+  assert.match(init, /first section in that order that is not `✅ Written`/);
+  assert.match(init, /Do not reopen or re-confirm a completed unchanged section/);
+  assert.match(init, /user requests a full review/);
 });
 
 // Section 7 is where a requirement value first enters the pipeline. If the guide

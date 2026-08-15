@@ -1,12 +1,12 @@
 ---
 name: adr-impl
-description: Implement an ADR — check dependencies first, implement prerequisites in topological order, write code, run tests, apply verified low-risk refactors, rerun tests, then auto-promote ADR Status from Proposed to Accepted. Enforces the ADR-first development cycle. Use when the user invokes /adr-impl or asks to implement an ADR / a Proposed feature whose decision is already recorded. Keywords - "/adr-impl", "ADR 구현", "implement ADR", "Proposed ADR 코드 반영".
+description: Implement an ADR — check dependencies first, implement prerequisites in topological order, write code, run tests, apply verified low-risk refactors, complete the adversarial implementation review, then auto-promote ADR Status from Proposed to Accepted. Enforces the ADR-first development cycle. Use when the user invokes /adr-impl or asks to implement an ADR / a Proposed feature whose decision is already recorded. Keywords - "/adr-impl", "ADR 구현", "implement ADR", "Proposed ADR 코드 반영".
 argument-hint: "[adr-path-or-category]"
 ---
 
 # adr-impl
 
-Implements the specified ADR in code, and once the implementation and tests pass, automatically updates the ADR Status to `Accepted`. **If no ADR exists, write the ADR first and then proceed** — for the general case write it directly with `/adr-new <category>`, and if an ALPS Section 7 feature already exists, batch-convert with `/feature-to-adr`.
+Implements the specified ADR in code, and once the implementation, tests, verified refactor pass, and final implementation review pass, automatically updates the ADR Status to `Accepted`. **If no ADR exists, write the ADR first and then proceed** — for the general case write it directly with `/adr-new <category>`, and if an ALPS Section 7 feature already exists, batch-convert with `/feature-to-adr`.
 
 > Status semantics: `Proposed` means "the ADR has been proposed but is not implemented", `Accepted` means "implementation complete". This command is responsible for the Status transition at the end.
 
@@ -45,7 +45,7 @@ Implements the specified ADR in code, and once the implementation and tests pass
    5. **If there are 0 Proposed ADRs**, tell the user _"Every ADR is already implemented. To record a new decision, write the ADR first with `/adr-new <category>`. You can also use `/feature-to-adr` to batch-convert ALPS Section 7 features."_ and finish.
    6. **If there is not a single ADR on disk at all**, tell the user _"There are no ADRs yet. Write one directly with `/adr-new <category>`, or if you have ALPS Section 7 features, convert them with `/feature-to-adr` and call this again."_ and finish.
 
-   Once the target ADR is identified, check its current Status — this command handles the `Proposed → Accepted` transition automatically. If an ADR that is already `Accepted` is given as the implementation target, confirm once with the user whether the intent is a partial change / reinforcement, then proceed. At this point, if **the decision itself changed because of a requirement change** (not a mere implementation correction — for the judgment call see `authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"), reflect the new decision in the ADR body as the current state (edit-in-place), revert Status to `Proposed`, and proceed with this implementation. **A request that changes only a requirement value or rule ("max 7 turns → 10 turns", "retention 30 days → 90 days") also falls here** — even though it looks like editing a single constant in the code, a system behavior requirement has changed, so do not touch the code first; update the ADR's requirement contract to the new value first (`authoring-rules.md` "Requirements live in the code and in the ADR") (after the step 5 tests pass, step 6 will auto-promote it back to `Accepted` — `concepts.md` "Automatic transition rules"). If that decision change is **major** (swapping the adopted alternative, reversing a Driver, changing the core algorithm/architecture, a bug fix that changes behavior — `authoring-rules.md` "What to log — minor vs major"), leave a one-line entry in the category's `decision-log.md`. Judge it a supersede **only when the decision topic has branched and the old decision must coexist as a separate record**; in that case create a new ADR with `/adr-new`, leave the old one as `Superseded`, and take that new ADR as the implementation target (a supersede is also major, so log it).
+   Once the target ADR is identified, check its current Status — this command handles the `Proposed → Accepted` transition automatically. If an ADR that is already `Accepted` is given as the implementation target, confirm once with the user whether the intent is a partial change / reinforcement, then proceed. At this point, if **the decision itself changed because of a requirement change** (not a mere implementation correction — for the judgment call see `authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"), reflect the new decision in the ADR body as the current state (edit-in-place), revert Status to `Proposed`, and proceed with this implementation. **A request that changes only a requirement value or rule ("max 7 turns → 10 turns", "retention 30 days → 90 days") also falls here** — even though it looks like editing a single constant in the code, a system behavior requirement has changed, so do not touch the code first; update the ADR's requirement contract to the new value first (`authoring-rules.md` "Requirements live in the code and in the ADR") (after the tests and step 6 completion review pass, step 7 will auto-promote it back to `Accepted` — `concepts.md` "Automatic transition rules"). If that decision change is **major** (swapping the adopted alternative, reversing a Driver, changing the core algorithm/architecture, a bug fix that changes behavior — `authoring-rules.md` "What to log — minor vs major"), leave a one-line entry in the category's `decision-log.md`. Judge it a supersede **only when the decision topic has branched and the old decision must coexist as a separate record**; in that case create a new ADR with `/adr-new`, leave the old one as `Superseded`, and take that new ADR as the implementation target (a supersede is also major, so log it).
 
    **Every Status transition in this workflow must use the deterministic status script.** Do not edit a Status value with `apply_patch`, regex replacement, or a search for the first matching string — `.mapping.json` commonly contains many identical `Proposed` or dated `Accepted` values. After updating the ADR decision text, use:
 
@@ -110,29 +110,32 @@ Implements the specified ADR in code, and once the implementation and tests pass
    - If `/adr-impl-refactor` applied any code change, rerun the **full project test command** on the resulting code. Targeted before/after tests establish that each patch is locally safe; the full rerun establishes that the implementation as a whole is still complete. If it fails, do not move to step 6 — undo or correct only the refactor introduced in this pass, then rerun the tests.
    - Keep `/adr-impl-refactor`'s proposal-only items in the wrap-up. They are advice, not incomplete implementation, unless one exposes an ADR violation or a concrete functional defect that belongs back in step 4.
 
-6. **Automatic Status transition (`Proposed → Accepted`)**
+6. **Final implementation review (completion gate)**
+   - After the final tests, verify the ADR / mapping structure with the deterministic harness:
 
-   For the detailed policy see `concepts.md` "Automatic transition rules". What this step triggers:
-   - Immediately after the step 5 tests pass, **without asking the user**, run the deterministic transition command:
+     ```bash
+     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <implemented category key>
+     ```
+
+     This check mechanically catches malformed ADR/index state, broken dependencies, and new ADR back-references before the adversarial review spends model work on an invalid baseline. If an `error` comes out, fix it before continuing.
+
+   - Run `/adr-impl-review <category>` on the **refactored final code while the target remains `Proposed`** (report only — it does not modify code or ADRs). This invocation is the full completion review, not a partial-review request, so it does not need a separate partial-intent confirmation. Do not pass it the refactor review or result artifacts: its necessity and sufficiency reviewers must derive their conclusions independently from the ADR, final diff, code, tests, and human baseline. It first explains the actual diff in a way a junior can understand so a human can confirm the intent, and then a necessity reviewer and a sufficiency reviewer, who do not share results with each other, each attack unnecessary changes and missing behavior / counterexamples.
+   - `PASS` proceeds to step 7. `FIX_REQUIRED`, `BLOCK`, or `INCONCLUSIVE` does **not** promote the ADR. Keep a newly implemented or decision-changed ADR `Proposed`, route the findings as `/adr-impl-review` specifies, then rerun the affected tests and this completion review. If an `[Impl-fact mismatch]` appears, correct the implementation fact with `/adr-sync <category>` before rerunning.
+   - An already-`Accepted` ADR reviewed for a behavior-preserving reinforcement keeps its existing Status when the new work is not merged; if the decision or requirement contract changed, step 1 already returned it to `Proposed`.
+
+7. **Automatic Status transition and wrap up (`Proposed → Accepted`)**
+
+   For the detailed policy see `concepts.md` "Automatic transition rules". Only after the step 6 review returns `PASS`:
+   - Without asking the user, run the deterministic transition command:
 
      ```bash
      node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-status-transition.mjs <target-adr-path> "Accepted (YYYY-MM-DD)" --summary "<current one-line decision summary>"
      ```
 
    - The script updates the Status line in the target ADR body and the `status` of the exact matching `adrs[]` record in `.mapping.json` together. It fails instead of guessing when the path is absent, duplicated, or already inconsistent.
-   - If several ADRs in one category were implemented together, update all of them
-   - Tell the user about the change in one line ("Updated ADR auth/0003 Status to Accepted")
-
-7. **Wrap up**
-   - Right after the Status promotion (step 6), quickly re-verify the ADR / mapping (= ADR index) structure with the deterministic harness:
-
-     ```bash
-     node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-structure-lint.mjs <implemented category key>
-     ```
-
-     This check mechanically catches whether the edit that changed Status to `Accepted (YYYY-MM-DD)` is correctly formatted (R1), whether the `status` in `.mapping.json` `adrs[]` is consistent with the `## Status` you just changed in the body (R8 status-index-mismatch), and whether any new ADR back-references were left in the code (R17, internal `adr-invariants.sh --code-only`). If an `error` comes out, fix it before committing.
-
-   - Then run `/adr-impl-review <category>` on the **refactored final code** (report only — it does not modify code or ADRs). Do not pass it the refactor review or result artifacts: its necessity and sufficiency reviewers must derive their conclusions independently from the ADR, final diff, code, tests, and human baseline. It first explains the actual diff in a way a junior can understand so a human can confirm the intent, and then a necessity reviewer and a sufficiency reviewer, who do not share results with each other, each attack unnecessary changes and missing behavior / counterexamples. The sufficiency reviewer actually executes targeted tests, and the final artifact is a junior-facing guide that explains code structure, runtime, and state transitions in Mermaid and includes the repair order and completion criteria. If an `[Impl-fact mismatch]` comes out of it, correct the ADR to match the code with `/adr-sync <category>`.
+   - If several ADRs in one category were implemented together, update all of them only after each one's completion review passes.
+   - Run `adr-structure-lint` once more after the transition to verify the dated Status format and body/index lockstep.
+   - Tell the user about the change in one line ("Updated ADR auth/0003 Status to Accepted").
 
 **Forbidden**:
 
@@ -142,5 +145,5 @@ Implements the specified ADR in code, and once the implementation and tests pass
 - Do not implement a new feature without an ADR.
 - Reflect any decision change discovered during implementation in the ADR before modifying the code.
 - Do not promote an ADR to `Accepted` when tests have not passed — Status is a fact about code behavior, not a declaration of intent.
-- Do not promote an ADR before the verified refactor pass and the final full test rerun complete.
+- Do not promote an ADR before the verified refactor pass, required final test rerun, and final implementation review all pass.
 - Do not edit ADR Status fields or mapping statuses manually. Always use `adr-status-transition.mjs` with the exact target ADR path.

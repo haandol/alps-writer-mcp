@@ -150,6 +150,30 @@ test("directive exempts refactoring of any size, but not decision changes", () =
   });
 });
 
+test("directive exempts only bug fixes that restore the current decision", () => {
+  withTmp((dir) => {
+    write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
+    const ctx = runHook(dir);
+
+    assert.match(ctx, /bug fix is exempt only when it restores behavior/);
+    assert.match(ctx, /allowed set, state transition, permission, visibility, mandatory field/);
+    assert.match(ctx, /behavior\/decision change and follows the cycle/);
+    assert.doesNotMatch(ctx, /Bug fixes, lint\/formatting/);
+  });
+});
+
+test("directive makes deep adr-sync finding-driven rather than mandatory", () => {
+  withTmp((dir) => {
+    write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
+    const ctx = runHook(dir);
+
+    assert.match(ctx, /implementation-fact mismatch/);
+    assert.match(ctx, /broad refactor or manual ADR edit/);
+    assert.match(ctx, /\/adr-sync --quick is optional/);
+    assert.doesNotMatch(ctx, /When finished, run \/adr-sync/);
+  });
+});
+
 test("absolute ALPS_ADR_MAPPING is honored as-is (not joined onto CLAUDE_PROJECT_DIR)", () => {
   withTmp((dirA) => {
     withTmp((dirB) => {

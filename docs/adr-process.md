@@ -51,18 +51,20 @@ flowchart TD
         Prereq["선행부터 구현<br/>(dependsOn 위상 순서)"]
         Code["코드 + 테스트 작성<br/>수직 슬라이스: UI → API → Data"]
         Refactor(["/adr-impl-refactor<br/>효율 · 복잡도 · 결합도 · 중복 · 재사용성<br/>검증된 저위험 변경만 즉시 반영"])
+        Review(["/adr-impl-review [category]<br/>주니어용 설명 + 사람의 의도 확인<br/>필요성 ∥ 충분성 + 테스트<br/>완료 판정, 보고 전용"])
         Accepted["Status → Accepted (YYYY-MM-DD)<br/>본문 ## Status와 매핑 status를 함께 갱신"]
         Impl --> Gate
         Gate -->|"선행이 Proposed / dangling"| Prereq
         Prereq --> Gate
         Gate -->|"선행 전부 Accepted"| Code
         Code -->|"최초 테스트 통과"| Refactor
-        Refactor -->|"안전한 변경 + 전체 테스트 재통과"| Accepted
+        Refactor -->|"안전한 변경 + 전체 테스트 재통과"| Review
+        Review -->|PASS| Accepted
+        Review -->|"FIX_REQUIRED · BLOCK · INCONCLUSIVE"| Code
     end
 
     subgraph maint["유지 — 반복 구간"]
         direction TB
-        Review(["/adr-impl-review [category]<br/>주니어용 설명 + 사람의 의도 확인<br/>필요성 ∥ 충분성 + 테스트<br/>Mermaid 수리 가이드 (보고 전용)"])
         Sync(["/adr-sync [category] [--quick]<br/>drift 복구 · 카테고리 정합성<br/>· 낡은 fN 정규화 · status↔본문 일치"])
         Rollup(["/adr-rollup [category]<br/>한 결정의 진화 체인을 통합"])
     end
@@ -73,10 +75,9 @@ flowchart TD
     S7 -.->|"Section 7 + 6.3을 읽음<br/>(alps-writer → adr-writer, 단방향, 1회)"| F2A
     ADROnly --> New
     Proposed --> Impl
-    Accepted --> Review
-    Review -->|"증거 검증 후"| Sync
     Review -.->|"구현 사실 drift 발견"| Sync
-    Sync -->|"다음 사이클"| Impl
+    Sync -.-> Review
+    Accepted -->|"다음 사이클"| Impl
     Sync -.->|"진화 이력이 여러 ADR에 흩어졌는가?"| Rollup
     Rollup -.-> Sync
 
@@ -94,11 +95,11 @@ flowchart TD
 **읽는 법**
 
 - **진입점은 둘이다.** PRD-first는 `/alps-init`에서 시작해 `/feature-to-adr`로 ADR 레이어로 넘어간다(alps-writer가 adr-writer에 넘기는 유일한 지점이며 단방향이다). ADR-only는 PRD 없이 곧장 `/adr-new`에서 시작한다.
-- **`/feature-to-adr`는 얇은 1회성 임포터다.** Section 7과 6.3을 읽고, 이름 기반 정규 카테고리 키를 만들고, 작성 자체는 `/adr-new`에 위임하고, 매핑에는 `dependsOn`만 보강한다. 나중에 PRD가 바뀌면 재임포트하지 않고 해당 ADR을 직접 수정한다(또는 supersede한다).
+- **`/feature-to-adr`는 얇은 1회성 임포터다.** Section 7과 6.3을 읽고, 이름 기반 정규 카테고리 키를 만들고, 작성 자체는 `/adr-new`에 위임하고, 매핑에는 `dependsOn`만 보강한다. 단일 기능을 지정해도 아직 변환되지 않은 선행 기능까지 위상 순서로 큐에 넣어 dangling 상태를 저장하지 않는다. 나중에 PRD가 바뀌면 재임포트하지 않고 해당 ADR을 직접 수정한다(또는 supersede한다).
 - **새 초안은 한 번 검증하고, 두 번 리뷰하지 않는다.** `/adr-new`는 `adr-reviewer`가 적용하는 것과 같은 규칙(R1-R20)으로 작성하므로, 결정론적 하네스를 돌린 뒤 판단 규칙에 대한 자체 점검을 수행한다 — 방금 제대로 해낸 것을 대부분 되풀이할 리뷰어를 띄우지 않는다. `/adr-review`는 그 작성 컨텍스트가 사라진 자리에 독립적인 읽기를 공급한다. **손으로 고친, 다른 세션에서 바뀐, 물려받은** ADR이 그 대상이며, 작성 직후 자동으로가 아니라 요청 시에 실행된다.
 - **의존성 게이트는 필수다.** `/adr-impl`은 곧장 코딩으로 가지 않는다. `dependsOn`을 전이적으로 순회하고, 선행이 `Proposed`이거나 dangling이면 그것을 위상 순서로 먼저 구현한다.
-- **구현 완료 전 검증된 리팩터링을 수행한다.** 최초 테스트가 통과하면 `/adr-impl-refactor`의 읽기 전용 리뷰어가 실행 효율, 복잡도, 결합도, 중복과 현재 코드에 근거한 재사용 기회를 독립적으로 찾는다. 주 세션은 동작 보존, 국소 범위, 높은 신뢰도, 변경 전후 테스트를 모두 만족하는 항목만 즉시 적용한다. 크리티컬 항목도 안전 조건을 우회하지 않으며, 나머지는 우선순위와 검증 방법을 갖춘 제안으로 남긴다. 전체 테스트를 다시 통과한 뒤에만 Status가 `Accepted`가 된다.
-- **구현 후 리뷰는 반증 기반이며 보고 전용이다.** `/adr-impl-review`는 실제 diff를 주니어가 따라갈 수 있게 설명하고, 사람의 의도를 확인한 뒤, 필요성 리뷰어와 충분성 리뷰어를 결과 공유 없이 병렬로 돌린다. 필요성은 제거 가능한 변경을 공격하고, 충분성은 빠진 ADR 결정과 반례를 표적 테스트로 공격한다. 마지막으로 실제 코드 관계에서만 그린 Mermaid 다이어그램과 수리 순서, 완료 기준을 담은 주니어용 Markdown 가이드를 만든다. `[Impl-fact mismatch]`는 코드가 권위를 갖는 구현 사실이므로 `/adr-sync`로 라우팅한다.
+- **구현 완료 전 검증된 리팩터링을 수행한다.** 최초 테스트가 통과하면 `/adr-impl-refactor`의 읽기 전용 리뷰어가 실행 효율, 복잡도, 결합도, 중복과 현재 코드에 근거한 재사용 기회를 독립적으로 찾는다. 독립 reviewer가 없으면 제안만 남기고 자동 반영하지 않는다. 실제 변경이 없으면 동일 targeted test를 반복하지 않는다.
+- **최종 리뷰가 완료를 판정한다.** `/adr-impl-review`는 `Proposed` 상태의 최종 diff를 설명하고, 사람의 의도를 확인한 뒤, 필요성·충분성 리뷰를 독립적으로 수행한다. `PASS`일 때만 Status가 `Accepted`가 되며, 다른 판정은 `Proposed`를 유지한 채 수정과 재검증으로 돌아간다. `[Impl-fact mismatch]`는 `/adr-sync`로 라우팅하지만, 깊은 sync는 모든 작은 변경의 기본 종료 단계가 아니다.
 - **진화 이력은 ADR 본문이 아니라 decision log에 산다.** ADR 본문은 현재 상태만 서술하고, 같은 결정이 진화하면 제자리에서 덮어쓴다. 주요 전이(채택 대안 교체, 핵심 알고리즘이나 아키텍처 변경, Driver 반전)는 카테고리별 `decision-log.md`에 최신순 한 줄로 남긴다 — `/adr-impl`과 `/adr-sync`가 추가하거나 수확하고, `/adr-rollup`은 통합 과정에서 체인의 주요 전이를 로그로 수확하고 현재 상태 통합 ADR만 남긴다. 로그는 관례 파일이므로 `.mapping.json`에 등록하지 않고 하네스도 검사하지 않는다. supersede(새 ADR)는 결정 주제가 갈라질 때만 일어나며, 진화 체인은 기본적으로 누적하지 않는다.
 - **`/adr-impl`은 카테고리 키로 대상을 찾는다.** Feature ID는 어디에도 저장하지 않으며, 숫자만으로 된 폴백 키(`f1`)조차 평범한 리터럴 카테고리 키로 해석한다.
 - **훅이 사이클을 지탱한다.** 매 턴 `.mapping.json` 인덱스 스냅샷과 ADR-first 지시를 다시 주입하므로, 긴 세션에서도(컨텍스트 압축을 지나서도) 흐름이 유지된다.
@@ -115,7 +116,13 @@ flowchart TD
     Q -->|이어쓰기| L["load_alps_document()"]
     I --> Ov["get_alps_overview()<br/>9개 섹션 전체의 작성 가이드"]
     L --> Ov
-    Ov --> Loop
+    L --> Status["get_alps_document_status()<br/>완료 섹션을 한 번 요약"]
+    Ov --> StartAt{"시작 위치"}
+    Status --> StartAt
+    StartAt -->|"신규"| First["Section 1"]
+    StartAt -->|"이어쓰기"| Resume["의존 순서상 첫 미완료 섹션<br/>완료·미변경 섹션은 재확인하지 않음"]
+    First --> Loop
+    Resume --> Loop
 
     subgraph Loop["섹션마다 — 한 번에 하나씩, 절대 묶지 않는다"]
         direction TB
@@ -139,6 +146,8 @@ flowchart TD
 ```
 
 **작성 순서** — `1 → 2 → 3 → 4 → 6 → 5 → 7 → 8 → 9`. 섹션 번호와 최종 문서 순서는 그대로다(5는 Design, 6은 Requirements). _질문하는_ 순서만 어긋나는데, Section 5가 Section 6.1이 정의하는 Feature ID(F1, F2, …)를 재사용하기 때문이다. 질문 순서가 숫자 순서에서 벗어나는 곳은 여기 한 군데뿐이다.
+
+기존 문서는 `get_alps_document_status` 결과를 읽고 이 순서에서 첫 미완료 섹션부터 이어간다. 완료된 섹션은 한 번 요약하되, 사용자가 전체 재검토를 요청하거나 선행 내용이 바뀐 경우가 아니면 다시 승인받지 않는다.
 
 | §   | 섹션                      | §   | 섹션                        |
 | --- | ------------------------- | --- | --------------------------- |
@@ -173,6 +182,12 @@ sequenceDiagram
     F2A->>MCP: read_alps_section(4) — 4.2 기술 스택 / 전역 제약
 
     F2A->>F2A: 6.3 그래프의 정합성 검사
+    alt 기능 하나를 지정
+        F2A->>F2A: 전이적 선행 기능까지 큐에 추가<br/>이미 매핑된 기능은 제외
+        Note over F2A: Section 7에 없는 선행이 있으면<br/>아무것도 쓰기 전에 중단
+    else 전체 변환
+        F2A->>F2A: 전체 기능을 위상 정렬
+    end
     Note over F2A: self-edge → 무시하고 한 줄 보고<br/>순환 → 큐 정렬, 카테고리 생성,<br/>dependsOn 기록 이전에 중단한 뒤<br/>6.3에서 순환을 끊어달라고 요청
 
     F2A->>F2A: 위상 순서로 큐 구성<br/>이미 매핑된 기능은 제외 (재실행 안전)
@@ -192,6 +207,7 @@ sequenceDiagram
 **이 핸드셰이크가 지키는 불변식.**
 
 - **PRD는 한 번만 임포트한다.** ADR이 존재한 뒤로 그 결정은 ADR 레이어에서 관리된다 — 이후 PRD 변경은 재임포트가 아니라 ADR을 수정(또는 supersede)해서 흡수한다. 재실행 시 이미 매핑된 기능을 큐에서 빼는 이유가 이것이다.
+- **매핑은 항상 의존성으로 닫혀 있다.** 한 기능만 요청해도 매핑에 없는 전이적 선행 기능을 먼저 변환한다. Section 7에서 선행 기능을 찾지 못하면 중단하며, 다음 단계가 거부할 dangling `dependsOn`을 중간 상태로 저장하지 않는다.
 - **임포터는 도메인 경계를 발명하지 않는다.** ALPS에는 기능보다 상위의 개념이 없으므로, 2세그먼트 `<context>/<feature>` 키는 두 경우에만 쓴다. Section 7이 이미 기능을 그룹으로 묶고 있을 때(PRD가 경계를 주장한 경우), 또는 사용자가 명시적으로 그룹화를 요청할 때다. 그 외에는 flat이 기본이며, 이것이 "adr-writer는 ALPS를 참조하지 않는다"를 참으로 유지한다.
 - **Feature ID는 절대 키가 되지 않는다.** `F1` / `F-AUTH-01`이 있어도 키는 기능 이름에서 나오고, ID는 어디에도 저장하지 않는다. 이름이 숫자뿐인 기능은 소문자 id(`f1`)를 평범한 리터럴 키로 쓰는 것이지, ID를 보존하는 필드가 아니다.
 - **그대로 넘어가는 것**: 근거를 포함한 요구사항 값(상한, 쿼터, 보존 기간, 목표치)과 비수치 요구사항(허용 값 집합과 전이, 필수 여부, 가시성, 유일성, 단위). 여기서 숫자를 "적절히"로 일반화하면 파이프라인에서 영구히 잃는다. ADR은 PRD를 되짚어 가리키지 않기 때문이다.
@@ -237,24 +253,27 @@ flowchart TD
     Test -->|"ADR의 결정이 틀렸다"| FixAdr["ADR을 먼저 고친다"]
     FixAdr --> Impl4
     Test -->|통과| Refactor["5.1 /adr-impl-refactor<br/>읽기 전용 reviewer가 효율·복잡도·중복·재사용성 검토<br/>안전 게이트 통과 항목만 변경 전후 테스트와 함께 적용<br/>나머지는 제안으로 기록"]
-    Refactor --> FinalTest{"5.2 전체 프로젝트 테스트 재통과?"}
+    Refactor --> FinalTest{"5.2 코드가 바뀌었으면<br/>전체 프로젝트 테스트 재통과?"}
     FinalTest -->|"리팩터링 문제"| Refactor
-    FinalTest -->|통과| Promote["6. 묻지 않고 자동 승격:<br/>본문 ## Status → Accepted (YYYY-MM-DD)<br/>+ 매핑 status를 함께"]
-    Promote --> Lint["7. adr-structure-lint &lt;category&gt;<br/>R1 날짜 형식 · R8 status-index-mismatch ·<br/>R17 코드 → ADR 역참조"]
-    Lint --> Rev(["→ /adr-impl-review &lt;category&gt;"])
+    FinalTest -->|통과| Lint["6. adr-structure-lint &lt;category&gt;<br/>유효한 Proposed 기준선 확인"]
+    Lint --> Rev(["6.1 /adr-impl-review &lt;category&gt;<br/>보고 전용 완료 게이트"])
+    Rev --> Verdict{"판정"}
+    Verdict -->|PASS| Promote["7. 묻지 않고 자동 승격:<br/>본문 ## Status → Accepted (YYYY-MM-DD)<br/>+ 매핑 status를 함께"]
+    Verdict -->|"FIX_REQUIRED · BLOCK · INCONCLUSIVE"| Impl4
+    Promote --> PostLint["전이 후 lint 재실행<br/>날짜 형식 + status lockstep"]
 
     classDef cmd fill:#e8f0fe,stroke:#4285f4,color:#111;
     classDef gate fill:#fef7e0,stroke:#f9ab00,color:#111;
     classDef stop fill:#fce8e6,stroke:#d93025,color:#111;
     class S,Rev cmd;
-    class Gate,Dep,Node,Test,FinalTest,AntiP,Kind,Disk gate;
+    class Gate,Dep,Node,Test,FinalTest,Verdict,AntiP,Kind,Disk gate;
     class StopD,StopP,StopC,StopA stop;
 ```
 
 - **의존성 순서가 입력 순서를 이긴다.** 대상이 여럿일 때 — 사용자가 `checkout, identity/login, cart`를 직접 고른 경우든 게이트가 선행을 추가한 경우든 — 항상 위상 정렬해서 가장 깊은 선행부터 구현하고, 그 순서를 한 줄로 사용자에게 보여준다.
-- **요구사항 값 변경은 코드 수정이 아니다.** "최대 7턴 → 10턴"은 상수 하나처럼 보이지만 시스템 동작 요구사항이 바뀐 것이다. ADR의 요구사항 계약을 먼저 갱신하고(제자리 수정, 그리고 최소 major이므로 `decision-log.md` 한 줄도), 테스트 통과 후 6단계가 다시 `Accepted`로 승격한다.
-- **자동 리팩터링은 보수적이다.** 공개 계약, 스키마, 의존성, 상태 전이, 권한, 필수 검증, 동시성, 트랜잭션, 폴백과 오류 의미를 건드리는 항목은 즉시 반영하지 않는다. 현재 존재하는 동일 의미의 중복만 재사용 후보이며, 한 호출자나 미래 사용처를 위한 범용 추상화는 만들지 않는다.
-- **Status는 사실을 기록하며 의도를 기록하지 않는다** — 최초 테스트뿐 아니라 리팩터링 뒤 전체 테스트가 실패하는 동안에도 절대 승격하지 않는다.
+- **요구사항 값 변경은 코드 수정이 아니다.** "최대 7턴 → 10턴"은 상수 하나처럼 보이지만 시스템 동작 요구사항이 바뀐 것이다. ADR의 요구사항 계약을 먼저 갱신하고(제자리 수정, 그리고 최소 major이므로 `decision-log.md` 한 줄도), 테스트와 최종 리뷰가 통과한 뒤 다시 `Accepted`로 승격한다.
+- **자동 리팩터링은 보수적이다.** 공개 계약, 스키마, 의존성, 상태 전이, 권한, 필수 검증, 동시성, 트랜잭션, 폴백과 오류 의미를 건드리는 항목은 즉시 반영하지 않는다. 독립 reviewer가 없으면 제안 전용이며, 실제 변경이 없으면 기준선 테스트를 재사용한다.
+- **Status는 사실을 기록하며 의도를 기록하지 않는다** — 최초 테스트, 리팩터링 뒤 필요한 전체 테스트, 최종 구현 리뷰가 모두 통과하기 전에는 승격하지 않는다.
 
 ## 5. /adr-impl-review 내부: 적대적 리뷰
 
@@ -361,7 +380,7 @@ Status는 사람이 손으로 정하는 값이 아니라 사이클이 자동으�
 ```mermaid
 stateDiagram-v2
     [*] --> Proposed: /adr-new · /feature-to-adr
-    Proposed --> Accepted: /adr-impl 최종 테스트 통과
+    Proposed --> Accepted: /adr-impl 테스트 + 최종 리뷰 PASS
     Accepted --> Proposed: 결정 변경 → 재구현 대기
     Accepted --> Deprecated: 대체 없이 폐기
     Accepted --> Superseded: 결정 주제가 갈라짐
@@ -376,7 +395,7 @@ stateDiagram-v2
 ```
 
 - `Proposed` — 제안되었고 아직 구현되지 않았다. 날짜를 갖지 않는다(작성 날짜는 본문 상단 `Date:`에 있다).
-- `Accepted (YYYY-MM-DD)` — 구현 완료 + 테스트 통과. 괄호에는 **전이 날짜만** 들어간다(하네스가 `date-only`로 검증한다).
+- `Accepted (YYYY-MM-DD)` — 구현 완료 + 테스트 통과 + 최종 구현 리뷰 PASS. 괄호에는 **전이 날짜만** 들어간다(하네스가 `date-only`로 검증한다).
 - `Deprecated (YYYY-MM-DD)` — 대체 없이 폐기되었다.
 - `Superseded by [ADR XXXX](link)` — 새 ADR로 대체되었다(날짜 대신 후속 ADR 링크).
 

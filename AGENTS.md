@@ -76,6 +76,7 @@ pnpm-workspace.yaml       # packages: plugins/alps-writer
 └── ci.yaml               # test (node 20/22) + lint/format/bump:check/build + dist-drift gate
 scripts/
 └── bump-version.mjs      # Set/verify the release version across all 13 sites
+.adr-invariants-code-ignore # Self-hosting exclusions for code→ADR example scanning
 
 plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 ├── .claude-plugin/plugin.json   # mcpServers only (node dist/index.js); skills/ (alps-init, feature-to-adr) are auto-discovered
@@ -213,8 +214,9 @@ avoid a round trip — not the only thing standing between a bad commit and `mai
   hook-start checks, and the dist-drift rebuild. The rule is **if CI fails on it,
   pre-push fails on it** — the two were split before, so a push could be green
   locally and red on GitHub over a lint or formatting problem already sitting in
-  the tree. `SKIP_TESTS=1 git push …` bypasses only the slow suite (for a
-  knowingly-red WIP branch); every other check always runs.
+  the tree. `SKIP_TESTS=1 git push …` bypasses only the slow suite for a
+  knowingly-red WIP branch and is rejected when the push updates `main`; every
+  other check always runs.
 
   Ordering matters in one place: the bundle-boot check runs **before** the
   `pnpm build` rebuild, so it judges the bundle being pushed rather than one just
@@ -227,6 +229,10 @@ avoid a round trip — not the only thing standing between a bad commit and `mai
   consumer executes with **no install step**. The hooks only exist for someone who
   ran `pnpm install` and can be skipped with `--no-verify`, so CI is the gate that
   actually holds.
+
+- **GitHub ruleset** — `main` requires a pull request and successful `test`,
+  `build`, and `runtime` checks. Local hooks are feedback; the remote ruleset is
+  the final publication boundary.
 
 **Why `engines.node` is 24 and CI runs no older matrix.** The floor used to read
 `>= 20`, and nothing could check it: `pnpm@11` needs Node >= 22.13 (it imports

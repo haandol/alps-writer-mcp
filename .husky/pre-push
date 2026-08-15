@@ -17,10 +17,13 @@
 #                  under a bare `node` with no node_modules in play
 #
 # Bypass: SKIP_TESTS=1 git push … skips only the slow suite, for a WIP branch you
-# know is red. Everything else always runs — those checks are seconds each and
-# each one catches a distinct way the pushed tree can be broken.
+# know is red. It is rejected for pushes that update main. Everything else always
+# runs — those checks are seconds each and each one catches a distinct way the
+# pushed tree can be broken.
 
 set -u
+
+PUSH_UPDATES="$(cat)"
 
 fail() {
   echo ""
@@ -36,6 +39,9 @@ pnpm --filter alps-writer exec tsc --noEmit ||
 
 # ── the suite ──────────────────────────────────────────────────────────────
 if [ "${SKIP_TESTS:-}" = "1" ]; then
+  if printf '%s\n' "$PUSH_UPDATES" | awk '$3 == "refs/heads/main" { found = 1 } END { exit !found }'; then
+    fail "SKIP_TESTS=1 is not allowed when updating main." "Push the WIP branch, then merge through a protected pull request."
+  fi
   echo "[pre-push] ⚠ SKIP_TESTS=1 — skipping the test suite."
 else
   pnpm test ||

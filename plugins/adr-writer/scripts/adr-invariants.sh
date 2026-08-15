@@ -41,6 +41,11 @@
 #                     directions never get confused.
 #
 # Exit: 0 = clean, 1 = at least one violation found, 2 = usage error.
+#
+# If `.adr-invariants-code-ignore` exists at the repository root, check (a)
+# ignores the exact files and directory prefixes listed there. This is for
+# self-hosting repositories whose prompts/tests intentionally teach ADR paths;
+# it does not affect ADR→PRD or rollup checks.
 
 set -uo pipefail
 
@@ -88,6 +93,27 @@ done
 ADR_DIR="${ADR_DIR%/}"
 
 found=0
+CODE_IGNORE_FILE=".adr-invariants-code-ignore"
+
+code_path_ignored() { # $1=repo-relative file path
+  local file="${1#./}" entry
+  [ -f "$CODE_IGNORE_FILE" ] || return 1
+  while IFS= read -r entry || [ -n "$entry" ]; do
+    entry="${entry#./}"
+    case "$entry" in
+      ""|\#*) continue ;;
+      */)
+        case "$file" in
+          "$entry"*) return 0 ;;
+        esac
+        ;;
+      *)
+        [ "$file" = "$entry" ] && return 0
+        ;;
+    esac
+  done < "$CODE_IGNORE_FILE"
+  return 1
+}
 
 # ── what the whole-tree checks actually scan ──────────────────────────────
 #
@@ -262,7 +288,14 @@ if [ "$RUN_CODE" -eq 1 ]; then
   # "see ../docs/adr/identity/login/0001.md") was silently dropped.
   hits=""
   if [ -n "$raw" ]; then
-    hits="$(printf '%s\n' "$raw" | grep -vE "^\.?/?${ADR_DIR}/")" || true
+    while IFS= read -r line; do
+      file="${line%%:*}"
+      case "$file" in
+        "$ADR_DIR"/*|"./$ADR_DIR"/*) continue ;;
+      esac
+      code_path_ignored "$file" && continue
+      hits="${hits}${hits:+$'\n'}${line}"
+    done <<< "$raw"
   fi
   if [ -n "$hits" ]; then
     echo "✗ (a) code → ADR reverse references (remove from code; link lives in .mapping.json):"

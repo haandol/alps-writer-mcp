@@ -64,6 +64,11 @@ export function agentText(name) {
   return stripFrontmatter(readFileSync(path.join(PLUGIN_ROOT, "agents", `${name}.md`), "utf8"));
 }
 
+export function ruleText(name) {
+  if (!RULE_DOCS.includes(name)) throw new Error(`unknown seeded rule document: ${name}`);
+  return readFileSync(path.join(TEMPLATES, name), "utf8");
+}
+
 function stripFrontmatter(source) {
   return source.replace(/^---\n[\s\S]*?\n---\n/, "");
 }

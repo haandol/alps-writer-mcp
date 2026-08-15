@@ -68,6 +68,15 @@ function validFindings(dir) {
     verdict: "FIX_REQUIRED",
     explanation: path.join(dir, "explanation.md"),
     report: path.join(dir, "implementation-review.md"),
+    metrics: {
+      startedAt: "2026-08-15T06:30:00.000Z",
+      completedAt: "2026-08-15T06:35:42.000Z",
+      elapsedSeconds: 342,
+      necessityFindingCount: 0,
+      sufficiencyFindingCount: 1,
+      unverifiedRiskCount: 0,
+      testCommandCount: 1,
+    },
     findings: [
       {
         category: "Spec violation",
@@ -124,5 +133,19 @@ test("review artifact validator rejects missing Mermaid and evidence fields", ()
     assert.equal(result.status, 1);
     assert.match(result.stderr, /evidence must be a non-empty string/);
     assert.match(result.stderr, /at least two Mermaid diagrams/);
+  });
+});
+
+test("review artifact validator requires internally consistent review metrics", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "implementation-review.md"), validReport());
+    const findings = validFindings(dir);
+    findings.metrics.unverifiedRiskCount = 1;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /unverifiedRiskCount is 1, expected 0/);
   });
 });

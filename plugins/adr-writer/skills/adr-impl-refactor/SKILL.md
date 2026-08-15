@@ -40,7 +40,7 @@ Run `adr-impl-refactor-reviewer` in a fresh read-only context.
 
 1. If the named agent exists, invoke it.
 2. Otherwise give a generic read-only subagent the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-refactor-reviewer.md`.
-3. If subagents are unavailable, the main session performs the same review and records that the independent context was unavailable.
+3. If subagents are unavailable, the main session performs the same analysis only to produce `PROPOSE_ONLY` items and records that the independent context was unavailable. **It must not classify or apply any candidate as `APPLY_NOW` without an isolated read-only reviewer.**
 
 Give the reviewer only the original ADR, mapping entry, raw diff, confirmed code scope, related tests, seeded rule docs, and project conventions. Do not give it necessity/sufficiency results, an implementation explanation, or earlier refactor conclusions.
 
@@ -52,6 +52,7 @@ The reviewer proposes; the main session verifies. An `APPLY_NOW` label is not su
 
 Auto-apply a candidate only when every condition holds:
 
+- The candidate came from an isolated read-only reviewer context. Main-session fallback findings are proposal-only.
 - It preserves the ADR decision, requirement contract, observable behavior, and public contract.
 - It is local to the confirmed implementation scope and has a small, mechanically explainable patch.
 - Confidence is `high`, with exact code and call-path evidence.
@@ -74,7 +75,7 @@ For each verified candidate:
 
 Do not use destructive worktree commands. Track the exact patch for each candidate so only work introduced by this skill is undone.
 
-After all candidates, rerun the combined targeted test set. When this skill is called by `/adr-impl`, `/adr-impl` must still rerun the project's full test command before Status promotion.
+After all candidates, rerun the combined targeted test set **only when at least one candidate was kept**. When zero candidates changed the worktree, reuse the passing baseline as the final targeted result instead of testing identical state twice. When this skill is called by `/adr-impl`, `/adr-impl` must still rerun the project's full test command after an applied refactor.
 
 ## 6. Write the result
 
@@ -110,13 +111,14 @@ Summarize the applied count, proposal count, and tests in chat. Do not present a
 
 ## 7. Continue the cycle
 
-- When called from `/adr-impl`, return control to its test step. The full project test must pass on the refactored code before `Proposed -> Accepted`.
+- When called from `/adr-impl`, return control to its test step. The required project tests and final implementation review must pass on the refactored code before `Proposed -> Accepted`.
 - Then `/adr-impl-review` reviews the final diff without reading `refactor-review.md` or `refactor-results.md`. Its necessity and sufficiency reviewers must derive their conclusions independently from the ADR, final code, diff, tests, and human baseline.
 
 ## Prohibited
 
 - Do not change the ADR, mapping, requirement contract, or decision log.
 - Do not auto-apply when tests are missing or the baseline is failing.
+- Do not auto-apply when an isolated read-only reviewer is unavailable.
 - Do not let priority or severity bypass the auto-apply gate.
 - Do not introduce speculative reuse or a framework for one caller.
 - Do not optimize tuning values without concrete evidence of repeated unnecessary work.
