@@ -8,7 +8,7 @@ argument-hint: "[category-or-adr-path?]"
 
 Review ADRs that already exist **as documents** and return a punch list. With no argument it sweeps every ADR; with an argument it narrows to one category or a single ADR.
 
-> **This is the document-quality axis.** It asks "is this ADR written at the right abstraction level, and is every requirement it must carry still in it?" — never "does the code match?" Pick the right command:
+> **This is the document-quality axis.** It asks "should this decision be an ADR at all, is it written at the right abstraction level, and is every requirement it must carry still in it?" — never "does the code match?" The ADR admission gate rejects replaceable libraries, SDKs, frameworks, credential/auth adapters, and module structure even when their prose is polished. Pick the right command:
 >
 > Both halves of that question come from one principle (`concepts.md` "The abstraction ladder"): **PRD, ADR, and code are the same system at three resolutions**, and an ADR earns its place only while it can be read alone to answer "why this decision, and what must the result honor?" Detail pulled up from the code level makes it untrustworthy alone; a requirement pushed out of it lands in no level at all. Every R1-R20 finding is one of those two leaks, so read the sweep's findings as **"which ADRs stopped being readable at their own level"** rather than as a style audit.
 >
@@ -141,7 +141,7 @@ This command stays report-only. Route what the user approves:
 
 - **R3/R4 (implementation detail, code-readable content)** → edit the ADR body directly.
 - **R18a (a missing requirement value or rule)** → this needs the user, not a guess. The code cannot tell you whether a value is a contract, so ask what the requirement is and record it with its basis (`authoring-rules.md` "Concrete numbers" / "Non-numeric requirements"). **Never invent a number.**
-- **R12/R13/R14 (weak gray zone, Drivers, alternatives)** → strengthen the ADR, or reconsider whether the decision needed an ADR at all.
+- **R12/R13/R14 (admission failure, weak gray zone, Drivers, alternatives)** → if the core subject is a replaceable implementation means, recommend retiring the ADR and moving useful detail down; otherwise strengthen the admitted decision.
 - **A contradiction between ADRs** → the user rules on which value holds; then whichever ADR changes gets a `decision-log.md` line if the change is major (`authoring-rules.md` "What to log — minor vs major").
 - **A wrong category boundary or a decision split across categories** → `/adr-sync` (its step 3.5 owns category realignment).
 - **Anything needing the code** → `/adr-sync [category]`, or `/adr-impl-review [category]` when the question is whether the implementation honored the decision.

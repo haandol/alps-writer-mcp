@@ -119,12 +119,12 @@ flowchart TD
 
 ### B. ADR-only — no PRD (adr-writer standalone)
 
-1. `/adr-new <category>` → describe the decision directly (an infrastructure choice, an architectural direction, a new feature direction). No ALPS document required.
+1. `/adr-new <category>` → apply the ADR admission gate, then describe a durable requirement or architectural decision directly. Replaceable libraries, SDKs, frameworks, and credential/auth wiring stay in code. No ALPS document required.
 2. `/adr-impl <category>` → build it in code, run the automatic verified refactor pass and tests, then invoke the report-only adversarial review as the completion gate.
 3. A passing `/adr-impl-review` promotes the ADR to `Accepted`; a must-fix verdict leaves it `Proposed`.
 4. As you keep working, the ADR-first hook re-injects the ADR map every turn. Run `/adr-sync` when drift evidence or periodic maintenance calls for it.
 
-**A pure refactor is exempt from the cycle** — a structural change that does not alter behavior gets no ADR, however large it is, because the coding agent's planning step already plans the change scope and caller impact. A bug fix is exempt only when it restores behavior the current ADR already decided. A fix or "refactor" that changes a requirement value, allowed state, transition, permission, key design, adopted algorithm, or external-dependency fallback is a behavior change — update the relevant ADR first.
+**Apply the ADR admission gate before the cycle.** A pure refactor is exempt, as are replaceable implementation changes such as swapping a library, SDK, framework, credential provider chain, signer, or adapter while preserving the same contracts and boundaries. A bug fix is exempt when it restores already intended behavior. A change to a requirement value, allowed state, transition, permission, key design, provider/model boundary, adopted algorithm, security trust boundary, or external-dependency fallback enters the cycle and updates the relevant ADR first.
 
 ### C. Inherited or hand-edited ADRs — review them as documents
 
@@ -145,7 +145,7 @@ In all flows the hook runs automatically once adr-writer is installed — every 
 
 | Command                          | Role                                                                                                                                                                                                           |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/adr-new <category>`            | Author a new ADR directly — the default path, no ALPS PRD required                                                                                                                                             |
+| `/adr-new <category>`            | Apply the admission gate and author a durable decision directly; implementation-only choices create no ADR                                                                                                     |
 | `/adr-impl [category]`           | Implement an ADR in code (including tests). With no argument, lists Proposed ADRs and asks which to build                                                                                                      |
 | `/adr-impl-refactor [category]`  | Review concrete efficiency and proportionate reuse, apply only high-confidence local behavior-preserving refactors with before/after tests, and leave wider or weakly verified opportunities as proposals      |
 | `/adr-impl-review [category]`    | Explain the diff, confirm intent, run independent necessity/sufficiency reviews and tests, and emit a Mermaid-rich junior repair guide (report-only)                                                           |
@@ -161,7 +161,7 @@ One hook supports the main Claude Code session — **with no external LLM calls*
 | ------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `UserPromptSubmit` | Every user message | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn (survives session compaction, unlike a one-shot SessionStart injection) |
 
-The directive tells the model: when a request adds or changes behavior, read the relevant ADRs (or author one with `/adr-new`) before touching code. Classification is left to the main model — the hook never blocks an edit; keeping the PRD → ADR → code flow intact is the model's job, prompted every turn.
+The directive tells the model to apply the ADR admission gate first. Only changes to durable requirements, boundaries, provider/model choices, key designs, algorithms, trust policies, or fallbacks read or author an ADR before code; replaceable implementation means remain code-level. Classification is left to the main model — the hook never blocks an edit.
 
 ## Deterministic self-test
 

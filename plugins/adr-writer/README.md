@@ -1,6 +1,6 @@
 # adr-writer
 
-ADR-driven development cycle for Codex and Claude Code. Author Architecture Decision Records, implement them in code, and keep the two in sync — with an ADR-first hook that re-injects the ADR map every turn.
+ADR-driven development cycle for Codex and Claude Code. The ADR admission gate records only durable requirements and architectural decisions, leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring in code. The cycle then implements and keeps admitted decisions in sync, with an ADR-first hook that re-injects the ADR map every turn.
 
 **Standalone**: adr-writer requires no ALPS PRD and never references the `alps-writer` plugin. ADRs are its first-class artifact; code is implemented from ADRs. `docs/adr/.mapping.json` (the ADR index) stores no PRD reference. The ADR ↔ code link is not stored anywhere — an agent finds the code an ADR governs by reading the ADR and searching the repo, so refactors never churn a stored mapping.
 
@@ -24,7 +24,7 @@ codex plugin add adr-writer@alps-writer
 
 | Command                          | Role                                                                                                                                                                                                                                                                       |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/adr-new <category>`            | Author a new ADR directly — the default authoring path                                                                                                                                                                                                                     |
+| `/adr-new <category>`            | Apply the admission gate, then author a durable architectural decision directly; implementation-only choices create no ADR                                                                                                                                                 |
 | `/adr-impl [category]`           | Implement an ADR in code (including tests). With no argument, lists Proposed ADRs and asks which to build                                                                                                                                                                  |
 | `/adr-impl-refactor [category]`  | Review efficiency, complexity, coupling, duplication, and proportionate reuse; apply only high-confidence local behavior-preserving refactors with before/after tests, and propose the rest                                                                                |
 | `/adr-impl-review [category]`    | Explain the implementation, then run independent necessity/sufficiency reviews and tests; emit a Mermaid-rich junior repair guide (report-only)                                                                                                                            |
@@ -61,7 +61,7 @@ One hook supports the main session — **no external LLM calls**; the main model
 | ------------------ | ------------------ | ----------------------------------------------------------------------------- |
 | `UserPromptSubmit` | Every user message | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn |
 
-The directive prompts the model to read (or author) the relevant ADR before changing behavior. It never blocks an edit — keeping the PRD → ADR → code flow intact is the model's job, re-prompted every turn so it survives session compaction.
+The directive first applies the ADR admission gate. Requirement contracts, durable boundaries, provider/model choices, key designs, algorithms, and fallback policies enter the cycle; replaceable SDKs, libraries, frameworks, and credential/auth adapters stay in code. The hook never blocks an edit — keeping the PRD → ADR → code flow intact is the model's job, re-prompted every turn so it survives session compaction.
 
 ## Relationship to alps-writer
 

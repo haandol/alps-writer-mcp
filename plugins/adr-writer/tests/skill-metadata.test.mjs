@@ -340,6 +340,55 @@ test("the authoring rules gate requirements ahead of the code-readthrough filter
   assert.doesNotMatch(rules, /no constants in an ADR/i);
 });
 
+test("the ADR admission gate keeps replaceable implementation means out of every decision path", () => {
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  const concepts = read(path.join(ADR_ROOT, "templates", "adr", "concepts.md"));
+
+  for (const source of [rules, concepts]) {
+    assert.match(source, /ADR admission gate/);
+    assert.match(source, /implementation substitution test/);
+    assert.match(source, /GPT-5\.6 through Amazon Bedrock/);
+    assert.match(source, /credential provider chain/);
+    assert.match(source, /Do not create or update an ADR|Do not create or update an ADR/i);
+  }
+
+  // Technology categories that used to make code-level choices look
+  // automatically ADR-worthy must not remain as blanket examples.
+  assert.doesNotMatch(concepts, /Authentication method,/);
+  assert.doesNotMatch(concepts, /state-management library choice/);
+  assert.doesNotMatch(concepts, /Secret management strategy/);
+
+  const stages = {
+    "hooks/surface-adr-context.mjs": [
+      /ADR admission gate/,
+      /Replaceable implementation choices are exempt/,
+    ],
+    "skills/adr-new/SKILL.md": [/Apply the ADR admission gate before eliciting or drafting/],
+    "skills/adr-impl/SKILL.md": [/replaceable implementation means changes/],
+    "skills/adr-sync/SKILL.md": [/Retire low-level ADR/, /New ADR needed.*admission gate/s],
+    "skills/adr-rollup/SKILL.md": [/apply the ADR admission gate/i],
+    "skills/adr-impl-review/SKILL.md": [
+      /Never promote implementation discretion into `Undecided behavior`/,
+    ],
+    "agents/adr-reviewer.md": [/ADR admission \+ gray-zone substance/],
+    "agents/adr-impl-sufficiency-reviewer.md": [
+      /Do not file replaceable implementation means here/,
+    ],
+  };
+
+  for (const [rel, patterns] of Object.entries(stages)) {
+    const source = read(path.join(ADR_ROOT, rel));
+    for (const pattern of patterns) assert.match(source, pattern, `${rel} must state ${pattern}`);
+  }
+
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+  assert.ok(
+    adrNew.indexOf("before any filesystem write or mapping initialization") <
+      adrNew.indexOf("Create `docs/adr/`"),
+    "/adr-new must reject implementation detail before creating ADR scaffolding",
+  );
+});
+
 // An ADR is read under time pressure by someone deciding whether to trust it, so
 // padding costs the reader attention the decision needed, and the passive voice
 // hides the actor — which in a decision record is often the whole point. The rule

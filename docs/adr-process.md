@@ -7,6 +7,7 @@
 - **`.mapping.json`이 유일한 ADR 인덱스다** — 카테고리마다 각 ADR을 `{path, status, summary}`로 한 번씩 보유하고 `dependsOn`을 기록한다. README는 ADR 목록을 두지 않으며(개념 색인만), UserPromptSubmit 훅이 매 턴 이 인덱스를 렌더한다.
 - **adr-writer는 독립적이다** — 매핑은 코드 경로도, PRD 참조도 저장하지 않는다. `/feature-to-adr`는 **최초 1회 임포트**를 위해서만 ALPS를 읽고, 그 이후 결정은 ADR 레이어에서 관리된다.
 - **의존성은 한 방향(PRD → ADR → 코드)으로만 흐르며**, 어떤 산출물도 본문에서 다른 산출물을 직접 가리키지 않는다.
+- **ADR admission gate가 생성보다 먼저다.** 요구사항 계약, 지속적인 시스템·데이터·보안 경계, 외부 제공자·모델과 fallback, 키 설계, 알고리즘과 트레이드오프만 ADR 레이어로 올린다. 같은 계약과 경계를 유지한 채 교체할 수 있는 라이브러리, SDK, 프레임워크, credential/auth adapter, 모듈 구조는 코드 레이어에 둔다.
 - **ADR 본문 = 현재 상태, decision-log.md = 주요 변경 이력.** ADR은 현재 코드를 서술하는 요구사항 문서이고, 그 진화의 타임라인은 카테고리별 `decision-log.md`가 보존한다(관례 파일이며 인덱스에 등록하지 않는다). 진화는 기본적으로 제자리 수정 + 로그 한 줄이고, supersede는 결정 주제 자체가 갈라졌을 때만 쓴다.
 - **ADR 완결성의 기준은 재생성 테스트다** — "코드를 전부 지우고 이 ADR만 남았을 때, 요구사항을 지키는 코드를 이것만으로 다시 세울 수 있는가?" 구현과 구조, 이름은 달라져도 된다(ADR에 없으므로 재량이다). 하지만 **결과가 지켜야 하는 계약은 하나도 빠져서는 안 된다.** 그래서 요구사항 값(최대 턴 수, 사용량 쿼터, 보존 기간, 상한, 목표치)은 숫자와 근거를 그대로 ADR에 넣고, 구현 튜닝 값(커넥션 풀, 백오프, 캐시 TTL)은 넣지 않는다. 판단 기준은 `templates/adr/authoring-rules.md`의 "Concrete numbers"를 본다.
 
@@ -38,9 +39,14 @@ flowchart TD
     subgraph author["ADR 작성 (adr-writer)"]
         direction TB
         F2A(["/feature-to-adr<br/>1회성 임포트 — 기능당 한 번"])
+        Admit{"ADR admission gate<br/>지속적인 결정인가?"}
+        Detail["구현 계획 · 코드 · 테스트<br/>SDK · 라이브러리 · credential wiring"]
         New(["/adr-new &lt;category&gt;<br/>결정 하나를 직접 작성"])
         Proposed["Proposed ADR<br/>+ .mapping.json 기록<br/>adrs: {path, status: Proposed, summary}<br/>+ dependsOn"]
-        F2A -->|"기능별로 위임<br/>(dependsOn만 보강)"| New
+        F2A -->|"기능별로 위임<br/>(dependsOn만 보강)"| Admit
+        ADROnly --> Admit
+        Admit -->|"요구사항/아키텍처 결정"| New
+        Admit -->|"교체 가능한 구현 수단"| Detail
         New --> Proposed
     end
 
@@ -73,7 +79,6 @@ flowchart TD
     Hook[["UserPromptSubmit 훅<br/>매 턴 .mapping.json 인덱스를 렌더"]]
 
     S7 -.->|"Section 7 + 6.3을 읽음<br/>(alps-writer → adr-writer, 단방향, 1회)"| F2A
-    ADROnly --> New
     Proposed --> Impl
     Review -.->|"구현 사실 drift 발견"| Sync
     Sync -.-> Review
@@ -94,7 +99,7 @@ flowchart TD
 
 **읽는 법**
 
-- **진입점은 둘이다.** PRD-first는 `/alps-init`에서 시작해 `/feature-to-adr`로 ADR 레이어로 넘어간다(alps-writer가 adr-writer에 넘기는 유일한 지점이며 단방향이다). ADR-only는 PRD 없이 곧장 `/adr-new`에서 시작한다.
+- **진입점은 둘이지만 ADR 생성보다 admission gate가 먼저다.** PRD-first는 `/feature-to-adr`가 `/adr-new`에 위임하고, ADR-only는 직접 결정을 제시한다. 두 경로 모두 요구사항 계약이나 지속적인 아키텍처 경계를 바꾸는 결정만 ADR로 만들며, SDK·라이브러리·credential wiring처럼 교체 가능한 구현 수단은 코드와 테스트로 내려보낸다.
 - **`/feature-to-adr`는 얇은 1회성 임포터다.** Section 7과 6.3을 읽고, 이름 기반 정규 카테고리 키를 만들고, 작성 자체는 `/adr-new`에 위임하고, 매핑에는 `dependsOn`만 보강한다. 단일 기능을 지정해도 아직 변환되지 않은 선행 기능까지 위상 순서로 큐에 넣어 dangling 상태를 저장하지 않는다. 나중에 PRD가 바뀌면 재임포트하지 않고 해당 ADR을 직접 수정한다(또는 supersede한다).
 - **새 초안은 한 번 검증하고, 두 번 리뷰하지 않는다.** `/adr-new`는 `adr-reviewer`가 적용하는 것과 같은 규칙(R1-R20)으로 작성하므로, 결정론적 하네스를 돌린 뒤 판단 규칙에 대한 자체 점검을 수행한다 — 방금 제대로 해낸 것을 대부분 되풀이할 리뷰어를 띄우지 않는다. `/adr-review`는 그 작성 컨텍스트가 사라진 자리에 독립적인 읽기를 공급한다. **손으로 고친, 다른 세션에서 바뀐, 물려받은** ADR이 그 대상이며, 작성 직후 자동으로가 아니라 요청 시에 실행된다.
 - **의존성 게이트는 필수다.** `/adr-impl`은 곧장 코딩으로 가지 않는다. `dependsOn`을 전이적으로 순회하고, 선행이 `Proposed`이거나 dangling이면 그것을 위상 순서로 먼저 구현한다.
