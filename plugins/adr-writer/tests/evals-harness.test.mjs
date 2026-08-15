@@ -10,7 +10,15 @@
 // are written in. These tests pin the discriminating power that fixed it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync, writeFileSync, chmodSync, mkdtempSync, mkdirSync, existsSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  chmodSync,
+  mkdtempSync,
+  mkdirSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -207,6 +215,44 @@ ${finding}
     assert.equal(code, 0, out);
     assert.doesNotMatch(out, /✗/, `${name} compliant classification failed:\n${out}`);
   }
+});
+
+test("final-state sync scorer rejects transition residue and preserves current prohibitions", async () => {
+  const scenario = await loadScenario("sync-rewrites-final-state-only.mjs");
+
+  const badDir = mkdtempSync(path.join(tmpdir(), "adr-eval-final-state-bad-"));
+  await scenario.build(badDir);
+  const badChecks = await scenario.score({ dir: badDir, output: "", tail: null });
+  assert.ok(
+    badChecks.some((check) => !check.pass),
+    "the planted transition narration must not score as compliant",
+  );
+
+  const goodDir = mkdtempSync(path.join(tmpdir(), "adr-eval-final-state-good-"));
+  await scenario.build(goodDir);
+  const adrPath = path.join(goodDir, "docs/adr/runtime/mode/0001-execution-mode.md");
+  const mappingPath = path.join(goodDir, "docs/adr/.mapping.json");
+  writeFileSync(
+    adrPath,
+    readFileSync(adrPath, "utf8").replace(
+      "`MODE_A`와 `MODE_B`를 혼용하지 않고 `MODE_B`만 사용한다.",
+      "실행 모드는 `MODE_B`다.",
+    ),
+  );
+  writeFileSync(
+    mappingPath,
+    readFileSync(mappingPath, "utf8").replace(
+      "MODE_A와 MODE_B를 혼용하지 않고 MODE_B만 사용한다",
+      "실행 모드는 MODE_B다",
+    ),
+  );
+
+  const goodChecks = await scenario.score({ dir: goodDir, output: "", tail: null });
+  assert.deepEqual(
+    goodChecks.filter((check) => !check.pass),
+    [],
+    `a direct final-state rewrite must pass: ${JSON.stringify(goodChecks)}`,
+  );
 });
 
 // ── the author-side scorer must discriminate too ───────────────────────────

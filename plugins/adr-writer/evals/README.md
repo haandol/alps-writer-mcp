@@ -70,6 +70,10 @@ not run (bad `--only`, agent produced nothing).
      first gives the author every value and checks they survive; the second gives
      it none and checks it says so. Pushing the author toward "always record a
      requirement value" passes the first and makes the second invent one.
+   - `sync-rewrites-final-state-only` carries both sides in one artifact: remove
+     the replaced mode and comparison narration, but preserve the current
+     forbidden transition. A blanket "remove negative sentences" rule fails the
+     second half.
 
    The two axes also split by pipeline stage, and that split is deliberate.
    `/adr-new` no longer calls `adr-reviewer` (it self-checks at its step 6(b)), so

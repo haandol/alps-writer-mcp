@@ -378,6 +378,58 @@ test("prose style is stated once, applied at authoring and review, and never cut
   assert.match(sweep, /never propose a cut that removes content/i);
 });
 
+// ADR edits tended to preserve the requested result by narrating what it
+// replaced ("do not mix A and B; use only B"). That makes the body grow with
+// every revision and forces a reader to reconstruct the current contract. Every
+// path that writes ADR prose must instead state the final result directly,
+// while preserving genuine prohibitions and routing history to its own homes.
+test("ADR mutation paths record the final state without transition residue", () => {
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  assert.match(rules, /## Final-state wording/);
+  assert.match(rules, /`MODE_A`와 `MODE_B`를 혼용하지 않고 `MODE_B`만/);
+  assert.match(rules, /실행 모드는 `MODE_B`다/);
+  assert.match(rules, /\.mapping\.json.*summary/);
+  assert.match(rules, /not a blanket ban on negative sentences/i);
+  assert.match(rules, /requirement gate/i);
+  assert.match(rules, /- \[ \] \*\*Final-state wording\*\*/);
+
+  const sources = {
+    "adr-new": read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md")),
+    "adr-impl": read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md")),
+    "adr-sync": read(path.join(ADR_ROOT, "skills", "adr-sync", "SKILL.md")),
+    "adr-rollup": read(path.join(ADR_ROOT, "skills", "adr-rollup", "SKILL.md")),
+    reviewer: read(path.join(ADR_ROOT, "agents", "adr-reviewer.md")),
+  };
+
+  for (const [name, source] of Object.entries(sources)) {
+    assert.match(source, /final-state|final state/i, `${name} must apply final-state wording`);
+    assert.match(
+      source,
+      /mapping summary|\.mapping\.json.*summary/i,
+      `${name} must cover the mapping summary`,
+    );
+    assert.match(
+      source,
+      /current prohibition|forbidden transition|negative sentence/i,
+      `${name} must preserve current prohibitions`,
+    );
+  }
+
+  assert.match(sources["adr-sync"], /Final-state reconstruction/);
+  assert.match(sources.reviewer, /non-final-state narration/);
+  assert.match(sources.reviewer, /Alternatives.*decision-log\.md/);
+
+  const allShippedGuidance = [
+    rules,
+    ...Object.values(sources),
+    read(path.join(ADR_ROOT, "templates", "adr", "concepts.md")),
+    read(path.join(ADR_ROOT, "templates", "adr", "README.md")),
+    read(path.join(ADR_ROOT, "templates", "adr", "decision-log.template.md")),
+  ].join("\n");
+  assert.match(allShippedGuidance, /MODE_A/);
+  assert.match(allShippedGuidance, /MODE_B/);
+});
+
 // Requirements do not arrive only as numbers. An allowed value set, a mandatory
 // field, a permission rule and a forbidden transition are contracts too, and the
 // "code readthrough" filter sweeps them out just as easily as it swept out

@@ -46,7 +46,7 @@ The background and problem requiring the decision. _Absorb_ the PRD's business m
 
 ## Decision
 
-The decision made and why.
+The currently valid decision and why. State the result directly; do not describe it as a transition from a previous identifier, value, or approach.
 
 ### Requirement contract
 
