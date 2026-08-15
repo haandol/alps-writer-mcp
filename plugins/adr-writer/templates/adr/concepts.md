@@ -34,13 +34,14 @@ Rule: never copy ALPS's user stories or acceptance-criteria prose into an ADR. T
 
 Every rule and command name below is this one test applied at a different moment. They are worth knowing by name, because separately-running review agents stay aligned by citing them:
 
-| Name                                             | The moment it applies                | What it asks                                                              |
-| ------------------------------------------------ | ------------------------------------ | ------------------------------------------------------------------------- |
-| **ADR admission gate**                           | before creating or updating an ADR   | Is this a durable decision, or only one replaceable implementation means? |
-| **Regeneration test**                            | finishing an ADR draft; reviewing it | Delete all code — can requirement-honoring code be rebuilt from this ADR? |
-| **Requirement gate → code-readthrough → litmus** | writing each line                    | Which level owns this one fact?                                           |
-| **Stability gradient** (`Code >> ADR >> PRD`)    | after the fact                       | Did a volatile-level change drag a stable level with it?                  |
-| **`Spec violation` vs `Impl-fact mismatch`**     | reviewing an implementation          | Which level must change to resolve this disagreement?                     |
+| Name                                             | The moment it applies                | What it asks                                                               |
+| ------------------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------- |
+| **ADR admission gate**                           | before creating or updating an ADR   | Is this a durable decision, or only one replaceable implementation means?  |
+| **Decision identity check**                      | after admission, before new ADR      | Does an existing ADR already own this architectural question and boundary? |
+| **Regeneration test**                            | finishing an ADR draft; reviewing it | Delete all code — can requirement-honoring code be rebuilt from this ADR?  |
+| **Requirement gate → code-readthrough → litmus** | writing each line                    | Which level owns this one fact?                                            |
+| **Stability gradient** (`Code >> ADR >> PRD`)    | after the fact                       | Did a volatile-level change drag a stable level with it?                   |
+| **`Spec violation` vs `Impl-fact mismatch`**     | reviewing an implementation          | Which level must change to resolve this disagreement?                      |
 
 ## The ADR admission gate — decide whether an ADR should exist
 
@@ -65,6 +66,16 @@ Technology names are not automatically architectural. "Use GPT-5.6 through Amazo
 Apply the **stability check** as a final guard: if ordinary behavior-preserving code changes would repeatedly force this ADR to change, its subject is probably one level too low. Move the detail to code, tests, or the project's `AGENTS.md`/README instead.
 
 The admission gate also governs review and sync. Code that contains an unrecorded implementation choice is not automatically `Undecided behavior` or a `New ADR needed` finding. Raise it only when the choice passes this gate. If an existing ADR's core subject fails the gate, propose retiring the ADR and moving any useful detail down rather than polishing the document in place.
+
+## The decision identity check — update before create
+
+After a request passes the admission gate, inspect `.mapping.json` summaries and the plausible ADR bodies before allocating a new ADR number. The question is not "does the requested provider, algorithm, or value differ from the current text?" It is "which architectural question and durable boundary does this request change?"
+
+An existing ADR owns the change when it can be rewritten as one current-state record that answers the same question and owns the same requirement or system/data/security/external boundary. In that case, edit it in place, keep its path and number, update the mapping summary, and put a major old → new transition in `decision-log.md`. If the ADR was already `Accepted`, return it to `Proposed` while implementation is brought into line.
+
+Changing GPT-5.6 access from Amazon Bedrock to the OpenAI API changes the adopted provider but still evolves the same model/provider-boundary decision. Reverting to Amazon Bedrock evolves that same decision again. Neither direction creates a new decision identity. A new ADR is reserved for a topic with no existing owner or a true fork where multiple decisions must remain independently current and separately referenceable.
+
+This check keeps **one logical decision = one current-state ADR** during normal authoring. `/adr-rollup` repairs legacy repositories where revisions were already stacked into an evolution chain.
 
 ## What an ADR covers — the gray zone between business and code
 
@@ -214,4 +225,4 @@ An ADR body is **a requirements and architecture document describing the current
 
 **Three layers preserve different things**: the ADR body = current state / `decision-log.md` = the timeline of major changes / Git = the verbatim diff. The log is a **convention file** rather than an ADR, so it is not registered in `.mapping.json` and the deterministic harness does not check it — for the recording criteria and format see [`authoring-rules.md` "Decision log (decision-log.md)"](./authoring-rules.md#decision-log-decision-logmd), and for the directory and non-indexing policy see [`structure.md`](./structure.md#decision-log-decision-logmd--a-convention-file-not-registered-in-the-mapping).
 
-<!-- adr-writer:rules-version 0.6.3 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.6.4 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

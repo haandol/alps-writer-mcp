@@ -51,7 +51,7 @@ node <plugin>/scripts/adr-structure-lint.mjs [category]   # deterministic struct
 bash <plugin>/scripts/adr-invariants.sh                   # reverse-reference oracle only
 ```
 
-`adr-structure-lint` handles the deterministic half of the reviewer's R-rules. `/adr-impl-review` is the pre-promotion completion gate: standard mode uses a decision ledger, isolated sufficiency review, and targeted tests for localized changes; full mode adds the human gate, independent necessity/sufficiency reviews, and detailed repair artifacts for protected-surface or broad changes. Both record the selected mode, elapsed time, findings, unverified risks, and executed test commands before `PASS` permits `Accepted`.
+`adr-structure-lint` handles the deterministic half of the reviewer's R-rules. `/adr-impl-review` is the pre-promotion completion gate: standard mode uses a decision ledger, isolated sufficiency review, and targeted tests for localized changes; full mode adds independent necessity/sufficiency reviews and detailed repair artifacts for protected-surface or broad changes. Intent and regeneration completeness are approved before implementation, so neither mode repeats a routine human gate afterward. Both record the selected mode, elapsed time, findings, unverified risks, and executed test commands before `PASS` permits `Accepted`.
 
 ## Hook
 

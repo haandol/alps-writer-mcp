@@ -389,6 +389,45 @@ test("the ADR admission gate keeps replaceable implementation means out of every
   );
 });
 
+test("decision identity is checked before a new ADR is created", () => {
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  const concepts = read(path.join(ADR_ROOT, "templates", "adr", "concepts.md"));
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+  const featureToAdr = read(
+    path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md"),
+  );
+  const impl = read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md"));
+  const sync = read(path.join(ADR_ROOT, "skills", "adr-sync", "SKILL.md"));
+  const hook = read(path.join(ADR_ROOT, "hooks", "surface-adr-context.mjs"));
+
+  for (const source of [rules, concepts]) {
+    assert.match(source, /Decision identity check/i);
+    assert.match(source, /update before create/i);
+    assert.match(source, /Amazon Bedrock/);
+    assert.match(source, /OpenAI API/);
+    assert.match(source, /revert|reverting|Returning|원복/i);
+  }
+
+  assert.ok(
+    adrNew.indexOf("Decision identity check — update before create") <
+      adrNew.indexOf("Create `docs/adr/`"),
+    "/adr-new must search for an existing owner before creating ADR scaffolding",
+  );
+  assert.ok(
+    adrNew.indexOf("Decision identity check — update before create") <
+      adrNew.indexOf("Assign the next number within the category"),
+    "/adr-new must search for an existing owner before allocating a number",
+  );
+  assert.match(adrNew, /stop the new-ADR path/);
+  assert.match(adrNew, /\/adr-impl <existing-category>/);
+  assert.match(featureToAdr, /decision identity check/i);
+  assert.match(featureToAdr, /Existing decision changed/);
+  assert.match(impl, /same provider-boundary ADR/);
+  assert.match(sync, /decision identity check/i);
+  assert.match(hook, /already owns the same architectural question and boundary/);
+  assert.match(hook, /reverting to a former choice/);
+});
+
 // An ADR is read under time pressure by someone deciding whether to trust it, so
 // padding costs the reader attention the decision needed, and the passive voice
 // hides the actor — which in a decision record is often the whole point. The rule

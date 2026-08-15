@@ -1,6 +1,6 @@
 ---
 name: adr-impl-review
-description: Review code implemented from an ADR using a risk-selected standard or full path. Standard reviews use a decision ledger, one isolated sufficiency pass, and targeted tests; full reviews add human intent confirmation plus independent necessity and sufficiency passes and detailed repair artifacts. Report-only; never edits code or ADRs. Use after /adr-impl, or when the user asks for a necessity/sufficiency review, minimality/completeness review, adversarial implementation review, or "필요충분 테스트". Keywords - "/adr-impl-review", "ADR 구현 검토", "필요성 리뷰", "충분성 리뷰", "필요충분 테스트", "적대적 코드 리뷰", "구현이 ADR 대로 됐는지".
+description: Review code implemented from an ADR using a risk-selected standard or full path. Standard reviews use a decision ledger, one isolated sufficiency pass, and targeted tests; full reviews add independent necessity and sufficiency passes plus detailed repair artifacts. The approved ADR baseline is established before implementation, so completion review does not repeat routine human confirmation. Report-only; never edits code or ADRs.
 argument-hint: "[adr-path-or-category] [--base <ref>] [--mode standard|full]"
 ---
 
@@ -12,12 +12,12 @@ Rather than approving the implementation outright, disprove it in the following 
 flowchart TD
     CHANGE["Implementation change"] --> RISK{"Protected surface?"}
     RISK -->|No| STANDARD["Standard: ledger + sufficiency + targeted tests"]
-    RISK -->|Yes or unclear| FULL["Full: human gate + necessity + sufficiency"]
+    RISK -->|Yes or unclear| FULL["Full: necessity + sufficiency + evidence artifacts"]
     STANDARD --> RULING["Evidence-backed result"]
     FULL --> RULING
 ```
 
-In full mode, the necessity and sufficiency reviews run **in parallel**, without seeing each other's results (section 3). Standard mode runs only the isolated sufficiency pass defined below.
+In full mode, the necessity and sufficiency reviews run **in parallel**, without seeing each other's results (section 3). Standard mode runs only the isolated sufficiency pass defined below. The user's intent and the ADR's regeneration checklist are settled before implementation; this command consumes that baseline and does not reopen it as a routine post-implementation gate.
 
 This procedure is not a proof of mathematical necessity and sufficiency. It is **a disproof-based review that hunts for unnecessary changes and missing behavior from two different perspectives.** A passing test is only evidence that no counterexample was found among the cases actually executed — not a proof of completeness.
 
@@ -29,12 +29,12 @@ Most findings in this review are a disagreement between the ADR and the code, an
 
 PRD, ADR, and code are the same system at three resolutions — like C4's context / container / component zoom — and each level exists to be **read alone**. The ADR's question is "why this decision, and what must the result honor?"; the code's is "how is it done?" That split decides every category:
 
-| Disagreement                                          | Level that owns it          | Category                   | Route                                |
-| ----------------------------------------------------- | --------------------------- | -------------------------- | ------------------------------------ |
-| The ADR's contract is not honored in code             | ADR (the contract)          | `Spec violation`           | fix the code                         |
-| Names, signatures, wire form, field names differ      | Code (implementation facts) | `Impl-fact mismatch`       | remove ADR detail via sync           |
-| The code adds an ADR-worthy behavior no level decided | neither yet                 | `Undecided behavior`       | user: raise it to the ADR, or remove |
-| The code implemented a different coherent decision    | contested                   | `Decision changed in code` | user rules, then log it              |
+| Disagreement                                          | Level that owns it          | Category                   | Route                                    |
+| ----------------------------------------------------- | --------------------------- | -------------------------- | ---------------------------------------- |
+| The ADR's contract is not honored in code             | ADR (the contract)          | `Spec violation`           | fix the code                             |
+| Names, signatures, wire form, field names differ      | Code (implementation facts) | `Impl-fact mismatch`       | remove ADR detail via sync               |
+| The code adds an ADR-worthy behavior no level decided | neither yet                 | `Undecided behavior`       | escalate only if contract choice remains |
+| The code implemented a different coherent decision    | contested                   | `Decision changed in code` | escalate, then log it                    |
 
 So the recurring judgment is **not "is the code good?" but "at which resolution does this belong?"** Two guards follow, and they are the same guards `/adr-new` writes under, seen from the other side:
 
@@ -42,15 +42,15 @@ So the recurring judgment is **not "is the code good?" but "at which resolution 
 - **Never treat code that enforces a contract as removable.** Cap checks, transition guards, permission checks, and required-field validation are the code level's job of honoring the ADR level's contract, so "it passes without this" is not evidence.
 - **Never promote implementation discretion into `Undecided behavior`.** Before raising extra code to the ADR, apply the ADR admission gate. Replaceable libraries, SDKs, frameworks, middleware, module layouts, credential provider chains, signers, authentication adapters, and tuning choices are expected code-level decisions when contracts and architecture/security boundaries stay unchanged. They are not findings merely because the ADR does not name them.
 
-A note on scope: `/adr-impl-review` judges the **code** level against the ADR level. Whether the ADR itself is written at the right resolution is `/adr-review`'s question, and whether the decision is the right one to make is the human's at the section 2 gate. Never rewrite an ADR from inside this command to make a finding go away.
+A note on scope: `/adr-impl-review` judges the **code** level against the ADR level. Whether the ADR itself is written at the right resolution is `/adr-review`'s question, and the implementation cycle confirms the decision and regeneration checklist before code begins. Never rewrite an ADR from inside this command to make a finding go away.
 
 ## Invariant principles
 
 - **Report-only**: never auto-modify code, ADRs, or the mapping. Write only the Markdown/JSON/HTML review artifacts.
 - **Independent contexts**: in full mode, run the explainer, necessity reviewer, and sufficiency reviewer in fresh isolated contexts. In standard mode, run the sufficiency reviewer in one fresh isolated context. Never pass a reviewer another agent's result.
-- **The ADR is the behavioral spec**: right after implementation, the ADR's admitted decision and requirement contract are authoritative. Implementation facts such as API names and actual field names should not be in that spec; when they appear, separate them as `Impl-fact mismatch` and route them for removal. The reviewer agents never break the premise that the admitted decision and contract are correct — whether the spec itself is right is asked only by the human at the section 2 gate. That gate and `/adr-review` also judge whether the spec is at the right resolution; if it falls short, route it outward to an ADR update or retirement rather than fixing it inside impl-review.
+- **The approved ADR is the behavioral spec**: right after implementation, the ADR's admitted decision and requirement contract are authoritative because the implementation cycle confirmed their intent and regeneration checklist before code began. Implementation facts such as API names and actual field names should not be in that spec; when they appear, separate them as `Impl-fact mismatch` and route them for removal. If review finds concrete evidence that the ADR baseline itself is incomplete or contradictory, return it as a blocking contract issue; do not perform a routine confirmation or silently fix the ADR inside impl-review.
 - **Evidence over assertion**: every finding includes the applicable basis among an ADR quote, the actual diff or code location, and a reproduction procedure or execution result. Report a conjecture you could not reproduce only as `Unverified risk`.
-- **Separation of the human's role**: confirming the explanation is a gate for "is this understandable and does it match the intent?" — not an approval that the code is correct.
+- **Escalation is exceptional**: ask for human judgment only when the approved contract must change, premises contradict, a material risk cannot be verified, or the repair would exceed the approved scope. Evidence-backed implementation and test defects are remediation work, not approval questions.
 
 ## 1. Fix the target and the change scope
 
@@ -93,7 +93,7 @@ For `standard`, execute this section and then continue at section 7. Sections 2-
 1. Build a decision ledger containing every ADR decision and requirement-contract row relevant to the diff.
 2. Run `adr-impl-sufficiency-reviewer` in one fresh isolated context with only the ADR, raw diff, changed code and tests, project rule documents, and the ledger. If subagents are unavailable, perform one separate sufficiency pass in the main session and record the isolation limitation.
 3. Execute the related targeted tests and any minimal reproduction needed to account for every ledger row. An unexecuted core path makes the verdict `INCONCLUSIVE`, not `PASS`.
-4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, report-writer agent, HTML page, mandatory Mermaid, or human spec-fitness gate.
+4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, report-writer agent, HTML page, mandatory Mermaid, or post-implementation spec-fitness gate.
 5. Write a concise `implementation-review.md` with these headings: `Review mode`, `Scope`, `Decision ledger`, `Findings`, `Tests`, and `Review limits`. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, and the normal evidence fields.
 6. Run the artifact validator. `PASS` requires every ledger row accounted for, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk.
 
@@ -101,7 +101,7 @@ For `standard`, execute this section and then continue at section 7. Sections 2-
 
 The rest of sections 2-6 applies only to `full`.
 
-## 2. The plain implementation explanation and the human gate
+## 2. Build the review baseline without a post-implementation gate
 
 Run `adr-impl-explainer` as a fresh read-only subagent.
 
@@ -109,21 +109,20 @@ Run `adr-impl-explainer` as a fresh read-only subagent.
 2. Otherwise invoke a generic read-only subagent given the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-explainer.md` as its instructions.
 3. Only when subagents are unavailable should the main session carry out the same instructions, noting that isolated explanation was unavailable.
 
-Give the explainer only the ADR, the raw diff, the changed code scope, and the related tests. Save the result as `explanation.md`, show it to the user, and confirm the following three questions.
+Give the explainer only the ADR, the raw diff, the changed code scope, and the related tests. Save the result as `explanation.md` for the repair report; do not stop to show it or ask the user to reconfirm the implementation.
 
-1. Is the explanation simple enough for a junior to understand? (understandability)
-2. Is the behavior described the intended implementation? (did the implementation follow the spec?)
-3. Does this ADR decision (the spec) itself capture the real user problem — are any requirements, risks, or risk-tolerance criteria missing? (spec fitness)
+Create `review-baseline.md` from:
 
-The first two questions ask "did the code follow the spec?", but the third asks "is the spec right?" — code that satisfies necessity and sufficiency can still make a bad product if the spec itself is incomplete, so only a human can judge this axis and it is never delegated to a reviewer agent.
+- the current ADR and mapping summary
+- the Decision, Decision Drivers, every numeric and non-numeric requirement row, explicit out-of-scope items, and recorded risk tolerance
+- the pre-implementation approval summary supplied by `/adr-impl`, when available
+- a regeneration checklist marking where each contract is stated in the ADR
 
-Question 3 is **the regeneration test asked of a human** (`authoring-rules.md` "What an ADR must satisfy — the regeneration test"): if all this code were deleted and only the ADR survived, could requirement-honoring code be rebuilt from it? Frame it that way when you ask, because it turns a vague "is the spec good?" into a checkable list — are any requirement values, allowed value sets, permission rules, required validations, state transitions, or failure guarantees missing from the ADR? The reviewer agents cannot ask this: they take the ADR as authoritative by construction, so an incomplete ADR reads to them as a complete one. This gate is the only place that gap surfaces.
-
-Record the intent the user corrected and their risk-tolerance criteria in `human-baseline.md`. **Never proceed to the adversarial reviews before explicit confirmation.** If it is not understandable, fix the explanation; if the code and the intent differ, record that difference in the baseline. **If the spec itself falls short**, do not fix code inside impl-review — record it in the baseline and route it out: `/adr-review [category]` for a full read of how the ADR is written, or an ADR update (`/adr-new`, edit-in-place) when the user already knows what is missing. Do not touch the code yet.
+Self-check the baseline against `authoring-rules.md` R18a/R19. A missing contract that can be recovered from the already approved ADR wording is corrected in the baseline. Concrete evidence that the ADR itself is incomplete, contradictory, or requires a new product choice is a blocking contract issue routed to ADR authoring before any code repair; it is not a reason to ask the routine three confirmation questions again. When `/adr-impl-review` is invoked standalone and no approval summary exists, record that limit and use the current ADR as the review baseline.
 
 ## 3. Run the two independent reviews in parallel
 
-Give both reviewers, in common, **only the original material and `human-baseline.md`.** Do not give them `explanation.md` or the other reviewer's result. That is what keeps them from anchoring on the explainer's interpretation or the other reviewer's conclusion.
+Give both reviewers, in common, **only the original material and `review-baseline.md`.** Do not give them `explanation.md` or the other reviewer's result. That is what keeps them from anchoring on the explainer's interpretation or the other reviewer's conclusion.
 
 ### 3.1 The necessity review
 
@@ -132,7 +131,7 @@ Run `adr-impl-necessity-reviewer`.
 - The question: "is each change in this diff strictly necessary to achieve the ADR's goal?"
 - Success condition: finding changes that can be removed or shrunk, with evidence.
 - Forbidden: style preferences, a taste for future extensibility, unjustified "make it simpler". Also forbidden is filing **code that enforces a requirement the ADR records** (cap checks, counters, expiry handling, and likewise transition guards, permission checks, duplicate prevention, required-field validation) as unnecessary — whether it is a number, a value set, or a permission, that is contract.
-- The core attempt: for each unit of change, test "does the ADR and the user baseline still hold if this is deleted?"
+- The core attempt: for each unit of change, test "does the ADR and the approved review baseline still hold if this is deleted?"
 
 ### 3.2 The sufficiency review and tests
 
@@ -182,7 +181,7 @@ Once the independent reviews and evidence verification are done, run `adr-impl-r
 2. Otherwise invoke a generic subagent given the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` as its instructions.
 3. If subagents are unavailable, the main session writes it under the same instructions.
 
-Give the report-writer the original ADR and diff, `human-baseline.md`, all three agents' artifacts, and the verified findings and test results. Save the result as `implementation-review.md`.
+Give the report-writer the original ADR and diff, `review-baseline.md`, all three agents' artifacts, and the verified findings and test results. Save the result as `implementation-review.md`.
 
 The filename must be exactly `implementation-review.md`. Alternatives such as `final-review.md` or `review.md` are not allowed. Even when the report-writer is unavailable and the main session writes it, first read the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` and follow the same output structure.
 
@@ -207,9 +206,9 @@ Include all of the following for each finding.
 7. The tests that must pass and the completion criteria
 8. The confidence level and what has not been confirmed yet
 
-At the end of the document, put a `Fix execution order` reflecting the dependency order, a `Verification checklist`, and the **seven-axis merge decision checklist** (problem fitness, functional adequacy, contract compliance, change minimality, verification strength, operational safety, maintainability) — functional adequacy is only one axis of good code, so rule on each axis by mapping it to the findings, tests, and human-gate evidence. `Contract compliance` is the axis that compares, number by number, whether the requirement values the ADR set are enforced at those values — limit logic can work while the value differs, which is a requirement violation, so keep it separate from functional adequacy. If any item would leave a junior guessing from the document alone, mark it `needs confirmation` and write the specific question to ask the owner.
+At the end of the document, put a `Fix execution order` reflecting the dependency order, a `Verification checklist`, and the **seven-axis merge decision checklist** (problem fitness, functional adequacy, contract compliance, change minimality, verification strength, operational safety, maintainability) — functional adequacy is only one axis of good code, so rule on each axis by mapping it to the approved ADR baseline, findings, and tests. `Contract compliance` is the axis that compares, number by number, whether the requirement values the ADR set are enforced at those values — limit logic can work while the value differs, which is a requirement violation, so keep it separate from functional adequacy. If any item lacks evidence, mark it `undetermined`; escalate only a contract-changing or material unresolved issue.
 
-## 6. Generate the per-item ruling page
+## 6. Generate the evidence page
 
 Serialize the three agents' raw Markdown and the synthesized result into the following JSON.
 
@@ -268,15 +267,20 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-report.mjs <findings.json> --
 
 If the validator fails, do not report completion or generate the HTML. Fill the omissions it names in `implementation-review.md` or `findings.json` and re-run until the validator exits 0. In particular, fill `perspective`, `code`, `evidence`, `test`, and `testResult` for every finding, and where a test could not be run, write `NOT RUN — <reason>` rather than leaving it blank.
 
-In full mode, open the report and summarize in chat only the verdict, the necessity/sufficiency finding counts, the tests executed, elapsed time, and the number of unverified risks. The user rules on each item as **apply / skip / defer** and exports `feedback.json`. In standard mode, present the concise findings in chat and record the same explicit rulings there; do not require HTML or `feedback.json`.
+In full mode, open the report and return the verdict, necessity/sufficiency finding counts, tests executed, elapsed time, unverified-risk count, and normalized findings to the caller. In standard mode, return the concise findings with the same routing metadata. A pre-promotion invocation by `/adr-impl` must not ask the user to rule `apply / skip / defer` on ordinary evidence-backed repairs; the caller owns remediation. A standalone review remains report-only and simply presents the findings and recommended routes.
 
-## 7. Routing after the user's ruling
+## 7. Routing and integrated remediation
 
-This command itself remains report-only. Route the approved items from the mode-appropriate ruling record — explicit chat rulings in standard mode or `feedback.json` in full mode — to follow-up work.
+This command itself remains report-only. When `/adr-impl` invoked it as the pre-promotion completion gate, return findings in these two groups:
 
-- `Unnecessary change` → remove the code. Re-run the related tests after removal.
-- `Simpler alternative` / `Refactor` → simplify after confirming it does not change the ADR decision.
-- `Spec violation` / `Best practice` → fix the code.
+- **Auto-remediate in the caller**: `Unnecessary change`, `Simpler alternative`, `Refactor`, `Spec violation`, `Best practice` weighted `now`, `Test gap`, and confirmed `Impl-fact mismatch`, when the fix is evidence-backed, remains within the approved scope, and does not change the ADR contract. `/adr-impl` applies them, records what changed, reruns affected tests, and reruns the same review mode.
+- **Escalate**: a changed/new ADR decision, contradictory premises, a material `Unverified risk`, destructive migration, or a broad repair outside the approved scope.
+
+Detailed routes:
+
+- `Unnecessary change` → remove the code and re-run related tests.
+- `Simpler alternative` / `Refactor` → simplify only when the ADR decision and observable behavior remain unchanged.
+- `Spec violation` / `Best practice` → fix the code; minor `next-cycle` advice may remain advisory when it does not affect PASS.
 - `Decision changed in code` → the user decides between updating the ADR and reverting the code. **If they choose to update the ADR, the edit is not the whole job** — a decision change of this kind is **major** by definition (replacing the adopted alternative, inverting a Driver, changing a requirement value), so it also takes **one line in the category's `decision-log.md`**, which is what preserves the old approach's rationale once the body is overwritten to current state (`authoring-rules.md` "What to log — minor vs major"). Route the edit to whichever command owns it rather than doing it here: **`/adr-impl <category>`** when the code is being reworked in the same cycle (its step 1 does the edit-in-place, the log line, and the Status handling), or **`/adr-sync <category>`** when the code already stands and only the ADR must catch up (its "intended decision change" branch). Supersede with a new ADR via `/adr-new` only when the decision topic itself forked and the old decision must stay separately referenceable (`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede").
 - `Undecided behavior` → first confirm the behavior passes the ADR admission gate. If it is replaceable implementation discretion, close the finding with no ADR change. Otherwise the user decides whether to add the admitted decision to the ADR or remove it from the code. Adding it goes through the same owners — `/adr-impl` or `/adr-sync` for an in-place addition, `/adr-new` when it is a separate durable decision.
 - `Impl-fact mismatch` → use `/adr-sync <category>` to remove the stale implementation detail, or correct it only when it is an admitted public/architectural contract.
@@ -284,7 +288,7 @@ This command itself remains report-only. Route the approved items from the mode-
 - `Unverified risk` → reproduce it first, or explicitly accept the risk. Do not fix it straight away.
 - `Contradiction` → do not fix anything before a human decides which of the two premises holds.
 
-Once the fixes are done, run `/adr-impl-review` again to close the selected review path. Full mode closes both necessity and sufficiency passes; standard mode closes its sufficiency pass.
+Once automatic fixes are done, run `/adr-impl-review` again to close the selected review path. Full mode closes both necessity and sufficiency passes; standard mode closes its sufficiency pass. On `PASS`, the caller completes the Status transition and reports the fixes; no routine post-implementation approval remains.
 
 ## Prohibited
 

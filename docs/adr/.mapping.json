@@ -6,7 +6,7 @@
         {
           "path": "docs/adr/adr-authoring/current-state/0001-record-only-the-final-decision-state.md",
           "status": "Accepted (2026-08-15)",
-          "summary": "ADR 본문은 현재 유효한 결정과 요구사항을 직접 서술하고 선택 비교와 주요 변경 이력은 전용 위치에 기록한다"
+          "summary": "ADR 작성 경로는 새 파일보다 기존 결정 소유자 확인을 우선하고 같은 결정의 대안 변경과 원복을 기존 ADR의 현재 상태로 갱신한다"
         }
       ],
       "dependsOn": []
@@ -72,7 +72,7 @@
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
           "status": "Accepted (2026-08-15)",
-          "summary": "구현 리뷰는 보호 표면과 변경 범위에 따라 standard 또는 full 모드를 선택하고 검증된 저위험 리팩토링만 자동 반영한다"
+          "summary": "구현 리뷰는 위험에 따라 standard/full을 선택하고 구현 전 승인된 ADR을 기준으로 증거 기반 발견을 자동 수정·재검증하며 계약 판단이 필요할 때만 사용자에게 묻는다"
         }
       ],
       "dependsOn": []
@@ -94,7 +94,7 @@
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
           "status": "Accepted (2026-08-15)",
-          "summary": "개발 흐름은 선행 ADR을 우회하지 않고 상태 유효성을 보장하며 변경 위험에 따라 검증 강도를 선택한 뒤 완료 상태를 판정한다"
+          "summary": "개발 흐름은 ADR 의도를 구현 전에 한 번 승인하고 구현 후에는 자동 검토·수정·재검증을 거쳐 추가 승인 없이 완료한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]

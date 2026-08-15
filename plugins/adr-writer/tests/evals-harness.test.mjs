@@ -59,7 +59,10 @@ function runEvals(args, cmd) {
     cwd: PLUGIN_ROOT,
     encoding: "utf8",
     env: { ...process.env, ...(cmd ? { ADR_EVAL_CMD: cmd } : {}) },
-    timeout: 120_000,
+    // Match the production eval timeout. The full test command schedules
+    // several subprocess-heavy files together, so 120 seconds can kill a
+    // completed stub run while its parent runner is still exiting.
+    timeout: 600_000,
     maxBuffer: 32 * 1024 * 1024,
   });
   return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? "") };
@@ -347,6 +350,34 @@ FULL | B retention 30 to 90 days and public API change
       bad: `=== EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
 STANDARD | B public API retention change
+=== EVAL-END ===`,
+    },
+    {
+      name: "author-routes-existing-provider-change",
+      good: `기존 ADR 0001이 같은 결정을 소유하므로 제자리 재작성하고 /adr-impl ai/model-provider로 라우팅한다. 원복도 같은 ADR이며 새 ADR이나 0002는 없다.
+=== EVAL-VERDICT: ROUTE_TO_EXISTING ===
+=== EVAL-FINDINGS ===
+DECISION_IDENTITY | 기존 provider boundary ADR을 유지하고 Bedrock 원복도 같은 0001에 반영
+=== EVAL-END ===`,
+      bad: `OpenAI API 전환용 ADR 0002를 새로 작성한다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+NEW_ADR | provider 변경마다 새 ADR 생성
+=== EVAL-END ===`,
+    },
+    {
+      name: "impl-completes-without-reconfirmation",
+      good: `PASS_PATH는 추가 승인 없이 Accepted로 완료한다. FIX_PATH는 사용자 승인 없이 자동 수정하고 최종 보고에 수정과 검증을 정리한다. ESCALATE_ONLY만 사용자에게 묻는다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+PASS_PATH | 추가 승인 없이 Accepted로 전환
+FIX_PATH | 사용자 승인 없이 자동으로 Spec violation 코드를 수정하고 Test gap 테스트를 추가한 뒤 재실행하고 동일 모드로 재리뷰
+ESCALATE_ONLY | 계약 변경 결정만 사용자에게 질문하며 자동 수정 없음
+=== EVAL-END ===`,
+      bad: `구현 후 재생성 가능한지 다시 확인받고 각 finding을 apply/skip/defer로 판정받는다.
+=== EVAL-VERDICT: BLOCK ===
+=== EVAL-FINDINGS ===
+PASS_PATH | 사용자 승인 대기
 === EVAL-END ===`,
     },
   ];

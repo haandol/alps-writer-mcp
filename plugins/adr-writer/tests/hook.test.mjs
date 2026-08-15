@@ -157,6 +157,12 @@ test("directive applies the admission gate before sending changes into the ADR c
     assert.match(ctx, /bug fix is exempt when it restores already intended behavior/);
     assert.match(ctx, /replaceable implementation choices/i);
     assert.match(ctx, /fix the ADR before the code/);
+    assert.match(ctx, /existing ADR already owns the same architectural question and boundary/);
+    assert.match(ctx, /Update that ADR in place/);
+    assert.match(ctx, /reverting to a former choice/);
+    assert.match(ctx, /confirm the current Decision, Drivers, requirement contract/);
+    assert.match(ctx, /do not repeat that routine intent check/);
+    assert.match(ctx, /automatically repair evidence-backed code and test findings/);
     assert.match(ctx, /Proposed prerequisite blocks downstream implementation/);
     assert.doesNotMatch(ctx, /Bug fixes, lint\/formatting/);
   });
