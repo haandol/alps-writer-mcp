@@ -34,7 +34,7 @@ Section 9 (Out of Scope) is not a footnote. By naming what the agent must _not_ 
 | 1   | Overview                    | Product context, target users, problem statement              |
 | 2   | MVP Goals and Key Metrics   | What success looks like in measurable terms                   |
 | 3   | Demo Scenario               | A concrete walk-through that anchors the rest of the document |
-| 4   | High-Level Architecture     | System shape — components, boundaries, data flow              |
+| 4   | High-Level Architecture     | C4 Context and Container views of boundaries and system shape |
 | 5   | Design Specification        | UX/UI flows, component structure, error states                |
 | 6   | Requirements Summary        | Consolidated functional/non-functional requirements           |
 | 7   | Feature-Level Specification | Per-feature vertical slices (UI → API → data)                 |

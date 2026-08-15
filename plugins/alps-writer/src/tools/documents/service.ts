@@ -10,6 +10,34 @@ import { TemplateRegistry } from "../templates/registry.js";
 const bySubsectionId = ([a]: [string, unknown], [b]: [string, unknown]) =>
   a.localeCompare(b, undefined, { numeric: true });
 
+const ALLOWED_ARCHITECTURE_DIAGRAMS = new Set(["C4Context", "C4Container"]);
+
+function architectureDiagramError(content: string): string | null {
+  const diagramTypes = [...content.matchAll(/```mermaid\s*\r?\n([\s\S]*?)```/g)]
+    .map(
+      (match) =>
+        match[1]
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .find((line) => line && !line.startsWith("%%"))
+          ?.split(/\s+/)[0],
+    )
+    .filter((type): type is string => Boolean(type));
+
+  for (const required of ALLOWED_ARCHITECTURE_DIAGRAMS) {
+    if (!diagramTypes.includes(required)) {
+      return `Section 4.1 requires a Mermaid ${required} diagram.`;
+    }
+  }
+
+  const disallowed = diagramTypes.find((type) => !ALLOWED_ARCHITECTURE_DIAGRAMS.has(type));
+  if (disallowed) {
+    return `Section 4.1 allows only Mermaid C4Context and C4Container diagrams; found ${disallowed}.`;
+  }
+
+  return null;
+}
+
 export class DocumentService {
   private workingDoc: string | null = null;
   private readonly templates: TemplateRegistry;
@@ -214,6 +242,10 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
 
     const document = this.readWorkingDocument();
     if ("error" in document) return document.error;
+    if (subsection.fullId === "4.1") {
+      const diagramError = architectureDiagramError(content);
+      if (diagramError) return `Invalid subsection content: ${diagramError}`;
+    }
     const docContent = document.content;
     const projectName = this.extractProjectName(docContent);
     const sections = this.parseSections(docContent);

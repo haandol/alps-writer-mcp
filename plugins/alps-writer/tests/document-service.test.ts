@@ -77,6 +77,61 @@ test("save enforces template subsection IDs and titles", () => {
   assert.match(service.getStatus(), /Section 1 \(Overview\): ⬜ Not started/);
 });
 
+test("Section 4.1 requires Context and Container as its only Mermaid diagram types", () => {
+  const dir = temporaryDirectory();
+  const target = path.join(dir, "architecture.alps.xml");
+  const service = new DocumentService();
+  service.initDocument("demo", target);
+
+  const contextOnly =
+    '```mermaid\n%%{init: {"theme": "neutral"}}%%\n%% system boundary\nC4Context\nPerson(user, "User")\n```';
+  assert.match(
+    service.saveSection(4, "1", "System Diagram", contextOnly),
+    /requires a Mermaid C4Container diagram/,
+  );
+
+  const componentAdded = `${contextOnly}
+
+\`\`\`mermaid
+C4Container
+Container(app, "Application")
+\`\`\`
+
+\`\`\`mermaid
+C4Component
+Component(module, "Module")
+\`\`\``;
+  assert.match(
+    service.saveSection(4, "1", "System Diagram", componentAdded),
+    /allows only Mermaid C4Context and C4Container diagrams; found C4Component/,
+  );
+
+  const valid = `${contextOnly}
+
+\`\`\`mermaid
+C4Container
+Container(app, "Application")
+\`\`\``;
+  assert.match(service.saveSection(4, "1", "System Diagram", valid), /Saved 4\.1/);
+});
+
+test("non-C4 diagrams remain valid outside Section 4.1", () => {
+  const dir = temporaryDirectory();
+  const target = path.join(dir, "dependencies.alps.xml");
+  const service = new DocumentService();
+  service.initDocument("demo", target);
+
+  assert.match(
+    service.saveSection(
+      6,
+      "3",
+      "Feature Dependency Diagram",
+      "```mermaid\ngraph TD\nF2 --> F1\n```",
+    ),
+    /Saved 6\.3/,
+  );
+});
+
 test("status uses required template coverage instead of content length", () => {
   const dir = temporaryDirectory();
   const target = path.join(dir, "status.alps.xml");

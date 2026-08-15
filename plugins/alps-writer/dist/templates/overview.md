@@ -7,7 +7,7 @@ This document provides a comprehensive framework to capture and validate all ess
 1. Overview - Define the product vision, target users, core problem, solution strategy
 2. MVP Goals and Key Metrics - Articulate measurable goals that validate the MVP hypothesis
 3. Demo Scenario - Describe the demo scenario showing how key hypotheses can be validated _(references: Section 2)_
-4. High-Level Architecture - Provide C4 model diagrams illustrating the system architecture
+4. High-Level Architecture - Provide both C4 Context and Container diagrams; exclude Component and Code levels
 5. Design Specification - Detail the UX and page flow _(references: Section 6)_
 6. Requirements Summary - Enumerate all core functional and non-functional requirements
 7. Feature-Level Specification - Present complete user stories for each feature _(references: Section 6)_
@@ -116,4 +116,5 @@ When user provides PDF, ALPS (PRD), or any reference:
 - ALWAYS ask 1-2 questions at a time (1 for complex topics)
 - When saving, ALWAYS call `save_alps_section(section, subsection_id, title, content)` with all four arguments; `subsection_id` and `title` must match the section's XML template
 - Author Section 6 (Requirements) before Section 5 (Design) — see the recommended authoring order
+- In Section 4.1, ALWAYS include both Mermaid `C4Context` and `C4Container` diagrams. These are the only C4 levels allowed; never generate Component, Dynamic, Deployment, or Code-level C4 diagrams.
 </rules>

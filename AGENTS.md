@@ -16,6 +16,11 @@ Everything in this repo serves one idea, so weigh changes against it.
 | **Middle**   | ADR (`docs/adr/`)         | HOW (architecture) — the decision, its rationale, the requirement contract | **adr-writer**  |
 | **Zoom in**  | Code / AGENTS.md / README | HOW (detail) — structure, names, signatures, tuning values                 | the user's repo |
 
+ALPS applies the C4 analogy literally in Section 4: every PRD includes both a
+Mermaid `C4Context` and `C4Container` diagram. Those are the only C4 levels the
+PRD uses. Component, Dynamic, Deployment, and Code-level C4 diagrams belong
+below the PRD resolution and must not be generated there.
+
 **The goal is selective reading: a reader loads one level, gets its question answered, and stops.** "Why is the refresh window 7 days?" is answered by the ADR without opening a source file; "how is rotation implemented?" is answered by the code without reading the PRD. That only holds while each level carries **its own resolution and no other** — which is why the plugins constrain what may be written at each level as strictly as they do.
 
 Two leaks break it, and nearly every rule in `plugins/adr-writer/templates/adr/` exists to catch one of them:
