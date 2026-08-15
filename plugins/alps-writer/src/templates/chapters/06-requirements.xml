@@ -4,7 +4,7 @@
 - Each core feature is assigned a unique ID (F1, F2, …), and will be mapped to Section 7.
 - Prioritize each requirement using: Must-Have, Should-Have, or Nice-to-Have.
 - Only features defined in this section are included in the MVP scope; additional features must be listed in Section 9.
-- At most 3 non-functional requirements. The cap is deliberate: an MVP can only credibly commit to a handful of measurable guarantees, so this forces the team to pick the few that actually gate release rather than listing aspirational ones. If a 4th feels essential, drop or merge a weaker one — or defer it to a later iteration via Section 9.
+- Identify a top-3 NFR focus set for MVP prioritization. This is not a deletion cap: retain every mandatory security, privacy, regulatory, accessibility, contractual, and Must-Have constraint even when the final list exceeds three. Optional constraints outside the focus set may be merged or deferred via Section 9.
   </description>
   <subsection id="6.1" title="Core Features (Functional Requirements)">
     <example>

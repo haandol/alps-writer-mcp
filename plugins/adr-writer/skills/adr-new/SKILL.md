@@ -33,7 +33,7 @@ flowchart TD
 So an ADR answers exactly one question: **"why this decision, and what must the result honor?"** Two ways to get that wrong, and you are guarding both directions at once:
 
 - **Pulling detail up from the code level** (signatures, field types, pool sizes, pseudocode, file paths) — the ADR stops being trustworthy on its own, because it asserts things the code may already have changed. The reader must open the code to learn which half still holds, and the level no longer answers its question.
-- **Pushing a requirement out** ("the code will hold that number") — now **no level holds it.** The code shows the value but not that it is a contract; the PRD is too coarse to name it. This is the more expensive failure, which is why step 2 makes you ask about requirement values even unprompted.
+- **Pushing a requirement out** ("the PRD or code already has that number") — code shows enforcement and the PRD shows user intent, but neither explains the admitted architectural contract and rationale. This is the more expensive failure, which is why step 2 makes you ask about requirement values even unprompted.
 
 The one test behind both, applied when you finish the draft:
 

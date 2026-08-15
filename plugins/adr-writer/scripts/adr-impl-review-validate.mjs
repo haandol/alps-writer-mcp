@@ -9,6 +9,7 @@ import { CATEGORY_NAMES, VERDICT_NAMES } from "./adr-impl-review-categories.mjs"
 // the report can render (and rank) — the two lists used to be separate copies.
 const ALLOWED_VERDICTS = VERDICT_NAMES;
 const ALLOWED_CATEGORIES = CATEGORY_NAMES;
+const ALLOWED_MODES = new Set(["standard", "full"]);
 const ALLOWED_PERSPECTIVES = new Set(["necessity", "sufficiency", "both"]);
 const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
 const REQUIRED_REPORT_TEXT = [
@@ -43,6 +44,15 @@ const REQUIRED_MERGE_AXES = [
   "Verification strength",
   "Operational safety",
   "Maintainability",
+];
+const REQUIRED_STANDARD_REPORT_TEXT = [
+  "# ADR implementation review",
+  "## Review mode",
+  "## Scope",
+  "## Decision ledger",
+  "## Findings",
+  "## Tests",
+  "## Review limits",
 ];
 
 function usage(message) {
@@ -137,7 +147,14 @@ function validateMetrics(metrics, findings, errors) {
   }
 }
 
-function validateReport(report, findingCount, errors) {
+function validateReport(report, findingCount, mode, errors) {
+  if (mode === "standard") {
+    for (const text of REQUIRED_STANDARD_REPORT_TEXT) {
+      if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
+    }
+    return;
+  }
+
   for (const text of REQUIRED_REPORT_TEXT) {
     if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
   }
@@ -195,6 +212,9 @@ function main() {
 
   const data = readJson(findingsPath, errors);
   if (data) {
+    if (!ALLOWED_MODES.has(data.reviewMode)) {
+      errors.push(`findings.json reviewMode must be standard or full`);
+    }
     if (typeof data.adr !== "string" || !data.adr.trim()) errors.push("findings.json missing adr");
     if (!ALLOWED_VERDICTS.has(data.verdict)) {
       errors.push(`findings.json verdict is invalid: ${data.verdict ?? "(missing)"}`);
@@ -204,21 +224,37 @@ function main() {
     } else {
       data.findings.forEach((finding, index) => validateFinding(finding, index, errors));
       validateMetrics(data.metrics, data.findings, errors);
+      if (
+        data.reviewMode === "standard" &&
+        Number.isInteger(data.metrics?.necessityFindingCount) &&
+        data.metrics.necessityFindingCount !== 0
+      ) {
+        errors.push("standard review metrics.necessityFindingCount must be 0");
+      }
+      if (
+        data.reviewMode === "standard" &&
+        data.findings.some((finding) => ["necessity", "both"].includes(finding?.perspective))
+      ) {
+        errors.push("standard review findings must use the sufficiency perspective");
+      }
     }
 
     const reportPath = resolveArtifact(artifactDir, data.report);
     if (!reportPath || path.resolve(reportPath) !== path.resolve(expectedReport)) {
       errors.push("findings.json report must point to implementation-review.md");
     }
-    const explanationPath = resolveArtifact(artifactDir, data.explanation);
-    if (!explanationPath || !existsSync(explanationPath)) {
-      errors.push("findings.json explanation must point to an existing file");
+    if (data.reviewMode === "full") {
+      const explanationPath = resolveArtifact(artifactDir, data.explanation);
+      if (!explanationPath || !existsSync(explanationPath)) {
+        errors.push("full review explanation must point to an existing file");
+      }
     }
 
     if (existsSync(expectedReport)) {
       validateReport(
         readFileSync(expectedReport, "utf8"),
         Array.isArray(data.findings) ? data.findings.length : 0,
+        data.reviewMode,
         errors,
       );
     }

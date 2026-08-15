@@ -35,7 +35,7 @@ flowchart LR
 
 ### Requirement contract
 
-- Section 4.1은 Mermaid `C4Context` 다이어그램과 `C4Container` 다이어그램을 각각 하나 이상 포함한다.
+- High-Level Architecture는 Mermaid `C4Context` 다이어그램과 `C4Container` 다이어그램을 각각 하나 이상 포함한다.
 - Context 다이어그램은 사람, 외부 시스템, 대상 시스템과 그 관계를 표현한다.
 - Container 다이어그램은 애플리케이션, 데이터 저장소 등 주요 실행·배포 단위와 기술 책임 및 관계를 표현한다.
 - ALPS PRD의 C4 다이어그램은 `C4Context`와 `C4Container`만 사용한다. `C4Component`, `C4Dynamic`, `C4Deployment` 및 Code 수준 다이어그램은 생성하지 않는다.

@@ -74,6 +74,19 @@ not run (bad `--only`, agent produced nothing).
      the replaced mode and comparison narration, but preserve the current
      forbidden transition. A blanket "remove negative sentences" rule fails the
      second half.
+   - `feature-handoff-zero-or-many` checks that replaceable implementation work
+     produces zero ADRs, independent durable decisions remain separate, and a
+     feature-only prerequisite does not manufacture a placeholder ADR.
+   - `impl-blocks-proposed-prerequisite` checks the mandatory dependency gate;
+     user confirmation must not create a downstream-only override.
+   - `hook-admission-routing` pairs one replaceable SDK swap with one requirement
+     quota change so tightening either side cannot silently capture the other.
+   - `alps-batch-preserves-mandatory-nfr` checks explicit batch approval together
+     with separate save units and mandatory NFR preservation beyond the top-three
+     focus set.
+   - `impl-review-selects-risk-mode` checks both directions of the review-mode
+     classifier: localized implementation uses standard, while contract and
+     public-surface changes use full.
 
    The two axes also split by pipeline stage, and that split is deliberate.
    `/adr-new` no longer calls `adr-reviewer` (it self-checks at its step 6(b)), so

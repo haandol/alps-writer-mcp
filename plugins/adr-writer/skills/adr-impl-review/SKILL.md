@@ -1,7 +1,7 @@
 ---
 name: adr-impl-review
-description: Adversarially review code implemented from an ADR with independent necessity and sufficiency passes. First produces a junior-readable implementation explanation for human intent confirmation, then runs isolated reviewers to find unnecessary changes and missing behavior, executes targeted tests or reproducible checks, and emits evidence-backed review artifacts. Report-only; never edits code or ADRs. Use after /adr-impl, or when the user asks for a necessity/sufficiency review, minimality/completeness review, adversarial implementation review, or "필요충분 테스트". Keywords - "/adr-impl-review", "ADR 구현 검토", "필요성 리뷰", "충분성 리뷰", "필요충분 테스트", "적대적 코드 리뷰", "구현이 ADR 대로 됐는지".
-argument-hint: "[adr-path-or-category] [--base <ref>]"
+description: Review code implemented from an ADR using a risk-selected standard or full path. Standard reviews use a decision ledger, one isolated sufficiency pass, and targeted tests; full reviews add human intent confirmation plus independent necessity and sufficiency passes and detailed repair artifacts. Report-only; never edits code or ADRs. Use after /adr-impl, or when the user asks for a necessity/sufficiency review, minimality/completeness review, adversarial implementation review, or "필요충분 테스트". Keywords - "/adr-impl-review", "ADR 구현 검토", "필요성 리뷰", "충분성 리뷰", "필요충분 테스트", "적대적 코드 리뷰", "구현이 ADR 대로 됐는지".
+argument-hint: "[adr-path-or-category] [--base <ref>] [--mode standard|full]"
 ---
 
 # adr-impl-review
@@ -10,16 +10,14 @@ Rather than approving the implementation outright, disprove it in the following 
 
 ```mermaid
 flowchart TD
-    EXPLAIN["Plain explanation"] --> GATE["Human intent confirmation"]
-    GATE --> NEC["Necessity review"]
-    GATE --> SUF["Sufficiency review + tests"]
-    NEC --> EVID["Evidence verification"]
-    SUF --> EVID
-    EVID --> REPORT["Junior-facing repair report"]
-    REPORT --> RULING["Per-item user ruling"]
+    CHANGE["Implementation change"] --> RISK{"Protected surface?"}
+    RISK -->|No| STANDARD["Standard: ledger + sufficiency + targeted tests"]
+    RISK -->|Yes or unclear| FULL["Full: human gate + necessity + sufficiency"]
+    STANDARD --> RULING["Evidence-backed result"]
+    FULL --> RULING
 ```
 
-The necessity and sufficiency reviews run **in parallel**, without seeing each other's results (section 3).
+In full mode, the necessity and sufficiency reviews run **in parallel**, without seeing each other's results (section 3). Standard mode runs only the isolated sufficiency pass defined below.
 
 This procedure is not a proof of mathematical necessity and sufficiency. It is **a disproof-based review that hunts for unnecessary changes and missing behavior from two different perspectives.** A passing test is only evidence that no counterexample was found among the cases actually executed — not a proof of completeness.
 
@@ -49,7 +47,7 @@ A note on scope: `/adr-impl-review` judges the **code** level against the ADR le
 ## Invariant principles
 
 - **Report-only**: never auto-modify code, ADRs, or the mapping. Write only the Markdown/JSON/HTML review artifacts.
-- **Independent contexts**: run the explainer, the necessity reviewer, and the sufficiency reviewer each in a fresh isolated context. Never pass a reviewer the explanation document or the other reviewer's result.
+- **Independent contexts**: in full mode, run the explainer, necessity reviewer, and sufficiency reviewer in fresh isolated contexts. In standard mode, run the sufficiency reviewer in one fresh isolated context. Never pass a reviewer another agent's result.
 - **The ADR is the behavioral spec**: right after implementation, the ADR's admitted decision and requirement contract are authoritative. Implementation facts such as API names and actual field names should not be in that spec; when they appear, separate them as `Impl-fact mismatch` and route them for removal. The reviewer agents never break the premise that the admitted decision and contract are correct — whether the spec itself is right is asked only by the human at the section 2 gate. That gate and `/adr-review` also judge whether the spec is at the right resolution; if it falls short, route it outward to an ADR update or retirement rather than fixing it inside impl-review.
 - **Evidence over assertion**: every finding includes the applicable basis among an ADR quote, the actual diff or code location, and a reproduction procedure or execution result. Report a conjecture you could not reproduce only as `Unverified risk`.
 - **Separation of the human's role**: confirming the explanation is a gate for "is this understandable and does it match the intent?" — not an approval that the code is correct.
@@ -61,7 +59,7 @@ ADR identification follows the same rules as `/adr-impl`.
 - If it is a file path, use that ADR.
 - If it is a category key, look it up in `docs/adr/.mapping.json`.
 - With no argument, show the list of `Accepted` ADRs and take a selection.
-- If it is a `Proposed` ADR invoked by `/adr-impl` after implementation, refactoring, and tests, treat it as the full pre-promotion completion review and do not ask whether it is partial. For any other `Proposed` target, confirm once whether this is a partial-implementation review.
+- If it is a `Proposed` ADR invoked by `/adr-impl` after implementation, refactoring, and tests, treat it as the selected pre-promotion completion review and do not ask whether it is partial. For any other `Proposed` target, confirm once whether this is a partial-implementation review.
 
 Determine the diff under review by this priority:
 
@@ -78,7 +76,30 @@ If the scope mixes several implementations and cannot be mapped onto the ADR, do
 - Whichever project conventions exist among `AGENTS.md`, `CONTRIBUTING.md`, `CLAUDE.md` — note these are the **project's own** conventions file, a different thing from `docs/adr/concepts.md` above
 - An executable project test command
 
-Create one review artifact directory and pass its path to every agent that follows. To avoid dirtying the repository, the default location is `${TMPDIR:-/tmp}/adr-impl-review-<adr-slug>-<timestamp>/`. Record the review start time when this directory is created. The final artifact records elapsed time, per-perspective finding counts, unverified-risk count, and executed test-command count so the project can decide from evidence whether a lighter review path is justified. Do not introduce or select a lighter path from one run or intuition alone.
+Create one review artifact directory and pass its path to every agent that follows. To avoid dirtying the repository, the default location is `${TMPDIR:-/tmp}/adr-impl-review-<adr-slug>-<timestamp>/`. Record the review start time when this directory is created. The final artifact records the selected mode and rationale, elapsed time, per-perspective finding counts, unverified-risk count, and executed test-command count.
+
+### 1.1 Select the review mode
+
+Use `full` when any of these surfaces changes: requirement values or rules, public API or wire form, schema or persistence, state or transitions, permissions or visibility, security boundaries, external fallback, concurrency, transactions, resource lifetime, or error semantics. Also use `full` for changes spanning bounded contexts or broad modules, when the user requests a full review, or whenever classification is unclear.
+
+Use `standard` only for localized implementation or reinforcement of an existing decision that changes none of those protected surfaces. An explicit `--mode standard` never overrides the criteria; upgrade it to `full` and explain why. An explicit `--mode full` is always honored.
+
+Record `reviewMode` and the classification evidence in the artifacts.
+
+## Standard mode
+
+For `standard`, execute this section and then continue at section 7. Sections 2-6 are the full-mode path.
+
+1. Build a decision ledger containing every ADR decision and requirement-contract row relevant to the diff.
+2. Run `adr-impl-sufficiency-reviewer` in one fresh isolated context with only the ADR, raw diff, changed code and tests, project rule documents, and the ledger. If subagents are unavailable, perform one separate sufficiency pass in the main session and record the isolation limitation.
+3. Execute the related targeted tests and any minimal reproduction needed to account for every ledger row. An unexecuted core path makes the verdict `INCONCLUSIVE`, not `PASS`.
+4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, report-writer agent, HTML page, mandatory Mermaid, or human spec-fitness gate.
+5. Write a concise `implementation-review.md` with these headings: `Review mode`, `Scope`, `Decision ledger`, `Findings`, `Tests`, and `Review limits`. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, and the normal evidence fields.
+6. Run the artifact validator. `PASS` requires every ledger row accounted for, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk.
+
+## Full mode
+
+The rest of sections 2-6 applies only to `full`.
 
 ## 2. The plain implementation explanation and the human gate
 
@@ -194,6 +215,7 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
 
 ```json
 {
+  "reviewMode": "full",
   "adr": "docs/adr/ordering/checkout/0001-checkout.md",
   "status": "Accepted (2026-07-10)",
   "verdict": "FIX_REQUIRED",
@@ -228,7 +250,7 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
 }
 ```
 
-`metrics` is mandatory even for `PASS` with zero findings. Count the raw findings each independent perspective produced before deduplication, count `Unverified risk` entries after synthesis, and count distinct test or reproduction commands actually executed. These metrics are observational only: they never weaken the current completion gate. A future light path requires representative history showing both review cost and finding yield, then a separate ADR decision.
+`reviewMode` and `metrics` are mandatory even for `PASS` with zero findings. Count the raw findings each independent perspective produced before deduplication, count `Unverified risk` entries after synthesis, and count distinct test or reproduction commands actually executed. In standard mode the necessity count is zero by definition.
 
 Allowed categories:
 
@@ -237,7 +259,7 @@ Allowed categories:
 - Shared quality: `Best practice`, `Refactor`
 - Verification state: `Unverified risk`, `Contradiction`
 
-Build the HTML with these scripts.
+Validate both modes with the first script. Build the HTML only in full mode.
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-validate.mjs <artifact-dir>
@@ -246,11 +268,11 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-report.mjs <findings.json> --
 
 If the validator fails, do not report completion or generate the HTML. Fill the omissions it names in `implementation-review.md` or `findings.json` and re-run until the validator exits 0. In particular, fill `perspective`, `code`, `evidence`, `test`, and `testResult` for every finding, and where a test could not be run, write `NOT RUN — <reason>` rather than leaving it blank.
 
-Open the report and summarize in chat only the verdict, the necessity/sufficiency finding counts, the tests executed, elapsed time, and the number of unverified risks. The user rules on each item as **apply / skip / defer** and exports `feedback.json`.
+In full mode, open the report and summarize in chat only the verdict, the necessity/sufficiency finding counts, the tests executed, elapsed time, and the number of unverified risks. The user rules on each item as **apply / skip / defer** and exports `feedback.json`. In standard mode, present the concise findings in chat and record the same explicit rulings there; do not require HTML or `feedback.json`.
 
 ## 7. Routing after the user's ruling
 
-This command itself remains report-only. Route the approved items in `feedback.json` to follow-up work.
+This command itself remains report-only. Route the approved items from the mode-appropriate ruling record — explicit chat rulings in standard mode or `feedback.json` in full mode — to follow-up work.
 
 - `Unnecessary change` → remove the code. Re-run the related tests after removal.
 - `Simpler alternative` / `Refactor` → simplify after confirming it does not change the ADR decision.
@@ -262,7 +284,7 @@ This command itself remains report-only. Route the approved items in `feedback.j
 - `Unverified risk` → reproduce it first, or explicitly accept the risk. Do not fix it straight away.
 - `Contradiction` → do not fix anything before a human decides which of the two premises holds.
 
-Once the fixes are done, run `/adr-impl-review` again to close both the necessity and sufficiency passes.
+Once the fixes are done, run `/adr-impl-review` again to close the selected review path. Full mode closes both necessity and sufficiency passes; standard mode closes its sufficiency pass.
 
 ## Prohibited
 

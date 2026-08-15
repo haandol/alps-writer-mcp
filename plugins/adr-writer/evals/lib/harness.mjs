@@ -16,8 +16,10 @@ import { SEEDED_RULE_DOCS } from "../../scripts/adr-lint-lib.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const PLUGIN_ROOT = path.resolve(HERE, "..", "..");
+export const ALPS_PLUGIN_ROOT = path.resolve(PLUGIN_ROOT, "..", "alps-writer");
 export const TEMPLATES = path.join(PLUGIN_ROOT, "templates", "adr");
 export const STRUCTURE_LINT = path.join(PLUGIN_ROOT, "scripts", "adr-structure-lint.mjs");
+export const ADR_HOOK = path.join(PLUGIN_ROOT, "hooks", "surface-adr-context.mjs");
 
 // The seeded rule docs a real repo holds. Fixtures get the real files, not
 // stubs — several rules are only judgeable against them, and a scenario that
@@ -58,6 +60,19 @@ export function seedMapping(dir, mapping = { categories: {} }) {
 // (the frontmatter is client registration metadata, not instructions).
 export function skillText(name) {
   return stripFrontmatter(readFileSync(path.join(PLUGIN_ROOT, "skills", name, "SKILL.md"), "utf8"));
+}
+
+export function alpsSkillText(name) {
+  return stripFrontmatter(
+    readFileSync(path.join(ALPS_PLUGIN_ROOT, "skills", name, "SKILL.md"), "utf8"),
+  );
+}
+
+export function alpsGuideText(section) {
+  return readFileSync(
+    path.join(ALPS_PLUGIN_ROOT, "src", "guides", `${String(section).padStart(2, "0")}.md`),
+    "utf8",
+  );
 }
 
 export function agentText(name) {
@@ -173,6 +188,20 @@ export function expectNoText(haystack, pattern, label) {
     detail: hit ? `found forbidden ${pattern}: "${hit[0]}"` : `absent, as required`,
     label,
   };
+}
+
+export function hookContext(dir, mapping = { categories: {} }) {
+  seedMapping(dir, mapping);
+  const result = spawnSync(process.execPath, [ADR_HOOK], {
+    cwd: dir,
+    input: JSON.stringify({ prompt: "eval" }),
+    encoding: "utf8",
+    env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
+  });
+  if (result.status !== 0) {
+    throw new Error(`hook failed: ${result.stderr || result.stdout}`);
+  }
+  return JSON.parse(result.stdout).hookSpecificOutput?.additionalContext ?? "";
 }
 
 // Run the shipped deterministic harness over the fixture. Used by author-side

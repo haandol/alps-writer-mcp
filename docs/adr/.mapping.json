@@ -33,13 +33,57 @@
       ],
       "dependsOn": []
     },
+    "alps-authoring/spec-handoff": {
+      "feature": "Admission-aware PRD to ADR handoff",
+      "adrs": [
+        {
+          "path": "docs/adr/alps-authoring/spec-handoff/0001-admission-aware-feature-handoff.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "PRD 기능은 admission gate를 통과한 0개 이상의 독립 ADR 결정으로 전달하고 재실행 시 PRD와 ADR 계약 차이를 조정한다"
+        }
+      ],
+      "dependsOn": ["adr-authoring/decision-boundary"]
+    },
+    "alps-authoring/authoring-interaction": {
+      "feature": "ALPS authoring interaction",
+      "adrs": [
+        {
+          "path": "docs/adr/alps-authoring/authoring-interaction/0001-support-atomic-and-batch-approval.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "ALPS 작성은 section별 승인을 기본으로 하되 명시적 요청이나 완성된 입력에는 단위 경계를 유지한 batch 승인을 지원한다"
+        }
+      ],
+      "dependsOn": []
+    },
+    "alps-authoring/nfr-selection": {
+      "feature": "NFR selection",
+      "adrs": [
+        {
+          "path": "docs/adr/alps-authoring/nfr-selection/0001-preserve-mandatory-nfrs-beyond-focus-set.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "MVP NFR은 상위 세 개 focus set을 강조하되 보안·규제·계약과 명시적 Must-Have 조건은 개수와 무관하게 보존한다"
+        }
+      ],
+      "dependsOn": []
+    },
     "adr-cycle/implementation-review": {
       "feature": "Implementation review",
       "adrs": [
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
           "status": "Accepted (2026-08-15)",
-          "summary": "구현 완료 전 전용 리팩토링 단계가 검증된 저위험 개선만 적용하고 나머지는 제안으로 남긴 뒤 최종 구현 리뷰가 변경된 코드를 검증한다"
+          "summary": "구현 리뷰는 보호 표면과 변경 범위에 따라 standard 또는 full 모드를 선택하고 검증된 저위험 리팩토링만 자동 반영한다"
+        }
+      ],
+      "dependsOn": []
+    },
+    "adr-cycle/behavior-evaluation": {
+      "feature": "Prompt behavior evaluation",
+      "adrs": [
+        {
+          "path": "docs/adr/adr-cycle/behavior-evaluation/0001-evaluate-critical-prompt-decisions.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "영속 상태와 계약 소유권을 결정하는 prompt 분류는 정적 문구 검사와 실제 shipping prompt를 사용하는 행동 시나리오로 함께 검증한다"
         }
       ],
       "dependsOn": []
@@ -50,10 +94,21 @@
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
           "status": "Accepted (2026-08-15)",
-          "summary": "개발 흐름은 유효 상태와 독립 검토를 보장하고 검증 비용을 실제 변경에 비례시키며 main 배포를 PR과 필수 CI로 보호한다"
+          "summary": "개발 흐름은 선행 ADR을 우회하지 않고 상태 유효성을 보장하며 변경 위험에 따라 검증 강도를 선택한 뒤 완료 상태를 판정한다"
         }
       ],
-      "dependsOn": ["adr-cycle/implementation-review"]
+      "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]
+    },
+    "delivery/repository-protection": {
+      "feature": "Repository protection",
+      "adrs": [
+        {
+          "path": "docs/adr/delivery/repository-protection/0001-protect-main-with-pr-and-ci.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "main 갱신은 원격 저장소가 pull request와 필수 CI 성공을 병합 조건으로 강제하고 로컬 hook은 피드백 수단으로 사용한다"
+        }
+      ],
+      "dependsOn": []
     }
   }
 }

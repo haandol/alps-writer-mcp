@@ -44,7 +44,7 @@ Mark each item below pass or fail. For each rule's detailed criteria, treat the 
 > **What every rule below is really testing** (`concepts.md` "The abstraction ladder"): PRD, ADR, and code are the same system at three resolutions, like C4's context / container / component zoom. An ADR earns its place only while it can be **read alone** to answer "why this decision, and what must the result honor?" So each rule catches one of exactly two leaks:
 >
 > - **Detail pulled up from the code level** — R2, R3, R7, R9, and R4's filters (a)/(b), plus R18b. The ADR asserts things the code may already have changed, so a reader must open the code to learn which half still holds.
-> - **A requirement pushed out of the ADR** — R18a and R19, guarded by R4's gate (0). Worse, because the fact now lives at **no** level: the code shows the value but not that it is a contract, and the PRD is too coarse to name it.
+> - **A requirement pushed out of the ADR** — R18a and R19, guarded by R4's gate (0). Code shows enforcement and the PRD shows user intent, but neither explains the admitted architectural contract and rationale.
 >
 > The rest set up those two: R12 first applies the ADR admission gate and then asks whether the ADR's own resolution (rationale) is present at all, R13/R14 test the rationale, R5/R11 ask whether the level is sliced along the right boundary, R15/R17 keep the levels from pointing at each other physically, and R20 is about how a sentence reads once its content is right. When a finding is ambiguous, ask which leak it is — a diagnosis that fits neither is usually taste, and taste stays out of the report.
 
