@@ -1,0 +1,18 @@
+# Paths whose authored text teaches or tests the ADR workflow itself. They
+# intentionally contain example ADR ids and docs/adr paths, so they are not
+# product-code back-references. Directory entries end with "/".
+AGENTS.md
+CONTRIBUTING.md
+README.md
+docs/
+plugins/adr-writer/README.md
+plugins/adr-writer/agents/
+plugins/adr-writer/evals/
+plugins/adr-writer/skills/
+plugins/adr-writer/templates/
+plugins/adr-writer/tests/
+plugins/adr-writer/hooks/surface-adr-context.mjs
+plugins/adr-writer/scripts/adr-impl-review-report.mjs
+plugins/adr-writer/scripts/adr-invariants.sh
+plugins/adr-writer/scripts/adr-structure-lint.mjs
+plugins/alps-writer/skills/

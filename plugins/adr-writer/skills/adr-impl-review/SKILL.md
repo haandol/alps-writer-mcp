@@ -60,7 +60,7 @@ ADR identification follows the same rules as `/adr-impl`.
 - If it is a file path, use that ADR.
 - If it is a category key, look it up in `docs/adr/.mapping.json`.
 - With no argument, show the list of `Accepted` ADRs and take a selection.
-- If it is a `Proposed` ADR, confirm once whether this is a partial-implementation review.
+- If it is a `Proposed` ADR invoked by `/adr-impl` after implementation, refactoring, and tests, treat it as the full pre-promotion completion review and do not ask whether it is partial. For any other `Proposed` target, confirm once whether this is a partial-implementation review.
 
 Determine the diff under review by this priority:
 
@@ -77,7 +77,7 @@ If the scope mixes several implementations and cannot be mapped onto the ADR, do
 - Whichever project conventions exist among `AGENTS.md`, `CONTRIBUTING.md`, `CLAUDE.md` — note these are the **project's own** conventions file, a different thing from `docs/adr/concepts.md` above
 - An executable project test command
 
-Create one review artifact directory and pass its path to every agent that follows. To avoid dirtying the repository, the default location is `${TMPDIR:-/tmp}/adr-impl-review-<adr-slug>-<timestamp>/`.
+Create one review artifact directory and pass its path to every agent that follows. To avoid dirtying the repository, the default location is `${TMPDIR:-/tmp}/adr-impl-review-<adr-slug>-<timestamp>/`. Record the review start time when this directory is created. The final artifact records elapsed time, per-perspective finding counts, unverified-risk count, and executed test-command count so the project can decide from evidence whether a lighter review path is justified. Do not introduce or select a lighter path from one run or intuition alone.
 
 ## 2. The plain implementation explanation and the human gate
 
@@ -200,6 +200,15 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
   "report": "/tmp/.../implementation-review.md",
   "scope": ["src/checkout/handler.ts"],
   "conventions": "AGENTS.md",
+  "metrics": {
+    "startedAt": "2026-08-15T06:30:00.000Z",
+    "completedAt": "2026-08-15T06:35:42.000Z",
+    "elapsedSeconds": 342,
+    "necessityFindingCount": 1,
+    "sufficiencyFindingCount": 0,
+    "unverifiedRiskCount": 0,
+    "testCommandCount": 2
+  },
   "findings": [
     {
       "category": "Unnecessary change",
@@ -218,6 +227,8 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
 }
 ```
 
+`metrics` is mandatory even for `PASS` with zero findings. Count the raw findings each independent perspective produced before deduplication, count `Unverified risk` entries after synthesis, and count distinct test or reproduction commands actually executed. These metrics are observational only: they never weaken the current completion gate. A future light path requires representative history showing both review cost and finding yield, then a separate ADR decision.
+
 Allowed categories:
 
 - Necessity: `Unnecessary change`, `Simpler alternative`
@@ -234,7 +245,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-report.mjs <findings.json> --
 
 If the validator fails, do not report completion or generate the HTML. Fill the omissions it names in `implementation-review.md` or `findings.json` and re-run until the validator exits 0. In particular, fill `perspective`, `code`, `evidence`, `test`, and `testResult` for every finding, and where a test could not be run, write `NOT RUN — <reason>` rather than leaving it blank.
 
-Open the report and summarize in chat only the verdict, the necessity/sufficiency finding counts, the tests executed, and the number of unverified risks. The user rules on each item as **apply / skip / defer** and exports `feedback.json`.
+Open the report and summarize in chat only the verdict, the necessity/sufficiency finding counts, the tests executed, elapsed time, and the number of unverified risks. The user rules on each item as **apply / skip / defer** and exports `feedback.json`.
 
 ## 7. Routing after the user's ruling
 

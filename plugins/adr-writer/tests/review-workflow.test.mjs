@@ -47,13 +47,13 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
   assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
 });
 
-test("adr-impl runs verified refactoring before Status promotion and final review", () => {
+test("adr-impl promotes only after verified refactoring, tests, and final review pass", () => {
   const impl = read("skills/adr-impl/SKILL.md");
   const initialTests = impl.indexOf("initial implementation tests pass");
   const refactor = impl.indexOf("/adr-impl-refactor <category>");
   const fullTests = impl.indexOf("full project test command", refactor);
-  const promotion = impl.indexOf("Automatic Status transition");
-  const finalReview = impl.indexOf("/adr-impl-review <category>", promotion);
+  const finalReview = impl.indexOf("/adr-impl-review <category>", fullTests);
+  const promotion = impl.indexOf("Automatic Status transition", finalReview);
 
   for (const [label, position] of [
     ["initial tests", initialTests],
@@ -67,13 +67,32 @@ test("adr-impl runs verified refactoring before Status promotion and final revie
 
   assert.ok(initialTests < refactor, "refactoring must start only after the initial tests pass");
   assert.ok(refactor < fullTests, "the full test rerun must exercise the refactored code");
-  assert.ok(fullTests < promotion, "Accepted must describe code that passed after refactoring");
-  assert.ok(promotion < finalReview, "the report-only review must inspect the final code");
+  assert.ok(fullTests < finalReview, "the final review must inspect tested, refactored code");
+  assert.ok(finalReview < promotion, "Accepted must be gated by a passing final review");
   assert.match(impl, /Do not pass it the refactor review or result artifacts/);
+  assert.match(impl, /`FIX_REQUIRED`, `BLOCK`, or `INCONCLUSIVE` does \*\*not\*\* promote/);
 
   const finalReviewSkill = read("skills/adr-impl-review/SKILL.md");
   assert.match(finalReviewSkill, /Report-only/);
   assert.match(finalReviewSkill, /This command itself remains report-only/);
+  assert.match(finalReviewSkill, /full pre-promotion completion review/);
+  assert.match(finalReviewSkill, /elapsed time, per-perspective finding counts/);
+  assert.match(finalReviewSkill, /A future light path requires representative history/);
+});
+
+test("no maintenance command bypasses the final review when promoting Proposed", () => {
+  const concepts = read("templates/adr/concepts.md");
+  const sync = read("skills/adr-sync/SKILL.md");
+  const rollup = read("skills/adr-rollup/SKILL.md");
+
+  assert.match(
+    concepts,
+    /does \*\*not\*\* promote a `Proposed` ADR merely because code and tests exist/,
+  );
+  assert.match(sync, /Do \*\*not\*\* promote `Proposed` merely because code and tests exist/);
+  assert.match(sync, /route it to `\/adr-impl <category>`/);
+  assert.match(rollup, /every decision included in it came from already-`Accepted` ADRs/);
+  assert.match(rollup, /tests and final implementation review pass/);
 });
 
 test("adr-impl-refactor auto-applies only locally verified behavior-preserving changes", () => {
@@ -91,6 +110,8 @@ test("adr-impl-refactor auto-applies only locally verified behavior-preserving c
   assert.match(skill, /undo only that candidate's edits/);
   assert.match(skill, /move the candidate to `PROPOSE_ONLY`/);
   assert.match(skill, /Do not use destructive worktree commands/);
+  assert.match(skill, /must not classify or apply any candidate as `APPLY_NOW`/);
+  assert.match(skill, /Main-session fallback findings are proposal-only/);
 
   for (const protectedSurface of [
     /APIs or wire forms/,
@@ -126,6 +147,8 @@ test("refactor review requires concrete efficiency evidence and proportionate re
   assert.match(reviewer, /Require direct code evidence or a reproducible measurement/);
   assert.match(reviewer, /Do not merge code that only looks syntactically similar/);
   assert.match(skill, /priority, expected benefit, risk, estimated scope and verification/);
+  assert.match(skill, /only when at least one candidate was kept/);
+  assert.match(skill, /reuse the passing baseline/);
 });
 
 test("human gate asks a third spec-fitness question that reviewers never inherit", () => {

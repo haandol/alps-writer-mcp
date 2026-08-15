@@ -5,6 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { withTmp, write, initRepo, runInvariants, seedRuleDocs, TEMPLATES } from "./helpers.mjs";
 
 // A minimal but realistic canonical fixture: DDD context × feature folders,
@@ -341,6 +342,31 @@ test("a hand-authored doc outside docs/adr/ citing an ADR is still flagged", () 
     assert.equal(code, 1);
     assert.match(stdout, /architecture-review\.md/);
   });
+});
+
+test("a repository code-ignore file suppresses intentional prompt examples but not product source", () => {
+  withTmp((dir) => {
+    seedCanonicalRepo(dir);
+    write(dir, ".adr-invariants-code-ignore", "plugins/adr-writer/skills/\nREADME.md\n");
+    write(
+      dir,
+      "plugins/adr-writer/skills/reviewer.md",
+      "Example: docs/adr/identity/login/0001-x.md\n",
+    );
+    write(dir, "README.md", "Example: ADR identity/login/0001\n");
+    write(dir, "plugins/adr-writer/hooks/real.mjs", 'const ref = "ADR infra/0001";\n');
+
+    const { code, stdout } = runInvariants(dir, ["--code-only"]);
+    assert.equal(code, 1, stdout);
+    assert.match(stdout, /hooks\/real\.mjs/);
+    assert.doesNotMatch(stdout, /reviewer\.md|README\.md/);
+  });
+});
+
+test("this self-hosting repository passes the exact code-reference oracle", () => {
+  const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+  const { code, stdout } = runInvariants(repoRoot, ["--code-only"]);
+  assert.equal(code, 0, stdout);
 });
 
 test("a real source dir merely NAMED like a cache is still scanned when not ignored", () => {

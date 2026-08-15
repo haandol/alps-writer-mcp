@@ -43,6 +43,13 @@
 //     "report":     "/tmp/.../implementation-review.md",
 //     "scope":      ["src/checkout/handler.ts", "..."],   // code the reviewer read
 //     "conventions":"AGENTS.md",                          // or "none"
+//     "metrics": {
+//       "elapsedSeconds": 342,
+//       "necessityFindingCount": 1,
+//       "sufficiencyFindingCount": 0,
+//       "unverifiedRiskCount": 0,
+//       "testCommandCount": 2
+//     },
 //     "findings": [                                       // required (may be [])
 //       {
 //         "id":       "f1",                               // stable id (auto if absent)
@@ -302,6 +309,7 @@ function buildHtml(data) {
   const verdictKey = (data.verdict || "").toUpperCase();
   const vmeta = VERDICTS[verdictKey] || { hue: "#566173", note: "" };
   const scope = Array.isArray(data.scope) ? data.scope : [];
+  const metrics = data.metrics && typeof data.metrics === "object" ? data.metrics : null;
   const findings = normalizeFindings(data);
   const cards = findings.map((f, i) => findingCard(f, i, findings.length)).join("\n");
   const count = findings.length;
@@ -556,6 +564,11 @@ function buildHtml(data) {
         ${data.conventions ? `<div>Project conventions · <code>${esc(data.conventions)}</code></div>` : ""}
         ${data.explanation ? `<div>Plain explanation · <code>${esc(data.explanation)}</code></div>` : ""}
         ${data.report ? `<div>Repair guide · <code>${esc(data.report)}</code></div>` : ""}
+        ${
+          metrics
+            ? `<div>Review metrics · ${esc(metrics.elapsedSeconds)}s · necessity ${esc(metrics.necessityFindingCount)} · sufficiency ${esc(metrics.sufficiencyFindingCount)} · tests ${esc(metrics.testCommandCount)}</div>`
+            : ""
+        }
       </div>
     </div>
     <div class="stamp">

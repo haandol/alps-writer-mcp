@@ -48,6 +48,13 @@ test("necessity and sufficiency evidence survives into the interactive report", 
     verdict: "FIX_REQUIRED",
     explanation: "/tmp/review/explanation.md",
     report: "/tmp/review/implementation-review.md",
+    metrics: {
+      elapsedSeconds: 42,
+      necessityFindingCount: 1,
+      sufficiencyFindingCount: 1,
+      unverifiedRiskCount: 1,
+      testCommandCount: 1,
+    },
     findings: [
       {
         id: "n1",
@@ -78,6 +85,8 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   assert.match(result.stdout, /pnpm test -- cancel/);
   assert.match(result.stdout, /implementation-review\.md/);
   assert.match(result.stdout, /explanation\.md/);
+  assert.match(result.stdout, /Review metrics/);
+  assert.match(result.stdout, /42s/);
 });
 
 test("INCONCLUSIVE with no findings does not render a false conforming claim", () => {

@@ -154,7 +154,7 @@ When the judgment is ambiguous, apply [the requirement gate and two filters](./a
 ```mermaid
 stateDiagram-v2
     [*] --> Proposed: /adr-new
-    Proposed --> Accepted: /adr-impl (implemented + tests pass)
+    Proposed --> Accepted: /adr-impl (implementation + tests + final review PASS)
     Accepted --> Proposed: decision changed, awaiting reimplementation
     Accepted --> Deprecated: retired with no replacement ADR
     Accepted --> Superseded: the decision topic forked
@@ -164,21 +164,21 @@ stateDiagram-v2
 
 `Superseded` names the successor ADR in the form `Superseded by [ADR XXXX](link)`.
 
-| Status     | Meaning                                                                                                                       |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Proposed   | The ADR has been proposed to the system. Even when the decision itself is agreed, **the code implementation is not finished** |
-| Accepted   | **The code implementation is complete.** The behavior the ADR describes actually exists in the codebase and passes tests      |
-| Deprecated | No longer valid. Retired with no replacement ADR                                                                              |
-| Superseded | Replaced by a new ADR. Names the successor in the form `Superseded by [ADR XXXX](link)`                                       |
+| Status     | Meaning                                                                                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Proposed   | The ADR has been proposed to the system. Even when the decision itself is agreed, **the code implementation or its completion review is not finished**       |
+| Accepted   | **The code implementation is complete.** The behavior exists, required tests pass, and the final necessity/sufficiency implementation review returned `PASS` |
+| Deprecated | No longer valid. Retired with no replacement ADR                                                                                                             |
+| Superseded | Replaced by a new ADR. Names the successor in the form `Superseded by [ADR XXXX](link)`                                                                      |
 
 ### Automatic transition rules
 
 Status is **not a value a human asks about and changes by hand, but one the cycle updates automatically.**
 
 - When a new ADR is created by `/adr-new` (or `/feature-to-adr`, which delegates to it), it is always saved as `Proposed`. Never ask the user "shall I make it Accepted?"
-- When `/adr-impl` implements an ADR and the tests pass, that command updates the ADR's Status to `Accepted` automatically. It does not separately confirm the promotion.
-- `/adr-sync` catches Status drift by comparing the code with the ADR: if the ADR is `Accepted` but the behavior it describes is absent from the code, it reverts to `Proposed`; if the ADR is `Proposed` but the code plus tests exist, it promotes to `Accepted`. (The bar for `Accepted` is **implementation plus passing tests**, as in the status table above — never promote on the existence of code alone.)
-- **When a requirement change actually changes the decision of an already-`Accepted` ADR** (even an in-place edit, if the decision's direction changed — for the judgment call see [`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"](./authoring-rules.md#changing-an-adr--edit-in-place-vs-supersede)), revert Status to `Proposed` until the new decision is reflected in code and tests. `/adr-impl` then auto-promotes `Proposed → Accepted` again. For a supersede, rather than reverting, mark the old ADR `Superseded` and start the new ADR as `Proposed`. A mere implementation-fact correction (an API table, an entity name, and so on) means the decision did not change, so it is not subject to this rule — keep `Accepted`.
+- When `/adr-impl` completes implementation, required tests, verified refactoring, and the final `/adr-impl-review` with `PASS`, that command updates the ADR's Status to `Accepted` automatically. It does not separately confirm the promotion.
+- `/adr-sync` catches invalid completion claims by comparing the code with the ADR: if an `Accepted` behavior or its tests are absent, it reverts to `Proposed`. It does **not** promote a `Proposed` ADR merely because code and tests exist, because the final review result is not persisted in the ADR or mapping; it routes that case to `/adr-impl` to complete the review gate.
+- **When a requirement change actually changes the decision of an already-`Accepted` ADR** (even an in-place edit, if the decision's direction changed — for the judgment call see [`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"](./authoring-rules.md#changing-an-adr--edit-in-place-vs-supersede)), revert Status to `Proposed` until the new decision is reflected in code, tests, and the final implementation review. `/adr-impl` then auto-promotes `Proposed → Accepted` again. For a supersede, rather than reverting, mark the old ADR `Superseded` and start the new ADR as `Proposed`. A mere implementation-fact correction (an API table, an entity name, and so on) means the decision did not change, so it is not subject to this rule — keep `Accepted`.
 - Record the date with the transition: `Accepted (YYYY-MM-DD)`, `Deprecated (YYYY-MM-DD)`. **The parentheses hold the date only** — just the single date, as in `Accepted (2026-07-09)`, with no trailing references, feature IDs, or implementation notes (`Accepted (2026-07-09) — implements F1` and `Accepted (2026-07-09, ref)` are both forbidden — `adr-structure-lint` catches them as `date-only`). `Superseded` is marked with the successor link instead of a date (`Superseded by [ADR XXXX](link)`). `Proposed` carries no date — the authoring date lives in the `Date:` at the top of the body (the time of writing, separate from the Status transition date), and the date on the Status line is recorded only on a transition.
 - Never use informal statuses such as `Implemented`, `Done`, or `Completed`.
 

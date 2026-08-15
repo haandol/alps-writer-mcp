@@ -116,7 +116,7 @@ Date: <today>
 
 **Rules**:
 
-0. **Status follows "the current code state"**: if the consolidation target is implemented and running, `Accepted (today's date)`. If part of the consolidated ADR is not in the code yet, either split that part into a separate ADR or leave the consolidated ADR as `Proposed` and let `/adr-impl` promote it automatically — do not ask the user.
+0. **Status preserves verified completion rather than re-inferring it**: keep the consolidation target `Accepted` only when every decision included in it came from already-`Accepted` ADRs and still exists in the current code and tests. If any included decision was `Proposed`, lacks implementation, or needs a new completion judgment, leave the consolidated ADR as `Proposed` and let `/adr-impl` run the tests and final implementation review before promotion — do not ask the user to hand-set Status.
 1. **Seamless merge**: leave no trace of the rollup in the result. Never mark `(Roll-up)` in a filename, title, or README link. **Never create an Evolution History section in the ADR body** — the body describes only the current state. The rationale behind the major transitions the chain carried is not discarded: it is harvested into `decision-log.md` in step 9, and Git preserves the individual diffs.
 2. **Describe current state only**: "consists of ~" rather than "added ~".
 3. **Keep Decision Drivers and alternatives ≥ 2**: the consolidated ADR follows the ordinary authoring rules (`authoring-rules.md`) exactly. Revive the real alternatives that lived somewhere in the chain.
@@ -231,7 +231,7 @@ The harvest never touches `.mapping.json` (the log is a convention file and is n
 
 ### Next step (consolidated ADRs left as Proposed)
 
-- Part of the consolidated ADR is not in the code yet, so it stays `Proposed` → continue with `/adr-impl <category>` and it will switch to `Accepted` automatically once the tests pass. (Omit this section if everything is implemented)
+- Part of the consolidated ADR is not in the code yet or has no verified completion review, so it stays `Proposed` → continue with `/adr-impl <category>` and it will switch to `Accepted` automatically once the tests and final implementation review pass. (Omit this section if every included decision preserves an existing Accepted state)
 
 ### No chain (categories left alone)
 

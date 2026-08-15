@@ -10,6 +10,17 @@
         }
       ],
       "dependsOn": []
+    },
+    "delivery/development-flow": {
+      "feature": "Development flow",
+      "adrs": [
+        {
+          "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "개발 흐름은 유효 상태와 독립 검토를 보장하고 검증 비용을 실제 변경에 비례시키며 main 배포를 PR과 필수 CI로 보호한다"
+        }
+      ],
+      "dependsOn": ["adr-cycle/implementation-review"]
     }
   }
 }
