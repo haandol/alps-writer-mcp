@@ -386,8 +386,10 @@ test("prose style is stated once, applied at authoring and review, and never cut
 test("ADR mutation paths record the final state without transition residue", () => {
   const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
   assert.match(rules, /## Final-state wording/);
-  assert.match(rules, /`MODE_A`와 `MODE_B`를 혼용하지 않고 `MODE_B`만/);
-  assert.match(rules, /실행 모드는 `MODE_B`다/);
+  assert.match(rules, /`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만/);
+  assert.match(rules, /이벤트 이름은 `CURRENT_EVENT`다/);
+  assert.match(rules, /타임아웃을 10초에서 30초로 변경한다/);
+  assert.match(rules, /타임아웃은 30초다/);
   assert.match(rules, /\.mapping\.json.*summary/);
   assert.match(rules, /not a blanket ban on negative sentences/i);
   assert.match(rules, /requirement gate/i);
@@ -426,8 +428,8 @@ test("ADR mutation paths record the final state without transition residue", () 
     read(path.join(ADR_ROOT, "templates", "adr", "README.md")),
     read(path.join(ADR_ROOT, "templates", "adr", "decision-log.template.md")),
   ].join("\n");
-  assert.match(allShippedGuidance, /MODE_A/);
-  assert.match(allShippedGuidance, /MODE_B/);
+  assert.match(allShippedGuidance, /LEGACY_EVENT/);
+  assert.match(allShippedGuidance, /CURRENT_EVENT/);
 });
 
 // Requirements do not arrive only as numbers. An allowed value set, a mandatory

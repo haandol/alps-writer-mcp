@@ -279,11 +279,11 @@ Reached from ②/③ of [edit-in-place vs supersede](#changing-an-adr--edit-in-p
 
 When an ADR is created or edited, write the currently valid result as a direct assertion. Do not make the reader reconstruct it from the replaced name, the migration step, or a contrast with the previous choice.
 
-| Transition narration                                                                 | Final-state assertion                 |
-| ------------------------------------------------------------------------------------ | ------------------------------------- |
-| "`MODE_A`와 `MODE_B`를 혼용하지 않고 `MODE_B`만 사용한다."                           | "실행 모드는 `MODE_B`다."             |
-| "The service uses the primary queue rather than the legacy queue."                   | "The service uses the primary queue." |
-| "The timeout changed from the previous value to the contractually required 30 days." | "The timeout is 30 days — contract."  |
+| Transition narration                                                           | Final-state assertion                 |
+| ------------------------------------------------------------------------------ | ------------------------------------- |
+| "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만 사용한다." | "이벤트 이름은 `CURRENT_EVENT`다."    |
+| "타임아웃을 10초에서 30초로 변경한다."                                         | "타임아웃은 30초다."                  |
+| "The service uses the primary queue rather than the legacy queue."             | "The service uses the primary queue." |
 
 Apply this rewrite to the current-state parts of Context, Decision, the requirement contract, Consequences, diagrams, and the matching `.mapping.json` summary:
 
@@ -338,7 +338,7 @@ For the PR reviewer or the author before merge.
 - [ ] **Non-numeric requirements survived too** — allowed value sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units and formats, forbidden transitions were not dropped as "obvious from the code" ([non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering))
 - [ ] **No tuning values** — values a developer may change without violating a requirement (pool sizes, backoff, cache TTL, worker counts) are absent
 - [ ] **Code-readthrough test** — for every paragraph, asking "is this obvious from reading the code this ADR governs?", nothing obvious remains (the code is the source of truth for those). Items that passed the requirement gate stay even when obvious
-- [ ] **Final-state wording** — the body and `.mapping.json` summary state the current result directly. No evolution narration ("originally it was", "added in v2", "changed from before") or comparison residue ("not X but Y", "`MODE_A`와 `MODE_B`를 혼용하지 않고 `MODE_B`만") remains outside Alternatives or [`decision-log.md`](#decision-log-decision-logmd). Current prohibitions and forbidden transitions that passed the requirement gate remain intact
+- [ ] **Final-state wording** — the body and `.mapping.json` summary state the current result directly. No evolution narration ("originally it was", "added in v2", "changed from before") or comparison residue ("not X but Y", "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만") remains outside Alternatives or [`decision-log.md`](#decision-log-decision-logmd). Current prohibitions and forbidden transitions that passed the requirement gate remain intact
 - [ ] **Prose style** — active voice by default (the actor is named where it matters), no hedges or throat-clearing, one idea per sentence, concrete nouns over vague ones ([Prose style](#prose-style--say-it-in-the-fewest-words-in-the-active-voice)). Tightening wording must never have dropped a requirement
 - [ ] **Gray-zone check** — the body actually contains **at least one** of: (a) adoption rationale / alternatives, (b) business rules translated into system behavior, (c) domain rules and state transitions, (d) external-dependency fallback (without these the ADR has little value)
 - [ ] **No code references below folder level** anywhere in prose, tables, or diagrams

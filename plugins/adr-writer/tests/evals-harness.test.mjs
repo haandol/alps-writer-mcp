@@ -230,20 +230,20 @@ test("final-state sync scorer rejects transition residue and preserves current p
 
   const goodDir = mkdtempSync(path.join(tmpdir(), "adr-eval-final-state-good-"));
   await scenario.build(goodDir);
-  const adrPath = path.join(goodDir, "docs/adr/runtime/mode/0001-execution-mode.md");
+  const adrPath = path.join(goodDir, "docs/adr/runtime/event/0001-event-name.md");
   const mappingPath = path.join(goodDir, "docs/adr/.mapping.json");
   writeFileSync(
     adrPath,
     readFileSync(adrPath, "utf8").replace(
-      "`MODE_A`와 `MODE_B`를 혼용하지 않고 `MODE_B`만 사용한다.",
-      "실행 모드는 `MODE_B`다.",
+      "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만 사용한다.",
+      "이벤트 이름은 `CURRENT_EVENT`다.",
     ),
   );
   writeFileSync(
     mappingPath,
     readFileSync(mappingPath, "utf8").replace(
-      "MODE_A와 MODE_B를 혼용하지 않고 MODE_B만 사용한다",
-      "실행 모드는 MODE_B다",
+      "LEGACY_EVENT와 CURRENT_EVENT를 혼용하지 않고 CURRENT_EVENT만 사용한다",
+      "이벤트 이름은 CURRENT_EVENT다",
     ),
   );
 
