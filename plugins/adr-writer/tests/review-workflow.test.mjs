@@ -47,6 +47,87 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
   assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
 });
 
+test("adr-impl runs verified refactoring before Status promotion and final review", () => {
+  const impl = read("skills/adr-impl/SKILL.md");
+  const initialTests = impl.indexOf("initial implementation tests pass");
+  const refactor = impl.indexOf("/adr-impl-refactor <category>");
+  const fullTests = impl.indexOf("full project test command", refactor);
+  const promotion = impl.indexOf("Automatic Status transition");
+  const finalReview = impl.indexOf("/adr-impl-review <category>", promotion);
+
+  for (const [label, position] of [
+    ["initial tests", initialTests],
+    ["refactor pass", refactor],
+    ["full test rerun", fullTests],
+    ["Status promotion", promotion],
+    ["final implementation review", finalReview],
+  ]) {
+    assert.notEqual(position, -1, `adr-impl is missing ${label}`);
+  }
+
+  assert.ok(initialTests < refactor, "refactoring must start only after the initial tests pass");
+  assert.ok(refactor < fullTests, "the full test rerun must exercise the refactored code");
+  assert.ok(fullTests < promotion, "Accepted must describe code that passed after refactoring");
+  assert.ok(promotion < finalReview, "the report-only review must inspect the final code");
+  assert.match(impl, /Do not pass it the refactor review or result artifacts/);
+
+  const finalReviewSkill = read("skills/adr-impl-review/SKILL.md");
+  assert.match(finalReviewSkill, /Report-only/);
+  assert.match(finalReviewSkill, /This command itself remains report-only/);
+});
+
+test("adr-impl-refactor auto-applies only locally verified behavior-preserving changes", () => {
+  const skill = read("skills/adr-impl-refactor/SKILL.md");
+  const reviewer = read("agents/adr-impl-refactor-reviewer.md");
+
+  assert.match(skill, /dedicated read-only reviewer/);
+  assert.match(skill, /With no target, show the `Accepted` ADR list/);
+  assert.match(skill, /mixes several implementations/);
+  assert.match(skill, /Auto-apply a candidate only when every condition holds/);
+  assert.match(skill, /preserves the ADR decision, requirement contract, observable behavior/);
+  assert.match(skill, /Confidence is `high`/);
+  assert.match(skill, /tests passed before the change and can run after it/);
+  assert.match(skill, /Critical priority never overrides the gate/);
+  assert.match(skill, /undo only that candidate's edits/);
+  assert.match(skill, /move the candidate to `PROPOSE_ONLY`/);
+  assert.match(skill, /Do not use destructive worktree commands/);
+
+  for (const protectedSurface of [
+    /APIs or wire forms/,
+    /schemas or persistence/,
+    /states or transitions/,
+    /permissions or visibility/,
+    /concurrency/,
+    /transactions/,
+    /error semantics/,
+  ]) {
+    assert.match(skill, protectedSurface);
+  }
+
+  assert.match(reviewer, /Never edit code, ADRs, tests, or the mapping/);
+  assert.match(reviewer, /APPLY_NOW/);
+  assert.match(reviewer, /PROPOSE_ONLY/);
+  assert.match(reviewer, /A critical issue does not bypass this boundary/);
+  assert.doesNotMatch(reviewer.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "", /Edit|Write/);
+});
+
+test("refactor review requires concrete efficiency evidence and proportionate reuse", () => {
+  const skill = read("skills/adr-impl-refactor/SKILL.md");
+  const reviewer = read("agents/adr-impl-refactor-reviewer.md");
+
+  for (const source of [skill, reviewer]) {
+    assert.match(source, /same-semantics duplication/);
+    assert.match(source, /one caller/);
+    assert.match(source, /hypothetical future/);
+    assert.match(source, /speculative caching, concurrency, batching, or micro-optimization/);
+  }
+
+  assert.match(reviewer, /repeated parsing, serialization, traversal, lookup, allocation, I\/O/);
+  assert.match(reviewer, /Require direct code evidence or a reproducible measurement/);
+  assert.match(reviewer, /Do not merge code that only looks syntactically similar/);
+  assert.match(skill, /priority, expected benefit, risk, estimated scope and verification/);
+});
+
 test("human gate asks a third spec-fitness question that reviewers never inherit", () => {
   const skill = read("skills/adr-impl-review/SKILL.md");
   // The third human-gate question: is the spec itself right (the spec axis, not the code).

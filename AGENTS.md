@@ -100,8 +100,8 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 ├── .claude-plugin/plugin.json   # hooks registration (no MCP)
 ├── .codex-plugin/plugin.json    # Codex metadata; registers skills + hooks
 ├── README.md
-├── skills/               # adr-new, adr-impl, adr-impl-review, adr-sync, adr-rollup
-├── agents/               # ADR authoring reviewer + isolated impl explainer/review/report roles
+├── skills/               # adr-new, adr-impl, adr-impl-refactor, adr-impl-review, adr-sync, adr-rollup
+├── agents/               # ADR authoring reviewer + isolated refactor/impl explainer/review/report roles
 ├── evals/                # behaviour evals (real model; NOT in pnpm test)
 │   ├── run.mjs           # runner — N runs per scenario, hit rates, shareable report
 │   ├── lib/harness.mjs   # fixture builder + scorers; passes the REAL skill/agent text

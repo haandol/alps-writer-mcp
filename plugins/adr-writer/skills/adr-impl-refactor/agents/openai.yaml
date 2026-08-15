@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADR Implementation Refactor"
+  short_description: "Apply only verified low-risk refactors"
+  default_prompt: "Use $adr-impl-refactor to review this ADR implementation for efficiency and proportionate reuse, apply only verified low-risk refactors, and propose the rest."

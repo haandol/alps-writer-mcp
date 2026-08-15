@@ -1,6 +1,6 @@
 ---
 name: adr-impl
-description: Implement an ADR — check dependencies first, implement prerequisites in topological order, write code, run tests, then auto-promote ADR Status from Proposed to Accepted. Enforces the ADR-first development cycle. Use when the user invokes /adr-impl or asks to implement an ADR / a Proposed feature whose decision is already recorded. Keywords - "/adr-impl", "ADR 구현", "implement ADR", "Proposed ADR 코드 반영".
+description: Implement an ADR — check dependencies first, implement prerequisites in topological order, write code, run tests, apply verified low-risk refactors, rerun tests, then auto-promote ADR Status from Proposed to Accepted. Enforces the ADR-first development cycle. Use when the user invokes /adr-impl or asks to implement an ADR / a Proposed feature whose decision is already recorded. Keywords - "/adr-impl", "ADR 구현", "implement ADR", "Proposed ADR 코드 반영".
 argument-hint: "[adr-path-or-category]"
 ---
 
@@ -105,6 +105,10 @@ Implements the specified ADR in code, and once the implementation and tests pass
    - **Write the tests so they read as the documentation** — they are where step 4 moved the explanation, so they carry that load only if a reader can learn the behavior from them. Name each test as the sentence it proves ("a cancelled order cannot move to shipping", not "test transition 3"), keep one behavior per test so a failure names the broken rule by itself, and where a case exists for a non-obvious reason, put that _why_ in a short comment above it — that is the sentence the deleted code comment used to hold.
    - If there are no tests, ask the user what verification procedure they want.
    - If tests fail, do not move on to step 6 — if it is an implementation bug go back to step 4; if the ADR made the wrong decision, fix the ADR first and then go back to step 4.
+   - Once the initial implementation tests pass, run `/adr-impl-refactor <category>` **before** Status promotion. Its dedicated read-only reviewer examines execution efficiency, complexity, coupling, duplication, and proportionate reuse. The main session applies only high-confidence, local, behavior-preserving candidates whose related tests pass before and after; every wider, weakly verified, or speculative opportunity remains a proposal.
+   - A critical refactor finding does not bypass that safety gate. Changes to public contracts, schemas, dependencies, state or transition rules, permissions, validation, concurrency, transactions, fallback, resource lifetime, or error semantics are never automatic refactors.
+   - If `/adr-impl-refactor` applied any code change, rerun the **full project test command** on the resulting code. Targeted before/after tests establish that each patch is locally safe; the full rerun establishes that the implementation as a whole is still complete. If it fails, do not move to step 6 — undo or correct only the refactor introduced in this pass, then rerun the tests.
+   - Keep `/adr-impl-refactor`'s proposal-only items in the wrap-up. They are advice, not incomplete implementation, unless one exposes an ADR violation or a concrete functional defect that belongs back in step 4.
 
 6. **Automatic Status transition (`Proposed → Accepted`)**
 
@@ -128,7 +132,7 @@ Implements the specified ADR in code, and once the implementation and tests pass
 
      This check mechanically catches whether the edit that changed Status to `Accepted (YYYY-MM-DD)` is correctly formatted (R1), whether the `status` in `.mapping.json` `adrs[]` is consistent with the `## Status` you just changed in the body (R8 status-index-mismatch), and whether any new ADR back-references were left in the code (R17, internal `adr-invariants.sh --code-only`). If an `error` comes out, fix it before committing.
 
-   - Then run `/adr-impl-review <category>` (report only — it does not modify code or ADRs). It first explains the actual diff in a way a junior can understand so a human can confirm the intent, and then a necessity reviewer and a sufficiency reviewer, who do not share results with each other, each attack unnecessary changes and missing behavior / counterexamples. The sufficiency reviewer actually executes targeted tests, and the final artifact is a junior-facing guide that explains code structure, runtime, and state transitions in Mermaid and includes the repair order and completion criteria. If an `[Impl-fact mismatch]` comes out of it, correct the ADR to match the code with `/adr-sync <category>`.
+   - Then run `/adr-impl-review <category>` on the **refactored final code** (report only — it does not modify code or ADRs). Do not pass it the refactor review or result artifacts: its necessity and sufficiency reviewers must derive their conclusions independently from the ADR, final diff, code, tests, and human baseline. It first explains the actual diff in a way a junior can understand so a human can confirm the intent, and then a necessity reviewer and a sufficiency reviewer, who do not share results with each other, each attack unnecessary changes and missing behavior / counterexamples. The sufficiency reviewer actually executes targeted tests, and the final artifact is a junior-facing guide that explains code structure, runtime, and state transitions in Mermaid and includes the repair order and completion criteria. If an `[Impl-fact mismatch]` comes out of it, correct the ADR to match the code with `/adr-sync <category>`.
 
 **Forbidden**:
 
@@ -138,4 +142,5 @@ Implements the specified ADR in code, and once the implementation and tests pass
 - Do not implement a new feature without an ADR.
 - Reflect any decision change discovered during implementation in the ADR before modifying the code.
 - Do not promote an ADR to `Accepted` when tests have not passed — Status is a fact about code behavior, not a declaration of intent.
+- Do not promote an ADR before the verified refactor pass and the final full test rerun complete.
 - Do not edit ADR Status fields or mapping statuses manually. Always use `adr-status-transition.mjs` with the exact target ADR path.

@@ -10,8 +10,10 @@ For installation see the [README Quick Start](../README.md#quick-start). For the
 flowchart LR
     A["Check ADRs<br/>(mapping snapshot)"] --> B["Author/edit ADR<br/>(/adr-new — default)<br/>or /feature-to-adr<br/>(ALPS helper)"]
     B --> C["Write code<br/>(/adr-impl)"]
-    C --> D["Test<br/>(project commands)"]
-    D --> R["/adr-impl-review<br/>(independent adversarial review<br/>+ junior repair guide)"]
+    C --> D["Initial test<br/>(project commands)"]
+    D --> F["/adr-impl-refactor<br/>(verified low-risk changes applied,<br/>the rest proposed)"]
+    F --> V["Final full test<br/>(refactored code)"]
+    V --> R["/adr-impl-review<br/>(independent adversarial review<br/>+ junior repair guide)"]
     R --> E["/adr-sync<br/>(reinforce ADR<br/>with what was learned)"]
     E -->|next cycle| A
 ```
@@ -41,6 +43,7 @@ flowchart TD
         Impl(["/adr-impl [id]"])
         Gate{"dependsOn met?<br/>prerequisites Accepted?"}
         Code["Write code + tests<br/>(vertical slice: UI → API → data)"]
+        Refactor(["/adr-impl-refactor [category]<br/>efficiency · complexity · duplication · reuse<br/>safe changes only, before/after tests"])
         Accepted["ADR Status → Accepted"]
 
         F2A -->|delegates each feature to| New
@@ -50,7 +53,8 @@ flowchart TD
         Gate -->|prerequisite is Proposed / dangling| PrereqFirst["implement prerequisite first<br/>(topological order)"]
         PrereqFirst --> Gate
         Gate -->|all prerequisites Accepted| Code
-        Code -->|tests pass| Accepted
+        Code -->|initial tests pass| Refactor
+        Refactor -->|safe changes + final tests pass| Accepted
     end
 
     subgraph maint["Ongoing maintenance"]
@@ -81,7 +85,7 @@ flowchart TD
 
     classDef cmd fill:#e8f0fe,stroke:#4285f4,color:#111;
     classDef gate fill:#fef7e0,stroke:#f9ab00,color:#111;
-    class Init,F2A,New,Impl,Review,Sync,Rollup,DocRev,Start,Hand cmd;
+    class Init,F2A,New,Impl,Refactor,Review,Sync,Rollup,DocRev,Start,Hand cmd;
     class Gate gate;
 ```
 
@@ -90,6 +94,7 @@ flowchart TD
 - **Two entry points.** PRD-first starts at `/alps-init` and crosses into the ADR layer via `/feature-to-adr` (the only place `alps-writer` hands off to `adr-writer` — a one-way dependency; `adr-writer` never reads ALPS back). ADR-only skips the PRD box entirely and starts at `/adr-new`.
 - **`/feature-to-adr` is a thin importer.** It reads Section 7 features and the 6.3 dependency graph, derives a canonical category key from each feature _name_ (the Feature ID is not stored — adr-writer keeps no PRD reference; the key is name-derived and `/adr-impl` resolves by key), and delegates the actual authoring to `/adr-new`. It runs once per feature; later PRD changes are absorbed by editing the ADR, not re-importing.
 - **The gate is mandatory.** `/adr-impl` never skips straight to coding — it reads `dependsOn`, walks prerequisites transitively, and refuses to build on a `Proposed` or dangling prerequisite until you implement it first (in topological order). Status flips to `Accepted` only after tests pass — it records a fact, not an intent.
+- **Verified refactoring happens before completion.** After the initial implementation tests pass, `/adr-impl` invokes `/adr-impl-refactor`. Its independent read-only reviewer checks concrete execution efficiency, complexity, coupling, duplication, and reuse already justified by current same-semantics code. The main session applies only high-confidence local behavior-preserving candidates with before/after tests, reruns the full project tests, and leaves all wider or weakly verified opportunities as prioritized proposals. Critical priority never bypasses the safety gate.
 - **Post-implementation review is adversarial and report-only.** Right after `/adr-impl`, `/adr-impl-review` first explains the actual diff for a junior and pauses for human intent confirmation. It then runs isolated necessity and sufficiency reviewers in parallel: one attacks removable scope, while the other derives the ADR decision ledger, searches for counterexamples, and executes targeted tests. A final Markdown guide uses grounded Mermaid diagrams plus ordered fix and verification steps so a developer new to the code can apply the approved changes. `/adr-sync` remains the route for `[Impl-fact mismatch]`, where code is authoritative for implementation facts.
 - **Maintenance is a separate, repeating phase.** `/adr-sync` reconciles ADRs with shipping code, repairs drift, checks category/`dependsOn` integrity, and proposes canonicalizing any legacy `fN` naming (applied only after you confirm). `/adr-rollup` is reached from sync only when one decision's evolution history is scattered across several ADRs. `/adr-review` sits alongside them on a different axis: it reads ADRs **as documents** against the authoring rules and never opens the code, so it is entered from a hand-edited or inherited ADR rather than from an implementation.
 - **Evolution history lives in the decision log, not in the ADR body.** An ADR body describes the current state, so when the same decision evolves the default is to overwrite it in place — and if the transition is major (replacing the adopted alternative, changing the core algorithm or architecture, inverting a Driver), one line goes newest-first into the per-category `docs/adr/<category>/decision-log.md`. `/adr-impl` and `/adr-sync` write those lines; `/adr-rollup` harvests a scattered chain's history into the log and leaves one current-state ADR. The log is a **convention file** — it is not registered in `.mapping.json`, and the harness checks only that its ADR pointer still resolves on disk (a rollup renumber can orphan it and no other oracle sees it). Three layers preserve different things: ADR body = current state, `decision-log.md` = timeline of major changes, Git = the verbatim diff.
@@ -101,16 +106,17 @@ flowchart TD
 
 1. `/alps-init` → answer the focused questions section by section; the agent saves each only after you confirm.
 2. After Section 7 (feature specs), run `/feature-to-adr` → it walks each feature and hands it to `/adr-new`, producing a `Proposed` ADR per feature under `docs/adr/<category>/` and seeding `docs/adr/.mapping.json`.
-3. `/adr-impl <category>` → implement an accepted-in-spirit ADR in code + tests. On success it flips the ADR to `Accepted`.
-4. `/adr-impl-review <category>` → confirm the junior-readable explanation, then review necessity and sufficiency independently and inspect the Mermaid repair guide.
-5. `/adr-sync` at the end of a cycle → fold what you learned back into the ADRs and repair any drift.
+3. `/adr-impl <category>` → implement an accepted-in-spirit ADR in code + tests.
+4. `/adr-impl-refactor <category>` runs automatically inside implementation → apply only verified local behavior-preserving improvements, rerun tests, and keep the rest as proposals. On success `/adr-impl` flips the ADR to `Accepted`.
+5. `/adr-impl-review <category>` → confirm the junior-readable explanation, then review necessity and sufficiency independently and inspect the Mermaid repair guide.
+6. `/adr-sync` at the end of a cycle → fold what you learned back into the ADRs and repair any drift.
 
 `/feature-to-adr` is a **one-time import**: it converts each Section 7 feature into an ADR once. After that the decision is managed at the ADR level — if the PRD later changes, edit the affected ADR directly (or supersede it with a new one) rather than re-importing.
 
 ### B. ADR-only — no PRD (adr-writer standalone)
 
 1. `/adr-new <category>` → describe the decision directly (an infrastructure choice, an architectural direction, a new feature direction). No ALPS document required.
-2. `/adr-impl <category>` → build it in code.
+2. `/adr-impl <category>` → build it in code, run the automatic verified refactor pass, rerun tests, and promote it only after the final code passes.
 3. `/adr-impl-review <category>` → run the report-only adversarial review and inspect its junior repair guide.
 4. As you keep working, the ADR-first hook re-injects the ADR map every turn so the agent checks ADRs before changing behavior. Run `/adr-sync` to reconcile ADRs with shipping code.
 
@@ -137,6 +143,7 @@ In all flows the hook runs automatically once adr-writer is installed — every 
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/adr-new <category>`            | Author a new ADR directly — the default path, no ALPS PRD required                                                                                                                                             |
 | `/adr-impl [category]`           | Implement an ADR in code (including tests). With no argument, lists Proposed ADRs and asks which to build                                                                                                      |
+| `/adr-impl-refactor [category]`  | Review concrete efficiency and proportionate reuse, apply only high-confidence local behavior-preserving refactors with before/after tests, and leave wider or weakly verified opportunities as proposals      |
 | `/adr-impl-review [category]`    | Explain the diff, confirm intent, run independent necessity/sufficiency reviews and tests, and emit a Mermaid-rich junior repair guide (report-only)                                                           |
 | `/adr-review [category]`         | Review **hand-edited or inherited** ADRs as documents against the authoring rules — no code read, report-only. No arg → every ADR. Not run after `/adr-new`, which judges its own draft against the same rules |
 | `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                                                                                                             |

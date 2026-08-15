@@ -1,0 +1,15 @@
+{
+  "categories": {
+    "adr-cycle/implementation-review": {
+      "feature": "Implementation review",
+      "adrs": [
+        {
+          "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
+          "status": "Accepted (2026-08-15)",
+          "summary": "구현 완료 전 전용 리팩토링 단계가 검증된 저위험 개선만 적용하고 나머지는 제안으로 남긴 뒤 최종 구현 리뷰가 변경된 코드를 검증한다"
+        }
+      ],
+      "dependsOn": []
+    }
+  }
+}

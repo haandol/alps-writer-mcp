@@ -31,22 +31,22 @@ codex plugin add alps-writer@alps-writer
 codex plugin add adr-writer@alps-writer
 ```
 
-Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-review`, `$adr-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust the ADR Writer hook when Codex prompts you.
+Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-refactor`, `$adr-impl-review`, `$adr-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust the ADR Writer hook when Codex prompts you.
 
 **Claude Code**
 
 ```
 /plugin marketplace add haandol/alps-writer-plugins
 /plugin install alps-writer@alps-writer   # PRD authoring (MCP server + /alps-init, /feature-to-adr)
-/plugin install adr-writer@alps-writer    # ADR cycle (/adr-new, /adr-impl, /adr-impl-review, /adr-review, /adr-sync, hooks)
+/plugin install adr-writer@alps-writer    # ADR cycle (/adr-new, /adr-impl, /adr-impl-refactor, /adr-impl-review, /adr-review, /adr-sync, hooks)
 ```
 
 > `/feature-to-adr` (in alps-writer) delegates ADR authoring to `/adr-new` (in adr-writer), so install **both** if you want the ALPS → ADR bridge. adr-writer on its own works without any ALPS PRD.
 
 Two entry flows, driven by `$skill-name` in Codex or `/skill-name` in Claude Code:
 
-- **PRD-first** — `/alps-init` → `/feature-to-adr` → `/adr-impl` → `/adr-impl-review` → `/adr-sync`
-- **ADR-only** — `/adr-new` → `/adr-impl` → `/adr-impl-review` → `/adr-sync`
+- **PRD-first** — `/alps-init` → `/feature-to-adr` → `/adr-impl` → `/adr-impl-refactor` (automatic) → `/adr-impl-review` → `/adr-sync`
+- **ADR-only** — `/adr-new` → `/adr-impl` → `/adr-impl-refactor` (automatic) → `/adr-impl-review` → `/adr-sync`
 
 See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash commands, hook behavior, and the mapping file, or the [ADR process overview](./docs/adr-process.md) for the same cycle drawn as diagrams.
 
@@ -64,6 +64,7 @@ See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash c
 **adr-writer (ADR)**
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
+- **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
 - **Adversarial implementation review** — explain the diff for a junior, independently challenge change necessity and behavioral sufficiency, run targeted tests, and generate a Mermaid-based repair guide
 - **ADR-first hook** — every user turn re-injects the ADR-first directive + current `docs/adr/.mapping.json` snapshot, so the agent checks ADRs before changing behavior
 - Fully standalone — no ALPS PRD required
@@ -96,8 +97,8 @@ alps-writer-plugins/                 # marketplace root (this repo)
     └── adr-writer/                  # ADR plugin (standalone, ALPS-agnostic)
         ├── .codex-plugin/plugin.json
         ├── .claude-plugin/plugin.json
-        ├── skills/                  # /adr-new, /adr-impl, /adr-impl-review, /adr-review, /adr-sync, /adr-rollup
-        ├── agents/                  # ADR authoring + isolated implementation review roles
+        ├── skills/                  # /adr-new, /adr-impl, /adr-impl-refactor, /adr-impl-review, /adr-review, /adr-sync, /adr-rollup
+        ├── agents/                  # ADR authoring + isolated refactor/implementation review roles
         ├── hooks/                   # ADR-first directive hook (UserPromptSubmit)
         └── templates/adr/           # README + concepts + authoring-rules + structure + mapping.schema.json
 ```
