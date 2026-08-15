@@ -14,7 +14,7 @@ Return the content to be saved under the caller's artifact directory with the **
 
 - The target ADR, its mapping entry, and the raw diff
 - Project conventions
-- `human-baseline.md`
+- `review-baseline.md`
 - `explanation.md`
 - `necessity-review.md`
 - `sufficiency-review.md`
@@ -124,11 +124,11 @@ Number them in dependency order.
 
 ## 10. Merge decision checklist
 
-Functional adequacy is only one axis of good code. Fill in the seven axes below as `met | not met | undetermined`, mapping each to the findings, tests, and human-gate evidence this review actually produced. Never pass an axis as "met" without evidence — record which finding, test, or `human-baseline.md` item you based it on.
+Functional adequacy is only one axis of good code. Fill in the seven axes below as `met | not met | undetermined`, mapping each to the approved ADR baseline, findings, and tests. Never pass an axis as "met" without evidence — record which finding, test, or `review-baseline.md` item you based it on.
 
 | Axis                  | Core question                                                                                                   | Evidence source                                           | Verdict |
 | --------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------- |
-| Problem fitness       | Was the problem/spec worth solving correct in the first place?                                                  | Human gate result (`human-baseline.md`)                   |         |
+| Problem fitness       | Does the implementation target the problem and contract approved before coding?                                 | Approved ADR and `review-baseline.md`                     |         |
 | Functional adequacy   | Are requirements met across normal, error, boundary, and concurrent paths?                                      | Sufficiency findings and the tests executed               |         |
 | Contract compliance   | Are the ADR's requirements (values, allowed sets, mandatory fields, permissions, ordering) enforced as written? | Requirement rows of the sufficiency decision ledger       |         |
 | Change minimality     | Did code or abstractions unrelated to the goal creep in?                                                        | Necessity findings                                        |         |
@@ -136,7 +136,7 @@ Functional adequacy is only one axis of good code. Fill in the seven axes below 
 | Operational safety    | Were failure, rollback, observability, and data consistency considered?                                         | Sufficiency findings (partial failure, restart, fallback) |         |
 | Maintainability       | Can the next person understand and change this safely?                                                          | `Best practice`, `Refactor`, the explanation gate         |         |
 
-- **Problem fitness** is an axis about the spec rather than the code, so base it on the human judgment in `human-baseline.md` — if a human flagged the spec as inadequate, mark it `not met` and record that impl-review must not fix it in code but route to an ADR update or `adr-reviewer`.
+- **Problem fitness** is an axis about the spec rather than the code, so base it on the approved ADR and `review-baseline.md`. If the baseline contains a concrete unresolved contract gap, mark it `not met` and route to an ADR update or `adr-reviewer`; do not ask the routine intent questions again after implementation.
 - **Contract compliance** exists as its own axis because the ADR and the code are the same system at two resolutions — the ADR records the contract, the code enforces it — so a fix at the wrong level looks like a fix and is not one. A differing value, allowed set, or transition rule means **the code** changes (the ADR owns the contract). A differing name, signature, wire representation, library, SDK, or credential/auth adapter means `/adr-sync` removes the stale code-level detail from the ADR, unless it is an admitted public/architectural contract. Never write a fix step that edits the ADR's value to match the code.
 - **Contract compliance** is a different axis from functional adequacy — limit logic can exist and work (functional adequacy met) while the number differs from the ADR, in which case the product violates a requirement. **Non-numeric requirements share this axis** — state management can work while the allowed set differs, a forbidden transition is open, or a mandatory input is optional, all of which are requirement violations. Using the requirement rows of the sufficiency decision ledger, compare **the ADR's value/set/rule ↔ the code's value/set/rule** and record it; if the ledger has no such row, mark `undetermined`. If the ADR records no requirements, write `not applicable`, but if that looks like an omission in the ADR itself, leave a question for the owner in `11. Review limits and questions`.
 - **Maintainability** includes whether the code and tests, rather than long comments, carry the explanation (`/adr-impl` step 4 caps comments at roughly three lines, moving the _what_ into tests past that). Ground it in the `Refactor` findings about over-long comment blocks and non-documenting test names, plus the `Test gap` findings for cases a comment enumerated but no test covers. When a comment block's cases are uncovered, say so in the fix steps as "add the test first, then shorten the comment" — never as "delete the comment", which would drop the knowledge.

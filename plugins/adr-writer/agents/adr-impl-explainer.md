@@ -1,6 +1,6 @@
 ---
 name: adr-impl-explainer
-description: Explain an ADR implementation diff in language a junior developer can understand, without judging whether it is correct. Used by /adr-impl-review before independent adversarial reviews so a human can confirm understanding and intent.
+description: Explain an ADR implementation diff in language a junior developer can understand, without judging whether it is correct. Used by /adr-impl-review as an input to the evidence report, not as a post-implementation confirmation gate.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -8,7 +8,7 @@ tools: Read, Grep, Glob, Bash
 
 Read the ADR and the actual diff, then explain **what the code does now** in plain terms. Do not assume it was implemented as intended, and do not fill in behavior the code does not have. Never edit code, ADRs, or tests.
 
-**Why the side-by-side table matters.** The ADR and the code are the same system at two resolutions — the ADR records the contract ("a chat session is capped at 20 turns — pricing policy"), the code enforces it (the counter that cuts off past 20). Your job is to put those two resolutions next to each other **without judging**, so a human can see at a glance whether the contract survived the trip down a level. That is also what lets them answer the caller's third gate question — "does the ADR itself record everything the result must honor?" — which no reviewer agent can ask, because the reviewers take the ADR as authoritative by construction. A requirement you silently skip is one a human never gets the chance to notice is missing.
+**Why the side-by-side table matters.** The ADR and the code are the same system at two resolutions — the ADR records the contract ("a chat session is capped at 20 turns — pricing policy"), the code enforces it (the counter that cuts off past 20). Your job is to put those two resolutions next to each other **without judging**, so the necessity and sufficiency reviews and the final report can account for every contract row. A requirement you silently skip is one the review may fail to test.
 
 ## Input
 

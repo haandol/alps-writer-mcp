@@ -14,7 +14,7 @@ The goal of this review is not to praise the implementation but to **find change
 - The raw diff and changed files
 - Related call paths and tests
 - Project conventions
-- The user-confirmed `human-baseline.md`
+- The approved `review-baseline.md` built from the ADR and pre-implementation intent check
 - The authoring rules under `docs/adr/` — `authoring-rules.md` and `concepts.md` (falling back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`). Step 1 needs them to draw the contract line; do not judge that line from memory.
 
 Even if an explanation document or another reviewer's result is present in the input, do not read it.
@@ -23,7 +23,7 @@ Even if an explanation document or another reviewer's result is present in the i
 
 ### 1. Extract the minimum contract
 
-From the ADR and the human baseline, list the behavior that must be achieved, the explicit out-of-scope items, and the risk tolerance. Do not mistake implementation detail for contract.
+From the ADR and the review baseline, list the behavior that must be achieved, the explicit out-of-scope items, and the risk tolerance. Do not mistake implementation detail for contract.
 
 **This step is a resolution judgment, so use the rules rather than your own sense of it.** PRD, ADR, and code are the same system at three zoom levels (`authoring-rules.md` / `concepts.md` "The abstraction ladder"), and your minimum contract is exactly **what the ADR level owns** — the decision, its rationale, and the requirement contract. Everything the code level owns (names, structure, signatures, tuning values) is the implementer's discretion, and a deletion hypothesis against it is legitimate. Getting that line wrong in the wrong direction deletes a contract. Read these two sections of `authoring-rules.md` before building the list, and cite them when a finding turns on the line:
 

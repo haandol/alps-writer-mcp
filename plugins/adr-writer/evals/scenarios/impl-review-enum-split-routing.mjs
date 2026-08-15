@@ -126,7 +126,7 @@ export default {
       `ADR under review: docs/adr/ordering/0001-order-status-transitions.md`,
       `Mapping entry: the "ordering" category in docs/adr/.mapping.json`,
       `Code scope: src/ordering/ (the diff is also saved at diff.patch)`,
-      `No human-baseline.md was produced for this run; treat the ADR as the spec.`,
+      `No pre-implementation approval summary was produced for this standalone run; use the ADR as review-baseline.md.`,
       `No project convention documents exist in this fixture.`,
       `You may read files, but do not edit anything.`,
       TAIL_SPEC,

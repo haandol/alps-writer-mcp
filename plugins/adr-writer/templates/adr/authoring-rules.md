@@ -37,6 +37,19 @@ Technology names are not sufficient evidence by themselves. A provider/model sel
 
 If an existing ADR's core subject fails this gate, do not merely clean up its wording. Propose retiring it and move any useful implementation guidance to the code or project documentation. Likewise, code that contains an unrecorded implementation choice does not automatically need an ADR; it must pass this gate first.
 
+## Decision identity check — update before create
+
+The admission gate answers **whether an ADR should exist**. It does not answer **whether the requested decision already has an ADR**. After a request passes admission, run this check before creating a category, allocating the next number, or drafting a new file:
+
+1. Read `.mapping.json` and compare the request with existing ADR summaries. Start with the requested category, then inspect plausible matches in other categories so a naming change does not hide the owner.
+2. Read every plausible ADR body. Identify a decision by the architectural question it answers and the requirement, system, data, security, or external boundary it owns — not by its current provider, product name, adopted alternative, or direction of change.
+3. If one existing ADR can be rewritten as a single current-state record, update that ADR in place. Keep its path and number. Refresh its body and mapping summary, record a major transition in `decision-log.md` when required, and return an implemented `Accepted` ADR to `Proposed` before changing code.
+4. Create a new ADR only when no existing ADR owns the topic, or when the topic forks so multiple decisions must remain independently valid and separately referenceable.
+
+A provider replacement is normally an evolution of the provider-boundary decision, not a new decision identity. Keeping the model while changing Amazon Bedrock to the OpenAI API updates the existing model/provider ADR. Returning from the OpenAI API to Amazon Bedrock updates the same ADR again; reversal does not create a fresh identity. The same rule applies when Decision Drivers change or the adopted alternative is replaced.
+
+**Do not create a new ADR and immediately supersede or deprecate the old one merely to preserve history.** The current body owns the present decision, `decision-log.md` owns major transitions, and Git owns the verbatim diff.
+
 ## What an ADR must satisfy — the regeneration test
 
 An ADR's goal is **not to reproduce the same code, but to make regenerated code satisfy the business requirements.** So completeness reduces to one question:
@@ -260,9 +273,9 @@ Split when two or more of these hold (e.g. `0003-payment.md` → `0003-payment-c
 
 ## Changing an ADR — edit-in-place vs supersede
 
-When a business requirement changes and an existing decision must be touched, this is the single criterion for choosing **edit-in-place** over **a new superseding ADR**. It recurs often, so follow the checklist rather than deciding ad hoc. This section is the source of truth for that call; other skills and documents link here.
+Run the [decision identity check](#decision-identity-check--update-before-create) before this section. When it finds an existing owner, use the criterion below to choose **edit-in-place** over **a new superseding ADR**. It recurs often, so follow the checklist rather than deciding ad hoc. This section is the source of truth for that call; other skills and documents link here.
 
-The criterion is **whether "why this choice" (Context, Decision Drivers, adoption rationale) changes.** Most changes are **edit-in-place** — overwrite the body to the current state. **A new ADR (supersede) is the exception**, and among edit-in-place cases only major transitions also get one line in the [decision log](#decision-log-decision-logmd). Three branches:
+The criterion is **whether the decision can still be expressed as one current-state record**. A changed Context, Decision Driver, adopted alternative, or direction can still belong to the same logical decision. Most changes are **edit-in-place** — overwrite the body to the current state. **A new ADR (supersede) is the exception**, and among edit-in-place cases only major transitions also get one line in the [decision log](#decision-log-decision-logmd). Three branches:
 
 **① Edit-in-place, no log (minor)** — the "why" is unchanged and only details shift:
 
@@ -278,6 +291,7 @@ The criterion is **whether "why this choice" (Context, Decision Drivers, adoptio
 - **Replacing the adopted alternative** (e.g. optimistic → pessimistic locking). The log preserves the old approach's rationale — do not keep the whole old ADR.
 - **Inverted Decision Drivers** — a pressure or constraint that narrowed the decision changed (e.g. the "no PII leaves for an external LLM" constraint disappeared).
 - **A core algorithm or architecture change**, or **a core bug fix that changes behavior**.
+- **Changing an external provider or reverting to a previously used provider** while the ADR still owns the same integration boundary and can state one current choice.
 
 **③ Supersede — create a new ADR and mark the old one `Status: Superseded by [ADR XXXX](link)`** — only when ② cannot hold it. Reserve it narrowly:
 
@@ -376,6 +390,7 @@ For the PR reviewer or the author before merge.
 - [ ] **Prose style** — active voice by default (the actor is named where it matters), no hedges or throat-clearing, one idea per sentence, concrete nouns over vague ones ([Prose style](#prose-style--say-it-in-the-fewest-words-in-the-active-voice)). Tightening wording must never have dropped a requirement
 - [ ] **Gray-zone check** — the body actually contains **at least one** of: (a) adoption rationale / alternatives, (b) business rules translated into system behavior, (c) domain rules and state transitions, (d) external-dependency fallback (without these the ADR has little value)
 - [ ] **ADR admission gate** — the core decision changes a requirement contract, durable system/security boundary, external provider/model/fallback, data/key design, or cross-implementation trade-off. A replaceable library, SDK, framework, credential/auth adapter, or module structure is not the ADR's subject
+- [ ] **Decision identity check** — before adding a new ADR, existing mapping summaries and plausible ADR bodies were checked for the same architectural question and owned boundary. A provider/alternative change or reversal that remains one current-state decision updates the existing ADR
 - [ ] **No code references below folder level** anywhere in prose, tables, or diagrams
 - [ ] **No back-references from code** — the code this ADR governs (comments, constants, imports) carries no ADR ID or path. If the code exists, check via adr-reviewer R17 or `/adr-sync` step 5(a) grep; for a new `Proposed` with no code yet, `/adr-sync` checks after implementation
 - [ ] **No forbidden items** (code snippets, tuning values, call graphs, field-type tables, env var names, pseudocode, full JSON, migration commands) — requirement values and business limits are _not_ forbidden items
@@ -388,4 +403,4 @@ For the PR reviewer or the author before merge.
 - [ ] **One ADR = one decision** holds (no split signals)
 - [ ] **`.mapping.json`** has the matching category entry including the new ADR
 
-<!-- adr-writer:rules-version 0.6.3 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.6.4 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

@@ -44,7 +44,9 @@ Derive each category key canonically from the feature name. Use a two-segment `<
 
 Do not silently exclude a feature because its category already exists.
 
-For every existing category:
+Before classifying any material as a new candidate, run the adr-writer **decision identity check** across the mapping. Start with the feature's category, then inspect plausible summaries and ADR bodies in other categories. Match by the architectural question and owned requirement or system/data/security/external boundary, not by the current provider, product name, adopted alternative, or direction of change.
+
+For every existing or plausible owning category:
 
 1. Read all current ADRs in that category.
 2. Compare the current PRD material with the ADR decision and requirement contracts:
@@ -56,11 +58,11 @@ For every existing category:
    - NFRs and architecture constraints that discriminate between alternatives
 3. Report:
    - `In sync`
-   - `PRD contract changed`
+   - `PRD contract changed / Existing decision changed`
    - `New durable decision candidate`
    - `PRD-only detail` that does not pass the ADR admission gate
 
-When the PRD contract changed, the user rules that the new PRD requirement is intended. If confirmed, route an existing decision change through `/adr-impl <category>` so it updates the ADR first, logs a major contract transition when required, then changes code. Use `/adr-new <category>` only for a distinct durable decision that can live independently.
+When an existing decision changed, the user rules that the new PRD requirement or boundary is intended. If confirmed, route it through `/adr-impl <owning-category>` so it updates that exact ADR first, logs a major transition when required, then changes code. Provider replacements and reversals remain the same decision when one current-state ADR can still describe the provider boundary. Use `/adr-new <category>` only when no existing ADR owns the topic or a distinct durable decision must live independently.
 
 This reconciliation belongs to alps-writer. adr-writer remains standalone and never reads the PRD itself. Do not add PRD paths, section numbers, or feature IDs to ADR bodies or `.mapping.json`.
 
@@ -83,6 +85,8 @@ Apply the ADR admission gate independently to every candidate.
 - **Fail** → implementation planning material; do not create an ADR.
 
 Libraries, SDKs, frameworks, middleware, module layout, credential/auth wiring, signers, adapters, and tuning values fail when they can be replaced while preserving the same contract and boundaries.
+
+For every candidate that passes, run the decision identity check against all mapped summaries and plausible ADR bodies before counting it as new. If an existing ADR owns it, classify it as `Existing decision changed` and route it through step 3 instead of `/adr-new`.
 
 Show the user a compact decision-discovery result before drafting:
 
@@ -138,6 +142,7 @@ For two or more queued features, show the analysis order once and get one approv
 At completion report:
 
 - features inspected
+- existing ADRs updated by category
 - ADRs created by category
 - features requiring no ADR
 - PRD↔ADR contract differences found

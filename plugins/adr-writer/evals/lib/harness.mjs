@@ -241,7 +241,7 @@ export function expectLintClean(dir, label = "structure-lint reports no error") 
 export const DEFAULT_CMD = process.env.ADR_EVAL_CMD ?? "claude -p --allowedTools ''";
 
 export function runAgent(prompt, { cmd = DEFAULT_CMD, cwd, timeoutMs = 600_000 } = {}) {
-  const started = Date.now();
+  const started = performance.now();
   const r = spawnSync(cmd, {
     shell: true,
     input: prompt,
@@ -256,6 +256,6 @@ export function runAgent(prompt, { cmd = DEFAULT_CMD, cwd, timeoutMs = 600_000 }
     error: r.error ? String(r.error.message ?? r.error) : null,
     stdout: r.stdout ?? "",
     stderr: r.stderr ?? "",
-    ms: Date.now() - started,
+    ms: performance.now() - started,
   };
 }

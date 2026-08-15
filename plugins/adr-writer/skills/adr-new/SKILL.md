@@ -12,7 +12,7 @@ Author an ADR directly. Works without an ALPS PRD — this is the plugin's canon
 >
 > **Refactoring is out of scope** — a structural change that does not alter behavior is left to the coding agent's planning step rather than turned into an ADR (`concepts.md` "What an ADR is not"). If the user tries to record a refactor as an ADR, ask once: "Does this change alter behavior or a decision (the adopted alternative, a state transition, the key design)? If it is pure structural cleanup, planning without an ADR is the better path." If a decision does change, it is not a refactor, so proceed.
 
-> **Apply the ADR admission gate before eliciting or drafting.** Ask whether the choice changes a requirement contract, system/data/security boundary, external provider/model or fallback, adopted algorithm, consistency model, or another durable cross-implementation trade-off. Then use the implementation substitution test: if a library, SDK, framework, middleware, module layout, credential provider chain, signer, or adapter can be replaced while preserving those contracts and boundaries, do not create an ADR. Tell the user it belongs in the implementation plan, code, tests, dependency metadata, or project conventions. "GPT-5.6 through Amazon Bedrock" can pass because it fixes an external model/provider boundary; the Bedrock SDK or credential/auth adapter does not pass by itself.
+> **Apply the ADR admission gate before eliciting or drafting.** Ask whether the choice changes a requirement contract, system/data/security boundary, external provider/model or fallback, adopted algorithm, consistency model, or another durable cross-implementation trade-off. Then use the implementation substitution test: if a library, SDK, framework, middleware, module layout, credential provider chain, signer, or adapter can be replaced while preserving those contracts and boundaries, do not create an ADR. Tell the user it belongs in the implementation plan, code, tests, dependency metadata, or project conventions. "GPT-5.6 through Amazon Bedrock" can pass because it fixes an external model/provider boundary; the Bedrock SDK or credential/auth adapter does not pass by itself. **After admission, run the decision identity check before creating anything**: update the ADR that already owns the architectural question and boundary; create a new ADR only when no owner exists or the topic truly forks.
 
 > **Language**: this skill and every other harness prompt are written in English, but **talk to the user and write the ADR body in the language the user writes in** (`authoring-rules.md` "Conventions"). The prompts below are phrasing guides, not literal strings to paste.
 
@@ -57,7 +57,17 @@ Apply `authoring-rules.md` "ADR admission gate" **before any filesystem write or
 
 - If the requested decision fails the gate, stop this skill without creating `docs/adr/`, `.mapping.json`, a category, or an ADR. Return one line naming the replaceable implementation means and where it belongs instead.
 - If the choice is ambiguous because it may establish a trust boundary or externally supported contract, ask only for that boundary/contract. Never use "it is a technology choice" as sufficient evidence.
-- When an existing mapping is present, read it only to understand related decisions; an old low-level ADR does not justify adding another low-level ADR beside it.
+- An old low-level ADR does not justify adding another low-level ADR beside it.
+
+After the request passes admission, apply `authoring-rules.md` **"Decision identity check — update before create" before any filesystem write, category creation, or ADR number allocation**:
+
+1. If `docs/adr/.mapping.json` exists, read every summary. Inspect the requested category first, then plausible matches elsewhere so a renamed or miscategorized owner is not missed.
+2. Read the full body of each plausible match. Compare the architectural question and the requirement/system/data/security/external boundary it owns, not the current product name, provider, adopted alternative, or direction of change.
+3. If one existing ADR can express the requested result as a single current-state record, **stop the new-ADR path**. Do not create a category, allocate `NNNN`, or append an `adrs[]` record.
+   - When code has not changed yet, route to `/adr-impl <existing-category>` so it rewrites that exact ADR in place, records a major transition when required, returns an implemented `Accepted` ADR to `Proposed`, and then implements.
+   - When code already embodies the intended decision and the ADR is catching up, route to `/adr-sync <existing-category>`.
+   - A provider replacement, an adopted-alternative replacement, an inverted Decision Driver, and a return to a formerly used provider are all edit-in-place when the same ADR still owns the topic. For example, GPT-5.6 via Amazon Bedrock → GPT-5.6 via the OpenAI API → Amazon Bedrock again keeps one provider-boundary ADR and one path.
+4. Continue creating a new ADR only when no existing ADR owns the topic, or when the topic forks and multiple decisions must remain independently current and separately referenceable. When uncertain, the default is edit-in-place plus a decision-log entry.
 
 After the decision passes the gate, check the mapping state:
 
@@ -173,6 +183,7 @@ Skip the items the harness already proved (Status format, required sections, fil
 - **Gray-zone substance (R12)**, **discriminating Drivers (R13's quality half)**, **strawman alternatives (R14's quality half)**, **vertical-slice cohesion (R5's latter half)**, **one ADR = one decision (R11)**.
 - **ADR admission gate (R12)** — does the core subject itself change a durable contract, boundary, provider/model/fallback, key design, or cross-implementation trade-off? If it is only a replaceable implementation means, do not save the ADR.
 - **Final-state wording (R3)** — do the body and mapping summary state the current result directly, without carrying replaced identifiers, previous values, or transition narration outside Alternatives and `decision-log.md`? Confirm that removing comparison residue did not remove a current prohibition.
+- **Decision identity check (R11/R12)** — did the mapping and plausible ADR bodies reveal an existing owner for this architectural question or boundary? If yes, stop and route to edit-in-place; a new provider name, reversed direction, or changed Driver is not by itself a new decision.
 - **Prose style (R20)** — advisory. Apply the easy rewrites and never accept a cut that drops content.
 
 **Two of these you cannot check as well as a fresh reader, so make them explicit rather than assumed.** The values were in this conversation and the alternatives are yours, so a draft missing a requirement still reads as complete to you, and your own alternatives never look like strawmen. So for **R18a and R19, write the check out** — list the contracts a rebuild must honor and mark each present or absent, instead of concluding "the contract is complete". Anything absent goes back to the user as a question in step 7; **never invent a number to close the gap.**
@@ -190,16 +201,17 @@ Show the verified ADR and mapping in this shape and ask for approval:
 **Decision (summary)**: <2-3 sentences>
 **Decision Drivers**: <3-5, one line each>
 **Requirement contract**: <the values and rules the result must honor — verbatim, with their basis. "none" if there are none>
+**Regeneration checklist**: <each contract rebuilt code must honor, marked present; unresolved items are explicit questions>
 **Alternatives considered**: <N options — the adopted one plus those rejected>
 **Prerequisites**: <dependency ADRs, or none>
 **Verification**: <harness: pass | n warnings> · self-checked R1-R20 (no reviewer subagent) — `/adr-review <category>` for an independent read
 
-Save this as `Proposed` (unimplemented) and move on to implementation (/adr-impl)? Once implementation, tests, and the final implementation review pass, `/adr-impl` switches it to `Accepted` automatically.
+Does this current-state decision, its Drivers, and the complete regeneration checklist match your intent? If approved, save it as `Proposed` and move on to implementation (`/adr-impl`). This is the routine intent/spec-fitness confirmation; implementation review does not ask the same questions again unless the ADR changes or a genuine contract ambiguity is discovered.
 ```
 
 > Show the context/subdomain information on the category line only when step 2 item 6 was asked and answered — otherwise print the category key alone.
 
-Do not start changing code before approval. If the user requests changes, update the ADR and confirm again.
+Do not start changing code before approval. If the user requests changes, update the ADR and confirm again. Preserve this approved ADR as the implementation baseline; after code and review pass, `/adr-impl` promotes it without another routine confirmation.
 
 ### 8. Point to the next step
 

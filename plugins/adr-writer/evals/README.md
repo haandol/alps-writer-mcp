@@ -81,12 +81,18 @@ not run (bad `--only`, agent produced nothing).
      user confirmation must not create a downstream-only override.
    - `hook-admission-routing` pairs one replaceable SDK swap with one requirement
      quota change so tightening either side cannot silently capture the other.
+   - `author-routes-existing-provider-change` checks that Bedrock → OpenAI API
+     and a later reversal reuse one provider-boundary ADR instead of allocating
+     a new ADR for each direction.
    - `alps-batch-preserves-mandatory-nfr` checks explicit batch approval together
      with separate save units and mandatory NFR preservation beyond the top-three
      focus set.
    - `impl-review-selects-risk-mode` checks both directions of the review-mode
      classifier: localized implementation uses standard, while contract and
      public-surface changes use full.
+   - `impl-completes-without-reconfirmation` checks that a pre-approved ADR is
+     not reconfirmed after implementation, evidence-backed defects are repaired
+     and re-reviewed automatically, and only a real contract change escalates.
 
    The two axes also split by pipeline stage, and that split is deliberate.
    `/adr-new` no longer calls `adr-reviewer` (it self-checks at its step 6(b)), so

@@ -11,7 +11,7 @@ function read(relativePath) {
   return readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
-test("adr-impl-review isolates explanation, necessity, sufficiency, and report writing", () => {
+test("adr-impl-review isolates explanation, necessity, sufficiency, and report writing without a post-implementation gate", () => {
   const skill = read("skills/adr-impl-review/SKILL.md");
   const agents = [
     ["agents/adr-impl-explainer.md", "name: adr-impl-explainer"],
@@ -25,7 +25,12 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
     assert.match(skill, new RegExp(name.replace("name: ", "")));
   }
 
-  assert.match(skill, /Never proceed to the adversarial reviews before explicit confirmation/);
+  assert.match(skill, /Build the review baseline without a post-implementation gate/);
+  assert.match(skill, /do not stop to show it or ask the user to reconfirm/);
+  assert.doesNotMatch(
+    skill,
+    /Never proceed to the adversarial reviews before explicit confirmation/,
+  );
   assert.match(
     skill,
     /Never pass a reviewer the explanation document or the other reviewer's result/,
@@ -70,7 +75,8 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.ok(fullTests < finalReview, "the final review must inspect tested, refactored code");
   assert.ok(finalReview < promotion, "Accepted must be gated by a passing final review");
   assert.match(impl, /Do not pass it the refactor review or result artifacts/);
-  assert.match(impl, /`FIX_REQUIRED`, `BLOCK`, or `INCONCLUSIVE` does \*\*not\*\* promote/);
+  assert.match(impl, /On `FIX_REQUIRED`, keep the ADR `Proposed`/);
+  assert.match(impl, /`BLOCK` and unresolved `INCONCLUSIVE` remain `Proposed`/);
 
   const finalReviewSkill = read("skills/adr-impl-review/SKILL.md");
   assert.match(finalReviewSkill, /Report-only/);
@@ -80,9 +86,22 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.match(finalReviewSkill, /Use `standard` only for localized implementation/);
   assert.match(finalReviewSkill, /Use `full` when any of these surfaces changes/);
   assert.match(finalReviewSkill, /In full mode, the necessity and sufficiency reviews run/);
-  assert.match(finalReviewSkill, /explicit chat rulings in standard mode/);
-  assert.match(finalReviewSkill, /do not require HTML or `feedback\.json`/);
+  assert.match(finalReviewSkill, /Auto-remediate in the caller/);
+  assert.match(finalReviewSkill, /must not ask the user to rule `apply \/ skip \/ defer`/);
+  assert.match(finalReviewSkill, /no routine post-implementation approval remains/);
   assert.match(finalReviewSkill, /elapsed time, per-perspective finding counts/);
+
+  assert.match(impl, /implementation intent baseline/);
+  assert.match(impl, /once per ADR revision/);
+  assert.match(impl, /reuse that approved baseline/);
+  assert.doesNotMatch(
+    impl,
+    /If an admitted decision or requirement changed, confirm once with the user/i,
+  );
+  assert.match(impl, /Do not repeat this routine confirmation after implementation/);
+  assert.match(impl, /automatically apply evidence-backed changes/);
+  assert.match(impl, /Do not ask the user to approve each repair/);
+  assert.match(impl, /Do not ask for another approval/);
 });
 
 test("no maintenance command bypasses the final review when promoting Proposed", () => {
@@ -156,20 +175,23 @@ test("refactor review requires concrete efficiency evidence and proportionate re
   assert.match(skill, /reuse the passing baseline/);
 });
 
-test("human gate asks a third spec-fitness question that reviewers never inherit", () => {
+test("spec fitness is approved before implementation and not reopened as a routine completion gate", () => {
   const skill = read("skills/adr-impl-review/SKILL.md");
-  // The third human-gate question: is the spec itself right (the spec axis, not the code).
-  assert.match(skill, /confirm the following three questions/);
-  assert.match(skill, /spec fitness/);
-  assert.match(skill, /is the spec right/);
-  // An inadequate spec is routed outward rather than fixed in code by impl-review.
-  assert.match(
-    skill,
-    /whether the spec itself is right is asked only by the human at the section 2 gate/,
-  );
-  // The sufficiency reviewer keeps the contract of presuming the ADR is correct.
+  const impl = read("skills/adr-impl/SKILL.md");
+  const adrNew = read("skills/adr-new/SKILL.md");
+
+  assert.match(adrNew, /complete regeneration checklist match your intent/);
+  assert.match(adrNew, /routine intent\/spec-fitness confirmation/);
+  assert.match(impl, /implementation intent baseline/);
+  assert.match(impl, /complete enough to rebuild requirement-honoring code/);
+  assert.match(skill, /does not reopen it as a routine post-implementation gate/);
+  assert.match(skill, /Concrete evidence that the ADR itself is incomplete/);
+  assert.doesNotMatch(skill, /confirm the following three questions/);
+
+  // The sufficiency reviewer keeps the approved ADR as the contract.
   const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
   assert.match(sufficiency, /assume the ADR is correct/);
+  assert.match(sufficiency, /approved review baseline/);
 });
 
 test("sufficiency reviewer tests the tests — mutation and static analysis as verification lenses", () => {
@@ -254,8 +276,9 @@ test("junior repair report ends with a seven-axis merge-fitness checklist", () =
   assert.ok(countWord, `no spelled-out word for ${axes.length} axes — extend COUNT_WORDS`);
   assert.match(writer, new RegExp(`${countWord}[ -]ax(is|es)`, "i"));
   assert.match(skill, new RegExp(`${countWord}[ -]ax(is|es)`, "i"));
-  // Problem fitness is a spec axis, so it is grounded in human-baseline and routed outward.
-  assert.match(writer, /flagged the spec as inadequate/);
+  // Problem fitness is a spec axis, so it is grounded in the pre-implementation baseline.
+  assert.match(writer, /approved ADR and `review-baseline\.md`/i);
+  assert.match(writer, /concrete unresolved contract gap/);
   // Contract compliance is a separate axis from functional adequacy — logic can exist while the value differs.
   assert.match(writer, /a different axis from functional adequacy/);
 });
