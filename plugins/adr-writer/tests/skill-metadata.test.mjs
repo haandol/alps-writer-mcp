@@ -610,20 +610,17 @@ test("README is the index and links to concepts.md, which holds the principle", 
   assert.doesNotMatch(concepts, /^#{1,3}.*\bAGENTS\.md\b/m);
 });
 
-// The per-turn hook is the only guard when a user just says "bump 7 turns to 10"
-// without invoking a skill. If its scope test reads as "new feature or behavior
-// change", a bare constant edit looks exempt — so the directive has to name a
-// requirement-value change as in-scope and state the ADR-then-code ordering,
-// while keeping tuning-value edits exempt.
+// The compact per-turn hook is the only guard when a user just says "bump 7
+// turns to 10" without invoking a skill. It must route admitted work to the
+// mapping before code while keeping implementation-only edits exempt.
 test("the per-turn directive treats a requirement-value change as in-scope", () => {
   const hook = read(path.join(ADR_ROOT, "hooks", "surface-adr-context.mjs"));
   assert.match(
     hook,
-    /changes a requirement value or rule is a behavior change even when it looks like a one-line constant edit/,
+    /requirement value or rule change is admitted even when it looks like a one-line constant edit/,
   );
-  // the ordering the directive must enforce
-  assert.match(hook, /fix the ADR before the code/);
-  // tuning values stay exempt, so the directive does not swallow every constant
+  assert.match(hook, /before code read the full/);
+  assert.match(hook, /update that owner in place/);
   assert.match(hook, /Keep replaceable libraries, SDKs, adapters, tuning values[^"]*in code/);
 });
 

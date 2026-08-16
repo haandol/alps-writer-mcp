@@ -80,7 +80,7 @@ Compare **at least two** realistic alternatives. Real alternatives only — neve
 
 ## Where the ADR index lives
 
-The ADR list is held solely by [`docs/adr/.mapping.json`](./structure.md#the-adr-registry-mappingjson) rather than this README — each category's `adrs[]` record carries a path, Status, and one-line summary, and the UserPromptSubmit hook renders that index every turn. So the README keeps no separate ADR list and remains a **conceptual index** only. When you add an ADR or its body decision changes, update that one-line summary in the corresponding `adrs[]` record in `.mapping.json`.
+The ADR list is held solely by [`docs/adr/.mapping.json`](./structure.md#the-adr-registry-mappingjson) rather than this README — each category's `adrs[]` record carries a path, Status, and one-line summary, and admitted work reads that index on demand before code changes. So the README keeps no separate ADR list and remains a **conceptual index** only. When you add an ADR or its body decision changes, update that one-line summary in the corresponding `adrs[]` record in `.mapping.json`.
 
 ## References
 
@@ -89,4 +89,4 @@ The ADR list is held solely by [`docs/adr/.mapping.json`](./structure.md#the-adr
 - [Michael Nygard — Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) — the original ADR article
 - [adr-writer plugin](https://github.com/haandol/alps-writer-plugins) — this plugin itself
 
-<!-- adr-writer:rules-version 0.6.4 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.6.5 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

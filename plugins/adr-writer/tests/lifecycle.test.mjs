@@ -218,9 +218,9 @@ test("e2e: dependsOn pointing at a non-existent category → harness flags dangl
   });
 });
 
-// ── the created mapping is what the hook renders to the model ─────────────
+// ── the created mapping stays on demand instead of entering every turn ───
 
-test("e2e: after /adr-new the hook snapshot shows the new category + Proposed ADR", () => {
+test("e2e: after /adr-new the hook points to the mapping without injecting its contents", () => {
   withTmp((dir) => {
     seedScaffold(dir);
     adrNew(dir, {
@@ -229,11 +229,13 @@ test("e2e: after /adr-new the hook snapshot shows the new category + Proposed AD
       feature: "Login",
       dependsOn: [],
     });
+    const mapping = JSON.parse(readFileSync(path.join(dir, "docs/adr/.mapping.json"), "utf8"));
+    assert.equal(mapping.categories["identity/login"].adrs[0].status, "Proposed");
+
     const ctx = runHook(dir);
-    assert.match(ctx, /▸ identity/);
-    assert.match(ctx, /• identity\/login .*— Login/);
-    // the ADR file exists on disk so no [missing] marker
-    assert.doesNotMatch(ctx, /\[missing\]/);
+    assert.match(ctx, /before code read the full docs\/adr\/\.mapping\.json/);
+    assert.doesNotMatch(ctx, /identity\/login/);
+    assert.doesNotMatch(ctx, /password-policy/);
   });
 });
 

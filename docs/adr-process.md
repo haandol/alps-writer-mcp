@@ -4,7 +4,7 @@
 
 핵심 불변식:
 
-- **`.mapping.json`이 유일한 ADR 인덱스다** — 카테고리마다 각 ADR을 `{path, status, summary}`로 한 번씩 보유하고 `dependsOn`을 기록한다. README는 ADR 목록을 두지 않으며(개념 색인만), UserPromptSubmit 훅이 매 턴 이 인덱스를 렌더한다.
+- **`.mapping.json`이 유일한 ADR 인덱스다** — 카테고리마다 각 ADR을 `{path, status, summary}`로 한 번씩 보유하고 `dependsOn`을 기록한다. README는 ADR 목록을 두지 않으며(개념 색인만), admission gate를 통과한 요청이 코드 변경 전에 이 인덱스를 읽는다.
 - **adr-writer는 독립적이다** — 매핑은 코드 경로도, Feature ID도, PRD 참조도 저장하지 않는다. `/feature-to-adr`가 ALPS를 읽어 기능별 `0..N` 결정을 찾고 기존 ADR 계약과 재조정하지만, adr-writer는 ALPS를 읽지 않는다.
 - **의존성은 한 방향(PRD → ADR → 코드)으로만 흐르며**, 어떤 산출물도 본문에서 다른 산출물을 직접 가리키지 않는다.
 - **ADR admission gate가 생성보다 먼저다.** 요구사항 계약, 지속적인 시스템·데이터·보안 경계, 외부 제공자·모델과 fallback, 키 설계, 알고리즘과 트레이드오프만 ADR 레이어로 올린다. 같은 계약과 경계를 유지한 채 교체할 수 있는 라이브러리, SDK, 프레임워크, credential/auth adapter, 모듈 구조는 코드 레이어에 둔다.
@@ -76,7 +76,7 @@ flowchart TD
     end
 
     Mapping[(".mapping.json<br/>유일한 ADR 인덱스<br/>category → adrs{path,status,summary}<br/>+ dependsOn<br/>(코드 경로 없음, PRD 참조 없음)")]
-    Hook[["UserPromptSubmit 훅<br/>매 턴 .mapping.json 인덱스를 렌더"]]
+    Hook[["UserPromptSubmit 훅<br/>매 턴 compact admission gate"]]
 
     S7 -.->|"Section 7 + 6.3을 읽고<br/>기존 ADR 계약과 비교"| F2A
     Proposed --> Impl
@@ -88,7 +88,8 @@ flowchart TD
 
     Proposed -.->|"항목을 기록"| Mapping
     Accepted -.->|"status 갱신 (lockstep)"| Mapping
-    Mapping --> Hook
+    Hook -.->|"admitted 요청은 전체 인덱스 조회"| Mapping
+    Mapping -.->|"소유자 · dependsOn 판정"| Impl
     Hook -.->|"ADR-first로 유도"| Impl
 
     classDef cmd fill:#e8f0fe,stroke:#4285f4,color:#111;
@@ -107,7 +108,7 @@ flowchart TD
 - **최종 리뷰가 위험에 비례해 완료를 판정한다.** 보호 표면을 바꾸지 않는 국소 구현은 `standard`로 decision ledger, 독립 충분성 검토와 targeted test를 수행한다. 계약·공개 표면·데이터·상태·권한·보안·fallback·동시성·트랜잭션·오류 의미 또는 넓은 범위를 바꾸면 `full`로 사람의 spec-fitness 확인과 독립 필요성·충분성 검토를 수행한다. 불명확하면 `full`이다.
 - **진화 이력은 ADR 본문이 아니라 decision log에 산다.** ADR 본문은 현재 상태만 서술하고, 같은 결정이 진화하면 제자리에서 덮어쓴다. 주요 전이(채택 대안 교체, 핵심 알고리즘이나 아키텍처 변경, Driver 반전)는 카테고리별 `decision-log.md`에 최신순 한 줄로 남긴다 — `/adr-impl`과 `/adr-sync`가 추가하거나 수확하고, `/adr-rollup`은 통합 과정에서 체인의 주요 전이를 로그로 수확하고 현재 상태 통합 ADR만 남긴다. 로그는 관례 파일이므로 `.mapping.json`에 등록하지 않고 하네스도 검사하지 않는다. supersede(새 ADR)는 결정 주제가 갈라질 때만 일어나며, 진화 체인은 기본적으로 누적하지 않는다.
 - **`/adr-impl`은 카테고리 키로 대상을 찾는다.** Feature ID는 어디에도 저장하지 않으며, 숫자만으로 된 폴백 키(`f1`)조차 평범한 리터럴 카테고리 키로 해석한다.
-- **훅이 사이클을 지탱한다.** 매 턴 `.mapping.json` 인덱스 스냅샷과 ADR-first 지시를 다시 주입하므로, 긴 세션에서도(컨텍스트 압축을 지나서도) 흐름이 유지된다.
+- **훅이 사이클을 지탱한다.** 매 턴 짧은 ADR admission 지시를 다시 주입해 긴 세션에서도(컨텍스트 압축을 지나서도) 흐름을 유지한다. admission을 통과한 요청만 코드 변경 전에 전체 `.mapping.json`과 plausible ADR 본문을 읽는다.
 - **독립적인 순수 리팩터링 요청은 ADR 작성에서 면제된다.** 동작을 바꾸지 않는 구조 변경은 규모가 얼마나 크든 새 ADR을 만들지 않는다. 다만 `/adr-impl` 안에서는 방금 만든 구현의 완료 품질을 높이기 위해 검증된 저위험 리팩터링 단계를 자동 실행한다. 이 단계도 결정을 바꾸지 않으며, 채택 대안·상태 기계·핵심 설계·외부 의존성 폴백을 바꾼다면 리팩터링이 아니라 동작 변경이므로 해당 ADR을 먼저 갱신한다.
 
 ## 2. /alps-init 내부: 섹션 단위 작성 루프

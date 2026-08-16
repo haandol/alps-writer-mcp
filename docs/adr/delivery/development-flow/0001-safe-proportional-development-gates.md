@@ -20,7 +20,7 @@ ADR의 의도와 재생성 가능성을 구현 후에 다시 확인하면 작성
 - 사용자는 새 ADR이나 변경된 ADR의 의도와 완전성을 구현 전에 한 번 확인해야 한다.
 - 완료 상태는 테스트와 필수 구현 리뷰 결과를 반영하고 해결 가능한 발견을 자동 수정해야 한다.
 - 검증 강도는 계약과 보호 표면의 변경 위험에 비례해야 한다.
-- 저장소 상태가 바뀌지 않으면 검증을 반복하지 않고 drift 근거 없는 작은 변경에 깊은 동기화를 강제하지 않아야 한다.
+- 저장소 상태가 바뀌지 않으면 검증을 반복하지 않고, 일반 대화가 ADR 인덱스 전체를 소비하지 않으며, drift 근거 없는 작은 변경에 깊은 동기화를 강제하지 않아야 한다.
 
 ## Decision
 
@@ -37,6 +37,8 @@ flowchart LR
 
     Input --> Intent --> Prerequisite --> Valid --> Verify --> Complete
 ```
+
+`UserPromptSubmit` 훅은 매 턴 짧은 ADR admission 지시만 다시 주입한다. `.mapping.json` 내용은 훅에 포함하지 않으며, 요청이 admission gate를 통과한 경우에만 메인 세션이 전체 mapping과 plausible ADR 본문을 읽어 기존 결정 소유자와 선행 상태를 판정한다. mapping 파일이 없으면 훅은 조용히 종료하고, 파일이 존재하지만 JSON 파싱에 실패하면 ADR 작업 전에 복구하도록 경고한다.
 
 새 ADR을 작성하거나 기존 ADR의 결정·요구사항 계약을 바꾸면 구현 전에 현재 Decision, Decision Drivers, requirement contract와 regeneration checklist를 제시하고 사용자에게 의도 일치를 한 번 확인받는다. 이 승인은 command가 아니라 정확한 ADR revision에 귀속된다. `/adr-new`나 `/feature-to-adr`에서 승인한 ADR 내용이 바뀌지 않았다면 `/adr-impl`은 그 기준선을 재사용하고 의도·재생성 질문을 다시 하지 않는다. 승인 후 ADR이 바뀌지 않았다면 구현 완료 뒤에도 같은 질문을 반복하지 않는다.
 
@@ -60,6 +62,9 @@ flowchart LR
 - 구현 전 승인 이후 ADR 계약이 바뀌지 않았으면 spec-fitness와 regeneration 질문을 반복하지 않는다.
 - 동작이 바뀌지 않은 검증 기준선은 재사용할 수 있다. 자동 변경이 없으면 같은 대상 테스트를 다시 실행하지 않는다.
 - 깊은 ADR 동기화는 drift, 넓은 구조 변경, 수동 ADR 변경 또는 주기적 감사 근거가 있을 때 수행한다.
+- 매 턴 훅은 compact admission directive만 주입하고 mapping의 category, path, status, summary를 렌더하지 않는다.
+- admission gate를 통과한 요청은 코드 변경 전에 전체 `.mapping.json`과 plausible ADR 본문을 읽어 기존 소유자와 `dependsOn` 상태를 확인한다.
+- `.mapping.json`이 없으면 훅은 추가 context를 주입하지 않으며, 파일이 손상되어 파싱할 수 없으면 ADR 작업 전에 복구 경고를 표시한다.
 
 ### Alternatives
 
@@ -88,17 +93,20 @@ flowchart LR
 - 작은 변경은 표준 리뷰를 사용하고 보호 표면 변경은 전체 리뷰를 유지한다.
 - 완료 상태와 실제 검증 결과가 일치한다.
 - 구현 후 반복 승인 없이 검토 발견을 수정하고 완료 결과를 받을 수 있다.
+- ADR과 무관한 턴은 전체 ADR 인덱스를 반복해서 소비하지 않는다.
 
 ### Negative
 
 - 선행 구현이 끝나기 전에는 downstream 작업이 대기할 수 있다.
 - 리뷰 모드 분류가 잘못되면 검증이 과하거나 부족할 수 있다.
 - 구현 전 ADR 승인이 형식적으로 수행되면 잘못된 계약을 기준으로 자동 완료할 수 있다.
+- admission을 통과한 뒤 mapping을 읽으라는 지시를 모델이 따르지 않으면 기존 결정 소유자나 선행 상태를 놓칠 수 있다.
 
 ### Risks
 
 - 구현자가 변경 위험을 낮게 분류할 수 있다. 보호 표면 조건 중 하나라도 해당하면 전체 리뷰를 선택한다.
 - 자동 수정 범위가 넓어질 수 있다. 계약 변경·모순·중대한 미검증 위험과 파괴적 변경은 반드시 사용자 판단으로 분리한다.
+- on-demand mapping 조회가 누락될 수 있다. 훅과 행동 eval은 admitted 요청에서 코드보다 먼저 전체 mapping과 plausible ADR을 읽는지를 검증한다.
 
 ## Related
 
