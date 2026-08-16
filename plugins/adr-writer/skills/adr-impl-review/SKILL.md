@@ -52,6 +52,8 @@ A note on scope: `/adr-impl-review` judges the **code** level against the ADR le
 - **Evidence over assertion**: every finding includes the applicable basis among an ADR quote, the actual diff or code location, and a reproduction procedure or execution result. Report a conjecture you could not reproduce only as `Unverified risk`.
 - **Escalation is exceptional**: ask for human judgment only when the approved contract must change, premises contradict, a material risk cannot be verified, or the repair would exceed the approved scope. Evidence-backed implementation and test defects are remediation work, not approval questions.
 
+**Generic subagent dispatch rule**: when a named agent is unavailable, resolve the corresponding `${CLAUDE_PLUGIN_ROOT}/agents/*.md` file to an **absolute path** and instruct a generic subagent to read that file completely and follow it. Do not load the agent file into the main session or paste its full text into the dispatch prompt. Pass task inputs separately, and require only the agent file's existing output contract — never an instruction echo, raw input dump, or exploratory transcript. If the subagent cannot read the absolute path, fall back once to passing the file's full text so review capability is preserved, and record that path-based context isolation was unavailable.
+
 ## 1. Fix the target and the change scope
 
 ADR identification follows the same rules as `/adr-impl`.
@@ -106,7 +108,7 @@ The rest of sections 2-6 applies only to `full`.
 Run `adr-impl-explainer` as a fresh read-only subagent.
 
 1. If named agents are available, invoke `adr-impl-explainer`.
-2. Otherwise invoke a generic read-only subagent given the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-explainer.md` as its instructions.
+2. Otherwise invoke a generic read-only subagent using the generic dispatch rule with `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-explainer.md`.
 3. Only when subagents are unavailable should the main session carry out the same instructions, noting that isolated explanation was unavailable.
 
 Give the explainer only the ADR, the raw diff, the changed code scope, and the related tests. Save the result as `explanation.md` for the repair report; do not stop to show it or ask the user to reconfirm the implementation.
@@ -150,7 +152,7 @@ Run `adr-impl-sufficiency-reviewer`.
 The execution order per client is as follows.
 
 1. If a named reviewer exists, invoke that agent.
-2. Otherwise read the full text of `${CLAUDE_PLUGIN_ROOT}/agents/<agent-name>.md` and pass it to a generic read-only subagent.
+2. Otherwise invoke a generic read-only subagent using the generic dispatch rule with `${CLAUDE_PLUGIN_ROOT}/agents/<agent-name>.md`.
 3. If subagents are unavailable, the main session performs the two perspectives as **separate passes that do not read each other's results**, and states the isolation limitation.
 
 Save the results as `necessity-review.md` and `sufficiency-review.md`.
@@ -178,7 +180,7 @@ The synthesized verdict:
 Once the independent reviews and evidence verification are done, run `adr-impl-review-report-writer` as a fresh subagent. This step creates no new conclusions; it turns the verified findings into **a document a junior developer seeing this code for the first time can fix it from alone.**
 
 1. If named agents are available, invoke `adr-impl-review-report-writer`.
-2. Otherwise invoke a generic subagent given the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` as its instructions.
+2. Otherwise invoke a generic subagent using the generic dispatch rule with `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md`.
 3. If subagents are unavailable, the main session writes it under the same instructions.
 
 Give the report-writer the original ADR and diff, `review-baseline.md`, all three agents' artifacts, and the verified findings and test results. Save the result as `implementation-review.md`.
