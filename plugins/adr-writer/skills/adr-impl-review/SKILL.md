@@ -52,7 +52,9 @@ A note on scope: `/adr-impl-review` judges the **code** level against the ADR le
 - **Evidence over assertion**: every finding includes the applicable basis among an ADR quote, the actual diff or code location, and a reproduction procedure or execution result. Report a conjecture you could not reproduce only as `Unverified risk`.
 - **Escalation is exceptional**: ask for human judgment only when the approved contract must change, premises contradict, a material risk cannot be verified, or the repair would exceed the approved scope. Evidence-backed implementation and test defects are remediation work, not approval questions.
 
-**Generic subagent dispatch rule**: when a named agent is unavailable, resolve the corresponding `${CLAUDE_PLUGIN_ROOT}/agents/*.md` file to an **absolute path** and instruct a generic subagent to read that file completely and follow it. Do not load the agent file into the main session or paste its full text into the dispatch prompt. Pass task inputs separately, and require only the agent file's existing output contract — never an instruction echo, raw input dump, or exploratory transcript. If the subagent cannot read the absolute path, fall back once to passing the file's full text so review capability is preserved, and record that path-based context isolation was unavailable.
+**Provider capability gate — apply before any named or generic subagent dispatch.** If the active model provider is identified as Amazon Bedrock, treat subagents as unavailable and do not invoke either path. Codex's current Bedrock transport can reject multi-agent input before an agent starts. If provider identity was not visible in advance and an attempted dispatch returns `validation_error` with `Invalid 'input': value did not match any expected variant`, do not retry with the named agent, a generic agent, or a different review role. Mark subagents unavailable for the rest of this command and use the main-session fallback for the selected mode, recording the isolation limitation.
+
+**Generic subagent dispatch rule**: after the provider capability gate passes, when a named agent is unavailable, resolve the corresponding `${CLAUDE_PLUGIN_ROOT}/agents/*.md` file to an **absolute path** and instruct a generic subagent to read that file completely and follow it. Do not load the agent file into the main session or paste its full text into the dispatch prompt. Pass task inputs separately, and require only the agent file's existing output contract — never an instruction echo, raw input dump, or exploratory transcript. If the subagent cannot read the absolute path, fall back once to passing the file's full text so review capability is preserved, and record that path-based context isolation was unavailable.
 
 ## 1. Fix the target and the change scope
 
@@ -93,7 +95,7 @@ Record `reviewMode` and the classification evidence in the artifacts.
 For `standard`, execute this section and then continue at section 7. Sections 2-6 are the full-mode path.
 
 1. Build a decision ledger containing every ADR decision and requirement-contract row relevant to the diff.
-2. Run `adr-impl-sufficiency-reviewer` in one fresh isolated context with only the ADR, raw diff, changed code and tests, project rule documents, and the ledger. If subagents are unavailable, perform one separate sufficiency pass in the main session and record the isolation limitation.
+2. Run `adr-impl-sufficiency-reviewer` in one fresh isolated context with only the ADR, raw diff, changed code and tests, project rule documents, and the ledger. If subagents are unavailable, including on Amazon Bedrock, perform one separate sufficiency pass in the main session and record the isolation limitation.
 3. Execute the related targeted tests and any minimal reproduction needed to account for every ledger row. An unexecuted core path makes the verdict `INCONCLUSIVE`, not `PASS`.
 4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, report-writer agent, HTML page, mandatory Mermaid, or post-implementation spec-fitness gate.
 5. Write a concise `implementation-review.md` with these headings: `Review mode`, `Scope`, `Decision ledger`, `Findings`, `Tests`, and `Review limits`. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, and the normal evidence fields.
@@ -153,7 +155,7 @@ The execution order per client is as follows.
 
 1. If a named reviewer exists, invoke that agent.
 2. Otherwise invoke a generic read-only subagent using the generic dispatch rule with `${CLAUDE_PLUGIN_ROOT}/agents/<agent-name>.md`.
-3. If subagents are unavailable, the main session performs the two perspectives as **separate passes that do not read each other's results**, and states the isolation limitation.
+3. If subagents are unavailable, including on Amazon Bedrock, the main session performs the two perspectives as **separate passes that do not read each other's results**, and states the isolation limitation.
 
 Save the results as `necessity-review.md` and `sufficiency-review.md`.
 

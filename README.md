@@ -52,6 +52,8 @@ Run `/adr-sync` when review finds implementation-fact drift, after broad refacto
 
 See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash commands, hook behavior, and the mapping file, or the [ADR process overview](./docs/adr-process.md) for the same cycle drawn as diagrams.
 
+Codex users on Amazon Bedrock should disable multi-agent before running ADR review skills; see [ADR Writer troubleshooting](./plugins/adr-writer/README.md#amazon-bedrock-rejects-a-subagent-request).
+
 ## Features
 
 **alps-writer (PRD)**

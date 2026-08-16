@@ -63,6 +63,35 @@ One hook supports the main session — **no external LLM calls**; the main model
 
 The directive first applies the ADR admission gate. Requirement contracts, durable boundaries, provider/model choices, key designs, algorithms, and fallback policies enter the cycle and trigger an on-demand read of the full mapping and plausible ADR bodies; replaceable SDKs, libraries, frameworks, and credential/auth adapters stay in code. The hook never blocks an edit or injects mapping contents. Running at session start, resume, clear, and compaction recovery keeps the directive available without executing on every user message.
 
+## Troubleshooting
+
+### Amazon Bedrock rejects a subagent request
+
+Codex sessions using Amazon Bedrock can fail immediately after a review skill starts a subagent:
+
+```text
+{"error":{"code":"validation_error","message":"invalid request body: Invalid 'input': value did not match any expected variant","type":"invalid_request_error"}}
+```
+
+Codex multi-agent workflows use a hosted Responses API orchestration action. The [Codex Bedrock guide](https://developers.openai.com/codex/amazon-bedrock) explains that the Bedrock path does not use OpenAI's hosted Responses API and that hosted features are unavailable there; the [multi-agent guide](https://developers.openai.com/api/docs/guides/responses-multi-agent) describes that orchestration action. With the current Bedrock transport, disable multi-agent before starting the session so the invalid request is never sent:
+
+```toml
+[features]
+multi_agent = false
+```
+
+Put that setting in the `~/.codex/config.toml` used by the Bedrock session, then start a new Codex session. Existing subagent threads may retain the failed request state.
+
+The review skills degrade as follows:
+
+| Skill                | Bedrock / no-subagent behavior                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| `/adr-review`        | Reviews ADRs sequentially in the main session and reports that isolated contexts were absent   |
+| `/adr-impl-review`   | Runs the required perspectives as separate main-session passes and reports the isolation limit |
+| `/adr-impl-refactor` | Produces `PROPOSE_ONLY` candidates and never auto-applies without an isolated reviewer         |
+
+If provider identity was unavailable and the validation error occurs once, the skills do not retry another named or generic subagent in that command. The plugin never edits a user's Codex configuration automatically.
+
 ## Relationship to alps-writer
 
 The companion [`alps-writer`](https://github.com/haandol/alps-writer-plugins) plugin writes ALPS documents. `/feature-to-adr` discovers zero, one, or several admitted decisions per feature, reconciles existing contracts, and delegates each new decision to this plugin's `/adr-new`. The dependency is one-way.
