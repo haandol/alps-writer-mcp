@@ -27,7 +27,7 @@ codex plugin add adr-writer@alps-writer
 | `/adr-new <category>`            | Apply the admission gate, then author a durable architectural decision directly; implementation-only choices create no ADR                                                                                                                                                 |
 | `/adr-impl [category]`           | Implement an ADR in code (including tests). With no argument, lists Proposed ADRs and asks which to build                                                                                                                                                                  |
 | `/adr-impl-refactor [category]`  | Review efficiency, complexity, coupling, duplication, and proportionate reuse; apply only high-confidence local behavior-preserving refactors with before/after tests, and propose the rest                                                                                |
-| `/adr-impl-review [category]`    | Explain the implementation, then run independent necessity/sufficiency reviews and tests; emit a Mermaid-rich junior repair guide (report-only)                                                                                                                            |
+| `/adr-impl-review [category]`    | Select `standard` or `full` by risk. Standard uses a decision ledger, sufficiency pass, and targeted tests; full adds necessity review and detailed Mermaid repair artifacts (report-only)                                                                                 |
 | `/adr-review [category]`         | Review **hand-edited or inherited** ADRs as documents against the authoring rules (abstraction level, requirement preservation, alternatives) — no code read, report-only. No arg → every ADR. Not run after `/adr-new`, which judges its own draft against the same rules |
 | `/adr-sync [category] [--quick]` | Detect/repair drift between code and ADR, and absorb new learnings                                                                                                                                                                                                         |
 | `/adr-rollup [category]`         | Consolidate ADR groups whose evolution history of one logical decision is split (no arg → all categories)                                                                                                                                                                  |
@@ -62,6 +62,37 @@ One hook supports the main session — **no external LLM calls**; the main model
 | `SessionStart` | Startup, resume, clear, and compaction | Inject a compact ADR admission directive; admitted work reads `docs/adr/.mapping.json` before code changes |
 
 The directive first applies the ADR admission gate. Requirement contracts, durable boundaries, provider/model choices, key designs, algorithms, and fallback policies enter the cycle and trigger an on-demand read of the full mapping and plausible ADR bodies; replaceable SDKs, libraries, frameworks, and credential/auth adapters stay in code. The hook never blocks an edit or injects mapping contents. Running at session start, resume, clear, and compaction recovery keeps the directive available without executing on every user message.
+
+Claude Code discovers `hooks/hooks.json` automatically; its manifest does not register the file a second time. Codex registers the same file once through its client-specific manifest. In both clients the only event is `SessionStart` — there is no `UserPromptSubmit` hook.
+
+## Troubleshooting
+
+### Amazon Bedrock rejects a subagent request
+
+Codex sessions using Amazon Bedrock can fail immediately after a review skill starts a subagent:
+
+```text
+{"error":{"code":"validation_error","message":"invalid request body: Invalid 'input': value did not match any expected variant","type":"invalid_request_error"}}
+```
+
+Codex multi-agent workflows use a hosted Responses API orchestration action. The [Codex Bedrock guide](https://developers.openai.com/codex/amazon-bedrock) explains that the Bedrock path does not use OpenAI's hosted Responses API and that hosted features are unavailable there; the [multi-agent guide](https://developers.openai.com/api/docs/guides/responses-multi-agent) describes that orchestration action. With the current Bedrock transport, disable multi-agent before starting the session so the invalid request is never sent:
+
+```toml
+[features]
+multi_agent = false
+```
+
+Put that setting in the `~/.codex/config.toml` used by the Bedrock session, then start a new Codex session. Existing subagent threads may retain the failed request state.
+
+The review skills degrade as follows:
+
+| Skill                | Bedrock / no-subagent behavior                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| `/adr-review`        | Reviews ADRs sequentially in the main session and reports that isolated contexts were absent   |
+| `/adr-impl-review`   | Runs the required perspectives as separate main-session passes and reports the isolation limit |
+| `/adr-impl-refactor` | Produces `PROPOSE_ONLY` candidates and never auto-applies without an isolated reviewer         |
+
+If provider identity was unavailable and the validation error occurs once, the skills do not retry another named or generic subagent in that command. The plugin never edits a user's Codex configuration automatically.
 
 ## Relationship to alps-writer
 

@@ -15,6 +15,5 @@
     "drift-detection",
     "hooks",
     "ai"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }

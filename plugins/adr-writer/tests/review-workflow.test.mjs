@@ -72,6 +72,69 @@ test("generic subagent fallbacks load agent instructions inside the child contex
   assert.match(sources[2], /Do not ask the subagent to echo its instructions/);
 });
 
+test("Bedrock review paths avoid unsupported subagent dispatch and never retry the validation error", () => {
+  const review = read("skills/adr-review/SKILL.md");
+  const implReview = read("skills/adr-impl-review/SKILL.md");
+  const refactor = read("skills/adr-impl-refactor/SKILL.md");
+
+  for (const source of [review, implReview, refactor]) {
+    assert.match(source, /Provider capability gate/);
+    assert.match(source, /active model provider is identified as Amazon Bedrock/);
+    assert.match(source, /treat subagents as unavailable/);
+    assert.match(source, /do not invoke either path/);
+    assert.match(source, /validation_error/);
+    assert.match(source, /Invalid 'input': value did not match any expected variant/);
+    assert.match(source, /do not retry/);
+  }
+
+  assert.match(review, /separate sequential pass per ADR/);
+  assert.match(review, /passes were not isolated subagent contexts/);
+  assert.match(implReview, /separate passes that do not read each other's results/);
+  assert.match(refactor, /`PROPOSE_ONLY` main-session fallback/);
+  assert.match(refactor, /must not classify or apply any candidate as `APPLY_NOW`/);
+});
+
+test("Bedrock troubleshooting documents the supported Codex feature flag and review fallbacks", () => {
+  const pluginReadme = read("README.md");
+  const rootReadme = read("../../README.md");
+
+  assert.match(pluginReadme, /Amazon Bedrock rejects a subagent request/);
+  assert.match(pluginReadme, /developers\.openai\.com\/codex\/amazon-bedrock/);
+  assert.match(pluginReadme, /developers\.openai\.com\/api\/docs\/guides\/responses-multi-agent/);
+  assert.match(pluginReadme, /\[features\]\s+multi_agent = false/);
+  assert.match(pluginReadme, /in the `~\/\.codex\/config\.toml` used by the Bedrock session/);
+  assert.match(pluginReadme, /start a new Codex session/);
+  assert.match(pluginReadme, /do not retry another named or generic subagent/);
+  assert.match(pluginReadme, /never edits a user's Codex configuration automatically/);
+  assert.doesNotMatch(pluginReadme, /agents\.enabled/);
+
+  assert.match(
+    rootReadme,
+    /plugins\/adr-writer\/README\.md#amazon-bedrock-rejects-a-subagent-request/,
+  );
+});
+
+test("user documentation reflects the pre-implementation baseline and single lifecycle hook", () => {
+  const sources = [
+    read("../../README.md"),
+    read("README.md"),
+    read("../../docs/usage.md"),
+    read("../../docs/adr-process.md"),
+  ];
+
+  for (const source of sources) {
+    assert.doesNotMatch(source, /full:\s*(human gate|사람 게이트)/i);
+    assert.doesNotMatch(source, /full mode adds human intent/i);
+  }
+
+  assert.match(sources[0], /does not run for every user prompt/);
+  assert.match(sources[0], /completion review does not repeat a routine human gate/);
+  assert.match(sources[1], /there is no `UserPromptSubmit` hook/);
+  assert.match(sources[2], /there is no per-prompt `UserPromptSubmit` hook/);
+  assert.match(sources[2], /pre-approved ADR baseline/);
+  assert.match(sources[3], /구현 전에 승인된 기준선/);
+});
+
 test("adr-impl promotes only after verified refactoring, tests, and final review pass", () => {
   const impl = read("skills/adr-impl/SKILL.md");
   const initialTests = impl.indexOf("initial implementation tests pass");

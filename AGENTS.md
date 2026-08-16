@@ -105,7 +105,7 @@ plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 └── templates/alps/       # about-alps.md
 
 plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
-├── .claude-plugin/plugin.json   # hooks registration (no MCP)
+├── .claude-plugin/plugin.json   # Claude metadata; hooks/ is auto-discovered
 ├── .codex-plugin/plugin.json    # Codex metadata; registers skills + hooks
 ├── README.md
 ├── skills/               # adr-new, adr-impl, adr-impl-refactor, adr-impl-review, adr-sync, adr-rollup

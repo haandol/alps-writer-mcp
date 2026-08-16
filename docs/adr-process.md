@@ -19,7 +19,7 @@
 | [2](#2-alps-init-내부-섹션-단위-작성-루프)     | `/alps-init`       | ALPS 9개 섹션이 어떻게 작성되고, 왜 순서가 어긋나는가      |
 | [3](#3-feature-to-adr-내부-결정-발견과-재조정) | `/feature-to-adr`  | 기능별 0..N 결정과 계약 변경을 어떻게 전달하는가           |
 | [4](#4-adr-impl-내부-선행-의존성-게이트)       | `/adr-impl`        | 대상을 어떻게 찾고, 의존성 게이트를 왜 건너뛸 수 없는가    |
-| [5](#5-adr-impl-review-내부-적대적-리뷰)       | `/adr-impl-review` | 격리와 사람 게이트가 어떻게 반증 기반 판정을 만들어내는가  |
+| [5](#5-adr-impl-review-내부-적대적-리뷰)       | `/adr-impl-review` | 격리와 승인된 기준선이 어떻게 반증 기반 판정을 만드는가    |
 | [6](#6-이-변경은-어느-커맨드-소유인가)         | 라우팅             | 어떤 이견이나 변경 요청이 들어왔을 때 어느 커맨드가 맡는가 |
 | [7](#7-adr-status-전이)                        | Status             | Proposed / Accepted / Superseded 사이를 누가 옮기는가      |
 | [8](#8-의존성-모델과-결합-지점)                | PRD → ADR → 코드   | 연결이 어디에 살고, 어디에는 의도적으로 두지 않는가        |
@@ -57,7 +57,7 @@ flowchart TD
         Prereq["선행부터 구현<br/>(dependsOn 위상 순서)"]
         Code["코드 + 테스트 작성<br/>수직 슬라이스: UI → API → Data"]
         Refactor(["/adr-impl-refactor<br/>효율 · 복잡도 · 결합도 · 중복 · 재사용성<br/>검증된 저위험 변경만 즉시 반영"])
-        Review(["/adr-impl-review [category]<br/>standard: ledger + 충분성 + 테스트<br/>full: 사람 게이트 + 필요성 ∥ 충분성<br/>완료 판정, 보고 전용"])
+        Review(["/adr-impl-review [category]<br/>standard: ledger + 충분성 + 테스트<br/>full: 승인된 기준선 + 필요성 ∥ 충분성<br/>완료 판정, 보고 전용"])
         Accepted["Status → Accepted (YYYY-MM-DD)<br/>본문 ## Status와 매핑 status를 함께 갱신"]
         Impl --> Gate
         Gate -->|"선행이 Proposed / dangling"| Prereq
@@ -105,7 +105,7 @@ flowchart TD
 - **새 초안은 한 번 검증하고, 두 번 리뷰하지 않는다.** `/adr-new`는 `adr-reviewer`가 적용하는 것과 같은 규칙(R1-R20)으로 작성하므로, 결정론적 하네스를 돌린 뒤 판단 규칙에 대한 자체 점검을 수행한다 — 방금 제대로 해낸 것을 대부분 되풀이할 리뷰어를 띄우지 않는다. `/adr-review`는 그 작성 컨텍스트가 사라진 자리에 독립적인 읽기를 공급한다. **손으로 고친, 다른 세션에서 바뀐, 물려받은** ADR이 그 대상이며, 작성 직후 자동으로가 아니라 요청 시에 실행된다.
 - **의존성 게이트는 필수다.** `/adr-impl`은 곧장 코딩으로 가지 않는다. `dependsOn`을 전이적으로 순회하고, 선행이 `Proposed`이거나 dangling이면 그것을 위상 순서로 먼저 구현한다.
 - **구현 완료 전 검증된 리팩터링을 수행한다.** 최초 테스트가 통과하면 `/adr-impl-refactor`의 읽기 전용 리뷰어가 실행 효율, 복잡도, 결합도, 중복과 현재 코드에 근거한 재사용 기회를 독립적으로 찾는다. 독립 reviewer가 없으면 제안만 남기고 자동 반영하지 않는다. 실제 변경이 없으면 동일 targeted test를 반복하지 않는다.
-- **최종 리뷰가 위험에 비례해 완료를 판정한다.** 보호 표면을 바꾸지 않는 국소 구현은 `standard`로 decision ledger, 독립 충분성 검토와 targeted test를 수행한다. 계약·공개 표면·데이터·상태·권한·보안·fallback·동시성·트랜잭션·오류 의미 또는 넓은 범위를 바꾸면 `full`로 사람의 spec-fitness 확인과 독립 필요성·충분성 검토를 수행한다. 불명확하면 `full`이다.
+- **최종 리뷰가 위험에 비례해 완료를 판정한다.** 보호 표면을 바꾸지 않는 국소 구현은 `standard`로 decision ledger, 독립 충분성 검토와 targeted test를 수행한다. 계약·공개 표면·데이터·상태·권한·보안·fallback·동시성·트랜잭션·오류 의미 또는 넓은 범위를 바꾸면 `full`로 구현 전에 승인된 기준선과 독립 필요성·충분성 검토를 사용한다. 의도와 재생성 완전성은 구현 전에 승인하므로 완료 검토에서 일상적인 사람 게이트를 반복하지 않는다. 불명확하면 `full`이다.
 - **진화 이력은 ADR 본문이 아니라 decision log에 산다.** ADR 본문은 현재 상태만 서술하고, 같은 결정이 진화하면 제자리에서 덮어쓴다. 주요 전이(채택 대안 교체, 핵심 알고리즘이나 아키텍처 변경, Driver 반전)는 카테고리별 `decision-log.md`에 최신순 한 줄로 남긴다 — `/adr-impl`과 `/adr-sync`가 추가하거나 수확하고, `/adr-rollup`은 통합 과정에서 체인의 주요 전이를 로그로 수확하고 현재 상태 통합 ADR만 남긴다. 로그는 관례 파일이므로 `.mapping.json`에 등록하지 않고 하네스도 검사하지 않는다. supersede(새 ADR)는 결정 주제가 갈라질 때만 일어나며, 진화 체인은 기본적으로 누적하지 않는다.
 - **`/adr-impl`은 카테고리 키로 대상을 찾는다.** Feature ID는 어디에도 저장하지 않으며, 숫자만으로 된 폴백 키(`f1`)조차 평범한 리터럴 카테고리 키로 해석한다.
 - **훅이 사이클을 지탱한다.** 세션 시작·재개·초기화와 컨텍스트 압축 복구 시 짧은 ADR admission 지시를 주입해 일반 사용자 메시지마다 실행하지 않고도 흐름을 유지한다. admission을 통과한 요청만 코드 변경 전에 전체 `.mapping.json`과 plausible ADR 본문을 읽는다.
@@ -291,7 +291,7 @@ flowchart TD
 
 ## 5. /adr-impl-review 내부: 적대적 리뷰
 
-먼저 보호 표면으로 `standard`와 `full`을 고른다. 국소 변경은 decision ledger, 독립 충분성 검토와 targeted test만 수행한다. 요구사항, 공개 계약, 데이터, 상태, 권한, 보안, fallback, 동시성, 트랜잭션, 오류 의미 또는 넓은 범위가 바뀌면 `full`을 사용하며, 이때 설명자·리뷰어 둘·리포트 작성자가 각각 새 컨텍스트에서 돈다.
+먼저 보호 표면으로 `standard`와 `full`을 고른다. 국소 변경은 decision ledger, 독립 충분성 검토와 targeted test만 수행한다. 요구사항, 공개 계약, 데이터, 상태, 권한, 보안, fallback, 동시성, 트랜잭션, 오류 의미 또는 넓은 범위가 바뀌면 `full`을 사용하며, 구현 전에 승인된 ADR 기준선을 대상으로 설명자·리뷰어 둘·리포트 작성자가 각각 새 컨텍스트에서 돈다.
 
 ```mermaid
 flowchart TD
@@ -344,7 +344,7 @@ flowchart TD
 ```
 
 - **언제나 보고 전용이다.** 리뷰 산출물만 쓰고, 코드와 ADR과 매핑은 건드리지 않는다.
-- **ADR이 동작 스펙이고, 리뷰어들은 구조적으로 그것을 옳다고 전제한다.** `full`의 사람 게이트가 spec fitness를 직접 확인한다. `standard`는 보호 표면이 바뀌지 않은 국소 구현에만 허용되며, 분류가 불명확하면 `full`로 올린다.
+- **ADR이 동작 스펙이고, 리뷰어들은 구조적으로 그것을 옳다고 전제한다.** spec fitness와 regeneration checklist는 구현 전에 한 번 승인하며, 완료 검토는 그 기준선을 다시 묻지 않고 반증한다. `standard`는 보호 표면이 바뀌지 않은 국소 구현에만 허용되며, 분류가 불명확하면 `full`로 올린다.
 - **source-of-truth 구분이 카테고리를 결정한다.** enum 식별자 이름이 다른 것은 `Impl-fact mismatch`(ADR을 고친다)이고, 허용 집합이나 전이 규칙이 다른 것은 `Spec violation`(코드를 고친다)이다.
 
 ## 6. 이 변경은 어느 커맨드 소유인가

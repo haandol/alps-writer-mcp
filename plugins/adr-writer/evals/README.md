@@ -90,6 +90,10 @@ not run (bad `--only`, agent produced nothing).
    - `impl-review-selects-risk-mode` checks both directions of the review-mode
      classifier: localized implementation uses standard, while contract and
      public-surface changes use full.
+   - `bedrock-subagent-fallback` checks that a known Amazon Bedrock provider
+     prevents named and generic subagent dispatch, the known input validation
+     error is not retried, document and implementation review continue as
+     main-session passes, and refactoring remains `PROPOSE_ONLY`.
    - `impl-completes-without-reconfirmation` checks that a pre-approved ADR is
      not reconfirmed after implementation, evidence-backed defects are repaired
      and re-reviewed automatically, and only a real contract change escalates.

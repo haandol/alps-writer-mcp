@@ -94,6 +94,7 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /hook-admission-routing/);
   assert.match(out, /alps-batch-preserves-mandatory-nfr/);
   assert.match(out, /impl-review-selects-risk-mode/);
+  assert.match(out, /bedrock-subagent-fallback/);
 });
 
 // The prompt has to carry the SHIPPED instruction text. If a scenario ever
@@ -282,6 +283,37 @@ ${finding}
     assert.equal(code, 0, out);
     assert.doesNotMatch(out, /✗/, `${name} compliant classification failed:\n${out}`);
   }
+});
+
+test("Bedrock fallback scorer requires no dispatch, no retry, main-session review, and proposal-only refactoring", async () => {
+  const scenario = await loadScenario("bedrock-subagent-fallback.mjs");
+  const compliant = scenario.score({
+    tail: {
+      findings: [
+        { tag: "NO_DISPATCH", summary: "Amazon Bedrock is known before dispatch" },
+        { tag: "NO_RETRY", summary: "the validation error is terminal for this command" },
+        { tag: "MAIN_SESSION_FALLBACK", summary: "review passes continue without isolation" },
+        { tag: "PROPOSE_ONLY", summary: "refactor candidates are not auto-applied" },
+      ],
+    },
+  });
+  assert.ok(
+    compliant.every((check) => check.pass),
+    JSON.stringify(compliant, null, 2),
+  );
+
+  const unsafe = scenario.score({
+    tail: {
+      findings: [
+        { tag: "SPAWN_SUBAGENT", summary: "try a generic reviewer after the named agent fails" },
+        { tag: "APPLY_NOW", summary: "apply a local refactor from the main session" },
+      ],
+    },
+  });
+  assert.ok(
+    unsafe.some((check) => !check.pass),
+    "unsafe Bedrock routing must fail the scorer",
+  );
 });
 
 test("critical workflow scorers accept compliant classifications and reject collapsed ones", () => {

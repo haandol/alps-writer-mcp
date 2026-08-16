@@ -51,6 +51,18 @@ test("every skill declares a name matching its directory", () => {
   }
 });
 
+test("the Claude manifest relies on standard hook auto-discovery", () => {
+  const manifest = JSON.parse(read(path.join(ADR_ROOT, ".claude-plugin", "plugin.json")));
+  const hooks = JSON.parse(read(path.join(ADR_ROOT, "hooks", "hooks.json")));
+
+  assert.equal(
+    Object.hasOwn(manifest, "hooks"),
+    false,
+    "hooks/hooks.json is auto-discovered; declaring it in the manifest loads it twice",
+  );
+  assert.ok(hooks.hooks.SessionStart, "the auto-discovered hook file must register SessionStart");
+});
+
 // A skill that parses an argument must advertise it, or the client shows no hint
 // and the argument looks unsupported. /alps-init takes none, so it is exempt.
 test("every argument-taking skill declares an argument-hint", () => {
