@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// UserPromptSubmit — emit a compact ADR-first directive every turn.
+// SessionStart — emit a compact ADR-first directive when session context starts.
 //
-// Why every turn (not SessionStart): Claude Code compacts long sessions, and
-// a one-shot SessionStart injection vanishes after compaction. The directive
-// stays small; the model reads the ADR index only after a request passes the
-// admission gate.
+// startup/resume/clear/compact cover the points where session context is created
+// or replaced without adding noise to every user prompt. The model reads the ADR
+// index only after a request passes the admission gate.
 
 import path from "node:path";
 import { readFileSync, existsSync } from "node:fs";
@@ -48,7 +47,7 @@ function main() {
   if (loadJSON(mappingFile) === null) {
     const warn = {
       hookSpecificOutput: {
-        hookEventName: "UserPromptSubmit",
+        hookEventName: "SessionStart",
         additionalContext: `[ADR-first directive] ${MAPPING_PATH} exists but failed to parse as JSON. Repair it before continuing ADR-governed work.`,
       },
     };
@@ -67,7 +66,7 @@ function main() {
 
   const out = {
     hookSpecificOutput: {
-      hookEventName: "UserPromptSubmit",
+      hookEventName: "SessionStart",
       additionalContext: directive,
     },
   };

@@ -194,7 +194,7 @@ export function hookContext(dir, mapping = { categories: {} }) {
   seedMapping(dir, mapping);
   const result = spawnSync(process.execPath, [ADR_HOOK], {
     cwd: dir,
-    input: JSON.stringify({ prompt: "eval" }),
+    input: JSON.stringify({ hook_event_name: "SessionStart", source: "startup" }),
     encoding: "utf8",
     env: { ...process.env, CLAUDE_PROJECT_DIR: dir },
   });

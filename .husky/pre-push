@@ -76,8 +76,8 @@ printf '%s\n' "$INIT" | node plugins/alps-writer/dist/index.js 2>/dev/null | hea
   grep -q '"name":"alps-writer"' ||
   fail "the committed MCP bundle did not answer initialize." "Try it by hand: node plugins/alps-writer/dist/index.js"
 
-echo '{}' | node plugins/adr-writer/hooks/surface-adr-context.mjs >/dev/null ||
-  fail "the adr-writer UserPromptSubmit hook failed to run." "It runs on every user turn, so this breaks the plugin immediately."
+echo '{"hook_event_name":"SessionStart","source":"startup"}' | node plugins/adr-writer/hooks/surface-adr-context.mjs >/dev/null ||
+  fail "the adr-writer SessionStart hook failed to run." "It seeds ADR context when a session starts or is restored, so this breaks the plugin immediately."
 
 # ── the committed bundle matches src (CI build job) ────────────────────────
 # plugins/alps-writer/dist/ is committed and a marketplace install runs it

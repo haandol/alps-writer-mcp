@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Status
 
-Accepted (2026-08-15)
+Accepted (2026-08-16)
 
 ## Context
 
@@ -38,7 +38,7 @@ flowchart LR
     Input --> Intent --> Prerequisite --> Valid --> Verify --> Complete
 ```
 
-`UserPromptSubmit` 훅은 매 턴 짧은 ADR admission 지시만 다시 주입한다. `.mapping.json` 내용은 훅에 포함하지 않으며, 요청이 admission gate를 통과한 경우에만 메인 세션이 전체 mapping과 plausible ADR 본문을 읽어 기존 결정 소유자와 선행 상태를 판정한다. mapping 파일이 없으면 훅은 조용히 종료하고, 파일이 존재하지만 JSON 파싱에 실패하면 ADR 작업 전에 복구하도록 경고한다.
+`SessionStart` 훅은 세션 시작·재개·초기화와 context compaction 복구 시점에만 짧은 ADR admission 지시를 주입한다. 일반 사용자 메시지마다 다시 실행하지 않는다. `.mapping.json` 내용은 훅에 포함하지 않으며, 요청이 admission gate를 통과한 경우에만 메인 세션이 전체 mapping과 plausible ADR 본문을 읽어 기존 결정 소유자와 선행 상태를 판정한다. mapping 파일이 없으면 훅은 조용히 종료하고, 파일이 존재하지만 JSON 파싱에 실패하면 ADR 작업 전에 복구하도록 경고한다.
 
 새 ADR을 작성하거나 기존 ADR의 결정·요구사항 계약을 바꾸면 구현 전에 현재 Decision, Decision Drivers, requirement contract와 regeneration checklist를 제시하고 사용자에게 의도 일치를 한 번 확인받는다. 이 승인은 command가 아니라 정확한 ADR revision에 귀속된다. `/adr-new`나 `/feature-to-adr`에서 승인한 ADR 내용이 바뀌지 않았다면 `/adr-impl`은 그 기준선을 재사용하고 의도·재생성 질문을 다시 하지 않는다. 승인 후 ADR이 바뀌지 않았다면 구현 완료 뒤에도 같은 질문을 반복하지 않는다.
 
@@ -62,7 +62,8 @@ flowchart LR
 - 구현 전 승인 이후 ADR 계약이 바뀌지 않았으면 spec-fitness와 regeneration 질문을 반복하지 않는다.
 - 동작이 바뀌지 않은 검증 기준선은 재사용할 수 있다. 자동 변경이 없으면 같은 대상 테스트를 다시 실행하지 않는다.
 - 깊은 ADR 동기화는 drift, 넓은 구조 변경, 수동 ADR 변경 또는 주기적 감사 근거가 있을 때 수행한다.
-- 매 턴 훅은 compact admission directive만 주입하고 mapping의 category, path, status, summary를 렌더하지 않는다.
+- 훅은 세션 시작·재개·초기화와 context compaction 복구 시점에만 compact admission directive를 주입하고, 일반 사용자 메시지마다 실행하지 않는다.
+- 훅은 mapping의 category, path, status, summary를 렌더하지 않는다.
 - admission gate를 통과한 요청은 코드 변경 전에 전체 `.mapping.json`과 plausible ADR 본문을 읽어 기존 소유자와 `dependsOn` 상태를 확인한다.
 - `.mapping.json`이 없으면 훅은 추가 context를 주입하지 않으며, 파일이 손상되어 파싱할 수 없으면 ADR 작업 전에 복구 경고를 표시한다.
 

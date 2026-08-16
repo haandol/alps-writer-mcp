@@ -218,7 +218,7 @@ test("e2e: dependsOn pointing at a non-existent category → harness flags dangl
   });
 });
 
-// ── the created mapping stays on demand instead of entering every turn ───
+// ── the created mapping stays on demand instead of entering session context ───
 
 test("e2e: after /adr-new the hook points to the mapping without injecting its contents", () => {
   withTmp((dir) => {

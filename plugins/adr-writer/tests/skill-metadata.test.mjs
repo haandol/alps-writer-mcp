@@ -610,10 +610,10 @@ test("README is the index and links to concepts.md, which holds the principle", 
   assert.doesNotMatch(concepts, /^#{1,3}.*\bAGENTS\.md\b/m);
 });
 
-// The compact per-turn hook is the only guard when a user just says "bump 7
-// turns to 10" without invoking a skill. It must route admitted work to the
-// mapping before code while keeping implementation-only edits exempt.
-test("the per-turn directive treats a requirement-value change as in-scope", () => {
+// The compact lifecycle hook seeds the main session even when a user later says
+// "bump 7 turns to 10" without invoking a skill. It must route admitted work to
+// the mapping before code while keeping implementation-only edits exempt.
+test("the lifecycle directive treats a requirement-value change as in-scope", () => {
   const hook = read(path.join(ADR_ROOT, "hooks", "surface-adr-context.mjs"));
   assert.match(
     hook,
@@ -626,7 +626,9 @@ test("the per-turn directive treats a requirement-value change as in-scope", () 
 
 test("the hook command accepts either Codex or Claude plugin-root variables", () => {
   const hooks = JSON.parse(read(path.join(ADR_ROOT, "hooks", "hooks.json")));
-  const command = hooks.hooks.UserPromptSubmit[0].hooks[0].command;
+  assert.deepEqual(Object.keys(hooks.hooks), ["SessionStart"]);
+  assert.equal(hooks.hooks.SessionStart[0].matcher, "startup|resume|clear|compact");
+  const command = hooks.hooks.SessionStart[0].hooks[0].command;
 
   for (const variable of ["PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT"]) {
     const env = { ...process.env };
@@ -637,7 +639,7 @@ test("the hook command accepts either Codex or Claude plugin-root variables", ()
     const result = spawnSync("/bin/sh", ["-c", command], {
       cwd: PLUGINS_ROOT,
       env,
-      input: "{}\n",
+      input: '{"hook_event_name":"SessionStart","source":"startup"}\n',
       encoding: "utf8",
     });
 

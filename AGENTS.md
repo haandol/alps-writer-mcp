@@ -122,8 +122,8 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 │   ├── adr-impl-review-validate.mjs    # /adr-impl-review artifact validator
 │   └── adr-impl-review-report.mjs      # renders findings.json → standalone review HTML
 ├── hooks/
-│   ├── hooks.json        # UserPromptSubmit registration
-│   └── surface-adr-context.mjs  # UserPromptSubmit — inject a compact ADR admission directive
+│   ├── hooks.json        # SessionStart registration
+│   └── surface-adr-context.mjs  # SessionStart — inject a compact ADR admission directive
 └── templates/adr/
     ├── README.md         # ADR concepts (copied into docs/adr/ on /adr-new)
     ├── authoring-rules.md, structure.md
@@ -183,13 +183,13 @@ The hook script (in adr-writer) is Node ESM (`.mjs`) and reads NDJSON events fro
 
 ### Cycle hooks layout (adr-writer)
 
-| File                            | Event              | Purpose                                                                                     |
-| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
-| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject a compact ADR admission directive on every user turn; never inject mapping contents. |
+| File                            | Event          | Purpose                                                                                                                     |
+| ------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `hooks/surface-adr-context.mjs` | `SessionStart` | Inject a compact ADR admission directive on startup, resume, clear, and compaction recovery; never inject mapping contents. |
 
 The cycle relies on the **main session model** for text understanding — the hook calls no auxiliary LLM and uses no intent regex. It supplies structured context; classification (and keeping the PRD → ADR → code flow intact) stays with the main model. There is deliberately no `PreToolUse` enforcement hook: the ADR ↔ code link is not stored, so a non-LLM hook can't map an edited file back to an ADR — that judgment belongs to the model.
 
-The compact directive is re-injected every turn (UserPromptSubmit) instead of once at SessionStart so it survives Claude Code's session compaction. A request that passes the admission gate must read the full mapping and plausible ADR bodies before code changes; exempt requests do not pay that context cost.
+The compact directive is injected when session context starts or is replaced (`startup`, `resume`, `clear`, `compact`). This restores it after compaction without running a hook for every user message. A request that passes the admission gate must read the full mapping and plausible ADR bodies before code changes; exempt requests do not pay that context cost.
 
 ## Conventions
 
@@ -252,7 +252,7 @@ The `runtime` job still exists because installing is not the same as shipping: a
 marketplace install has no `node_modules` at all — the MCP server is a bundle with
 dependencies inlined, and the adr-writer scripts, hook, and tests use Node
 built-ins only. It runs the dependency-free adr-writer suite, an MCP `initialize`
-round-trip against the committed bundle, and the `UserPromptSubmit` hook, all
+round-trip against the committed bundle, and the `SessionStart` hook, all
 under a bare `node`. The pnpm-based jobs cannot catch a break there, since they
 always have a populated `node_modules`.
 

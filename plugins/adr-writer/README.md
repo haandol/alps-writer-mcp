@@ -1,6 +1,6 @@
 # adr-writer
 
-ADR-driven development cycle for Codex and Claude Code. The ADR admission gate records only durable requirements and architectural decisions, leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring in code. The cycle then implements and keeps admitted decisions in sync, with an ADR-first hook that re-injects a compact admission directive every turn and reads the ADR map only for admitted work.
+ADR-driven development cycle for Codex and Claude Code. The ADR admission gate records only durable requirements and architectural decisions, leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring in code. The cycle then implements and keeps admitted decisions in sync, with an ADR-first hook that injects a compact admission directive when session context starts or is restored and reads the ADR map only for admitted work.
 
 **Standalone**: adr-writer requires no ALPS PRD and never references the `alps-writer` plugin. ADRs are its first-class artifact; code is implemented from ADRs. `docs/adr/.mapping.json` (the ADR index) stores no PRD reference. The ADR ↔ code link is not stored anywhere — an agent finds the code an ADR governs by reading the ADR and searching the repo, so refactors never churn a stored mapping.
 
@@ -57,11 +57,11 @@ bash <plugin>/scripts/adr-invariants.sh                   # reverse-reference or
 
 One hook supports the main session — **no external LLM calls**; the main model classifies text and decides.
 
-| Hook               | When it fires      | Role                                                                                                       |
-| ------------------ | ------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `UserPromptSubmit` | Every user message | Inject a compact ADR admission directive; admitted work reads `docs/adr/.mapping.json` before code changes |
+| Hook           | When it fires                          | Role                                                                                                       |
+| -------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `SessionStart` | Startup, resume, clear, and compaction | Inject a compact ADR admission directive; admitted work reads `docs/adr/.mapping.json` before code changes |
 
-The directive first applies the ADR admission gate. Requirement contracts, durable boundaries, provider/model choices, key designs, algorithms, and fallback policies enter the cycle and trigger an on-demand read of the full mapping and plausible ADR bodies; replaceable SDKs, libraries, frameworks, and credential/auth adapters stay in code. The hook never blocks an edit or injects mapping contents — keeping the PRD → ADR → code flow intact is the model's job, re-prompted every turn so it survives session compaction.
+The directive first applies the ADR admission gate. Requirement contracts, durable boundaries, provider/model choices, key designs, algorithms, and fallback policies enter the cycle and trigger an on-demand read of the full mapping and plausible ADR bodies; replaceable SDKs, libraries, frameworks, and credential/auth adapters stay in code. The hook never blocks an edit or injects mapping contents. Running at session start, resume, clear, and compaction recovery keeps the directive available without executing on every user message.
 
 ## Relationship to alps-writer
 

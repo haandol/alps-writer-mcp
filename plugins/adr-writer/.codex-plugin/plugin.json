@@ -1,6 +1,6 @@
 {
   "name": "adr-writer",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "Run an ADR-first development cycle that authors, implements, safely refactors, reviews, synchronizes, and rolls up architecture decisions.",
   "author": {
     "name": "haandol",
@@ -22,7 +22,7 @@
   "interface": {
     "displayName": "ADR Writer",
     "shortDescription": "Keep architecture decisions aligned with code",
-    "longDescription": "Author decision records before implementation, implement accepted decisions in dependency order, apply only verified low-risk refactors before completion, review decision fidelity, detect code-to-ADR drift, and consolidate superseded decision chains. A bundled hook surfaces the ADR map on each user turn.",
+    "longDescription": "Author decision records before implementation, implement accepted decisions in dependency order, apply only verified low-risk refactors before completion, review decision fidelity, detect code-to-ADR drift, and consolidate superseded decision chains. A bundled hook injects the ADR admission directive when session context starts or is restored.",
     "developerName": "haandol",
     "category": "Developer Tools",
     "capabilities": ["Interactive", "Read", "Write"],
