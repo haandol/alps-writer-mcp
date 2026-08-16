@@ -123,7 +123,7 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 │   └── adr-impl-review-report.mjs      # renders findings.json → standalone review HTML
 ├── hooks/
 │   ├── hooks.json        # UserPromptSubmit registration
-│   └── surface-adr-context.mjs  # UserPromptSubmit — inject ADR-first directive + mapping snapshot
+│   └── surface-adr-context.mjs  # UserPromptSubmit — inject a compact ADR admission directive
 └── templates/adr/
     ├── README.md         # ADR concepts (copied into docs/adr/ on /adr-new)
     ├── authoring-rules.md, structure.md
@@ -133,7 +133,7 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 
 The two plugins are split so adr-writer never references ALPS. The only coupling is one-way: alps-writer's `/feature-to-adr` discovers zero, one, or several admitted decisions per feature, reconciles existing ADR contracts, and delegates each new decision to adr-writer's `/adr-new`.
 
-ADR folders are organized along two axes — a DDD **bounded context** (top-level folder / first key segment) containing one or more **features** (vertical slices, the second segment). A single-feature context stays flat (`auth/`, workshop `f1/`), so existing flat repos need no migration. The ADR index lives in `docs/adr/.mapping.json` itself (path/status/summary per ADR), rendered by the hook every turn; the README keeps no separate ADR list. The mapping carries an optional advisory `subdomainType` (core/supporting/generic) per context and stores no PRD reference. Context grouping is only applied when ALPS already groups features or the user asks for it — `/feature-to-adr` never invents a domain boundary the PRD doesn't assert, so the one-way alps-writer → adr-writer coupling and "adr-writer never references ALPS" both hold. The DDD overlay is metadata + framing only; it adds no folder depth (keys stay ≤2 segments) and `scripts/adr-invariants.sh` is unaffected.
+ADR folders are organized along two axes — a DDD **bounded context** (top-level folder / first key segment) containing one or more **features** (vertical slices, the second segment). A single-feature context stays flat (`auth/`, workshop `f1/`), so existing flat repos need no migration. The ADR index lives in `docs/adr/.mapping.json` itself (path/status/summary per ADR), and admitted work reads it on demand; the README keeps no separate ADR list. The mapping carries an optional advisory `subdomainType` (core/supporting/generic) per context and stores no PRD reference. Context grouping is only applied when ALPS already groups features or the user asks for it — `/feature-to-adr` never invents a domain boundary the PRD doesn't assert, so the one-way alps-writer → adr-writer coupling and "adr-writer never references ALPS" both hold. The DDD overlay is metadata + framing only; it adds no folder depth (keys stay ≤2 segments) and `scripts/adr-invariants.sh` is unaffected.
 
 ## Architecture
 
@@ -183,13 +183,13 @@ The hook script (in adr-writer) is Node ESM (`.mjs`) and reads NDJSON events fro
 
 ### Cycle hooks layout (adr-writer)
 
-| File                            | Event              | Purpose                                                                                        |
-| ------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
-| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject the ADR-first directive + current `docs/adr/.mapping.json` snapshot on every user turn. |
+| File                            | Event              | Purpose                                                                                     |
+| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| `hooks/surface-adr-context.mjs` | `UserPromptSubmit` | Inject a compact ADR admission directive on every user turn; never inject mapping contents. |
 
 The cycle relies on the **main session model** for text understanding — the hook calls no auxiliary LLM and uses no intent regex. It supplies structured context; classification (and keeping the PRD → ADR → code flow intact) stays with the main model. There is deliberately no `PreToolUse` enforcement hook: the ADR ↔ code link is not stored, so a non-LLM hook can't map an edited file back to an ADR — that judgment belongs to the model.
 
-The directive is re-injected every turn (UserPromptSubmit) instead of once at SessionStart so it survives Claude Code's session compaction — a one-shot SessionStart injection vanishes after the first compaction, while per-turn injection stays present for the whole session.
+The compact directive is re-injected every turn (UserPromptSubmit) instead of once at SessionStart so it survives Claude Code's session compaction. A request that passes the admission gate must read the full mapping and plausible ADR bodies before code changes; exempt requests do not pay that context cost.
 
 ## Conventions
 

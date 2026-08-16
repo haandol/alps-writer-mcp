@@ -148,7 +148,7 @@ Follow `concepts.md`, `authoring-rules.md`, and `structure.md` under `docs/adr/`
 
 ### 5. Update the index
 
-The ADR index is `docs/adr/.mapping.json` — the README no longer holds an ADR list. The `adrs[]` record pushed in step 4 (path + `status:"Proposed"` + summary) _is_ the index entry: its `summary` is the entry point for the next `/adr-sync --quick` and the one index line the UserPromptSubmit hook renders every turn. So the index was already updated in step 4 with no separate edit, and all you need here is to confirm (a) that the one-line `summary` accurately compresses the Decision and (b) that `status` matches the body's `## Status` (= `Proposed`) — see step 4. The README remains a conceptual index only (what an ADR is, the gray zone, the dependency model, the template), so leave it untouched here.
+The ADR index is `docs/adr/.mapping.json` — the README no longer holds an ADR list. The `adrs[]` record pushed in step 4 (path + `status:"Proposed"` + summary) _is_ the index entry: its `summary` is the lookup entry point for later admitted work and `/adr-sync --quick`. So the index was already updated in step 4 with no separate edit, and all you need here is to confirm (a) that the one-line `summary` accurately compresses the Decision and (b) that `status` matches the body's `## Status` (= `Proposed`) — see step 4. The README remains a conceptual index only (what an ADR is, the gray zone, the dependency model, the template), so leave it untouched here.
 
 ### 6. Verify before saving — the deterministic harness, then your own R1-R20 pass
 

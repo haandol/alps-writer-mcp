@@ -30,7 +30,7 @@
           "subdomainType": {
             "type": "string",
             "enum": ["core", "supporting", "generic"],
-            "description": "DDD subdomain classification of the bounded context this category belongs to. Advisory metadata only — never a hard gate and never a folder tier. Feature contexts are typically core/supporting; system-wide cross-cutting contexts (infra/integration/security/platform/data) are generic. Place it on the context-level entry (the top-folder entry, or a single-feature flat entry); per-feature sub-folder entries inherit the parent context's type conceptually and may omit it. Surfaced by adr-sync and the hook snapshot as advisory context (e.g. grouping by domain, 'generic — candidate for off-the-shelf'), never enforced. Omit when unknown."
+            "description": "DDD subdomain classification of the bounded context this category belongs to. Advisory metadata only — never a hard gate and never a folder tier. Feature contexts are typically core/supporting; system-wide cross-cutting contexts (infra/integration/security/platform/data) are generic. Place it on the context-level entry (the top-folder entry, or a single-feature flat entry); per-feature sub-folder entries inherit the parent context's type conceptually and may omit it. Surfaced by adr-sync or during on-demand mapping inspection as advisory context (e.g. grouping by domain, 'generic — candidate for off-the-shelf'), never enforced. Omit when unknown."
           },
           "adrs": {
             "type": "array",
@@ -56,7 +56,7 @@
                   "type": "string",
                   "maxLength": 240,
                   "pattern": "^[^\\r\\n\\u0000-\\u001F\\u007F-\\u009F]*$",
-                  "description": "One-line Key Decision summary — the entry point for /adr-sync --quick and what the hook renders after the path. Recommended for every ADR; omitting it is advisory (adr-structure-lint warns)."
+                  "description": "One-line Key Decision summary — the lookup entry point for admitted work and /adr-sync --quick. Recommended for every ADR; omitting it is advisory (adr-structure-lint warns)."
                 }
               }
             },

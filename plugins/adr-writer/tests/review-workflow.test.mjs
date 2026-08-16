@@ -52,6 +52,26 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
   assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
 });
 
+test("generic subagent fallbacks load agent instructions inside the child context", () => {
+  const sources = [
+    read("skills/adr-review/SKILL.md"),
+    read("skills/adr-impl-review/SKILL.md"),
+    read("skills/adr-impl-refactor/SKILL.md"),
+  ];
+
+  for (const source of sources) {
+    assert.match(source, /absolute path/i);
+    assert.match(source, /read that file completely/i);
+    assert.match(source, /Do not load the agent file into the main session/);
+    assert.match(source, /fall back once to passing the file's full text/);
+    assert.match(source, /path-based context isolation was unavailable/);
+  }
+
+  assert.match(sources[0], /Do not ask the subagent to echo its instructions/);
+  assert.match(sources[1], /never an instruction echo/);
+  assert.match(sources[2], /Do not ask the subagent to echo its instructions/);
+});
+
 test("adr-impl promotes only after verified refactoring, tests, and final review pass", () => {
   const impl = read("skills/adr-impl/SKILL.md");
   const initialTests = impl.indexOf("initial implementation tests pass");

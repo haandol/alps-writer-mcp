@@ -94,7 +94,7 @@
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
           "status": "Accepted (2026-08-15)",
-          "summary": "개발 흐름은 ADR 의도를 구현 전에 한 번 승인하고 구현 후에는 자동 검토·수정·재검증을 거쳐 추가 승인 없이 완료한다"
+          "summary": "개발 흐름은 매 턴 짧은 admission gate만 유지하고 admitted 요청에서 mapping을 읽은 뒤 구현 전 승인과 구현 후 자동 검토·수정·재검증을 수행한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]

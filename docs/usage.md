@@ -8,7 +8,7 @@ For installation see the [README Quick Start](../README.md#quick-start). For the
 
 ```mermaid
 flowchart LR
-    A["Check ADRs<br/>(mapping snapshot)"] --> B["Author/edit ADR<br/>(/adr-new — default)<br/>or /feature-to-adr<br/>(ALPS helper)"]
+    A["Apply admission gate<br/>(read mapping if admitted)"] --> B["Author/edit ADR<br/>(/adr-new — default)<br/>or /feature-to-adr<br/>(ALPS helper)"]
     B --> C["Write code<br/>(/adr-impl)"]
     C --> D["Initial test<br/>(project commands)"]
     D --> F["/adr-impl-refactor<br/>(verified low-risk changes applied,<br/>the rest proposed)"]
@@ -70,7 +70,8 @@ flowchart TD
         DocRev(["/adr-review [category]<br/>document-quality read of<br/>hand-edited or inherited ADRs<br/>(no code read, report-only)"])
     end
 
-    Hook[["UserPromptSubmit hook<br/>re-injects ADR map every turn"]]
+    Hook[["UserPromptSubmit hook<br/>re-injects compact admission gate"]]
+    Mapping[(".mapping.json<br/>read on demand for admitted work")]
     Log[("docs/adr/&lt;category&gt;/decision-log.md<br/>timeline of major changes<br/>(convention file, not indexed)")]
 
     S7 -.->|"reads Section 7 + 6.3<br/>and reconciles existing ADR contracts"| F2A
@@ -83,6 +84,8 @@ flowchart TD
     Hand(["ADR edited by hand<br/>or inherited"]) --> DocRev
     DocRev -.->|"how the ADR is written"| Sync
     Hook -.->|prompts ADR-first every turn| Impl
+    Hook -.->|admitted request reads full index| Mapping
+    Mapping -.->|owner and prerequisite lookup| Impl
     Impl -.->|"major transition, one line"| Log
     Sync -.->|"major transition, one line"| Log
     Rollup -.->|"harvests the chain's history"| Log
@@ -102,7 +105,7 @@ flowchart TD
 - **The final review is risk-based, report-only, and completion-gating.** Localized changes that touch no protected surface use `standard`: decision ledger, isolated sufficiency review, and targeted tests. Requirement, public contract, schema, state, permission, security, fallback, concurrency, transaction, error-semantic, or broad changes use `full`: human spec-fitness gate plus independent necessity and sufficiency reviews and the detailed repair artifact. Unclear cases use `full`.
 - **Maintenance is a separate, repeating phase.** `/adr-sync` reconciles ADRs with shipping code, repairs drift, checks category/`dependsOn` integrity, and proposes canonicalizing any legacy `fN` naming (applied only after you confirm). `/adr-rollup` is reached from sync only when one decision's evolution history is scattered across several ADRs. `/adr-review` sits alongside them on a different axis: it reads ADRs **as documents** against the authoring rules and never opens the code, so it is entered from a hand-edited or inherited ADR rather than from an implementation.
 - **Evolution history lives in the decision log, not in the ADR body.** An ADR body describes the current state, so when the same decision evolves the default is to overwrite it in place — and if the transition is major (replacing the adopted alternative, changing the core algorithm or architecture, inverting a Driver), one line goes newest-first into the per-category `docs/adr/<category>/decision-log.md`. `/adr-impl` and `/adr-sync` write those lines; `/adr-rollup` harvests a scattered chain's history into the log and leaves one current-state ADR. The log is a **convention file** — it is not registered in `.mapping.json`, and the harness checks only that its ADR pointer still resolves on disk (a rollup renumber can orphan it and no other oracle sees it). Three layers preserve different things: ADR body = current state, `decision-log.md` = timeline of major changes, Git = the verbatim diff.
-- **The hook runs underneath all of it.** Every user turn, `UserPromptSubmit` re-injects the mapping snapshot and the ADR-first directive so the agent checks ADRs before changing behavior — this is what keeps the cycle intact across a long, compacted session.
+- **The hook runs underneath all of it.** Every user turn, `UserPromptSubmit` re-injects a compact ADR admission directive so the cycle survives long, compacted sessions. Only an admitted request reads the full mapping and plausible ADR bodies before code changes.
 
 ## Walkthroughs
 
@@ -122,7 +125,7 @@ Re-run `/feature-to-adr` when the PRD changes. It does not overwrite ADRs automa
 1. `/adr-new <category>` → apply the ADR admission gate, then describe a durable requirement or architectural decision directly. Replaceable libraries, SDKs, frameworks, and credential/auth wiring stay in code. No ALPS document required.
 2. `/adr-impl <category>` → build it in code, run the automatic verified refactor pass and tests, then invoke the report-only adversarial review as the completion gate.
 3. A passing `/adr-impl-review` promotes the ADR to `Accepted`; a must-fix verdict leaves it `Proposed`.
-4. As you keep working, the ADR-first hook re-injects the ADR map every turn. Run `/adr-sync` when drift evidence or periodic maintenance calls for it.
+4. As you keep working, the ADR-first hook re-injects only the compact admission gate. An admitted request reads the full ADR map before code changes. Run `/adr-sync` when drift evidence or periodic maintenance calls for it.
 
 **Apply the ADR admission gate before the cycle.** A pure refactor is exempt, as are replaceable implementation changes such as swapping a library, SDK, framework, credential provider chain, signer, or adapter while preserving the same contracts and boundaries. A bug fix is exempt when it restores already intended behavior. A change to a requirement value, allowed state, transition, permission, key design, provider/model boundary, adopted algorithm, security trust boundary, or external-dependency fallback enters the cycle and updates the relevant ADR first.
 
@@ -130,7 +133,7 @@ Re-run `/feature-to-adr` when the PRD changes. It does not overwrite ADRs automa
 
 Run `/adr-review [category]` when an ADR set arrives without the context of whoever wrote it: a repo you inherited, an ADR edited by hand, or one changed by another session. It reads the ADRs against the authoring rules (abstraction level, requirement preservation, alternatives) without opening the code and reports a punch list — it never edits the ADRs, the mapping, or code. It is deliberately **not** run right after `/adr-new`, which judges its own draft against the same rules.
 
-In all flows the hook runs automatically once adr-writer is installed — every user turn re-injects the ADR map and the ADR-first directive.
+In all flows the hook runs automatically once adr-writer is installed. Every user turn re-injects the compact admission directive; admitted work reads the ADR map on demand.
 
 ## Slash commands
 
@@ -157,11 +160,11 @@ In all flows the hook runs automatically once adr-writer is installed — every 
 
 One hook supports the main Claude Code session — **with no external LLM calls**; the main model classifies text and makes decisions itself.
 
-| Hook               | When it fires      | Role                                                                                                                                                  |
-| ------------------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UserPromptSubmit` | Every user message | Inject the ADR-first directive + `docs/adr/.mapping.json` snapshot every turn (survives session compaction, unlike a one-shot SessionStart injection) |
+| Hook               | When it fires      | Role                                                                                                                                          |
+| ------------------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UserPromptSubmit` | Every user message | Inject a compact ADR admission directive without mapping contents; admitted work reads `docs/adr/.mapping.json` on demand before code changes |
 
-The directive tells the model to apply the ADR admission gate first. Only changes to durable requirements, boundaries, provider/model choices, key designs, algorithms, trust policies, or fallbacks read or author an ADR before code; replaceable implementation means remain code-level. Classification is left to the main model — the hook never blocks an edit.
+The directive tells the model to apply the ADR admission gate first. Only changes to durable requirements, boundaries, provider/model choices, key designs, algorithms, trust policies, or fallbacks read the full mapping and plausible ADR bodies before code; replaceable implementation means remain code-level. Classification is left to the main model — the hook never blocks an edit.
 
 ## Deterministic self-test
 
