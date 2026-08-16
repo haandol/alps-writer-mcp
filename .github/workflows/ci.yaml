@@ -101,10 +101,10 @@ jobs:
             console.log(`bundle answered initialize as ${info.name} ${info.version}`);
           '
 
-      # The hook runs on every user turn in a consumer repo, so a runtime it
-      # cannot start on breaks the plugin for that user on turn one.
+      # The hook seeds each new or restored session context, so a runtime it
+      # cannot start on breaks the plugin when that session begins.
       - name: adr-writer hook runs
-        run: echo '{}' | node plugins/adr-writer/hooks/surface-adr-context.mjs
+        run: echo '{"hook_event_name":"SessionStart","source":"startup"}' | node plugins/adr-writer/hooks/surface-adr-context.mjs
 
   build:
     runs-on: ubuntu-latest

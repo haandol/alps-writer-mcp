@@ -93,8 +93,8 @@
       "adrs": [
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
-          "status": "Accepted (2026-08-15)",
-          "summary": "개발 흐름은 매 턴 짧은 admission gate만 유지하고 admitted 요청에서 mapping을 읽은 뒤 구현 전 승인과 구현 후 자동 검토·수정·재검증을 수행한다"
+          "status": "Accepted (2026-08-16)",
+          "summary": "개발 흐름은 세션 생명주기와 context compaction 복구 시 admission gate를 주입하고 admitted 요청에서 mapping을 읽은 뒤 구현 전 승인과 구현 후 자동 검토·수정·재검증을 수행한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]

@@ -7,7 +7,7 @@ A Codex and Claude Code **marketplace** that ships two independent plugins for s
 | Plugin                  | Scope                                                                                                                            | Depends on                       |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
-| **`adr-writer`** (ADR)  | ADR-driven development: author, implement, adversarially review, and sync; an ADR-first hook runs on every turn.                 | nothing — fully standalone       |
+| **`adr-writer`** (ADR)  | ADR-driven development: author, implement, adversarially review, and sync; an ADR-first hook runs when session context starts.   | nothing — fully standalone       |
 
 The two are split so that **adr-writer never references ALPS**. The only coupling is one-way (`alps-writer → adr-writer`): `/feature-to-adr` discovers zero, one, or several durable decisions per feature and reconciles PRD contract changes before delegating ADR work.
 
@@ -69,7 +69,7 @@ See the [Usage guide](./docs/usage.md) for the full cycle, walkthroughs, slash c
 - **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
 - **Risk-based implementation review** — localized changes use a decision ledger, isolated sufficiency pass, and targeted tests; protected-surface changes add the human gate, independent necessity/sufficiency reviews, and a Mermaid repair guide
-- **ADR-first hook** — every user turn re-injects the admission-aware ADR directive + current `docs/adr/.mapping.json` snapshot, so the agent checks only ADR-worthy changes before coding
+- **ADR-first hook** — session start, resume, clear, and compaction recovery inject the admission-aware ADR directive without the mapping contents; admitted work reads `docs/adr/.mapping.json` before coding
 - Fully standalone — no ALPS PRD required
 
 ## Documentation
@@ -102,7 +102,7 @@ alps-writer-plugins/                 # marketplace root (this repo)
         ├── .claude-plugin/plugin.json
         ├── skills/                  # /adr-new, /adr-impl, /adr-impl-refactor, /adr-impl-review, /adr-review, /adr-sync, /adr-rollup
         ├── agents/                  # ADR authoring + isolated refactor/implementation review roles
-        ├── hooks/                   # ADR-first directive hook (UserPromptSubmit)
+        ├── hooks/                   # ADR-first directive hook (SessionStart)
         └── templates/adr/           # README + concepts + authoring-rules + structure + mapping.schema.json
 ```
 

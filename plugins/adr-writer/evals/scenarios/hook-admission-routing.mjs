@@ -3,7 +3,7 @@ import { hookContext, ruleText, seedRuleDocs, TAIL_SPEC, expectText } from "../l
 export default {
   name: "hook-admission-routing",
   description:
-    "The emitted UserPromptSubmit directive must route a requirement-value change ADR-first while leaving a replaceable SDK swap at code level.",
+    "The emitted SessionStart directive must route a requirement-value change ADR-first while leaving a replaceable SDK swap at code level.",
 
   build(dir) {
     seedRuleDocs(dir);

@@ -1,4 +1,4 @@
-// Tests for hooks/surface-adr-context.mjs — a compact per-turn admission
+// Tests for hooks/surface-adr-context.mjs — a compact session-lifecycle
 // directive that reads the ADR index only after the request is admitted.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -32,7 +32,9 @@ test("valid mapping emits the directive without injecting mapping contents", () 
       }),
     );
 
-    const ctx = runHook(dir);
+    const raw = runHook(dir, { raw: true });
+    const ctx = raw.hookSpecificOutput?.additionalContext ?? "";
+    assert.equal(raw.hookSpecificOutput?.hookEventName, "SessionStart");
     assert.match(ctx, /\[ADR-first directive\]/);
     assert.doesNotMatch(ctx, /DO-NOT-INJECT/);
     assert.doesNotMatch(ctx, /0001-hidden/);
@@ -105,12 +107,12 @@ test("directive keeps deep adr-sync finding-driven", () => {
   });
 });
 
-test("directive stays below the per-turn context budget", () => {
+test("directive stays below the lifecycle context budget", () => {
   withTmp((dir) => {
     write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
     const ctx = runHook(dir);
 
-    assert.ok(ctx.length < 1_800, `per-turn directive too large: ${ctx.length}`);
+    assert.ok(ctx.length < 1_800, `lifecycle directive too large: ${ctx.length}`);
   });
 });
 

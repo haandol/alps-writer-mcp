@@ -180,7 +180,7 @@ Be honest about the gap when reading a result.
   this directory's summary of the rules instead of the rules that ship — via the
   same "read the agent file, hand it to a generic subagent" path the skills
   document as their fallback. But a real session also carries conversation
-  history, the UserPromptSubmit directive, the user's own CLAUDE.md, and a
+  history, the SessionStart directive, the user's own CLAUDE.md, and a
   multi-turn exchange with the user. A defect that only appears after twenty
   turns of context will not reproduce here.
 - **The tail block is an addition.** Scenarios append a machine-readable
