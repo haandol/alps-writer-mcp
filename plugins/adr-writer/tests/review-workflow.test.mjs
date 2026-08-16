@@ -114,6 +114,27 @@ test("Bedrock troubleshooting documents the supported Codex feature flag and rev
   );
 });
 
+test("user documentation reflects the pre-implementation baseline and single lifecycle hook", () => {
+  const sources = [
+    read("../../README.md"),
+    read("README.md"),
+    read("../../docs/usage.md"),
+    read("../../docs/adr-process.md"),
+  ];
+
+  for (const source of sources) {
+    assert.doesNotMatch(source, /full:\s*(human gate|사람 게이트)/i);
+    assert.doesNotMatch(source, /full mode adds human intent/i);
+  }
+
+  assert.match(sources[0], /does not run for every user prompt/);
+  assert.match(sources[0], /completion review does not repeat a routine human gate/);
+  assert.match(sources[1], /there is no `UserPromptSubmit` hook/);
+  assert.match(sources[2], /there is no per-prompt `UserPromptSubmit` hook/);
+  assert.match(sources[2], /pre-approved ADR baseline/);
+  assert.match(sources[3], /구현 전에 승인된 기준선/);
+});
+
 test("adr-impl promotes only after verified refactoring, tests, and final review pass", () => {
   const impl = read("skills/adr-impl/SKILL.md");
   const initialTests = impl.indexOf("initial implementation tests pass");

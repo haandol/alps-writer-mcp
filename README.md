@@ -31,7 +31,7 @@ codex plugin add alps-writer@alps-writer
 codex plugin add adr-writer@alps-writer
 ```
 
-Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-refactor`, `$adr-impl-review`, `$adr-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust the ADR Writer hook when Codex prompts you.
+Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-refactor`, `$adr-impl-review`, `$adr-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust ADR Writer's single `SessionStart` hook when Codex prompts you. It restores context on startup, resume, clear, and compaction; it does not run for every user prompt.
 
 **Claude Code**
 
@@ -70,8 +70,9 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
 - **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
-- **Risk-based implementation review** — localized changes use a decision ledger, isolated sufficiency pass, and targeted tests; protected-surface changes add the human gate, independent necessity/sufficiency reviews, and a Mermaid repair guide
-- **ADR-first hook** — session start, resume, clear, and compaction recovery inject the admission-aware ADR directive without the mapping contents; admitted work reads `docs/adr/.mapping.json` before coding
+- **Risk-based implementation review** — localized changes use a decision ledger, isolated sufficiency pass, and targeted tests; protected-surface changes add independent necessity/sufficiency reviews and a Mermaid repair guide. Intent and regeneration completeness are approved before implementation, so completion review does not repeat a routine human gate
+- **Provider-aware review fallback** — Codex sessions on Amazon Bedrock avoid unsupported subagent dispatch and retries; document/implementation reviews continue in the main session, while refactoring remains proposal-only without an isolated reviewer
+- **ADR-first hook** — one `SessionStart` hook runs only on startup, resume, clear, and compaction recovery, injecting the admission-aware directive without mapping contents; admitted work reads `docs/adr/.mapping.json` before coding
 - Fully standalone — no ALPS PRD required
 
 ## Documentation
