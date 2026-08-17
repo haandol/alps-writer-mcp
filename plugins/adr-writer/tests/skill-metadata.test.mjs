@@ -917,18 +917,28 @@ test("every automatic Status correction uses the exact-path transition script", 
   }
 });
 
-test("ADR interactions lead with digest and semantic changes without creating a second authority", () => {
+test("ADR interactions lead with reviewable digest and semantic changes without creating a second authority", () => {
   const template = read(path.join(ADR_ROOT, "templates", "adr", "README.md"));
-  for (const group of ["Required guarantees", "Prohibitions", "Failure guarantees"]) {
+  for (const group of [
+    "Required guarantees",
+    "Prohibitions",
+    "Failure guarantees",
+    "Observable evidence",
+  ]) {
     assert.match(template, new RegExp(group));
   }
   assert.match(template, /This grouping changes presentation only/);
+  assert.match(template, /one independently reviewable obligation per row/i);
+  assert.match(template, /never a test file, command, function, class, library, fixture/i);
 
   const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
   assert.match(adrNew, /Decision Digest/);
   assert.match(adrNew, /Decision question/);
   assert.match(adrNew, /Why this decision/);
   assert.match(adrNew, /Main risks/);
+  assert.match(adrNew, /Observable evidence/);
+  assert.match(adrNew, /one obligation per row/i);
+  assert.match(adrNew, /could a reviewer tell requirement by requirement/i);
   assert.match(adrNew, /not a second artifact or source of truth/);
 
   const impl = read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md"));
@@ -955,6 +965,8 @@ test("ADR authoring keeps decision-changing assumptions inside existing ADR sect
   const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
   const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
   const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  assert.match(reviewer, /Regeneration and reviewability test/);
+  assert.match(reviewer, /one coverage row/);
 
   for (const source of [template, rules, adrNew]) {
     assert.doesNotMatch(source, /^#{2,3} Decision premises$/m);

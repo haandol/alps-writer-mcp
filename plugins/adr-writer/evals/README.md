@@ -91,6 +91,14 @@ agent exit, or no output).
    - `impl-review-selects-risk-mode` checks both directions of the review-mode
      classifier: localized implementation uses standard, while contract and
      public-surface changes use full.
+   - `impl-review-evidence-package-unverified` ↔
+     `impl-review-evidence-package-pass` check both Evidence Package verdict
+     directions. A material `UNVERIFIED` obligation must produce
+     `INCONCLUSIVE` plus one exception-focused human action; two fully evidenced
+     `PROVEN` obligations must produce `PASS` with no new human gate. Both
+     scenarios require complete per-obligation rows, ADR-intent fit for material
+     implementation discretion, coverage-first presentation, no invented code
+     paths, and no per-row approval.
    - `bedrock-subagent-fallback` checks that a known Amazon Bedrock provider
      prevents named and generic subagent dispatch, the known input validation
      error is not retried, document and implementation review continue as

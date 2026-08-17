@@ -61,6 +61,18 @@ An ADR's goal is **not to reproduce the same code, but to make regenerated code 
 
 These two sentences govern every other rule here. The filters below are tools for "what to drop"; the regeneration test is the standard for "what may never be dropped."
 
+### Reviewable contract rows and observable evidence
+
+An ADR carries the intent that implementation review later checks. Write each requirement-contract row as **one independently reviewable obligation**. Do not bundle several values, permissions, transitions, or failure guarantees into a sentence whose partial implementation could look complete.
+
+For each obligation, record implementation-independent **observable evidence**: what result would let a reviewer distinguish a conforming implementation from a violating one. Examples:
+
+- Requirement: "Free plan users upload at most 5 files per month." Observable evidence: "the sixth upload in one month is rejected and the stored file count remains 5."
+- Prohibition: "A cancelled order never moves to shipping." Observable evidence: "a shipping request from cancelled leaves the order cancelled."
+- Failure guarantee: "Provider failure never records payment completion." Observable evidence: "a failed provider call leaves no completed payment."
+
+Observable evidence is a review oracle, not a test prescription. Do not name test files, commands, libraries, functions, classes, fixtures, internal tables, or data representations. Different implementations may use different tests and structures while producing the same observable result.
+
 ## The requirement gate and two filters
 
 Apply three questions to each line of the body, **in this order**:
@@ -398,6 +410,8 @@ For the PR reviewer or the author before merge.
 - [ ] **Status is a valid value** (`Proposed`/`Accepted`/`Deprecated`/`Superseded by [...]`)
 - [ ] **The one-line decision summary** is updated in the matching `.mapping.json` `adrs[]` record
 - [ ] **Regeneration test** — imagining all code deleted and only this ADR left, could requirement-honoring code be rebuilt? Is any contract missing (limits, cycles, permissions, required validation, state transitions)?
+- [ ] **Reviewable contract rows** — each requirement row states one obligation, so implementation review can assign it one coverage status without hiding partial completion
+- [ ] **Observable evidence** — each obligation has an implementation-independent result that distinguishes compliance from violation; no test file, command, library, function, class, fixture, or internal representation is pinned
 - [ ] **Requirement values appear verbatim** — numbers the result must honor (max turns, count limits, retention, size caps, NFR targets) are not blurred into "appropriately" or "is limited". Does each carry a scrap of justification (policy, contract, regulation)?
 - [ ] **Non-numeric requirements survived too** — allowed value sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units and formats, forbidden transitions were not dropped as "obvious from the code" ([non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering))
 - [ ] **Decision-changing assumptions are explicit and correctly routed** — every assumption that could change the adopted alternative appears in Context or the relevant Driver with what must be reconsidered if false; requirements remain in the contract, implementation defaults remain in code

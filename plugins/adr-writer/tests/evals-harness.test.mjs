@@ -94,6 +94,8 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /hook-admission-routing/);
   assert.match(out, /alps-batch-preserves-mandatory-nfr/);
   assert.match(out, /impl-review-selects-risk-mode/);
+  assert.match(out, /impl-review-evidence-package/);
+  assert.match(out, /impl-review-evidence-package-pass/);
   assert.match(out, /bedrock-subagent-fallback/);
   assert.match(out, /comprehension-load-score-only/);
 });
@@ -285,6 +287,136 @@ test("the implementation-detail admission scorer distinguishes rejection from ov
   });
   assert.equal(badChecks.find((check) => check.label.includes("creates no ADR"))?.pass, false);
   assert.equal(badChecks.find((check) => check.label.includes("creates no mapping"))?.pass, false);
+});
+
+test("the implementation-review Evidence Package scorer distinguishes verified and unverified rows", async () => {
+  const scenario = await loadScenario("impl-review-evidence-package-unverified.mjs");
+  const goodChecks = scenario.score({
+    tail: {
+      verdict: "INCONCLUSIVE",
+      findings: [
+        {
+          tag: "COVERAGE_C1",
+          summary:
+            "status=PROVEN; implementation=idempotency guard; evidence=duplicate remains one; tests=PASS",
+        },
+        {
+          tag: "COVERAGE_C2",
+          summary:
+            "status=UNVERIFIED; implementation=failure leaves pending; evidence=failure injection unavailable; tests=NOT RUN",
+        },
+        {
+          tag: "CHOICE",
+          summary:
+            "value=250 ms; evidence=fixed delay; intentFit=bounded retries preserve failure contract; impact=recovery latency and request rate",
+        },
+        {
+          tag: "HUMAN_REVIEW",
+          summary:
+            "verdict=INCONCLUSIVE; exception=의무 2 미검증; action=verify failure injection or accept risk; noPerRowApproval=true",
+        },
+      ],
+    },
+    output: `## ADR 계약 커버리지
+| Requirement | Status | Implementation | Evidence | Tests |
+| Payment completes at most once | PROVEN | idempotency guard | duplicate remains one | PASS |
+| Provider failure never records completion | UNVERIFIED | remains pending | injection unavailable | NOT RUN |
+## 중요한 구현 재량
+| 250 ms | fixed delay | bounded retries preserve failure contract | recovery latency |
+## 검토 결과
+Provider failure remains unverified. Coverage and choices are read-only.
+=== EVAL-VERDICT: INCONCLUSIVE ===`,
+  });
+  assert.ok(
+    goodChecks.every((check) => check.pass),
+    JSON.stringify(goodChecks, null, 2),
+  );
+
+  const badChecks = scenario.score({
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "COVERAGE_C1",
+          summary: "status=PROVEN; implementation=idempotency guard; evidence=guard; tests=PASS",
+        },
+        {
+          tag: "COVERAGE_C2",
+          summary: "status=UNVERIFIED; implementation=pending; evidence=unknown; tests=NOT RUN",
+        },
+        {
+          tag: "CHOICE",
+          summary: "value=250 ms; evidence=delay; intentFit=bounded; impact=latency",
+        },
+        {
+          tag: "HUMAN_REVIEW",
+          summary: "verdict=PASS; exception=none; action=approve each row; noPerRowApproval=false",
+        },
+      ],
+    },
+    output: `## ADR contract coverage
+Provider failure never records payment completion — UNVERIFIED
+## Notable implementation choices
+250 ms
+## Findings
+Approve each row?
+=== EVAL-VERDICT: PASS ===`,
+  });
+  assert.ok(
+    badChecks.some((check) => !check.pass),
+    "collapsed Evidence Package must fail",
+  );
+  assert.equal(badChecks.find((check) => check.label.includes("INCONCLUSIVE"))?.pass, false);
+  assert.equal(badChecks.find((check) => check.label.includes("complete table row"))?.pass, false);
+});
+
+test("the PASS Evidence Package scorer rejects a new human gate", async () => {
+  const scenario = await loadScenario("impl-review-evidence-package-pass.mjs");
+  const checks = scenario.score({
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "COVERAGE_C1",
+          summary:
+            "status=PROVEN; implementation=idempotency guard; evidence=duplicate remains one; tests=PASS",
+        },
+        {
+          tag: "COVERAGE_C2",
+          summary:
+            "status=PROVEN; implementation=failure leaves pending; evidence=injection confirmed pending; tests=PASS",
+        },
+        {
+          tag: "CHOICE",
+          summary:
+            "value=250 ms; evidence=fixed delay; intentFit=bounded retries preserve failure contract; impact=recovery latency and request rate",
+        },
+        {
+          tag: "HUMAN_REVIEW",
+          summary: "verdict=PASS; decisionRequired=true; noPerRowApproval=false",
+        },
+      ],
+    },
+    output: `## ADR contract coverage
+| Requirement | Status | Implementation | Evidence | Tests |
+| Payment completes at most once | PROVEN | idempotency guard | duplicate remains one | PASS |
+| Provider failure never records completion | PROVEN | remains pending | injection confirmed | PASS |
+## Notable implementation choices
+| 250 ms | fixed delay | bounded retries preserve failure contract | recovery latency |
+## Findings
+Approve each choice?
+## Residual risks
+Unverified core risk: none.
+=== EVAL-VERDICT: PASS ===`,
+  });
+  assert.equal(
+    checks.find((check) => check.label.includes("without another human decision"))?.pass,
+    false,
+  );
+  assert.equal(
+    checks.find((check) => check.label.includes("approve each coverage row"))?.pass,
+    false,
+  );
 });
 
 test("refactor safety scorers distinguish safe, protected, and no-subagent outcomes", () => {

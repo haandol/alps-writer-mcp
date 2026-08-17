@@ -49,9 +49,15 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
     /record in the report that models could not be diversified, along with the model each reviewer actually used/,
   );
   assert.match(skill, /Notable implementation choices/);
-  assert.match(skill, /selected value or behavior, code evidence, and why it matters/i);
+  assert.match(
+    skill,
+    /selected value or behavior, code evidence, why it fits the ADR intent, and why it matters/i,
+  );
   assert.match(skill, /progressive disclosure/i);
   assert.match(skill, /implementationChoices/);
+  assert.match(skill, /contractCoverage/);
+  assert.match(skill, /PROVEN.*VIOLATED.*UNVERIFIED.*CONTRADICTED/s);
+  assert.match(skill, /caller always surfaces this human-readable package/i);
   assert.doesNotMatch(skill, /accept.*request change.*investigate/i);
   // No provider's model ID may be embedded in the prompt.
   assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
@@ -71,6 +77,9 @@ test("implementation review separates ADR decisions from code-level AI choices",
   assert.match(sufficiency, /Notable implementation choices/);
   assert.match(sufficiency, /not a finding and does not change the verdict/);
   assert.match(sufficiency, /Build Notable implementation choices once from code outward/);
+  assert.match(sufficiency, /why it fits the ADR intent/);
+  assert.match(sufficiency, /never invent historical rationale/i);
+  assert.match(sufficiency, /Normalize each decision-ledger row into contract coverage/);
   assert.match(sufficiency, /replaceable tuning value or implementation means goes into/);
   assert.doesNotMatch(
     sufficiency,
@@ -80,6 +89,8 @@ test("implementation review separates ADR decisions from code-level AI choices",
     reportWriter,
     /These are material code-level choices the ADR intentionally does not own/,
   );
+  assert.match(reportWriter, /Why it fits the ADR intent/);
+  assert.match(reportWriter, /one row per independent ADR obligation/);
   assert.match(reportWriter, /do not amend the ADR/);
   assert.match(reportWriter, /Use progressive disclosure/);
   assert.match(reportWriter, /read-only/);
@@ -408,7 +419,15 @@ test("implementation review keeps contract evidence without a mandatory merge ch
   const skill = read("skills/adr-impl-review/SKILL.md");
   assert.match(writer, /ADR contract coverage/);
   assert.match(skill, /ADR contract coverage/);
+  assert.match(writer, /PROVEN/);
+  assert.match(skill, /contractCoverage/);
+  assert.match(skill, /PASS.*every contract-coverage row.*PROVEN/is);
+  assert.match(writer, /How the implementation meets it/);
   assert.match(writer, /Tests/);
+  assert.match(writer, /short cells, not fewer columns/);
+  assert.match(writer, /Do not collapse a material implementation choice into prose/);
+  assert.match(skill, /short cells, not fewer columns/);
+  assert.match(skill, /never replace the four-column implementation-choice table with prose/i);
   assert.match(writer, /Residual risks/);
   assert.doesNotMatch(writer, /Merge decision checklist/);
   assert.doesNotMatch(skill, /seven-axis merge decision checklist/);

@@ -9,6 +9,7 @@ const ALLOWED_CATEGORIES = CATEGORY_NAMES;
 const ALLOWED_MODES = new Set(["standard", "full"]);
 const ALLOWED_PERSPECTIVES = new Set(["necessity", "sufficiency", "both"]);
 const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
+const ALLOWED_COVERAGE_STATUSES = new Set(["PROVEN", "VIOLATED", "UNVERIFIED", "CONTRADICTED"]);
 const REQUIRED_REPORT_TEXT = [
   "# ADR implementation review",
   "## Review mode",
@@ -87,10 +88,35 @@ function validateImplementationChoice(choice, index, errors) {
     return;
   }
 
-  for (const field of ["choice", "evidence", "whyItMatters"]) {
+  for (const field of ["choice", "evidence", "intentFit", "whyItMatters"]) {
     if (typeof choice[field] !== "string" || !choice[field].trim()) {
       errors.push(`${label}.${field} must be a non-empty string`);
     }
+  }
+}
+
+function validateContractCoverage(row, index, errors) {
+  const label = `contractCoverage[${index}]`;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    errors.push(`${label} must be an object`);
+    return;
+  }
+
+  for (const field of [
+    "requirement",
+    "status",
+    "adrBasis",
+    "implementation",
+    "evidence",
+    "tests",
+  ]) {
+    if (typeof row[field] !== "string" || !row[field].trim()) {
+      errors.push(`${label}.${field} must be a non-empty string`);
+    }
+  }
+
+  if (row.status && !ALLOWED_COVERAGE_STATUSES.has(row.status)) {
+    errors.push(`${label}.status must be PROVEN, VIOLATED, UNVERIFIED, or CONTRADICTED`);
   }
 }
 
@@ -133,19 +159,28 @@ function validateMetrics(metrics, findings, errors) {
   }
 }
 
-function validateReport(report, findingCount, verdict, errors) {
+function validateReport(report, data, errors) {
   for (const text of REQUIRED_REPORT_TEXT) {
     if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
   }
 
-  if (["FIX_REQUIRED", "BLOCK"].includes(verdict)) {
+  for (const [index, row] of (data.contractCoverage ?? []).entries()) {
+    if (!report.includes(row.requirement)) {
+      errors.push(`implementation-review.md missing contractCoverage[${index}].requirement text`);
+    }
+    if (!report.includes(row.status)) {
+      errors.push(`implementation-review.md missing contractCoverage[${index}].status`);
+    }
+  }
+
+  if (["FIX_REQUIRED", "BLOCK"].includes(data.verdict)) {
     for (const text of REQUIRED_REPAIR_TEXT) {
       if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
     }
     const findingSections = report.match(/^### F\d+\.\s+/gm) ?? [];
-    if (findingSections.length < findingCount) {
+    if (findingSections.length < data.findings.length) {
       errors.push(
-        `implementation-review.md has ${findingSections.length} finding sections for ${findingCount} findings`,
+        `implementation-review.md has ${findingSections.length} finding sections for ${data.findings.length} findings`,
       );
     }
   }
@@ -205,6 +240,18 @@ function main() {
       );
     }
 
+    if (!Array.isArray(data.contractCoverage) || data.contractCoverage.length === 0) {
+      errors.push("findings.json contractCoverage must be a non-empty array");
+    } else {
+      data.contractCoverage.forEach((row, index) => validateContractCoverage(row, index, errors));
+      if (
+        data.verdict === "PASS" &&
+        data.contractCoverage.some((row) => row?.status !== "PROVEN")
+      ) {
+        errors.push("PASS requires every contractCoverage row to be PROVEN");
+      }
+    }
+
     const reportPath = resolveArtifact(artifactDir, data.report);
     if (!reportPath || path.resolve(reportPath) !== path.resolve(expectedReport)) {
       errors.push("findings.json report must point to implementation-review.md");
@@ -217,12 +264,7 @@ function main() {
     }
 
     if (existsSync(expectedReport)) {
-      validateReport(
-        readFileSync(expectedReport, "utf8"),
-        Array.isArray(data.findings) ? data.findings.length : 0,
-        data.verdict,
-        errors,
-      );
+      validateReport(readFileSync(expectedReport, "utf8"), data, errors);
     }
   }
 

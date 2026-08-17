@@ -33,7 +33,9 @@ full
 stream settlement
 
 ## ADR contract coverage
-The settlement invariant is implemented.
+| Requirement | Status |
+| --- | --- |
+| Settlement completes at most once | VIOLATED |
 
 ## Notable implementation choices
 - 250 ms fixed retry — src/stream.mjs:8 — affects recovery latency
@@ -76,7 +78,18 @@ function validFindings(dir) {
       {
         choice: "retry uses a 250 ms fixed delay",
         evidence: "src/stream.mjs:8 — retryDelayMs: 250",
+        intentFit: "preserves the ADR's bounded recovery and failure guarantees",
         whyItMatters: "changes recovery latency and request rate",
+      },
+    ],
+    contractCoverage: [
+      {
+        requirement: "Settlement completes at most once",
+        status: "VIOLATED",
+        adrBasis: "Requirement contract — Prohibitions",
+        implementation: "the current settlement path can write twice",
+        evidence: "src/stream.mjs:12 — duplicate writes reproduced",
+        tests: "node --test test/stream.test.mjs — FAIL: expected 1, got 2",
       },
     ],
     findings: [
@@ -104,7 +117,9 @@ standard — localized implementation reinforcement
 src/parser.mjs
 
 ## ADR contract coverage
-- Existing parsing behavior remains unchanged: accounted for by parser tests
+| Requirement | Status |
+| --- | --- |
+| Existing parsing behavior remains unchanged | PROVEN |
 
 ## Notable implementation choices
 None found.
@@ -166,15 +181,33 @@ test("review artifact validator rejects incomplete notable implementation choice
     writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
     writeFileSync(path.join(dir, "implementation-review.md"), validReport());
     const findings = validFindings(dir);
-    delete findings.implementationChoices[0].whyItMatters;
+    delete findings.implementationChoices[0].intentFit;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
 
     const result = validate(dir);
     assert.equal(result.status, 1);
-    assert.match(
-      result.stderr,
-      /implementationChoices\[0\]\.whyItMatters must be a non-empty string/,
-    );
+    assert.match(result.stderr, /implementationChoices\[0\]\.intentFit must be a non-empty string/);
+  });
+});
+
+test("review artifact validator rejects missing coverage fields and non-proven PASS rows", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
+    const findings = validFindings(dir);
+    findings.reviewMode = "standard";
+    findings.verdict = "PASS";
+    findings.findings = [];
+    findings.implementationChoices = [];
+    findings.metrics.sufficiencyFindingCount = 0;
+    findings.contractCoverage[0].status = "UNVERIFIED";
+    delete findings.contractCoverage[0].evidence;
+    delete findings.explanation;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /contractCoverage\[0\]\.evidence must be a non-empty string/);
+    assert.match(result.stderr, /PASS requires every contractCoverage row to be PROVEN/);
   });
 });
 
@@ -186,6 +219,16 @@ test("review artifact validator accepts concise standard-mode artifacts without 
     findings.verdict = "PASS";
     findings.findings = [];
     findings.implementationChoices = [];
+    findings.contractCoverage = [
+      {
+        requirement: "Existing parsing behavior remains unchanged",
+        status: "PROVEN",
+        adrBasis: "Decision",
+        implementation: "the parser uses the same accepted inputs and outputs",
+        evidence: "src/parser.mjs — behavior-preserving helper extraction",
+        tests: "node --test test/parser.test.mjs — PASS",
+      },
+    ];
     findings.metrics.sufficiencyFindingCount = 0;
     delete findings.explanation;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));

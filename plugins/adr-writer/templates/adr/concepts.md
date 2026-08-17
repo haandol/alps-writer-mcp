@@ -109,6 +109,8 @@ An ADR's goal is **not to reproduce the same code, but to make regenerated code 
 - **Implementation, structure, and names may differ** — they are not in the ADR, so they are discretionary.
 - **Nothing the result must honor may be missing** — if it is, the regenerated code violates a requirement.
 
+The same contract must also support the review that follows regeneration. Write each obligation independently and record implementation-independent **observable evidence**: the result a reviewer should see when the obligation is met or violated. This is not a test plan. Tests, commands, files, libraries, and internal data representation remain below ADR resolution. The implementation review derives a disposable Evidence Package from these rows, shows requirement-by-requirement coverage to the human reviewer, and keeps code-level choices separate.
+
 This test takes precedence over the code-readthrough test below. For the full definition and the requirement gate, see [`authoring-rules.md`](./authoring-rules.md#what-an-adr-must-satisfy--the-regeneration-test).
 
 ### Requirements live in both the ADR and the code — and the ADR comes first

@@ -4,6 +4,13 @@ This document is the **major decision-change history** of the adr-authoring/deci
 category. Each ADR body describes only the current state, while the timeline of "what
 changed and why" accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-08-17 — ADR 계약을 요구사항별 구현 리뷰 기준선으로 사용
+
+- **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)
+- **Change type**: architecture
+- **What**: Requirement contract를 독립적으로 검토 가능한 행과 구현 독립적인 관찰 기준으로 구성하고, 구현 리뷰가 같은 행을 요구사항별 달성 화면으로 파생하도록 변경했다.
+- **Why**: 코드 재생성마다 구현 디테일이 달라도 같은 요구사항을 준수하는지 사람이 낮은 인지부하로 판정할 수 있어야 한다.
+
 ## 2026-08-17 — 결정 가정을 기존 ADR 구조에 흡수
 
 - **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)

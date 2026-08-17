@@ -75,7 +75,18 @@
 //       {
 //         "choice": "retry uses a 250 ms fixed delay",
 //         "evidence": "src/client.ts:42 — retryDelayMs: 250",
+//         "intentFit": "keeps the ADR's bounded retry and failure guarantees intact",
 //         "whyItMatters": "changes recovery latency and upstream request rate"
+//       }
+//     ],
+//     "contractCoverage": [                               // required, non-empty
+//       {
+//         "requirement": "a payment is completed at most once",
+//         "status": "PROVEN" | "VIOLATED" | "UNVERIFIED" | "CONTRADICTED",
+//         "adrBasis": "Requirement contract — Required guarantees",
+//         "implementation": "the write path rejects an existing idempotency key",
+//         "evidence": "src/payments/settle.ts:42 — exact code or execution evidence",
+//         "tests": "pnpm test -- settlement — PASS"
 //       }
 //     ],
 //     "notes": "…"                                        // optional free text
@@ -187,8 +198,47 @@ function normalizeImplementationChoices(data) {
   return choices.map((choice) => ({
     choice: choice.choice || "",
     evidence: choice.evidence || "",
+    intentFit: choice.intentFit || "",
     whyItMatters: choice.whyItMatters || "",
   }));
+}
+
+function normalizeContractCoverage(data) {
+  const rows = Array.isArray(data.contractCoverage) ? data.contractCoverage : [];
+  return rows.map((row) => ({
+    requirement: row.requirement || "",
+    status: row.status || "UNVERIFIED",
+    adrBasis: row.adrBasis || "",
+    implementation: row.implementation || "",
+    evidence: row.evidence || "",
+    tests: row.tests || "",
+  }));
+}
+
+function contractCoverageCard(row, index, total) {
+  const idx = String(index + 1).padStart(2, "0");
+  const status = String(row.status || "UNVERIFIED").toUpperCase();
+  const statusClass = ["PROVEN", "VIOLATED", "UNVERIFIED", "CONTRADICTED"].includes(status)
+    ? status.toLowerCase()
+    : "unverified";
+
+  return `
+  <article class="coverage coverage--${statusClass}">
+    <header class="finding__head">
+      <span class="coverage__status">${esc(status)}</span>
+      <span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span>
+    </header>
+    <h3 class="finding__title">${esc(row.requirement) || "(no requirement)"}</h3>
+    <div class="coverage__implementation">
+      <span class="side__label">How the implementation meets it</span>
+      <p>${esc(row.implementation)}</p>
+    </div>
+    <div class="meta">
+      <div class="meta__row"><span class="meta__k">ADR</span><span class="meta__v">${esc(row.adrBasis)}</span></div>
+      <div class="meta__row"><span class="meta__k">Evidence</span><span class="meta__v meta__v--mono">${esc(row.evidence)}</span></div>
+      <div class="meta__row"><span class="meta__k">Tests</span><span class="meta__v meta__v--mono">${esc(row.tests)}</span></div>
+    </div>
+  </article>`;
 }
 
 function implementationChoiceCard(choice, index, total) {
@@ -202,11 +252,12 @@ function implementationChoiceCard(choice, index, total) {
     </header>
     <h3 class="finding__title">${esc(choice.choice) || "(no choice)"}</h3>
     <div class="choice__value">
-      <span class="side__label">Why it matters</span>
-      <p>${esc(choice.whyItMatters)}</p>
+      <span class="side__label">Why it fits the ADR intent</span>
+      <p>${esc(choice.intentFit)}</p>
     </div>
     <div class="meta">
       <div class="meta__row"><span class="meta__k">Evidence</span><span class="meta__v meta__v--mono">${esc(choice.evidence)}</span></div>
+      <div class="meta__row"><span class="meta__k">Impact</span><span class="meta__v">${esc(choice.whyItMatters)}</span></div>
     </div>
   </article>`;
 }
@@ -349,13 +400,19 @@ function buildHtml(data) {
   const scope = Array.isArray(data.scope) ? data.scope : [];
   const metrics = data.metrics && typeof data.metrics === "object" ? data.metrics : null;
   const findings = normalizeFindings(data);
+  const contractCoverage = normalizeContractCoverage(data);
   const implementationChoices = normalizeImplementationChoices(data);
   const cards = findings.map((f, i) => findingCard(f, i, findings.length)).join("\n");
+  const coverageCards = contractCoverage
+    .map((row, index) => contractCoverageCard(row, index, contractCoverage.length))
+    .join("\n");
   const choiceCards = implementationChoices
     .map((choice, index) => implementationChoiceCard(choice, index, implementationChoices.length))
     .join("\n");
   const count = findings.length;
+  const coverageCount = contractCoverage.length;
   const choiceCount = implementationChoices.length;
+  const provenCount = contractCoverage.filter((row) => row.status === "PROVEN").length;
 
   const empty =
     count === 0 && verdictKey === "PASS"
@@ -378,6 +435,7 @@ function buildHtml(data) {
     adr: data.adr || "",
     verdict: verdictKey,
     findings,
+    contractCoverage,
     implementationChoices,
   });
 
@@ -468,6 +526,26 @@ function buildHtml(data) {
     border-left: 3px solid var(--sev); border-radius: 10px;
     padding: 16px 18px 14px; margin-bottom: 14px;
   }
+  .coverage {
+    --coverage: #566173;
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 3px solid var(--coverage); border-radius: 8px;
+    padding: 16px 18px 14px; margin-bottom: 14px;
+  }
+  .coverage--proven { --coverage: #2e7d4f; }
+  .coverage--violated { --coverage: #c0362c; }
+  .coverage--unverified { --coverage: #b4690e; }
+  .coverage--contradicted { --coverage: #7b3f91; }
+  .coverage__status {
+    font: 700 10.5px/1 var(--mono); letter-spacing: 0.14em;
+    color: var(--coverage);
+  }
+  .coverage__implementation {
+    background: color-mix(in srgb, var(--coverage) 8%, var(--card));
+    border: 1px solid var(--line); border-radius: 7px;
+    padding: 11px 13px; margin: 10px 0 12px;
+  }
+  .coverage__implementation p { margin: 0; font-size: 13.5px; }
   .choice {
     background: var(--card); border: 1px solid var(--line);
     border-left: 3px solid #217a68; border-radius: 8px;
@@ -638,12 +716,17 @@ function buildHtml(data) {
     ${vmeta.note ? `<p class="vnote">${esc(vmeta.note)}</p>` : ""}
   </header>
 
-  ${empty}
+  ${
+    coverageCount
+      ? `<p class="count">ADR contract coverage · ${provenCount} / ${coverageCount} proven · read-only evidence</p>${coverageCards}`
+      : ""
+  }
   ${
     choiceCount
       ? `<p class="count">${choiceCount} notable implementation choice(s) · read-only context</p>${choiceCards}`
       : ""
   }
+  ${empty}
   ${count ? `<p class="count">${count} finding(s) · rule on each one</p>` : ""}
   ${cards}
 
@@ -681,6 +764,8 @@ function buildHtml(data) {
     const out = {
       adr: EMBED.adr,
       verdict: EMBED.verdict,
+      contractCoverage: EMBED.contractCoverage,
+      implementationChoices: EMBED.implementationChoices,
       reviews,
       status: "complete",
     };

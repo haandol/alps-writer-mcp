@@ -59,7 +59,26 @@ test("necessity and sufficiency evidence survives into the interactive report", 
       {
         choice: "retry uses a 250 ms fixed delay",
         evidence: "src/stream/client.ts:20 — retryDelayMs: 250",
+        intentFit: "keeps retries bounded without changing the ADR's failure result",
         whyItMatters: "changes recovery latency and request rate",
+      },
+    ],
+    contractCoverage: [
+      {
+        requirement: "Cancellation stops the upstream request",
+        status: "PROVEN",
+        adrBasis: "Requirement contract — Required guarantees",
+        implementation: "the abort signal reaches the upstream client",
+        evidence: "src/stream/client.ts:18 — signal passed to fetch",
+        tests: "pnpm test -- cancel — PASS",
+      },
+      {
+        requirement: "Restart recovery preserves queued work",
+        status: "UNVERIFIED",
+        adrBasis: "Requirement contract — Failure guarantees",
+        implementation: "queue recovery exists but was not executed locally",
+        evidence: "src/stream/queue.ts:44 — recovery branch",
+        tests: "NOT RUN — no local queue",
       },
     ],
     findings: [
@@ -96,8 +115,22 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   assert.match(result.stdout, /42s/);
   assert.match(result.stdout, /retry uses a 250 ms fixed delay/);
   assert.match(result.stdout, /src\/stream\/client\.ts:20/);
+  assert.match(result.stdout, /keeps retries bounded without changing the ADR/);
   assert.match(result.stdout, /changes recovery latency and request rate/);
+  assert.match(result.stdout, /Cancellation stops the upstream request/);
+  assert.match(result.stdout, /Restart recovery preserves queued work/);
+  assert.match(result.stdout, /1 \/ 2 proven/);
+  assert.match(result.stdout, /How the implementation meets it/);
   assert.match(result.stdout, /Review report/);
+  assert.ok(
+    result.stdout.indexOf("ADR contract coverage ·") <
+      result.stdout.indexOf("notable implementation choice(s) ·"),
+    "contract coverage must appear before implementation choices",
+  );
+  assert.ok(
+    result.stdout.indexOf("ADR contract coverage ·") < result.stdout.indexOf("finding(s) ·"),
+    "contract coverage must appear before findings",
+  );
   assert.doesNotMatch(result.stdout, /Repair guide ·/);
   assert.doesNotMatch(result.stdout, /Review this implementation choice/);
   assert.doesNotMatch(result.stdout, /choice_reviews/);
@@ -109,10 +142,21 @@ test("notable implementation choice content is escaped and read-only", () => {
     adr: "docs/adr/test.md",
     verdict: "PASS",
     findings: [],
+    contractCoverage: [
+      {
+        requirement: "The response remains backward compatible",
+        status: "PROVEN",
+        adrBasis: "Decision",
+        implementation: "the public response shape is unchanged",
+        evidence: "src/example.ts:1",
+        tests: "node --test — PASS",
+      },
+    ],
     implementationChoices: [
       {
         choice: payload,
         evidence: "src/example.ts:1",
+        intentFit: "preserves the ADR contract",
         whyItMatters: "different local convention",
       },
     ],
@@ -131,6 +175,16 @@ test("INCONCLUSIVE with no findings does not render a false conforming claim", (
     adr: "docs/adr/streaming/0001-cancel.md",
     verdict: "INCONCLUSIVE",
     findings: [],
+    contractCoverage: [
+      {
+        requirement: "Cancellation survives process restart",
+        status: "UNVERIFIED",
+        adrBasis: "Failure guarantees",
+        implementation: "cannot determine",
+        evidence: "queue unavailable",
+        tests: "NOT RUN — no local queue",
+      },
+    ],
     implementationChoices: [],
   });
 

@@ -23,12 +23,21 @@ Turn verified review results into `implementation-review.md`. Never invent new d
 Every report must let the reader answer five questions without reconstructing the whole implementation:
 
 1. What was reviewed?
-2. Which ADR decisions and contract rows are accounted for?
+2. Which ADR decisions and contract rows are accounted for, and what did the implementation do for each one?
 3. What findings remain?
 4. Which tests ran and what did they prove?
 5. What risk remains unverified?
 
-Under `ADR contract coverage`, state Contract compliance explicitly: compare every recorded value, allowed set, transition, permission, mandatory field, ordering rule, uniqueness rule, and unit against the code. The existence of similar logic is not enough when its value or rule differs.
+Under `ADR contract coverage`, state Contract compliance explicitly: compare every recorded value, allowed set, transition, permission, mandatory field, ordering rule, uniqueness rule, and unit against the code. Keep one row per independent ADR obligation and include the implementation-independent observable evidence when selecting verification. The existence of similar logic is not enough when its value or rule differs.
+
+Render coverage as a read-only table before findings:
+
+| Requirement | Status | How the implementation meets it | Evidence | Tests |
+| ----------- | ------ | ------------------------------- | -------- | ----- |
+
+Use exactly `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`. Keep the ADR wording recognizable. `PROVEN` means the inspected or executed evidence supports the row and no counterexample was found; it is not a mathematical proof. Never merge several obligations into one row.
+
+Concise means short cells, not fewer columns. Do not merge implementation, evidence, and tests into a three-column summary or a prose sentence.
 
 Use progressive disclosure. The default report is concise, including in full mode and for PASS. Keep this structure:
 
@@ -54,10 +63,12 @@ The ADR supplies architectural decisions and contracts. **These are material cod
 
 Render the choices as a read-only table:
 
-| Selected value or behavior | Code evidence | Why it matters |
-| -------------------------- | ------------- | -------------- |
+| Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
+| -------------------------- | ------------- | -------------------------- | -------------- |
 
-Do not ask the reader to accept, change, or investigate each choice. An item that passes the admission gate belongs in Findings as `Undecided behavior`, not in this table.
+Explain intent fit only through the contract or boundary the implementation preserves; never invent historical rationale. Do not ask the reader to accept, change, or investigate each choice. An item that passes the admission gate belongs in Findings as `Undecided behavior`, not in this table.
+
+Keep this four-column table even when there is only one choice. Do not collapse a material implementation choice into prose.
 
 ## Conditional diagrams
 

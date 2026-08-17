@@ -95,6 +95,7 @@ Implements the specified ADR in code, and once the implementation, tests, verifi
    - When this cycle created an ADR or changed an existing ADR's decision or requirement contract, include an **implementation intent baseline** in that same approval:
      - the current Decision and Decision Drivers
      - every numeric and non-numeric requirement-contract row with its basis
+     - the implementation-independent observable evidence for each contract row
      - the written regeneration checklist from `/adr-new` or the edit-in-place rewrite
      - explicit out-of-scope items and any risk tolerance the ADR records
    - Treat baseline approval as **once per ADR revision**, not once per command. If `/adr-new` or `/feature-to-adr` already obtained approval for this exact ADR content and the ADR has not changed, reuse that approved baseline and do not ask the intent/regeneration question again; only obtain normal approval for the implementation plan. Otherwise ask once whether the current-state baseline matches the user's intent and is complete enough to rebuild requirement-honoring code. Resolve omissions now, before code, and record the approved baseline for the completion review. Do not repeat this routine confirmation after implementation unless the ADR changes or review discovers a real contract ambiguity.
@@ -154,7 +155,7 @@ Implements the specified ADR in code, and once the implementation, tests, verifi
    - The script updates the Status line in the target ADR body and the `status` of the exact matching `adrs[]` record in `.mapping.json` together. It fails instead of guessing when the path is absent, duplicated, or already inconsistent.
    - If several ADRs in one category were implemented together, update all of them only after each one's completion review passes.
    - Run `adr-structure-lint` once more after the transition to verify the dated Status format and body/index lockstep.
-   - Tell the user the work is complete. Summarize the final review mode and verdict, tests run, any findings automatically fixed, deferred advisory items, and the ADR's `Accepted` transition. Do not ask for another approval when no unresolved decision or material risk remains.
+   - Tell the user the work is complete. Surface the final Evidence Package: requirement-by-requirement coverage status and evidence, Notable implementation choices with ADR-intent fit, final review mode and verdict, tests run, any findings automatically fixed, deferred advisory items, and the ADR's `Accepted` transition. This is the human review view. Do not ask for another approval when no unresolved decision or material risk remains.
 
 **Forbidden**:
 

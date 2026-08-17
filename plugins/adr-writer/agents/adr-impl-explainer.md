@@ -21,7 +21,7 @@ Read the ADR and the actual diff, then explain **what the code does now** in pla
 
 1. Summarize the ADR's goal and its out-of-scope items in one paragraph.
 2. Trace the real request flow from the diff's entry point through data/state changes to external dependency calls.
-   2-a. Extract the **requirements** the ADR records (max counts and turns, usage quotas, retention periods, size caps, response targets, and allowed value sets, transition rules, mandatory fields, permissions, visibility, ordering, uniqueness, units) and, for each, find how the code actually enforces it, listing the value or set verbatim side by side. Do not skip the non-numeric items — requirements do not arrive only as numbers. **Do not judge** whether they match (that is the sufficiency reviewer's job) — this agent's role ends at showing both sides so a human can compare them by eye. If you cannot find where the code enforces it, write "not found in code".
+   2-a. Extract the **requirements** the ADR records (max counts and turns, usage quotas, retention periods, size caps, response targets, and allowed value sets, transition rules, mandatory fields, permissions, visibility, ordering, uniqueness, units) and the implementation-independent observable evidence for each. Find how the code actually enforces each requirement, listing the value or set verbatim side by side. Do not skip the non-numeric items — requirements do not arrive only as numbers. **Do not judge** whether they match (that is the sufficiency reviewer's job) — this agent's role ends at showing both sides so a human can compare them by eye. If you cannot find where the code enforces it, write "not found in code".
 3. Distinguish before from after.
 4. Check how the code handles failure, cancellation, retries, duplicates, and concurrent execution — not just the happy path.
 5. Call out any new dependencies, configuration, stored state, or operational observability points.
@@ -41,8 +41,8 @@ Return only the following Markdown structure. Put a real fenced Mermaid block un
 
 ## What the ADR specifies vs what the code does
 
-| What the ADR specifies | ADR's value / set / rule | Code's value / set / rule (file:line) |
-| ---------------------- | ------------------------ | ------------------------------------- |
+| What the ADR specifies | ADR's value / set / rule | Observable evidence | Code's value / set / rule (file:line) |
+| ---------------------- | ------------------------ | ------------------- | ------------------------------------- |
 
 (Include a row for both numeric requirements and non-numeric ones — allowed value sets, transition rules, mandatory fields, permissions, ordering, units. If the ADR records no requirements, write "not applicable". Do not use judging or evaluative wording.)
 

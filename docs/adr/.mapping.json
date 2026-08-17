@@ -28,7 +28,7 @@
         {
           "path": "docs/adr/adr-authoring/decision-presentation/0001-present-decision-digest-and-semantic-diff.md",
           "status": "Accepted (2026-08-17)",
-          "summary": "ADR 상호작용은 Decision Digest와 semantic diff를 우선하며 결정에 중요한 가정은 Context나 Decision Driver에 한 줄로만 기록한다"
+          "summary": "ADR 상호작용은 Decision Digest와 semantic diff를 우선하며 각 계약 행과 구현 독립적인 관찰 기준을 구현 리뷰의 요구사항별 기준선으로 사용한다"
         }
       ],
       "dependsOn": ["adr-authoring/current-state"]
@@ -94,7 +94,7 @@
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
           "status": "Accepted (2026-08-17)",
-          "summary": "구현 리뷰는 계약 대조와 테스트 증거를 항상 유지하고 상세 guide·다이어그램·중요 구현 선택은 판정에 필요할 때만 한 번 생성한다"
+          "summary": "구현 리뷰는 위험 비례 검토를 유지하며 ADR 계약별 Evidence Package와 의도 적합성이 설명된 구현 재량을 사람에게 제공한다"
         }
       ],
       "dependsOn": []
