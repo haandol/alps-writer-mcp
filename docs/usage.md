@@ -2,7 +2,7 @@
 
 This guide covers the full development cycle, the two entry flows (PRD-first and ADR-only), the shared skills, the ADR-first hook, and the mapping file. Invoke a skill as `$skill-name` in Codex or `/skill-name` in Claude Code.
 
-For installation see the [README Quick Start](../README.md#quick-start). For the MCP server in other MCP clients see [MCP server](./mcp-server.md). For the same cycle drawn as eight diagrams — one per command's internals — see [ADR process overview](./adr-process.md).
+For installation see the [README Quick Start](../README.md#quick-start). For the MCP server in other MCP clients see [MCP server](./mcp-server.md). For the same lifecycle, critical command paths, routing, and efficiency review as diagrams, see [ADR process overview](./adr-process.md).
 
 ## Development cycle
 

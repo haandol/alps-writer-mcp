@@ -29,7 +29,7 @@ If the argument is a category, target only that category (`/adr-sync auth`).
 
 ### 1. Load the index and mapping
 
-- Read `concepts.md` (the abstraction ladder, the gray zone, the dependency model, Status and its automatic transitions), `docs/adr/README.md` (the index and the ADR template), `docs/adr/authoring-rules.md` (authoring rules and the review checklist), and `docs/adr/structure.md` (directory and mapping policy). In a repo seeded before the README/AGENTS split, all of the AGENTS material sits inside `README.md` — read it there instead
+- Read `concepts.md` (the abstraction ladder, the gray zone, the dependency model, Status and its automatic transitions), `docs/adr/README.md` (the index and the ADR template), `docs/adr/authoring-rules.md` (authoring rules and the review checklist), and `docs/adr/structure.md` (directory and mapping policy). In a repo seeded before the README/concepts split, all of the concepts material sits inside `README.md` — read it there instead
 - Read `docs/adr/.mapping.json` (the single ADR index — categories → adrs[] with path, status, summary, plus `dependsOn`). The mapping stores neither ADR↔code paths nor a PRD reference — locate the code an ADR governs by **reading the ADR's Decision body and searching the repo each time** (see "Finding the related code" below).
 - Enumerate every ADR file on disk: **only `NNNN-*.md` (ADR files that start with a number)** under `docs/adr/<category>/`. An ADR file on disk that is absent from `.mapping.json`'s adrs[], or an adrs[] path pointing at a file that does not exist, is itself drift (two-way disk↔mapping consistency). **`decision-log.md` is a convention file, not an ADR, so exclude it from this enumeration** — it is not registered in the mapping (`structure.md` "Decision log") and must never be reported as orphan drift. (The deterministic harness likewise does not enumerate this file as an ADR, since it does not start with `NNNN-`.)
 
@@ -47,7 +47,11 @@ For each ADR, extract the adrs[] summary from `.mapping.json` (the one-line Key 
 
 Quick mode performs only this step plus the index-based **detection and proposal** of stale `fN` naming in 3.7 (detecting stale `fN` naming from the adrs[] paths in `.mapping.json`) — it skips the remaining 3.x deep checks and any actual file moves.
 
+If those paths reveal stale `fN` naming, read `references/repository-hygiene.md` completely and apply only its "Canonical stale Feature-ID naming" detection and proposal rules. Do not read that reference or perform repository-hygiene checks when no candidate exists.
+
 ### 3. Pass 2 — deep verification (always run in deep mode)
+
+Before starting Pass 2, read `references/repository-hygiene.md` completely. It owns category integrity, split recommendations, stale Feature-ID naming, cross-ADR contradictions, companion/invariant checks, source-edit approval, and mapping hygiene. Apply those checks after the per-ADR semantic verification below and before the report.
 
 **Secure structure and consistency with the deterministic harness first** — filter out the mechanical rules before the LLM spends tokens on filenames, the Status enum, or index consistency:
 
@@ -112,97 +116,6 @@ For each target ADR:
   - **An intended decision change** → update the ADR to the current decision so it justifies the code. Editing the body in place to current state is the default, and if that transition is **major** (replacing the adopted alternative, inverting a Driver, changing the core algorithm or architecture) leave one line in the category's `decision-log.md`. Supersede with a new ADR only when the decision topic has branched and the old decision must coexist as a separate record (see `authoring-rules.md` "Changing an ADR — edit-in-place vs supersede"). Record in `Suggestions` as `[Decision changed in code] <category> — the code contradicts the ADR decision. Update the ADR (log to decision-log if major), then realign`.
   - **An unintended violation** → the code broke the decision, so the code is what needs fixing. Leave the ADR as it is and record in `Suggestions` as `[Code violates ADR] <category> — the code diverges from the ADR decision. Consider correcting the code`.
   - Sync never rules on which of the two it is by itself — the authority for gray-zone decisions rests with the ADR, so overwriting the ADR to match the code must never become the default behavior.
-
-### 3.5. Category slice integrity check
-
-Check whether the category keys in `.mapping.json` follow the DDD domain (bounded context) × feature (vertical slice) principle — for the anti-pattern category list, subdomain classification, and cross-cutting conditions see `structure.md` "Common contexts and subdomains".
-
-- **Category key check (both segments)** — if an anti-pattern from `structure.md` "Anti-pattern categories" (technical layer or structural units: `frontend`, `api`, `db`, and so on) appears in either the context folder segment or the feature sub-folder segment (`identity/api`), mark it as drift. Propose realigning to domain and feature units.
-- **Slice extractability check** — check whether each ADR's Decision covers one feature's (the leaf — a feature sub-folder or a single-feature context) UI → API → Data as a single slice. If one feature's decisions are scattered across categories (e.g. split into `auth-ui`/`auth-api`), that is drift — propose merging them into one category.
-- **Context coherence check (advisory)** — check whether a feature sub-folder sits under a context that does not own its language (e.g. a pricing decision under `identity/`). On a violation, record it as advisory in `Suggestions` — **not as a hard correction** — as `[Context mismatch] <category> — the feature diverges from its context's domain language. Consider moving it to the right context`; domain-boundary judgment belongs to the user, so never move folders automatically.
-- **subdomainType display (advisory)** — if a context entry has `subdomainType`, show it in the report as a grouping or annotation (e.g. `generic — a candidate for off-the-shelf replacement`). Never flag its absence as drift — it is optional metadata.
-- Record anti-pattern keys and slice-dispersion violations under `Fixed` or `Contradictions Resolved` rather than `Suggestions` — category classification is the trust foundation of the ADR cycle, so never defer it. (Context mismatch and a missing subdomainType are advisory, so they stay in `Suggestions`.)
-- **Renaming or merging a category key may leave another entry's `dependsOn` pointing at the old key** — in the same change unit as the realignment, repoint every `dependsOn` reference to the new key (removing the edge if the merge absorbed it into the side it depended on), and confirm with the step 6 `dependsOn` integrity check that no dangling reference remains.
-
-### 3.6. Category bloat check (split recommendation)
-
-Check whether the ADR file count in each feature sub-folder (or directly under a context) has reached the threshold (15) set in `structure.md` "When a context grows — splitting into feature sub-folders". If it has, apply that section's "inspect-and-propose procedure" for deriving feature candidates as written. If a context is already divided into several feature sub-folders and each holds fewer than 15, do not split even when the total is large.
-
-- The sync cycle **never performs the split automatically** — a folder move simultaneously affects cross-references, hook lookup keys, and the adrs[] paths in `.mapping.json`, so it needs the user's agreement.
-- Leave the result as a one-line recommendation in the `Suggestions` section, in the form `[Sub-folder split recommended] <category> holds <n> ADRs — candidate sub-features: ...`. If the user agrees on a later cycle, split using the procedure in `structure.md`.
-- If evolution-chain signals also appear (several ADRs tied together by `Superseded by` Status), state in the recommendation that **rollup comes first** rather than splitting — scattering a chain into sub-folders makes it harder to trace.
-
-> **Sync does not track PRD changes**: once ALPS (the PRD) has been reflected into ADRs via `/feature-to-adr`, the decision is managed at the ADR level. If the PRD changes later, absorb that change by editing the ADR directly (or superseding it with a new ADR); sync looks strictly at `ADR ↔ code` consistency. adr-writer does not know about ALPS (the plugins are separated per AGENTS.md), so it has no means of inspecting PRD↔ADR drift at all.
-
-### 3.7. Canonicalizing stale Feature-ID naming (propose, then confirm)
-
-ADRs created by the old `/feature-to-adr` (the version that embedded the ID directly in keys and filenames) may carry `fN` in the folder or file name, as in `docs/adr/f1/0001-f1-email-signup.md`. The current rule puts **the Feature ID nowhere — not in filenames, folder names, or the mapping** (`structure.md` "Directory structure", `authoring-rules.md` "Conventions") — the Feature ID is not load-bearing (`/adr-impl` finds targets by category key alone). Sync detects this stale naming and **proposes** the canonical path, moving it **only after user confirmation** — a folder or file move simultaneously affects the git rename, `dependsOn`, and the adrs[] paths in `.mapping.json`, so it is never done automatically.
-
-Handle the two cases **separately** (mixing them would force user judgment even on the safe cleanup that needs no re-key):
-
-- **(1) An `fN` prefix in the filename** (`NNNN-fN-title.md` → `NNNN-title.md`) — leave the category key and folder alone and remove only the `fN-` fragment from the filename. **This is not a renumber, because the number (`NNNN`) is untouched** (renumber is `adr-rollup`'s step alone — see Notes). `dependsOn` references keys, not filenames, so it is unaffected. The only things to update are that ADR's adrs[] path in `.mapping.json` and Related links in other ADRs. Since this is safe cleanup, **propose them in one batch** ("Shall I remove the `fN-` prefix from these 3 filenames to make them canonical?").
-- **(2) The folder name / category key is `fN`** (`docs/adr/f1/...`) — propose a re-key to a canonical feature-name-based key. Since you need the name, first gather the basis for candidates: the titles and one-line Decisions of that category's ADRs, and `feature` (the human-readable name) from `.mapping.json`. Refine that into kebab-case and offer a candidate key (`f1` → `login`, or `identity/login`), but **have the user confirm whether to use domain grouping (two segments)** — in line with the importer, sync never invents a domain boundary the PRD did not give. Once confirmed:
-  - **Check for a destination collision or a missing parent before moving** (otherwise `git mv` fails or silently creates the wrong nesting):
-    - If the destination key/directory (`docs/adr/<canonical>`) or the canonical key in `.mapping.json` **already exists** — `git mv` would push the old folder inside it, creating 3-segment nesting such as `docs/adr/identity/login/f1/...` (a violation of "at most 2 segments", `structure.md`). Do not proceed automatically; stop and ask the user whether this is a merge (absorbed into the existing category) or needs a different name.
-    - If you are promoting to two segments but **the parent context folder (`docs/adr/<context>`) does not exist**, `git mv` fails with `fatal: No such file or directory`, so create just the parent first with `mkdir -p docs/adr/<context>` and then move.
-  - `git mv docs/adr/f1 docs/adr/<canonical>` (or `docs/adr/<context>/<feature>` for two segments). Remove the filename `fN-` prefix from (1) at the same time. (`git mv` presumes committed files that git tracks — it fails for untracked or uncommitted files, in which case ask whether to proceed with a plain `mv`.)
-  - Re-key the category key `f1` → `<canonical>` in `.mapping.json`. The old `fN` simply disappears — the Feature ID is preserved nowhere (it is not load-bearing), and `/adr-impl` keeps matching by the canonical key.
-  - **If another entry's `dependsOn` points at the old key `f1`, change them all to the new key** — identical to the renaming rule in 3.5, and the step 6 `dependsOn` integrity check re-confirms no dangling reference remains.
-  - Update that ADR's adrs[] path in `.mapping.json` to the new path (`dependsOn` points at keys, so it was already repointed to the new key in the step above).
-- **Confirmation format**: before moving, show a table of old path → new path together with the key being re-keyed and the `dependsOn` references that will be updated, and get approval in one pass. If the user declines, leave everything alone and record in `Suggestions` as `[Feature-ID naming] <category> — old fN naming. Canonicalization deferred`.
-- Record the cleanup under **Fixed** in the step 7 report, in the form `[Naming] docs/adr/f1/0001-f1-x.md → docs/adr/identity/login/0001-x.md (key f1→identity/login)`.
-
-### 4. Cross-ADR contradiction check
-
-Follow the Related links of each corrected ADR and check the other ADRs:
-
-- Whether they describe the same behavior differently (thresholds, error codes, flow steps)
-- Status conflicts: whether a prerequisite category that an `Accepted` (implemented) category points at via `dependsOn` is still `Proposed` (unimplemented) — if the prerequisite is unimplemented, the dependent side may not actually work either. The authoritative dependency relation is `dependsOn` in `.mapping.json`, so treat it as the primary basis and Related links as secondary. Record violations under `Contradictions Resolved` (or `Suggestions` if user judgment is needed).
-- If a Related link (or the Decision body) points at another category as a prerequisite but this category's `dependsOn` omits it → the dependency direction may be ambiguous, so do not write it automatically; record in `Suggestions` as `[dependsOn missing] <category> — Related implies prerequisite <X> but it is absent from dependsOn` (matching sync's stance of "propose rather than quietly overwrite").
-- A superseded ADR failing to cover all of the old ADR's decisions
-- Stale cross-references after a category migration
-
-### 5. Companion document check
-
-Also examine the non-ADR documents an ADR depends on:
-
-- `docs/tables/**` or an equivalent schema document — if an entity relationship changed in the ADR, the same change must be reflected in the table document. Confirm the bidirectional Related links are alive.
-- Companion documents such as `docs/adr/<category>/*-data-flow.md` — whether the API tables, example records, and key specifications are aligned with the code.
-- `docs/adr/<category>/decision-log.md` (if present) — a lightweight check. It is a convention file, so it is not subject to per-ADR checks, but **(a) is already caught by the harness as `decision-log-link-broken`**, so trust that result and only apply the correction. Check the following: (a) whether each entry's `current ADR` link points at an ADR that exists on disk (if stale after a rollup or split, correct it to the new path — the harness tells you where), (b) whether an old ADR number is embedded in the prose (if so, replace it with the `current ADR` link), (c) whether there are PRD citations (`*.alps.xml`, `ALPS Section`, feature IDs) — remove them if present (the same one-way rule as the ADR body, treated identically to the PRD back-reference item below; note the log is outside check (b)'s grep scope so it is not machine-enforced, hence the manual check here). (d) If it duplicates the current state or carries implementation constants and field tables, strip them — the log records only "what changed and why".
-- ADR citations left in code comments, constants, or imports (`// See ADR auth/0002 §1`, `ADR_REF = "auth/0002"`) — **a code → ADR back-reference is forbidden on principle** (`concepts.md` "Dependencies run one way; references are written in neither direction"). **Remove** it rather than correcting it. ADR numbers move through split, rollup, and supersede, so code holding an ADR ID forces a cascade of code edits on a structural change even when the decision did not change. (The code↔ADR link is not stored in the mapping either — locate the related code by reading the ADR each time.)
-- PRD citations left in the ADR body (Context and Related included) (`prd/foo.alps.xml`, `ALPS Section 7 #F-AUTH-01`, `Section 6.3`) — **an ADR → PRD back-reference is likewise forbidden on principle** (the same dependency model). Symmetrically with code↔ADR, **remove** it rather than correcting it. adr-writer is standalone and does not reference the PRD, so there is nowhere to move such a citation and nothing to preserve — an ADR absorbs the PRD's motivation once at import time and never points back at it, and the mapping stores no PRD link either. (Record removals under **Fixed** in the step 7 report.)
-
-After the corrections, check the back-references in both directions. **Both sanity greps are bundled into `${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh` with the same regexes and scope, so run that script rather than retyping path-fragile greps every time**:
-
-```bash
-# (a) code → ADR back-references + (b) ADR → PRD back-references (both should be 0 on principle) — prints file:line per violation
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/adr-invariants.sh
-```
-
-The two checks the script runs internally:
-
-- **(a) Code → ADR back-references** — `ADR <category>/<number>`, `docs/adr/<category>`, or `ADR_REF` left in code or non-ADR documents. Code layout differs per repo (not only `packages/`, `apps/`, `src/` but also `services/`, `cmd/`, `internal/`, `lib/`, or a flat root), so rather than hardcoding paths it sweeps **every authored file** — in a git repo, the tracked files plus untracked-but-not-ignored ones, so `.gitignore` (the repo's own "generated vs authored" declaration) keeps build caches, virtualenvs, and coverage output off the scan; outside git it falls back to a whole-tree sweep minus a list of generated basenames. Results under `docs/adr/` are dropped by a path-prefix post-filter, so ADR ↔ ADR Related links are not false positives (`--exclude-dir` matches only a basename and cannot filter a path like `docs/adr`, which is why the post-filter does that job).
-
-  **Generated output being out of scope is deliberate, and so is hand-written documentation staying in.** A build cache that indexes the repo stores every ADR path verbatim, so scanning it buries the real hits — and a hit there is never actionable, since the fix belongs in whatever produced it. But an authored doc outside `docs/adr/` that cites an ADR number **is** a real finding: those numbers move on split, rollup, and supersede, so the citation goes stale exactly like one in code. Treat such a hit as a genuine violation to report, not noise to filter.
-
-- **(b) ADR → PRD back-references** — `*.alps.xml`, `ALPS Section`, `Section N.N`, or feature IDs left in numbered ADR bodies (`NNNN-*.md`). Because `--include='[0-9][0-9][0-9][0-9]-*.md'` restricts it to ADR bodies, the legitimate ALPS mentions in the seeded rule documents (README, structure, authoring-rules) are not false positives.
-
-Remove the code→ADR back-references found by (a) from the code, moving the linkage to `.mapping.json`, and remove the ADR→PRD back-references found by (b) from the ADR body (adr-writer does not reference the PRD, so there is nowhere to move them) — handle both in the same PR. Since the regexes live in one script, the sync report's **Fixed** section can quote the exact locations (`file:line`) verbatim. A consuming repo can wire this script directly into its own pre-commit or CI as a hard gate (exit 1) — the plugin does not enforce that, and the skill only calls it as advisory.
-
-> **Editing source code outside `docs/adr/` goes through a prior-approval gate**: removing the code→ADR back-references in (a) edits **actual source files** (comments, constants, imports), not ADR documents. `/adr-sync` is model-invocable and can therefore trigger automatically, so unlike corrections to ADR documents, `.mapping.json`, or the README, this source-code edit is applied **only after summarizing the target list (`file:line` plus the reference to be removed) and getting the user's approval once** before writing — the same line as `/adr-new` step 7 and `/adr-rollup` step 8's save gate. On a `--quick` run (check and propose only) or without approval, do not remove anything and record in `Suggestions` as `[Code→ADR ref] <file:line> — ADR back-reference in code. Removal target (approval required)`. ADR body corrections and automatic Status transitions are not subject to this gate (the Status transition follows the same no-confirmation automatic policy as `/adr-impl` — `concepts.md` "Automatic transition rules").
-
-### 6. Mapping and index hygiene
-
-`.mapping.json` is the only ADR index (the README carries no ADR list) — check the following:
-
-- Every ADR file on disk appears in `adrs[]` exactly once
-- Every path in `adrs[]` resolves on disk
-- Each `adrs[]` entry's `status` matches that ADR body's `## Status` (status-index-mismatch)
-- Each `adrs[]` entry has a `summary` (advisory)
-- **`dependsOn` integrity** (since `/adr-impl`'s prerequisite gate decides implementation order from this field, a stale value silently misorders a future impl — check it at the same level as the `adrs` array):
-  - Whether every `dependsOn` key in each category entry is a category key that exists in `categories` — a dangling key (especially one left over after a category merge or rename in 3.5) is drift.
-  - Whether the union of all `dependsOn` edges is an acyclic graph (the schema's "keep acyclic", including the self-edge ban).
-  - Record it under **Fixed** when it can be corrected automatically (e.g. reflecting into dependsOn the key rename or merge performed in 3.5 of this same sync), and under **Contradictions Resolved** or **Suggestions** when it needs user judgment (e.g. a cycle was found — the same halt-and-ask framing as `/adr-impl` step 2's "if the dependency graph has a cycle" branch).
 
 ### 7. Report
 

@@ -127,9 +127,9 @@ the parsed tail block, the raw reply, and the fixture path — so a check can re
 what the agent wrote to disk, not just what it said.
 
 Helpers are in `lib/harness.mjs`: `skillText` / `agentText` (real instruction
-text), `seedRuleDocs` / `seedMapping` / `write`, the `expect*` scorers, and
-`expectLintClean` which runs the shipped `adr-structure-lint.mjs` over the
-result.
+text; `skillText` also appends directly referenced Markdown modules),
+`seedRuleDocs` / `seedMapping` / `write`, the `expect*` scorers, and
+`expectLintClean` which runs the shipped `adr-structure-lint.mjs` over the result.
 
 ## Two directions, and why both
 
@@ -180,10 +180,11 @@ hides true ones.
 Be honest about the gap when reading a result.
 
 - **The prompt is real; the surrounding context is not.** Scenarios pass the
-  actual `SKILL.md` / `agents/*.md` text — reconstructing a prompt would test
-  this directory's summary of the rules instead of the rules that ship — via the
-  same "read the agent file, hand it to a generic subagent" path the skills
-  document as their fallback. But a real session also carries conversation
+  actual `SKILL.md`, its directly referenced Markdown modules, and
+  `agents/*.md` text — reconstructing a prompt would test this directory's
+  summary of the rules instead of the rules that ship — via the same "read the
+  agent file, hand it to a generic subagent" path the skills document as their
+  fallback. But a real session also carries conversation
   history, the SessionStart directive, the user's own CLAUDE.md, and a
   multi-turn exchange with the user. A defect that only appears after twenty
   turns of context will not reproduce here.

@@ -38,16 +38,13 @@ Run the narrowest existing tests that cover the changed path before applying any
 
 Run `adr-impl-refactor-reviewer` in a fresh read-only context.
 
-**Provider capability gate — apply before any named or generic subagent dispatch.** If the active model provider is identified as Amazon Bedrock, treat subagents as unavailable and do not invoke either path. Codex's current Bedrock transport can reject multi-agent input before the reviewer starts. If provider identity was not visible in advance and an attempted dispatch returns `validation_error` with `Invalid 'input': value did not match any expected variant`, do not retry with the named reviewer, a generic agent, or another reviewer. Mark subagents unavailable for the rest of this command and use step 4's `PROPOSE_ONLY` main-session fallback.
+Before dispatch, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely and apply its provider capability gate and dispatch chain with named agent `adr-impl-refactor-reviewer` and fallback file `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-refactor-reviewer.md`.
 
-1. If the named agent exists, invoke it.
-2. Otherwise resolve `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-refactor-reviewer.md` to an **absolute path** and run a generic read-only subagent instructed to read that file completely and follow it. Do not load the agent file into the main session or paste its full text into the dispatch prompt. Pass the ADR, mapping entry, diff, code scope, tests, rule docs, and project conventions separately as task input.
-3. If the generic subagent cannot read the absolute agent-file path, fall back once to passing the file's full text so review capability is preserved, and record that the path-based context isolation was unavailable.
-4. If subagents are unavailable, the main session performs the same analysis only to produce `PROPOSE_ONLY` items and records that the independent context was unavailable. **It must not classify or apply any candidate as `APPLY_NOW` without an isolated read-only reviewer.**
+If subagents are unavailable, use step 4's `PROPOSE_ONLY` main-session fallback: perform the same analysis only to produce `PROPOSE_ONLY` items and record that the independent context was unavailable. **It must not classify or apply any candidate as `APPLY_NOW` without an isolated read-only reviewer.**
 
 Give the reviewer only the original ADR, mapping entry, raw diff, confirmed code scope, related tests, seeded rule docs, and project conventions. Do not give it necessity/sufficiency results, an implementation explanation, or earlier refactor conclusions.
 
-Require only the reviewer file's existing `Refactor Review` output in the response. Do not ask the subagent to echo its instructions, raw inputs, or exploratory notes.
+Require only the reviewer file's existing `Refactor Review` output in the response.
 
 Save the result as `refactor-review.md`.
 

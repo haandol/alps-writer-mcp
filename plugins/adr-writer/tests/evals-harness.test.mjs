@@ -124,6 +124,18 @@ test("prompts embed the real skill/agent text, not a paraphrase", async () => {
   }
 });
 
+test("skillText includes directly referenced prompt modules", async () => {
+  const { skillText } = await import(path.join(EVALS, "lib", "harness.mjs"));
+
+  const review = skillText("adr-review");
+  assert.match(review, /# Loaded reference: references\/subagent-dispatch\.md/);
+  assert.match(review, /Invalid 'input': value did not match any expected variant/);
+
+  const sync = skillText("adr-sync");
+  assert.match(sync, /# Loaded reference: skills\/adr-sync\/references\/repository-hygiene\.md/);
+  assert.match(sync, /^## Canonical stale Feature-ID naming$/m);
+});
+
 // Fixtures must be repos the plugin would accept. A fixture that trips the
 // shipped lint teaches the agent about a defect the scenario never meant to test
 // — during development the enum scenario shipped a bare "Accepted" in the

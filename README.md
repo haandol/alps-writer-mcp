@@ -78,7 +78,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 ## Documentation
 
 - [Usage guide](./docs/usage.md) — development cycle, walkthroughs, slash commands, hook, mapping file
-- [ADR process overview](./docs/adr-process.md) — the whole cycle as eight diagrams, one per command's internals (Korean)
+- [ADR process overview](./docs/adr-process.md) — the lifecycle, critical command paths, routing, and efficiency review as diagrams (Korean)
 - [Dependency model](./docs/dependency-model.md) — how PRD → ADR → code stay decoupled (the design core)
 - [MCP server](./docs/mcp-server.md) — run the alps-writer MCP server in other clients, env vars, tool reference
 - [`about-alps.md`](./plugins/alps-writer/templates/alps/about-alps.md) — ALPS format design rationale

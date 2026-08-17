@@ -1,12 +1,9 @@
 // harness.mjs — build a throwaway repo, invoke a REAL skill/agent definition in
 // a headless agent, and score what comes back.
 //
-// The point of passing the actual SKILL.md / agents/*.md text is that a
-// reconstructed prompt would test this file's summary of the rules rather than
-// the rules that ship. Every skill already documents this exact path as its
-// fallback ("read ${CLAUDE_PLUGIN_ROOT}/agents/X.md and run a generic read-only
-// subagent with its full text as the instructions"), so an eval run exercises a
-// path the plugin genuinely uses.
+// The point of passing the actual SKILL.md, its directly referenced Markdown,
+// and agents/*.md text is that a reconstructed prompt would test this file's
+// summary of the rules rather than the rules that ship.
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -59,7 +56,16 @@ export function seedMapping(dir, mapping = { categories: {} }) {
 // The instruction text of a real skill or agent, minus its YAML frontmatter
 // (the frontmatter is client registration metadata, not instructions).
 export function skillText(name) {
-  return stripFrontmatter(readFileSync(path.join(PLUGIN_ROOT, "skills", name, "SKILL.md"), "utf8"));
+  const skillDir = path.join(PLUGIN_ROOT, "skills", name);
+  const source = readFileSync(path.join(skillDir, "SKILL.md"), "utf8");
+  const parts = [stripFrontmatter(source)];
+
+  for (const reference of directMarkdownReferences(source, skillDir)) {
+    parts.push(`\n# Loaded reference: ${path.relative(PLUGIN_ROOT, reference)}\n`);
+    parts.push(readFileSync(reference, "utf8"));
+  }
+
+  return parts.join("\n");
 }
 
 export function alpsSkillText(name) {
@@ -86,6 +92,18 @@ export function ruleText(name) {
 
 function stripFrontmatter(source) {
   return source.replace(/^---\n[\s\S]*?\n---\n/, "");
+}
+
+function directMarkdownReferences(source, skillDir) {
+  const files = new Set();
+  for (const match of source.matchAll(/`([^`\n]*references\/[^`\n]+\.md)`/g)) {
+    const reference = match[1];
+    const full = reference.startsWith("${CLAUDE_PLUGIN_ROOT}/")
+      ? path.join(PLUGIN_ROOT, reference.slice("${CLAUDE_PLUGIN_ROOT}/".length))
+      : path.join(skillDir, reference);
+    files.add(full);
+  }
+  return [...files];
 }
 
 // Scoring needs a fixed shape to read, and free-form prose is where a scorer

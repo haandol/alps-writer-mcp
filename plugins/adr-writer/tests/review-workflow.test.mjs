@@ -53,45 +53,68 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
 });
 
 test("generic subagent fallbacks load agent instructions inside the child context", () => {
-  const sources = [
+  const dispatch = read("references/subagent-dispatch.md");
+  const skills = [
     read("skills/adr-review/SKILL.md"),
     read("skills/adr-impl-review/SKILL.md"),
     read("skills/adr-impl-refactor/SKILL.md"),
   ];
 
-  for (const source of sources) {
-    assert.match(source, /absolute path/i);
-    assert.match(source, /read that file completely/i);
-    assert.match(source, /Do not load the agent file into the main session/);
-    assert.match(source, /fall back once to passing the file's full text/);
-    assert.match(source, /path-based context isolation was unavailable/);
+  for (const skill of skills) {
+    assert.match(skill, /\$\{CLAUDE_PLUGIN_ROOT\}\/references\/subagent-dispatch\.md/);
+    assert.match(skill, /read .* completely/i);
   }
 
-  assert.match(sources[0], /Do not ask the subagent to echo its instructions/);
-  assert.match(sources[1], /never an instruction echo/);
-  assert.match(sources[2], /Do not ask the subagent to echo its instructions/);
+  assert.match(dispatch, /absolute path/i);
+  assert.match(dispatch, /read that file completely/i);
+  assert.match(dispatch, /Do not load the agent file into the main session/);
+  assert.match(dispatch, /fall back once to passing the file's full text/);
+  assert.match(dispatch, /path-based context isolation was unavailable/);
+  assert.match(dispatch, /never an instruction echo/);
 });
 
 test("Bedrock review paths avoid unsupported subagent dispatch and never retry the validation error", () => {
+  const dispatch = read("references/subagent-dispatch.md");
   const review = read("skills/adr-review/SKILL.md");
   const implReview = read("skills/adr-impl-review/SKILL.md");
   const refactor = read("skills/adr-impl-refactor/SKILL.md");
 
-  for (const source of [review, implReview, refactor]) {
-    assert.match(source, /Provider capability gate/);
-    assert.match(source, /active model provider is identified as Amazon Bedrock/);
-    assert.match(source, /treat subagents as unavailable/);
-    assert.match(source, /do not invoke either path/);
-    assert.match(source, /validation_error/);
-    assert.match(source, /Invalid 'input': value did not match any expected variant/);
-    assert.match(source, /do not retry/);
-  }
+  assert.match(dispatch, /Provider capability gate/);
+  assert.match(dispatch, /active model provider is identified as Amazon Bedrock/);
+  assert.match(dispatch, /treat subagents as unavailable/);
+  assert.match(dispatch, /do not invoke either the named or generic path/);
+  assert.match(dispatch, /validation_error/);
+  assert.match(dispatch, /Invalid 'input': value did not match any expected variant/);
+  assert.match(dispatch, /do not retry/);
 
   assert.match(review, /separate sequential pass per ADR/);
   assert.match(review, /passes were not isolated subagent contexts/);
   assert.match(implReview, /separate passes that do not read each other's results/);
   assert.match(refactor, /`PROPOSE_ONLY` main-session fallback/);
   assert.match(refactor, /must not classify or apply any candidate as `APPLY_NOW`/);
+});
+
+test("large skill details are loaded through explicit progressive-disclosure references", () => {
+  const sync = read("skills/adr-sync/SKILL.md");
+  const hygiene = read("skills/adr-sync/references/repository-hygiene.md");
+
+  assert.match(sync, /read `references\/repository-hygiene\.md` completely/);
+  assert.match(sync, /Do not read that reference.*when no candidate exists/);
+  assert.match(
+    sync,
+    /Before starting Pass 2, read `references\/repository-hygiene\.md` completely/,
+  );
+  assert.doesNotMatch(sync, /^### 3\.5\./m);
+  assert.ok(sync.trim().split(/\s+/).length < 5000, "adr-sync SKILL.md should stay below 5k words");
+
+  for (const section of [
+    "Category slice integrity",
+    "Canonical stale Feature-ID naming",
+    "Companion documents and invariants",
+    "Mapping and index hygiene",
+  ]) {
+    assert.match(hygiene, new RegExp(`^## ${section}$`, "m"));
+  }
 });
 
 test("Bedrock troubleshooting documents the supported Codex feature flag and review fallbacks", () => {
@@ -127,12 +150,32 @@ test("user documentation reflects the pre-implementation baseline and single lif
     assert.doesNotMatch(source, /full mode adds human intent/i);
   }
 
+  const processReviewSection =
+    sources[3].match(/## 5\. \/adr-impl-review[\s\S]*?(?=\n## 6\.)/)?.[0] ?? "";
+  assert.notEqual(processReviewSection, "", "adr-process is missing the impl-review section");
+  assert.doesNotMatch(processReviewSection, /human-baseline\.md|사람 게이트 — 세 가지 질문/);
+  assert.doesNotMatch(processReviewSection, /사용자가 finding을 판정/);
+  assert.match(processReviewSection, /review-baseline\.md/);
+  assert.match(processReviewSection, /증거 기반 코드·테스트 수정 자동 반영/);
+
   assert.match(sources[0], /does not run for every user prompt/);
   assert.match(sources[0], /completion review does not repeat a routine human gate/);
   assert.match(sources[1], /there is no `UserPromptSubmit` hook/);
   assert.match(sources[2], /there is no per-prompt `UserPromptSubmit` hook/);
   assert.match(sources[2], /pre-approved ADR baseline/);
   assert.match(sources[3], /구현 전에 승인된 기준선/);
+  assert.match(sources[0], /critical command paths, routing, and efficiency review/);
+  assert.match(sources[2], /critical command paths, routing, and efficiency review/);
+  assert.doesNotMatch(sources[0], /eight diagrams|one per command's internals/);
+  assert.doesNotMatch(sources[2], /eight diagrams|one per command's internals/);
+});
+
+test("adr-sync names the current README and concepts split", () => {
+  const sync = read("skills/adr-sync/SKILL.md");
+
+  assert.match(sync, /README\/concepts split/);
+  assert.match(sync, /concepts material sits inside `README\.md`/);
+  assert.doesNotMatch(sync, /README\/AGENTS split|AGENTS material sits inside/);
 });
 
 test("adr-impl promotes only after verified refactoring, tests, and final review pass", () => {

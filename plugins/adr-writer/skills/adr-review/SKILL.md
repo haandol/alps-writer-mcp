@@ -62,18 +62,15 @@ Keep the result and pass each ADR's slice of it to that ADR's reviewer, so the L
 
 For each ADR in scope, run the `adr-reviewer` subagent in a fresh isolated context — that agent owns rules R1-R20 and is the source of truth for them; do not restate its criteria here.
 
-**Provider capability gate — apply before any named or generic subagent dispatch.** If the active model provider is identified as Amazon Bedrock, treat subagents as unavailable and do not invoke either path. Codex's current Bedrock transport can reject multi-agent input before the reviewer starts. If provider identity was not visible in advance and an attempted dispatch returns `validation_error` with `Invalid 'input': value did not match any expected variant`, do not retry with the named agent, a generic agent, or another reviewer. Mark subagents unavailable for the rest of this command and use the main-session fallback below.
+Before dispatch, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely and apply its provider capability gate and dispatch chain with named agent `adr-reviewer` and fallback file `${CLAUDE_PLUGIN_ROOT}/agents/adr-reviewer.md`.
 
-1. If the client can discover the `adr-reviewer` named subagent, invoke it.
-2. Otherwise resolve `${CLAUDE_PLUGIN_ROOT}/agents/adr-reviewer.md` to an **absolute path** and run a **generic read-only subagent** instructed to read that file completely and follow it as its review instructions. Do not load the agent file into the main session or paste its full text into the dispatch prompt; Codex plugins do not register `agents/*.md` as components, so this path-based fallback is the default path. Pass the ADR path, mapping entry, and harness slice separately as task input.
-3. If the generic subagent cannot read the absolute agent-file path, fall back once to passing the file's full text so review capability is preserved, and record that the path-based context isolation was unavailable.
-4. Where subagents are unavailable, the main session carries out the same instructions as a separate sequential pass per ADR. Give each pass only that ADR's path, mapping entry, and harness slice; do not reuse another ADR's findings as review input. Note in the report that the passes were not isolated subagent contexts.
+Where subagents are unavailable, the main session carries out the same instructions as a separate sequential pass per ADR. Give each pass only that ADR's path, mapping entry, and harness slice; do not reuse another ADR's findings as review input. Note in the report that the passes were not isolated subagent contexts.
 
 Pass each reviewer: the ADR path, that category's `.mapping.json` entry, and **that ADR's slice of the harness result**.
 
 - **One subagent per ADR, and run independent ADRs in parallel when the provider supports it.** Isolation is the point — a reviewer that saw the previous ADR's findings starts pattern-matching instead of judging, and one long context degrades the later ADRs. The Amazon Bedrock fallback is sequential and must report that this isolation was unavailable.
 - **Never batch several ADRs into one reviewer call** to save tokens. R19 (the regeneration test) requires holding one ADR's whole contract in view; batching is how a missing requirement slips through.
-- Require only the agent file's existing review-result format in the response. Do not ask the subagent to echo its instructions, raw rule documents, or exploratory notes.
+- Require only the agent file's existing review-result format in the response.
 - If the scope is large enough that a full parallel fan-out is impractical, process in **category-sized batches** and tell the user the batching, rather than silently reviewing a subset. Never truncate the scope without saying so.
 
 ### 4. Aggregate — where the value of a sweep actually is
