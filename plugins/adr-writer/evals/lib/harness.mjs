@@ -1,9 +1,9 @@
 // harness.mjs — build a throwaway repo, invoke a REAL skill/agent definition in
 // a headless agent, and score what comes back.
 //
-// The point of passing the actual SKILL.md, its directly referenced Markdown,
-// and agents/*.md text is that a reconstructed prompt would test this file's
-// summary of the rules rather than the rules that ship.
+// The point of passing the actual SKILL.md, scenario-selected Markdown
+// references, and agents/*.md text is that a reconstructed prompt would test
+// this file's summary of the rules rather than the rules that ship.
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -55,22 +55,15 @@ export function seedMapping(dir, mapping = { categories: {} }) {
 
 // The instruction text of a real skill or agent, minus its YAML frontmatter
 // (the frontmatter is client registration metadata, not instructions).
-export function skillText(name) {
-  const skillDir = path.join(PLUGIN_ROOT, "skills", name);
-  const source = readFileSync(path.join(skillDir, "SKILL.md"), "utf8");
-  const parts = [stripFrontmatter(source)];
-
-  for (const reference of directMarkdownReferences(source, skillDir)) {
-    parts.push(`\n# Loaded reference: ${path.relative(PLUGIN_ROOT, reference)}\n`);
-    parts.push(readFileSync(reference, "utf8"));
-  }
-
-  return parts.join("\n");
+export function skillText(name, options = {}) {
+  return promptText(path.join(PLUGIN_ROOT, "skills", name, "SKILL.md"), PLUGIN_ROOT, options);
 }
 
-export function alpsSkillText(name) {
-  return stripFrontmatter(
-    readFileSync(path.join(ALPS_PLUGIN_ROOT, "skills", name, "SKILL.md"), "utf8"),
+export function alpsSkillText(name, options = {}) {
+  return promptText(
+    path.join(ALPS_PLUGIN_ROOT, "skills", name, "SKILL.md"),
+    ALPS_PLUGIN_ROOT,
+    options,
   );
 }
 
@@ -81,8 +74,8 @@ export function alpsGuideText(section) {
   );
 }
 
-export function agentText(name) {
-  return stripFrontmatter(readFileSync(path.join(PLUGIN_ROOT, "agents", `${name}.md`), "utf8"));
+export function agentText(name, options = {}) {
+  return promptText(path.join(PLUGIN_ROOT, "agents", `${name}.md`), PLUGIN_ROOT, options);
 }
 
 export function ruleText(name) {
@@ -92,6 +85,36 @@ export function ruleText(name) {
 
 function stripFrontmatter(source) {
   return source.replace(/^---\n[\s\S]*?\n---\n/, "");
+}
+
+function promptText(entryPath, pluginRoot, { references = [] } = {}) {
+  if (!Array.isArray(references)) {
+    throw new TypeError("prompt references must be an array");
+  }
+
+  const source = readFileSync(entryPath, "utf8");
+  const entryDir = path.dirname(entryPath);
+  const available = new Map(
+    directMarkdownReferences(source, entryDir).map((reference) => [
+      path.relative(pluginRoot, reference).split(path.sep).join("/"),
+      reference,
+    ]),
+  );
+  const parts = [stripFrontmatter(source)];
+
+  for (const requested of references) {
+    const key = requested.split(path.sep).join("/");
+    const reference = available.get(key);
+    if (!reference) {
+      throw new Error(
+        `${key} is not directly referenced by ${path.relative(pluginRoot, entryPath)}`,
+      );
+    }
+    parts.push(`\n# Loaded reference: ${key}\n`);
+    parts.push(readFileSync(reference, "utf8"));
+  }
+
+  return parts.join("\n");
 }
 
 function directMarkdownReferences(source, skillDir) {

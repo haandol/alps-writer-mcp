@@ -125,16 +125,32 @@ test("prompts embed the real skill/agent text, not a paraphrase", async () => {
   }
 });
 
-test("skillText includes directly referenced prompt modules", async () => {
+test("prompt loaders include only explicitly selected direct references", async () => {
   const { skillText } = await import(path.join(EVALS, "lib", "harness.mjs"));
 
-  const review = skillText("adr-review");
+  const reviewBase = skillText("adr-review");
+  assert.doesNotMatch(reviewBase, /# Loaded reference:/);
+  assert.doesNotMatch(reviewBase, /Invalid 'input': value did not match any expected variant/);
+
+  const review = skillText("adr-review", {
+    references: ["references/subagent-dispatch.md"],
+  });
   assert.match(review, /# Loaded reference: references\/subagent-dispatch\.md/);
   assert.match(review, /Invalid 'input': value did not match any expected variant/);
 
-  const sync = skillText("adr-sync");
+  const sync = skillText("adr-sync", {
+    references: ["skills/adr-sync/references/repository-hygiene.md"],
+  });
   assert.match(sync, /# Loaded reference: skills\/adr-sync\/references\/repository-hygiene\.md/);
   assert.match(sync, /^## Canonical stale Feature-ID naming$/m);
+
+  assert.throws(
+    () =>
+      skillText("adr-review", {
+        references: ["references/not-directly-referenced.md"],
+      }),
+    /not directly referenced/,
+  );
 });
 
 // Fixtures must be repos the plugin would accept. A fixture that trips the

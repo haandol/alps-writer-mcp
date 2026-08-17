@@ -151,6 +151,9 @@ test("/adr-new verifies its own draft instead of delegating to adr-reviewer", ()
 
   // the reviewer agent names /adr-review as its path, and disclaims /adr-new
   const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  const reviewerDescription = reviewer.match(/^description:\s*(.+)$/m)?.[1] ?? "";
+  assert.match(reviewerDescription, /existing|hand-edited|independent/i);
+  assert.doesNotMatch(reviewerDescription, /before finalizing a new ADR via \/adr-new/i);
   assert.match(reviewer, /\*\*Not from `\/adr-new`\.\*\*/);
   assert.match(reviewer, /nobody holds an authoring context for/);
   // the sweep owns the independent read, and runs on request rather than always

@@ -127,7 +127,7 @@ the parsed tail block, the raw reply, and the fixture path — so a check can re
 what the agent wrote to disk, not just what it said.
 
 Helpers are in `lib/harness.mjs`: `skillText` / `agentText` (real instruction
-text; `skillText` also appends directly referenced Markdown modules),
+text; scenarios explicitly select any directly referenced Markdown modules),
 `seedRuleDocs` / `seedMapping` / `write`, the `expect*` scorers, and
 `expectLintClean` which runs the shipped `adr-structure-lint.mjs` over the result.
 
@@ -180,7 +180,7 @@ hides true ones.
 Be honest about the gap when reading a result.
 
 - **The prompt is real; the surrounding context is not.** Scenarios pass the
-  actual `SKILL.md`, its directly referenced Markdown modules, and
+  actual `SKILL.md`, the directly referenced Markdown modules selected by that scenario, and
   `agents/*.md` text — reconstructing a prompt would test this directory's
   summary of the rules instead of the rules that ship — via the same "read the
   agent file, hand it to a generic subagent" path the skills document as their
