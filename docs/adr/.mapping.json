@@ -116,7 +116,7 @@
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
           "status": "Accepted (2026-08-17)",
-          "summary": "개발 워크플로우는 필수 안전 경계만 강제하고 Feature와 ADR의 인지비용을 내부 5축으로 산정해 비영속 1~10 점수만 표시하며 분할은 사용자 요청에만 제안한다"
+          "summary": "개발 워크플로우는 필수 안전 경계만 강제하고 비영속 인지비용 점수와 요청 기반 분할을 제공하며 의미 분할이 부적절한 큰 구현은 선택적 Stacked PR 후보로 전달한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]

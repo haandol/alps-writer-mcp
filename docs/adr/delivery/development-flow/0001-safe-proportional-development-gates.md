@@ -16,12 +16,14 @@ ADR의 의도와 재생성 가능성을 구현 후에 다시 확인하면 작성
 
 ALPS와 ADR 플러그인은 요구사항을 AI를 통해 코드로 전환하고 그 과정의 인지부하를 관리하도록 돕는 워크플로우다. 모델이 스스로 처리할 수 있는 판단까지 고정 절차, 상태와 승인 단계로 만들면 모델이 개선된 뒤에도 사용자가 같은 절차 비용을 계속 부담한다. 인지부하 관리는 안전 경계를 늘리는 프레임워크가 아니라, 작업의 이해 비용을 짧게 평가하고 필요할 때 더 작은 의미 단위로 나눌 수 있게 하는 안내여야 한다.
 
+Feature나 ADR을 의미상 더 나누면 vertical slice 또는 one-ADR-one-decision 경계가 깨질 수 있다. 이 경우 하나의 결정이 만드는 큰 구현 diff를 단일 PR로 전달하면 리뷰 순간의 인지부하는 여전히 높다. 구현 전달 단계를 dependency 순서의 Stacked PR로 나누면 상위 문서 경계를 바꾸지 않고 각 리뷰가 하나의 구현 질문에 집중할 수 있다.
+
 ## Decision Drivers
 
 - 선행 결정과 승인된 ADR 계약이 유효하지 않은 상태에서 downstream 구현이 완료 상태가 되면 안 된다.
 - 완료 상태는 변경 위험에 비례한 테스트와 구현 리뷰를 반영하고 해결 가능한 발견을 자동 수정해야 한다.
 - 저장소 상태가 바뀌지 않으면 검증을 반복하지 않고, 일반 대화가 ADR 인덱스 전체를 소비하지 않으며, drift 근거 없는 작은 변경에 깊은 동기화를 강제하지 않아야 한다.
-- 인지부하 평가는 피처와 ADR을 비교하고 분할 후보를 찾을 만큼 일관되면서도 새 상태, 승인 단계나 완료 게이트를 만들지 않아야 한다.
+- 인지부하 평가는 피처와 ADR을 비교하고 분할 후보를 찾을 만큼 일관되어야 한다. 의미상 분할할 수 없는 큰 구현은 ALPS나 ADR을 인위적으로 쪼개지 않고 코드 전달 단계에서 리뷰 가능한 단위로 나눌 수 있어야 하며, 이 지원이 새 상태, 승인 단계나 완료 게이트를 만들면 안 된다.
 - 모델이 더 잘 판단하게 되면 prompt에서 축소하거나 제거할 수 있도록 평가 결과를 영속 권위나 구조적 프레임워크로 만들지 않아야 한다.
 
 ## Decision
@@ -34,11 +36,14 @@ flowchart LR
     Safety[ADR 계약과 선행 상태]
     Assess[인지비용 1~10 평가]
     Suggest[요청 시 분할 후보 제안]
+    Stack[필요 시 Stacked PR 후보]
     Verify[위험 비례 검증과 완료 판정]
 
     Input --> Safety --> Assess --> Verify
     Assess -. 사용자가 분할 요청 .-> Suggest
+    Suggest -. 의미 분할이 부적절 .-> Stack
     Suggest --> Input
+    Stack --> Verify
 ```
 
 필수 안전 경계는 ADR-first 계약, 선행 결정 유효성, 테스트와 위험 비례 완료 검토처럼 잘못된 결과를 완료 상태로 만들지 않기 위해 필요한 규칙만 유지한다. 인지부하 평가는 이 경계와 별개인 읽기 보조 정보이며 저장, 승인, 구현이나 상태 전환을 막지 않는다.
@@ -53,7 +58,11 @@ ALPS Feature와 ADR을 제시하거나 구현 계획을 세울 때 현재 내용
 
 축별 점수와 근거는 출력하지 않는다. 기본 출력은 `인지비용: N/10` 한 줄이다. 점수는 정밀한 측정값이나 품질 판정이 아니라 현재 독자가 예상할 이해 비용의 휴리스틱이며, 내용이 바뀌면 다시 계산한다.
 
-7점 이상은 분할을 검토할 수 있다는 신호지만 자동으로 추가 설명, 승인 단계나 분할안을 출력하지 않는다. 사용자가 분할을 요청하면 최대 세 개의 더 작은 인지 단위 후보를 제안한다. ALPS Feature는 독립적으로 시연 가능한 사용자 행동 경계가 있을 때만 Section 6과 Section 7의 피처 분할을 제안한다. ADR은 여러 독립 결정이 섞였을 때만 ADR 분할을 제안하며, 하나의 본질적으로 어려운 결정은 여러 ADR로 인위적으로 쪼개지 않고 설명 순서나 구현 단계를 제안한다. 어떤 경우에도 frontend/backend 같은 기술 계층으로 vertical slice를 분할하지 않는다.
+7점 이상은 분할을 검토할 수 있다는 신호지만 자동으로 추가 설명, 승인 단계나 분할안을 출력하지 않는다. 사용자가 분할을 요청하면 최대 세 개의 더 작은 인지 단위 후보를 제안한다. ALPS Feature는 독립적으로 시연 가능한 사용자 행동 경계가 있을 때만 Section 6과 Section 7의 피처 분할을 제안한다. ADR은 여러 독립 결정이 섞였을 때만 ADR 분할을 제안한다. 어떤 경우에도 frontend/backend 같은 기술 계층으로 vertical slice를 분할하지 않는다.
+
+하나의 본질적으로 어려운 결정은 하나의 ADR로 유지한다. 사용자가 인지부하 감소나 작업 분할을 요청했고 Feature 또는 ADR 분할이 적절하지 않으면, `/adr-impl`은 같은 ADR을 구현하는 dependency-ordered Stacked PR 후보를 제안할 수 있다. 각 PR은 하나의 review question과 그 단계를 검증하는 테스트에 집중한다. 전체 Stack은 하나의 승인된 ADR 계약을 공동으로 구현하며 PR별 ADR이나 placeholder ADR을 만들지 않는다.
+
+Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계획, 브랜치 관계와 리뷰 진행 상태는 구현 전달을 위한 일시적 정보이며 ALPS, ADR, `.mapping.json`이나 별도 registry에 저장하지 않는다. 실제 PR 생성은 사용자가 게시를 요청하고 현재 GitHub 환경이 지원할 때만 수행한다. 지원하지 않으면 같은 구현 단계 계획을 유지하되 GitHub Stack 절차를 강제하지 않는다.
 
 `SessionStart` 훅은 세션 시작·재개·초기화와 context compaction 복구 시점에만 짧은 ADR admission 지시를 주입한다. 일반 사용자 메시지마다 다시 실행하지 않는다. `.mapping.json` 내용은 훅에 포함하지 않으며, 요청이 admission gate를 통과한 경우에만 메인 세션이 전체 mapping과 plausible ADR 본문을 읽어 기존 결정 소유자와 선행 상태를 판정한다. mapping 파일이 없으면 훅은 조용히 종료하고, 파일이 존재하지만 JSON 파싱에 실패하면 ADR 작업 전에 복구하도록 경고한다.
 
@@ -85,6 +94,11 @@ ALPS Feature와 ADR을 제시하거나 구현 계획을 세울 때 현재 내용
 - 사용자가 분할을 요청한 경우에만 최대 세 개의 의미 단위 후보를 제시한다.
 - Feature 분할은 독립적으로 시연 가능한 사용자 행동을 기준으로 Section 6과 Section 7을 함께 조정하며 기술 계층으로 나누지 않는다.
 - ADR 분할은 여러 독립 결정이 섞였을 때만 제안한다. 하나의 어려운 결정은 하나의 ADR로 유지하고 설명 순서나 구현 단계만 나눌 수 있다.
+- 사용자가 분할을 요청했지만 Feature와 ADR의 의미 경계를 유지해야 하면, 하나의 ADR 구현을 dependency-ordered Stacked PR 후보로 제안할 수 있다.
+- 각 Stacked PR 후보는 하나의 review question과 해당 단계의 검증에 집중하며, 전체 Stack은 하나의 승인된 ADR 계약을 구현한다.
+- 인지비용 점수만으로 Stacked PR을 자동 생성하지 않는다. 실제 PR 생성은 사용자가 게시를 요청하고 현재 GitHub 환경이 지원할 때만 수행한다.
+- Stack 계획, 브랜치 관계와 리뷰 상태는 ALPS 문서, ADR 본문, `.mapping.json`, status 또는 별도 registry에 저장하지 않는다.
+- 개별 Stack layer는 ADR을 완료 상태로 만들지 않는다. 전체 Stack이 최종 테스트와 구현 리뷰를 통과한 뒤에만 ADR을 `Accepted`로 전환한다.
 - 인지비용 점수는 ALPS 문서, ADR 본문, `.mapping.json`, 상태 또는 별도 권위 문서에 저장하지 않는다. 현재 내용을 바탕으로 대화에서 다시 계산하는 일시적 안내다.
 - 인지비용 점수는 품질, 구현 가능성, 승인 여부나 완료 상태를 판정하지 않는다.
 - 인지부하 관리를 위해 새 mandatory checkpoint, 승인 모드, status, registry 또는 blocking threshold를 만들지 않는다.
@@ -119,6 +133,10 @@ ALPS Feature와 ADR을 제시하거나 구현 계획을 세울 때 현재 내용
    - 장점: 이해 비용을 짧게 드러내면서 사용자가 필요할 때만 작업 단위를 조정할 수 있다.
    - 단점: 점수는 모델 판단에 의존하므로 절대적 측정값으로 사용할 수 없다.
 
+7. **의미 분할이 부적절한 구현을 선택적 Stacked PR로 전달**
+   - 장점: Feature와 ADR 경계를 유지하면서 큰 구현 diff의 리뷰 부담을 시간과 질문별로 나눌 수 있다.
+   - 단점: 의존 PR의 순서와 base 관계를 관리해야 하며 GitHub 환경에 따라 사용할 수 없다.
+
 ## Consequences
 
 ### Positive
@@ -130,6 +148,7 @@ ALPS Feature와 ADR을 제시하거나 구현 계획을 세울 때 현재 내용
 - 구현 후 반복 승인 없이 검토 발견을 수정하고 완료 결과를 받을 수 있다.
 - ADR과 무관한 턴은 전체 ADR 인덱스를 반복해서 소비하지 않는다.
 - 사용자는 Feature나 ADR의 예상 이해 비용을 한 줄로 확인하고 필요할 때 분할을 요청할 수 있다.
+- 하나의 Feature와 ADR로 유지해야 하는 구현도 요청 시 review question별 Stacked PR 후보로 전달할 수 있다.
 - 인지부하 관리가 문서 상태나 강제 절차로 굳지 않아 모델 개선에 따라 prompt를 단순화할 수 있다.
 
 ### Negative
@@ -139,6 +158,7 @@ ALPS Feature와 ADR을 제시하거나 구현 계획을 세울 때 현재 내용
 - 구현 전 ADR 승인이 형식적으로 수행되면 잘못된 계약을 기준으로 자동 완료할 수 있다.
 - admission을 통과한 뒤 mapping을 읽으라는 지시를 모델이 따르지 않으면 기존 결정 소유자나 선행 상태를 놓칠 수 있다.
 - 같은 작업을 모델마다 다르게 채점할 수 있고 점수 자체가 새로운 검토 대상이 될 수 있다.
+- Stacked PR은 아래 PR의 변경과 리뷰 지연이 위 PR에 전파되어 전달 순서를 관리해야 한다.
 
 ### Risks
 
@@ -147,8 +167,11 @@ ALPS Feature와 ADR을 제시하거나 구현 계획을 세울 때 현재 내용
 - on-demand mapping 조회가 누락될 수 있다. 훅과 행동 eval은 admitted 요청에서 코드보다 먼저 전체 mapping과 plausible ADR을 읽는지를 검증한다.
 - 점수가 정밀한 생산성 지표처럼 사용될 수 있다. 점수는 비영속 휴리스틱이며 품질이나 완료 판정에 사용하지 않는다.
 - 높은 점수만 보고 vertical slice나 하나의 결정을 잘못 분할할 수 있다. 분할 제안은 사용자 행동 경계와 one-ADR-one-decision 기준을 먼저 적용한다.
+- Stack을 기술 계층이나 파일 수로 나누면 작은 PR이 여러 개여도 인지부하가 줄지 않는다. 각 layer는 하나의 review question과 dependency 순서를 가져야 한다.
+- GitHub Stack 지원 여부와 인터페이스는 변할 수 있다. 워크플로우는 provider 명령을 계약으로 고정하지 않고 실행 시 capability를 확인한다.
 
 ## Related
 
 - [구현 리뷰](../../adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md)
 - [PRD 기능을 ADR 결정으로 전달](../../alps-authoring/spec-handoff/0001-admission-aware-feature-handoff.md)
+- [저장소 보호](../repository-protection/0001-protect-main-with-pr-and-ci.md)

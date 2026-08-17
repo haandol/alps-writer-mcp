@@ -86,8 +86,8 @@ export default {
       ),
       expectNoText(
         visible,
-        /must split|split required|mandatory checkpoint|approval required|blocked|차단|필수 분할|승인 필요|체크포인트/i,
-        "does not turn the score into a process gate",
+        /must split|split required|mandatory checkpoint|approval required|blocked|Stacked PR|PR stack|차단|필수 분할|승인 필요|체크포인트/i,
+        "does not turn the score into a process gate or delivery plan",
       ),
     ];
   },

@@ -432,6 +432,23 @@ ADR_SCORE | B 9/10
 === EVAL-END ===`,
     },
     {
+      name: "impl-offers-stacked-pr-fallback",
+      good: `Feature와 ADR은 하나로 유지한다. 구현 전달만 세 개의 dependency-ordered Stacked PR로 나누고 각 layer는 하나의 review question을 가진다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+KEEP_ONE_ADR | 하나의 Feature와 하나의 ADR 계약을 유지
+STACK_FALLBACK | Stacked PR을 dependency 순서로 구성하고 PR마다 하나의 review question 사용
+EPHEMERAL | Stack 계획은 ADR, mapping, registry에 저장하지 않음
+NO_AUTOPUBLISH | 사용자의 게시 요청과 GitHub capability 확인 전에는 publish하지 않음
+=== EVAL-END ===`,
+      bad: `인지비용이 높으므로 ADR 세 개를 만들고 PR도 즉시 게시했다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+NEW_ADR | 새 ADR 세 개 생성
+AUTO_PUBLISH | 자동 게시 완료
+=== EVAL-END ===`,
+    },
+    {
       name: "author-routes-existing-provider-change",
       good: `기존 ADR 0001이 같은 결정을 소유하므로 제자리 재작성하고 /adr-impl ai/model-provider로 라우팅한다. 원복도 같은 ADR이며 새 ADR이나 0002는 없다.
 === EVAL-VERDICT: ROUTE_TO_EXISTING ===

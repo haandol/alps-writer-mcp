@@ -1021,3 +1021,23 @@ test("Feature and ADR comprehension load is scored internally but shown as one a
     assert.match(source, /implementation steps|구현 단계/i);
   }
 });
+
+test("adr-impl offers Stacked PR only as a requested delivery fallback", () => {
+  const impl = read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md"));
+
+  assert.match(impl, /Stacked PR/i);
+  assert.match(impl, /Feature or ADR split|Feature.*ADR.*split/i);
+  assert.match(impl, /one review question/i);
+  assert.match(impl, /dependency order|dependency-ordered/i);
+  assert.match(impl, /one approved ADR contract|same approved ADR contract/i);
+  assert.match(impl, /only when the user asks|user asks/i);
+  assert.match(impl, /do not automatically|never automatically|must not automatically/i);
+  assert.match(impl, /publishing|publish/i);
+  assert.match(impl, /GitHub.*capability|capability.*GitHub/i);
+  assert.match(impl, /Individual layers do not complete or promote the ADR/i);
+  assert.match(impl, /complete Stack[\s\S]{0,100}final tests[\s\S]{0,100}implementation review/i);
+  assert.match(
+    impl,
+    /do not (?:write|persist|store)[\s\S]{0,180}(?:ADR|\.mapping\.json|registry)/i,
+  );
+});
