@@ -1,9 +1,9 @@
 // harness.mjs — build a throwaway repo, invoke a REAL skill/agent definition in
 // a headless agent, and score what comes back.
 //
-// The point of passing the actual SKILL.md, its directly referenced Markdown,
-// and agents/*.md text is that a reconstructed prompt would test this file's
-// summary of the rules rather than the rules that ship.
+// The point of passing the actual SKILL.md, scenario-selected Markdown
+// references, and agents/*.md text is that a reconstructed prompt would test
+// this file's summary of the rules rather than the rules that ship.
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -17,6 +17,12 @@ export const ALPS_PLUGIN_ROOT = path.resolve(PLUGIN_ROOT, "..", "alps-writer");
 export const TEMPLATES = path.join(PLUGIN_ROOT, "templates", "adr");
 export const STRUCTURE_LINT = path.join(PLUGIN_ROOT, "scripts", "adr-structure-lint.mjs");
 export const ADR_HOOK = path.join(PLUGIN_ROOT, "hooks", "surface-adr-context.mjs");
+export const IMPL_REVIEW_VALIDATE = path.join(
+  PLUGIN_ROOT,
+  "scripts",
+  "adr-impl-review-validate.mjs",
+);
+export const IMPL_REVIEW_REPORT = path.join(PLUGIN_ROOT, "scripts", "adr-impl-review-report.mjs");
 
 // The seeded rule docs a real repo holds. Fixtures get the real files, not
 // stubs — several rules are only judgeable against them, and a scenario that
@@ -53,24 +59,59 @@ export function seedMapping(dir, mapping = { categories: {} }) {
   write(dir, "docs/adr/.mapping.json", JSON.stringify(mapping, null, 2) + "\n");
 }
 
-// The instruction text of a real skill or agent, minus its YAML frontmatter
-// (the frontmatter is client registration metadata, not instructions).
-export function skillText(name) {
-  const skillDir = path.join(PLUGIN_ROOT, "skills", name);
-  const source = readFileSync(path.join(skillDir, "SKILL.md"), "utf8");
-  const parts = [stripFrontmatter(source)];
-
-  for (const reference of directMarkdownReferences(source, skillDir)) {
-    parts.push(`\n# Loaded reference: ${path.relative(PLUGIN_ROOT, reference)}\n`);
-    parts.push(readFileSync(reference, "utf8"));
+export function validateReviewArtifact(dir, report, findings) {
+  const artifactDir = path.join(dir, "review-artifact");
+  const reportPath = write(artifactDir, "implementation-review.md", report);
+  const explanationPath = write(artifactDir, "explanation.md", "# Review explanation\n");
+  const findingsPath = write(
+    artifactDir,
+    "findings.json",
+    JSON.stringify(
+      {
+        ...findings,
+        report: reportPath,
+        explanation: findings.reviewMode === "full" ? explanationPath : undefined,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  const validation = spawnSync(process.execPath, [IMPL_REVIEW_VALIDATE, artifactDir], {
+    cwd: dir,
+    encoding: "utf8",
+  });
+  if (validation.status !== 0) {
+    return {
+      pass: false,
+      detail: validation.stderr.trim() || validation.stdout.trim() || "validator failed",
+    };
   }
 
-  return parts.join("\n");
+  const rendered = spawnSync(process.execPath, [IMPL_REVIEW_REPORT, findingsPath, "--stdout"], {
+    cwd: dir,
+    encoding: "utf8",
+  });
+  return {
+    pass: rendered.status === 0,
+    detail:
+      rendered.status === 0
+        ? "artifact validator and HTML renderer passed"
+        : rendered.stderr.trim() || "HTML renderer failed",
+    html: rendered.stdout,
+  };
 }
 
-export function alpsSkillText(name) {
-  return stripFrontmatter(
-    readFileSync(path.join(ALPS_PLUGIN_ROOT, "skills", name, "SKILL.md"), "utf8"),
+// The instruction text of a real skill or agent, minus its YAML frontmatter
+// (the frontmatter is client registration metadata, not instructions).
+export function skillText(name, options = {}) {
+  return promptText(path.join(PLUGIN_ROOT, "skills", name, "SKILL.md"), PLUGIN_ROOT, options);
+}
+
+export function alpsSkillText(name, options = {}) {
+  return promptText(
+    path.join(ALPS_PLUGIN_ROOT, "skills", name, "SKILL.md"),
+    ALPS_PLUGIN_ROOT,
+    options,
   );
 }
 
@@ -81,8 +122,8 @@ export function alpsGuideText(section) {
   );
 }
 
-export function agentText(name) {
-  return stripFrontmatter(readFileSync(path.join(PLUGIN_ROOT, "agents", `${name}.md`), "utf8"));
+export function agentText(name, options = {}) {
+  return promptText(path.join(PLUGIN_ROOT, "agents", `${name}.md`), PLUGIN_ROOT, options);
 }
 
 export function ruleText(name) {
@@ -92,6 +133,36 @@ export function ruleText(name) {
 
 function stripFrontmatter(source) {
   return source.replace(/^---\n[\s\S]*?\n---\n/, "");
+}
+
+function promptText(entryPath, pluginRoot, { references = [] } = {}) {
+  if (!Array.isArray(references)) {
+    throw new TypeError("prompt references must be an array");
+  }
+
+  const source = readFileSync(entryPath, "utf8");
+  const entryDir = path.dirname(entryPath);
+  const available = new Map(
+    directMarkdownReferences(source, entryDir).map((reference) => [
+      path.relative(pluginRoot, reference).split(path.sep).join("/"),
+      reference,
+    ]),
+  );
+  const parts = [stripFrontmatter(source)];
+
+  for (const requested of references) {
+    const key = requested.split(path.sep).join("/");
+    const reference = available.get(key);
+    if (!reference) {
+      throw new Error(
+        `${key} is not directly referenced by ${path.relative(pluginRoot, entryPath)}`,
+      );
+    }
+    parts.push(`\n# Loaded reference: ${key}\n`);
+    parts.push(readFileSync(reference, "utf8"));
+  }
+
+  return parts.join("\n");
 }
 
 function directMarkdownReferences(source, skillDir) {

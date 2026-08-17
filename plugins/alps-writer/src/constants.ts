@@ -22,7 +22,7 @@ export const SECTION_TITLES: Record<number, string> = {
 export const SECTION_REFERENCES: Record<number, number[]> = {
   3: [2],
   5: [6],
-  7: [6],
+  7: [3, 6],
   8: [2, 6],
 };
 

@@ -23,49 +23,89 @@ function validate(dir) {
   return spawnSync(process.execPath, [VALIDATOR, dir], { encoding: "utf8" });
 }
 
-function validReport() {
-  return `# ADR implementation review and repair guide
+function writeAdr(dir, requirement = "Settlement completes at most once") {
+  const adr = path.join(dir, "docs/adr/streaming/0001.md");
+  mkdirSync(path.dirname(adr), { recursive: true });
+  writeFileSync(
+    adr,
+    `# ADR 0001: settlement
 
-## 1. Verdict summary
-## 2. What to know first
-## 3. Order to read the code
-## 4. Map of the current implementation
-\`\`\`mermaid
-flowchart LR
-  A --> B
-\`\`\`
-## 5. Runtime flow
-\`\`\`mermaid
-sequenceDiagram
-  A->>B: request
-\`\`\`
-## 6. State, data, and failure model
-## 7. Findings
+## Decision
+
+Settlement uses an idempotent completion boundary.
+
+### Requirement contract
+
+- ${requirement}
+
+### Alternatives
+
+1. one
+2. two
+
+## Consequences
+
+Current state.
+`,
+  );
+  return adr;
+}
+
+function validReport() {
+  return `# ADR implementation review
+
+## Review mode
+full
+
+## Scope
+stream settlement
+
+## ADR contract coverage
+| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
+| --- | --- | --- | --- | --- | --- | --- |
+| D0 | Idempotent settlement boundary | PROVEN | Decision | Settlement has a single completion boundary | src/stream.mjs:4 | node --test test/stream.test.mjs — PASS |
+| R1 | Settlement completes at most once | VIOLATED | Settlement completes at most once | The current settlement path can write twice | src/stream.mjs:12 | node --test test/stream.test.mjs — FAIL |
+
+## Notable implementation choices
+| Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
+| --- | --- | --- | --- |
+| 250 ms fixed retry | src/stream.mjs:8 | Preserves bounded recovery | Affects recovery latency |
+
+## Findings
 ### F1. Duplicate settlement
 - Files and symbols to change: src/stream.mjs
 - Scope not to touch: protocol
 - Completion criteria: one record
 - Needs confirmation: none
-## 8. Fix execution order
-## 9. Verification checklist
-## 10. Merge decision checklist
-| Axis | Verdict |
-| --- | --- |
-| Problem fitness | met |
-| Functional adequacy | not met |
-| Contract compliance | met |
-| Change minimality | met |
-| Verification strength | met |
-| Operational safety | undetermined |
-| Maintainability | met |
-## 11. Review limits and questions
+
+## Tests
+node --test test/stream.test.mjs — FAIL
+
+## Residual risks
+None beyond F1.
+
+## Repair guide
+Fix F1 before merge.
 `;
 }
 
+function validReportWithInlineCodeCells() {
+  return validReport()
+    .replace(
+      "| D0 | Idempotent settlement boundary | PROVEN |",
+      "| `D0` | Idempotent settlement boundary | `PROVEN` |",
+    )
+    .replace(
+      "| R1 | Settlement completes at most once | VIOLATED |",
+      "| `R1` | Settlement completes at most once | `VIOLATED` |",
+    );
+}
+
 function validFindings(dir) {
+  const adr = writeAdr(dir);
   return {
     reviewMode: "full",
-    adr: "docs/adr/streaming/0001.md",
+    adr,
     verdict: "FIX_REQUIRED",
     explanation: path.join(dir, "explanation.md"),
     report: path.join(dir, "implementation-review.md"),
@@ -78,6 +118,34 @@ function validFindings(dir) {
       unverifiedRiskCount: 0,
       testCommandCount: 1,
     },
+    implementationChoices: [
+      {
+        choice: "retry uses a 250 ms fixed delay",
+        evidence: "src/stream.mjs:8 — retryDelayMs: 250",
+        intentFit: "preserves the ADR's bounded recovery and failure guarantees",
+        whyItMatters: "changes recovery latency and request rate",
+      },
+    ],
+    contractCoverage: [
+      {
+        contractId: "D0",
+        requirement: "Idempotent settlement boundary",
+        status: "PROVEN",
+        adrBasis: "Decision",
+        implementation: "settlement has a single completion boundary",
+        evidence: "src/stream.mjs:4 — completion boundary",
+        tests: "node --test test/stream.test.mjs — PASS",
+      },
+      {
+        contractId: "R1",
+        requirement: "Settlement completes at most once",
+        status: "VIOLATED",
+        adrBasis: "Settlement completes at most once",
+        implementation: "the current settlement path can write twice",
+        evidence: "src/stream.mjs:12 — duplicate writes reproduced",
+        tests: "node --test test/stream.test.mjs — FAIL: expected 1, got 2",
+      },
+    ],
     findings: [
       {
         category: "Spec violation",
@@ -102,8 +170,14 @@ standard — localized implementation reinforcement
 ## Scope
 src/parser.mjs
 
-## Decision ledger
-- Existing parsing behavior remains unchanged: accounted for by parser tests
+## ADR contract coverage
+| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
+| --- | --- | --- | --- | --- | --- | --- |
+| D0 | Parser compatibility | PROVEN | Decision | The parser preserves accepted inputs and outputs | src/parser.mjs | node --test test/parser.test.mjs — PASS |
+| R1 | Existing parsing behavior remains unchanged | PROVEN | Existing parsing behavior remains unchanged | The parser preserves accepted inputs and outputs | src/parser.mjs | node --test test/parser.test.mjs — PASS |
+
+## Notable implementation choices
+None found.
 
 ## Findings
 None
@@ -111,12 +185,12 @@ None
 ## Tests
 node --test test/parser.test.mjs — PASS
 
-## Review limits
+## Residual risks
 One isolated sufficiency pass; no protected surface changed.
 `;
 }
 
-test("review artifact validator accepts a self-contained junior repair guide", () => {
+test("review artifact validator accepts a concise full report without Mermaid", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
     writeFileSync(path.join(dir, "implementation-review.md"), validReport());
@@ -127,25 +201,18 @@ test("review artifact validator accepts a self-contained junior repair guide", (
   });
 });
 
-// A report can carry heading 10 and still omit an axis from the table. The axis
-// most likely to vanish is "Contract compliance" — a review that found no bug reads complete
-// without ever checking whether the ADR's requirement values were honored.
-test("review artifact validator rejects a merge-fitness table missing an axis", () => {
+test("review artifact validator accepts inline-code contract IDs and statuses", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
-    writeFileSync(
-      path.join(dir, "implementation-review.md"),
-      validReport().replace("| Contract compliance | met |\n", ""),
-    );
+    writeFileSync(path.join(dir, "implementation-review.md"), validReportWithInlineCodeCells());
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
 
     const result = validate(dir);
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /missing axis: Contract compliance/);
+    assert.equal(result.status, 0, result.stderr);
   });
 });
 
-test("review artifact validator rejects missing Mermaid and evidence fields", () => {
+test("review artifact validator rejects missing core headings and evidence fields", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
     writeFileSync(path.join(dir, "implementation-review.md"), "# short report\n");
@@ -156,7 +223,8 @@ test("review artifact validator rejects missing Mermaid and evidence fields", ()
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /evidence must be a non-empty string/);
-    assert.match(result.stderr, /at least two Mermaid diagrams/);
+    assert.match(result.stderr, /missing: ## ADR contract coverage/);
+    assert.doesNotMatch(result.stderr, /Mermaid|flowchart|sequenceDiagram/);
   });
 });
 
@@ -174,13 +242,71 @@ test("review artifact validator requires internally consistent review metrics", 
   });
 });
 
-test("review artifact validator accepts concise standard-mode artifacts without Mermaid or explanation", () => {
+test("review artifact validator rejects incomplete notable implementation choices", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "implementation-review.md"), validReport());
+    const findings = validFindings(dir);
+    delete findings.implementationChoices[0].intentFit;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /implementationChoices\[0\]\.intentFit must be a non-empty string/);
+  });
+});
+
+test("review artifact validator rejects missing coverage fields and non-proven PASS rows", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
     const findings = validFindings(dir);
     findings.reviewMode = "standard";
     findings.verdict = "PASS";
     findings.findings = [];
+    findings.implementationChoices = [];
+    findings.metrics.sufficiencyFindingCount = 0;
+    findings.contractCoverage[1].status = "UNVERIFIED";
+    delete findings.contractCoverage[1].evidence;
+    delete findings.explanation;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /contractCoverage\[1\]\.evidence must be a non-empty string/);
+    assert.match(result.stderr, /PASS requires every contractCoverage row to be PROVEN/);
+  });
+});
+
+test("review artifact validator accepts concise standard-mode artifacts without Mermaid or explanation", () => {
+  withArtifacts((dir) => {
+    writeAdr(dir, "Existing parsing behavior remains unchanged");
+    writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
+    const findings = validFindings(dir);
+    writeAdr(dir, "Existing parsing behavior remains unchanged");
+    findings.reviewMode = "standard";
+    findings.verdict = "PASS";
+    findings.findings = [];
+    findings.implementationChoices = [];
+    findings.contractCoverage = [
+      {
+        contractId: "D0",
+        requirement: "Parser compatibility",
+        status: "PROVEN",
+        adrBasis: "Decision",
+        implementation: "the parser uses the same accepted inputs and outputs",
+        evidence: "src/parser.mjs — behavior-preserving helper extraction",
+        tests: "node --test test/parser.test.mjs — PASS",
+      },
+      {
+        contractId: "R1",
+        requirement: "Existing parsing behavior remains unchanged",
+        status: "PROVEN",
+        adrBasis: "Existing parsing behavior remains unchanged",
+        implementation: "the parser uses the same accepted inputs and outputs",
+        evidence: "src/parser.mjs — behavior-preserving helper extraction",
+        tests: "node --test test/parser.test.mjs — PASS",
+      },
+    ];
     findings.metrics.sufficiencyFindingCount = 0;
     delete findings.explanation;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
@@ -190,7 +316,7 @@ test("review artifact validator accepts concise standard-mode artifacts without 
   });
 });
 
-test("standard-mode artifacts reject necessity findings and missing ledger headings", () => {
+test("standard-mode artifacts reject necessity findings and missing contract coverage", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "implementation-review.md"), "# ADR implementation review\n");
     const findings = validFindings(dir);
@@ -202,6 +328,84 @@ test("standard-mode artifacts reject necessity findings and missing ledger headi
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /necessityFindingCount must be 0/);
-    assert.match(result.stderr, /missing: ## Decision ledger/);
+    assert.match(result.stderr, /missing: ## ADR contract coverage/);
+  });
+});
+
+test("PASS rejects omitted ADR rows, duplicate IDs, unexecuted tests, and blocking findings", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
+    const findings = validFindings(dir);
+    writeAdr(dir, "Existing parsing behavior remains unchanged");
+    findings.reviewMode = "standard";
+    findings.verdict = "PASS";
+    findings.contractCoverage = [
+      {
+        contractId: "D0",
+        requirement: "Parser compatibility",
+        status: "PROVEN",
+        adrBasis: "Decision",
+        implementation: "claimed compatible",
+        evidence: "static inspection only",
+        tests: "NOT RUN",
+      },
+      {
+        contractId: "D0",
+        requirement: "Duplicate decision row",
+        status: "PROVEN",
+        adrBasis: "Decision",
+        implementation: "claimed compatible",
+        evidence: "duplicate",
+        tests: "NOT RUN",
+      },
+    ];
+    findings.metrics.testCommandCount = 0;
+    findings.metrics.sufficiencyFindingCount = 1;
+    findings.findings = [
+      {
+        category: "Test gap",
+        perspective: "sufficiency",
+        summary: "parser behavior was not executed",
+        confidence: "high",
+        code: "src/parser.mjs",
+        evidence: "no executed parser test",
+        test: "node --test test/parser.test.mjs",
+        testResult: "NOT RUN",
+      },
+    ];
+    delete findings.explanation;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /duplicate contractId: D0/);
+    assert.match(result.stderr, /missing ADR contract row: R1/);
+    assert.match(result.stderr, /tests must not contain failed or unexecuted results/);
+    assert.match(result.stderr, /at least one executed test/);
+    assert.match(result.stderr, /unresolved blocking findings: 1/);
+  });
+});
+
+test("human-facing report requires complete coverage and implementation-choice tables", () => {
+  withArtifacts((dir) => {
+    writeFileSync(
+      path.join(dir, "implementation-review.md"),
+      validReport()
+        .replace(
+          "| R1 | Settlement completes at most once | VIOLATED | Settlement completes at most once | The current settlement path can write twice | src/stream.mjs:12 | node --test test/stream.test.mjs — FAIL |",
+          "| R1 | Settlement completes at most once | VIOLATED |",
+        )
+        .replace(
+          "| 250 ms fixed retry | src/stream.mjs:8 | Preserves bounded recovery | Affects recovery latency |",
+          "| 250 ms fixed retry | src/stream.mjs:8 |",
+        ),
+    );
+    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /must have seven non-empty columns/);
+    assert.match(result.stderr, /must have four non-empty columns/);
   });
 });

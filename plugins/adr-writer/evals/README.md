@@ -44,9 +44,10 @@ ADR_EVAL_CMD="claude -p --add-dir . --allowedTools 'Read Write Edit Bash'" \
   node evals/run.mjs --only author-
 ```
 
-Exit code is 0 whenever the run completed, **including when checks fail** — a
-failing check is the finding, not an error. Exit 2 means the harness itself could
-not run (bad `--only`, agent produced nothing).
+Exit code is 0 whenever the agent command completed successfully, **including
+when checks fail** — a failing check is the finding, not an error. Exit 2 means
+the harness could not run or the agent command failed (bad `--only`, nonzero
+agent exit, or no output).
 
 ## Reproducing a reported bug
 
@@ -90,10 +91,23 @@ not run (bad `--only`, agent produced nothing).
    - `impl-review-selects-risk-mode` checks both directions of the review-mode
      classifier: localized implementation uses standard, while contract and
      public-surface changes use full.
+   - `impl-review-evidence-package-unverified` ↔
+     `impl-review-evidence-package-pass` check both Evidence Package verdict
+     directions. A material `UNVERIFIED` obligation must produce
+     `INCONCLUSIVE` plus one exception-focused human action; two fully evidenced
+     `PROVEN` obligations must produce `PASS` with no new human gate. Both
+     scenarios require complete per-obligation rows, ADR-intent fit for material
+     implementation discretion, coverage-first presentation, no invented code
+     paths, and no per-row approval. Their scorers also turn the visible reply
+     into a real review artifact, then run the shipped artifact validator and
+     HTML renderer so a prompt-only success cannot hide a broken report path.
    - `bedrock-subagent-fallback` checks that a known Amazon Bedrock provider
      prevents named and generic subagent dispatch, the known input validation
      error is not retried, document and implementation review continue as
      main-session passes, and refactoring remains `PROPOSE_ONLY`.
+   - `comprehension-load-score-only` checks the `0 → 1` display clamp directly,
+     keeps the five-axis calculation hidden, and rejects added gates or
+     explanatory output.
    - `impl-completes-without-reconfirmation` checks that a pre-approved ADR is
      not reconfirmed after implementation, evidence-backed defects are repaired
      and re-reviewed automatically, and only a real contract change escalates.
@@ -127,7 +141,7 @@ the parsed tail block, the raw reply, and the fixture path — so a check can re
 what the agent wrote to disk, not just what it said.
 
 Helpers are in `lib/harness.mjs`: `skillText` / `agentText` (real instruction
-text; `skillText` also appends directly referenced Markdown modules),
+text; scenarios explicitly select any directly referenced Markdown modules),
 `seedRuleDocs` / `seedMapping` / `write`, the `expect*` scorers, and
 `expectLintClean` which runs the shipped `adr-structure-lint.mjs` over the result.
 
@@ -180,7 +194,7 @@ hides true ones.
 Be honest about the gap when reading a result.
 
 - **The prompt is real; the surrounding context is not.** Scenarios pass the
-  actual `SKILL.md`, its directly referenced Markdown modules, and
+  actual `SKILL.md`, the directly referenced Markdown modules selected by that scenario, and
   `agents/*.md` text — reconstructing a prompt would test this directory's
   summary of the rules instead of the rules that ship — via the same "read the
   agent file, hand it to a generic subagent" path the skills document as their

@@ -1,0 +1,28 @@
+# Decision Log: adr-authoring/decision-presentation
+
+This document is the **major decision-change history** of the adr-authoring/decision-presentation
+category. Each ADR body describes only the current state, while the timeline of "what
+changed and why" accumulates here, newest first. Git preserves the individual diffs.
+
+## 2026-08-17 — ADR 계약을 요구사항별 구현 리뷰 기준선으로 사용
+
+- **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)
+- **Change type**: architecture
+- **What**: Requirement contract를 독립적으로 검토 가능한 행과 구현 독립적인 관찰 기준으로 구성하고, 구현 리뷰가 같은 행을 요구사항별 달성 화면으로 파생하도록 변경했다.
+- **Why**: 코드 재생성마다 구현 디테일이 달라도 같은 요구사항을 준수하는지 사람이 낮은 인지부하로 판정할 수 있어야 한다.
+
+## 2026-08-17 — 결정 가정을 기존 ADR 구조에 흡수
+
+- **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)
+- **Change type**: architecture
+- **What**: 별도 Decision premises section과 신뢰도 taxonomy를 제거하고, 대안 선택을 바꾸는 가정만 Context 또는 Decision Driver에 한 줄로 기록한다.
+- **Why**: 중요한 가정은 드러내면서 Context와 Drivers를 반복하는 추가 구조와 검토 비용을 없앤다.
+
+## 2026-08-17 — 결정 전제와 구현 재량을 분리해 노출
+
+- **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)
+- **Change type**: architecture
+- **What**: Decision Digest에 근거와 실패 영향을 가진 Decision premises를 추가하고, 코드 수준 구현 재량은 ADR이 아니라 구현 리뷰의 일시적 선택 원장에 남긴다.
+- **Why**: AI가 사용자가 명시하지 않은 전제와 기본값을 선택할 때 결론만 보여주면 사용자가 결정의 타당성과 재검토 조건을 판단하기 어렵다.
+
+<!-- adr-writer:rules-version 0.6.7 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

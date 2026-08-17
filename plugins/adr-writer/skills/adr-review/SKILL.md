@@ -73,6 +73,19 @@ Pass each reviewer: the ADR path, that category's `.mapping.json` entry, and **t
 - Require only the agent file's existing review-result format in the response.
 - If the scope is large enough that a full parallel fan-out is impractical, process in **category-sized batches** and tell the user the batching, rather than silently reviewing a subset. Never truncate the scope without saying so.
 
+For each ADR, evaluate five internal axes from 0 to 2 and sum them:
+conceptual breadth, contract density, state and flow complexity, boundary
+coupling, and uncertainty and verification burden. Show 1 rather than 0, so the
+displayed range is 1-10. Do not show or expose the
+axis scores or rationale. Add only `Comprehension load: <N>/10` beside the ADR
+in the disposable report and chat summary. Do not write or persist this score
+in the ADR, `.mapping.json`, Status, or any other authoritative artifact. It is
+advisory and does not block the document verdict or follow-up work.
+
+Only when the user asks to split, offer up to three candidates. Split ADRs only
+for independent decisions. Keep one inherently difficult decision in one ADR
+and offer implementation steps instead; never split by technical layer.
+
 ### 4. Aggregate — where the value of a sweep actually is
 
 A per-ADR punch list is just N separate reviews. What a sweep adds is what only becomes visible **across** ADRs, so spend the aggregation effort here:
@@ -118,10 +131,10 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 - [Gap] <category> — no ADR for <decision the set implies>
 
 ### Per-ADR
-- <path> — FIX_REQUIRED
+- <path> — FIX_REQUIRED — Comprehension load: <N>/10
   - [R18a] <short diagnosis> — <quote>
     Fix: <one line>
-- <path> — PASS
+- <path> — PASS — Comprehension load: <N>/10
 
 ### Prose style (R20, advisory)
 - <the house habit, with 2-3 rewrites and the affected ADRs — or "clean">
@@ -135,6 +148,8 @@ Order the per-ADR section **worst first** (BLOCK, then FIX_REQUIRED, then PASS) 
 **A `PASS` count is not a clean bill of health while an axis went unjudged.** The per-ADR verdict stays the reviewer's three values (`PASS` / `FIX_REQUIRED` / `BLOCK`) — do not invent a fourth — but an ADR can only be judged against the rules its reviewer could actually reach, so a rule nobody evaluated silently rides along inside `PASS`. That is why `Unjudged axes` sits in Scope, above the verdict: when it is non-empty, **say in the chat summary that the PASS count excludes those rules** rather than reporting "N passed" flat. This is the same discipline `/adr-impl-review` applies with `INCONCLUSIVE` — unverified must never read as verified — expressed without disturbing the reviewer's verdict vocabulary.
 
 **Summarize in chat rather than dumping the whole report**: the verdict counts, the cross-ADR findings, and the two or three ADRs that need attention most. For a large sweep, write the full report to a file and give the path.
+
+Lead the chat summary with the four questions a reader must answer: **Decision** (what was chosen), **Contract** (what the result must honor), **Rationale** (why this option won), and **Risk** (what remains costly, uncertain, or unjudged). Keep rule IDs, quotations, paths, confidence, and detailed evidence in the full report unless they are needed to understand an actionable finding. Progressive disclosure must never hide a requirement value, a `BLOCK`, or an unjudged axis.
 
 ### 7. Route the follow-ups
 

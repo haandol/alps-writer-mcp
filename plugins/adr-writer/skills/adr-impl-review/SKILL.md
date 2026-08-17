@@ -41,6 +41,7 @@ So the recurring judgment is **not "is the code good?" but "at which resolution 
 - **Never absorb a contract violation as an implementation fact.** An allowed value set or transition rule differing is `Spec violation` (the ADR owns it); only the identifier name or representation is `Impl-fact mismatch`. Routing a set difference to `/adr-sync` silently rewrites the contract to match whatever the code did.
 - **Never treat code that enforces a contract as removable.** Cap checks, transition guards, permission checks, and required-field validation are the code level's job of honoring the ADR level's contract, so "it passes without this" is not evidence.
 - **Never promote implementation discretion into `Undecided behavior`.** Before raising extra code to the ADR, apply the ADR admission gate. Replaceable libraries, SDKs, frameworks, middleware, module layouts, credential provider chains, signers, authentication adapters, and tuning choices are expected code-level decisions when contracts and architecture/security boundaries stay unchanged. They are not findings merely because the ADR does not name them.
+- **Do not hide material implementation discretion either.** The sufficiency pass records Notable implementation choices once from code outward. Keep only choices that affect runtime behavior, failure handling, operations, cost, or future maintenance, with the selected value or behavior, code evidence, why it fits the ADR intent, and why it matters. Explain intent fit only through the contract and boundaries the choice preserves; never invent historical rationale. Missing historical rationale or alternatives is not a risk by itself; use `Unverified risk` only when an unconfirmed behavior could affect safety or the ADR contract.
 
 A note on scope: `/adr-impl-review` judges the **code** level against the ADR level. Whether the ADR itself is written at the right resolution is `/adr-review`'s question, and the implementation cycle confirms the decision and regeneration checklist before code begins. Never rewrite an ADR from inside this command to make a finding go away.
 
@@ -92,12 +93,12 @@ Record `reviewMode` and the classification evidence in the artifacts.
 
 For `standard`, execute this section and then continue at section 7. Sections 2-6 are the full-mode path.
 
-1. Build a decision ledger containing every ADR decision and requirement-contract row relevant to the diff.
+1. Build a decision ledger containing every ADR decision and each independently reviewable requirement-contract row relevant to the diff, including its implementation-independent observable evidence. The sufficiency pass also extracts Notable implementation choices once from code outward.
 2. Run `adr-impl-sufficiency-reviewer` in one fresh isolated context with only the ADR, raw diff, changed code and tests, project rule documents, and the ledger. If subagents are unavailable, including on Amazon Bedrock, perform one separate sufficiency pass in the main session and record the isolation limitation.
 3. Execute the related targeted tests and any minimal reproduction needed to account for every ledger row. An unexecuted core path makes the verdict `INCONCLUSIVE`, not `PASS`.
 4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, report-writer agent, HTML page, mandatory Mermaid, or post-implementation spec-fitness gate.
-5. Write a concise `implementation-review.md` with these headings: `Review mode`, `Scope`, `Decision ledger`, `Findings`, `Tests`, and `Review limits`. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, and the normal evidence fields.
-6. Run the artifact validator. `PASS` requires every ledger row accounted for, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk.
+5. Write a concise `implementation-review.md` with these headings: `Review mode`, `Scope`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, and `Residual risks`. Under contract coverage, assign `D0` to the Decision and `R1..Rn` to every top-level Requirement contract bullet in source order. Show every ID exactly once with `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`, its exact ADR basis, how the implementation meets it, and the evidence and tests. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, the structured non-empty `contractCoverage` array, the structured `implementationChoices` array, and the normal evidence fields.
+6. Run the artifact validator. `PASS` requires every contract-coverage row to be `PROVEN`, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk.
 
 ## Full mode
 
@@ -117,8 +118,10 @@ Create `review-baseline.md` from:
 
 - the current ADR and mapping summary
 - the Decision, Decision Drivers, every numeric and non-numeric requirement row, explicit out-of-scope items, and recorded risk tolerance
+- any decision-changing assumption recorded in Context or a Decision Driver, including what must be reconsidered if it is false
 - the pre-implementation approval summary supplied by `/adr-impl`, when available
 - a regeneration checklist marking where each contract is stated in the ADR
+- the implementation-independent observable evidence recorded for each contract row
 
 Self-check the baseline against `authoring-rules.md` R18a/R19. A missing contract that can be recovered from the already approved ADR wording is corrected in the baseline. Concrete evidence that the ADR itself is incomplete, contradictory, or requires a new product choice is a blocking contract issue routed to ADR authoring before any code repair; it is not a reason to ask the routine three confirmation questions again. When `/adr-impl-review` is invoked standalone and no approval summary exists, record that limit and use the current ADR as the review baseline.
 
@@ -141,7 +144,7 @@ Run `adr-impl-sufficiency-reviewer`.
 
 - The question: "is there a counterexample that makes this implementation fail?"
 - Success condition: accounting for every row of the ADR decision ledger, and reproducing omissions, boundaries, errors, races, and partial failures.
-- **Compare requirement values value by value** — put each limit, quota, cycle, retention period, cap, and target the ADR records as its own ledger row and compare it directly against the number in the code. "There is limit logic" is not an accounting. A value mismatch or an unenforced value is a `Spec violation`. A self-imposed value absent from the ADR becomes `Undecided behavior` only when evidence shows it is a requirement or admitted architectural constraint; otherwise it is tuning discretion and out of scope.
+- **Compare requirement values value by value** — put each limit, quota, cycle, retention period, cap, and target the ADR records as its own ledger row and compare it directly against the number in the code. "There is limit logic" is not an accounting. A value mismatch or an unenforced value is a `Spec violation`. For a self-imposed value absent from the ADR, apply the admission gate: admitted requirement or boundary choices become `Undecided behavior`; replaceable choices go into Notable implementation choices; an unknown becomes `Unverified risk` only when it could affect safety or the ADR contract.
 - **Compare non-numeric requirements item by item too** — allowed value sets, transition rules, mandatory fields, permissions, visibility, ordering, uniqueness, and units are each ledger rows as well. An added or removed set member, a forbidden transition becoming allowed, and mandatory → optional are all `Spec violation`. **Split enums** — a differing identifier name is `Impl-fact mismatch` (correct the ADR), while a differing allowed set or transition rule is `Spec violation` (correct the code).
 - Tests: actually run the related tests, and use a minimal reproduction where possible. Go as far as checking **whether the tests actually catch defects** — if property or mutation tooling already exists in the project, run it restricted to the core invariants and record weak tests as `Test gap`; if static or security analysis (CodeQL and the like) is already configured, use it as evidence limited to this ADR's code scope. Do not install new tooling or modify product code, and pass out-of-scope vulnerabilities to `/security-review` only.
 - **Do the code and tests carry the explanation, rather than long comments?** `/adr-impl` step 4 caps comments at roughly three lines: past that, a one- or two-line _why_ stays at the site and the _what_ moves into tests. So for a comment block over ~3 lines that enumerates behavior (boundaries, an ordering or transition sequence, failure and fallback paths, a requirement value in prose), check whether a test covers each case — a missing case is `Test gap`, a fully covered block is `Refactor` (shorten the comment to the why). A test whose name does not read as the behavior it proves, or one asserting several unrelated behaviors, is also `Refactor`, since that is the load step 4 handed to the tests. Never propose deleting a comment whose cases are not yet covered, and never flag a comment that holds a _why_ code cannot express (an external constraint, a spec quirk, a trap that looks safe) — those are correct even beyond three lines.
@@ -167,27 +170,31 @@ The main session does not merge the two reviews by vote. Verify findings with th
 4. Downgrade to `Unverified risk` any claim you could not execute or whose call path you could not fully confirm.
 5. Distinguish the fact that a test exists from the fact that a test detects the defect.
 6. A necessity PASS means "no unnecessary change was found"; a sufficiency PASS means "no counterexample was found at present and the decision ledger is accounted for."
+7. Normalize the decision ledger into contract coverage independently from findings. Derive deterministic IDs from the ADR: `D0` is the Decision and `R1..Rn` are every top-level bullet under `### Requirement contract` in source order. Every derived ID gets exactly one row with `contractId`, `requirement`, `status`, `adrBasis`, `implementation`, `evidence`, and `tests`; omissions, duplicates, and invented IDs are invalid. `D0.adrBasis` is `Decision`; each `Rn.adrBasis` is the complete source bullet verbatim. Use only `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`. `PROVEN` means the inspected or executed evidence supports the row and no counterexample was found; it is not a mathematical proof.
+8. Normalize Notable implementation choices independently from findings. Every row has only a concrete selected value or behavior, code evidence, why it fits the ADR intent, and why it matters. Explain fit by naming the preserved contract or boundary, not by guessing why the implementer chose it. A row that changes a requirement contract or durable boundary is removed from the list and raised as `Undecided behavior`.
 
 The synthesized verdict:
 
-- `PASS`: there is no evidence-backed must-fix, every decision-ledger row is implemented, and the required targeted tests passed.
+- `PASS`: there is no evidence-backed must-fix, every contract-coverage row is `PROVEN`, and the required targeted tests passed.
 - `FIX_REQUIRED`: there is a finding requiring concrete follow-up in the code, the ADR, or the tests.
 - `INCONCLUSIVE`: an important path could not be executed or the scope could not be fixed, so PASS/FIX cannot be judged honestly.
 - `BLOCK`: a fork in the decision itself, or a structural collapse, requires a human architectural decision before any individual code fix.
 
-## 5. Generate the junior-facing repair report
+## 5. Generate the concise evidence report
 
-Once the independent reviews and evidence verification are done, run `adr-impl-review-report-writer` as a fresh subagent. This step creates no new conclusions; it turns the verified findings into **a document a junior developer seeing this code for the first time can fix it from alone.**
+Once the independent reviews and evidence verification are done, run `adr-impl-review-report-writer` as a fresh subagent. This step creates no new conclusions. It produces a concise report by default and expands into repair guidance only when the verdict or user request requires it.
 
 1. If named agents are available, invoke `adr-impl-review-report-writer`.
 2. Otherwise invoke a generic subagent using the generic dispatch rule with `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md`.
 3. If subagents are unavailable, the main session writes it under the same instructions.
 
-Give the report-writer the original ADR and diff, `review-baseline.md`, all three agents' artifacts, and the verified findings and test results. Save the result as `implementation-review.md`.
+Give the report-writer the original ADR and diff, `review-baseline.md`, all three agents' artifacts, the normalized Notable implementation choices, and the verified findings and test results. Save the result as `implementation-review.md`.
 
 The filename must be exactly `implementation-review.md`. Alternatives such as `final-review.md` or `review.md` are not allowed. Even when the report-writer is unavailable and the main session writes it, first read the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` and follow the same output structure.
 
-Include ample Mermaid diagrams using only relationships confirmed in the actual code.
+Use progressive disclosure. Every report contains only `Review mode`, `Scope`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, and `Residual risks` by default. Include detailed repair guidance only for `FIX_REQUIRED`, `BLOCK`, or when the user asks for it.
+
+Include Mermaid diagrams only when they reduce the amount of flow or state a reader must reconstruct, using only relationships confirmed in the actual code. Do not require a diagram count or type.
 
 - Overall change structure: `flowchart`
 - Core request/event flow: `sequenceDiagram`
@@ -197,7 +204,13 @@ Include ample Mermaid diagrams using only relationships confirmed in the actual 
 
 Diagrams must provide a repair map, not decoration. Tie each node to a real symbol or filename, and point clearly in the prose to where the finding occurs and the expected flow after the fix. Never guess at an edge you could not confirm in the actual code. Never use ASCII or box-drawing diagrams.
 
-Include all of the following for each finding.
+Render ADR contract coverage before findings as a read-only table with `Contract ID`, `Requirement`, `Status`, `ADR basis`, `How the implementation meets it`, `Evidence`, and `Tests`. Keep the ADR wording recognizable so the reader can trace each row without reopening the whole document. Never merge several obligations into one row.
+
+Render Notable implementation choices as a read-only table with `Selected value or behavior`, `Code evidence`, `Why it fits the ADR intent`, and `Why it matters`. These rows are below ADR resolution and do not amend the ADR. If a row would alter the ADR contract or durable boundary, it must be an `Undecided behavior` finding instead.
+
+Concise means short cells, not fewer columns. Never collapse ADR basis, implementation, evidence, and tests into fewer columns, and never replace the four-column implementation-choice table with prose. The human-facing package must preserve these separate fields even when there is only one row.
+
+For each actionable finding in a conditional repair guide, include:
 
 1. What the problem is and which user or operational symptom it manifests as
 2. The difference between the ADR decision and the actual code
@@ -208,7 +221,7 @@ Include all of the following for each finding.
 7. The tests that must pass and the completion criteria
 8. The confidence level and what has not been confirmed yet
 
-At the end of the document, put a `Fix execution order` reflecting the dependency order, a `Verification checklist`, and the **seven-axis merge decision checklist** (problem fitness, functional adequacy, contract compliance, change minimality, verification strength, operational safety, maintainability) — functional adequacy is only one axis of good code, so rule on each axis by mapping it to the approved ADR baseline, findings, and tests. `Contract compliance` is the axis that compares, number by number, whether the requirement values the ADR set are enforced at those values — limit logic can work while the value differs, which is a requirement violation, so keep it separate from functional adequacy. If any item lacks evidence, mark it `undetermined`; escalate only a contract-changing or material unresolved issue.
+Do not add a glossary, code-reading tour, merge checklist, or extra diagram unless it directly helps resolve a verified finding.
 
 ## 6. Generate the evidence page
 
@@ -233,6 +246,25 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
     "unverifiedRiskCount": 0,
     "testCommandCount": 2
   },
+  "implementationChoices": [
+    {
+      "choice": "retry uses a 250 ms fixed delay",
+      "evidence": "src/checkout/client.ts:42 — retryDelayMs: 250",
+      "intentFit": "keeps retries bounded and preserves the ADR's explicit failure result",
+      "whyItMatters": "changes recovery latency and upstream request rate"
+    }
+  ],
+  "contractCoverage": [
+    {
+      "contractId": "R1",
+      "requirement": "a payment is completed at most once",
+      "status": "PROVEN",
+      "adrBasis": "Requirement contract — Prohibitions",
+      "implementation": "the settlement path rejects an existing idempotency key",
+      "evidence": "src/payments/settle.ts:42 — exact code or execution evidence",
+      "tests": "pnpm test -- settlement — PASS"
+    }
+  ],
   "findings": [
     {
       "category": "Unnecessary change",
@@ -251,7 +283,7 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
 }
 ```
 
-`reviewMode` and `metrics` are mandatory even for `PASS` with zero findings. Count the raw findings each independent perspective produced before deduplication, count `Unverified risk` entries after synthesis, and count distinct test or reproduction commands actually executed. In standard mode the necessity count is zero by definition.
+`reviewMode`, `metrics`, `contractCoverage`, and `implementationChoices` are mandatory even for `PASS` with zero findings or zero choices. `contractCoverage` is non-empty because `D0` always represents the ADR Decision even when there is no explicit requirement-contract subsection. The artifact validator reads the ADR, derives `D0/R1..Rn`, rejects missing or duplicate IDs, and rejects `PASS` when tests were not executed, a coverage row is not `PROVEN`, an unverified risk remains, or a blocking finding remains. Count the raw findings each independent perspective produced before deduplication, count `Unverified risk` entries after synthesis, and count distinct test or reproduction commands actually executed. In standard mode the necessity count is zero by definition.
 
 Allowed categories:
 
@@ -269,7 +301,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-report.mjs <findings.json> --
 
 If the validator fails, do not report completion or generate the HTML. Fill the omissions it names in `implementation-review.md` or `findings.json` and re-run until the validator exits 0. In particular, fill `perspective`, `code`, `evidence`, `test`, and `testResult` for every finding, and where a test could not be run, write `NOT RUN — <reason>` rather than leaving it blank.
 
-In full mode, open the report and return the verdict, necessity/sufficiency finding counts, tests executed, elapsed time, unverified-risk count, and normalized findings to the caller. In standard mode, return the concise findings with the same routing metadata. A pre-promotion invocation by `/adr-impl` must not ask the user to rule `apply / skip / defer` on ordinary evidence-backed repairs; the caller owns remediation. A standalone review remains report-only and simply presents the findings and recommended routes.
+In full mode, open the report and return the verdict, requirement-by-requirement contract coverage, necessity/sufficiency finding counts, tests executed, elapsed time, unverified-risk count, Notable implementation choices, and normalized findings to the caller. In standard mode, return the same concise Evidence Package with the same routing metadata. The caller always surfaces this human-readable package before completion, but a pre-promotion invocation by `/adr-impl` must not ask the user to rule `apply / skip / defer` on `PROVEN` coverage rows, implementation choices, or ordinary evidence-backed repairs; the caller owns remediation. A standalone review remains report-only and presents findings plus optional interactive rulings. Contract coverage and Notable implementation choices are read-only context, not individual approval items.
 
 ## 7. Routing and integrated remediation
 

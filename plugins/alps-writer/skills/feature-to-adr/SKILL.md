@@ -88,13 +88,24 @@ Libraries, SDKs, frameworks, middleware, module layout, credential/auth wiring, 
 
 For every candidate that passes, run the decision identity check against all mapped summaries and plausible ADR bodies before counting it as new. If an existing ADR owns it, classify it as `Existing decision changed` and route it through step 3 instead of `/adr-new`.
 
+Estimate the current Feature and each admitted ADR candidate with the same
+internal five-axis comprehension-load rubric: conceptual breadth, contract
+density, state and flow complexity, boundary coupling, and uncertainty and
+verification burden. Score each axis from 0 to 2 and sum them. Show 1 rather than
+0, so the displayed range is 1-10. Do not show or expose the axis scores or
+rationale. Show only `Comprehension load: <N>/10`
+for each item. Do not write or persist this score in the ALPS document, an ADR,
+or `.mapping.json`; it is advisory and does not block drafting, approval, or
+implementation.
+
 Show the user a compact decision-discovery result before drafting:
 
 ```text
 Feature: <name>
+Comprehension load: <N>/10
 ADR candidates:
-- <decision A> — admitted because <durable contract/boundary>
-- <decision B> — admitted because <durable trade-off>
+- <decision A> — admitted because <durable contract/boundary> — Comprehension load: <N>/10
+- <decision B> — admitted because <durable trade-off> — Comprehension load: <N>/10
 
 Implementation-only:
 - <choice> — replaceable without changing the contract
@@ -103,6 +114,12 @@ Result: 0 | 1 | N ADRs
 ```
 
 If there are zero admitted decisions, finish that feature without creating a category or placeholder ADR. Keep the feature and its dependency order in the implementation plan.
+
+Only when the user asks to split a high-load item, offer up to three candidates.
+Split a Feature only at independently observable user-behavior boundaries.
+Split ADR work only when it contains independent decisions; keep one inherently
+difficult decision in one ADR and offer implementation steps instead. Never
+split by frontend/backend/data layers, and never make splitting a prerequisite.
 
 ## 5. Delegate each admitted decision
 

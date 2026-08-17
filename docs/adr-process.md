@@ -105,6 +105,7 @@ flowchart TD
 - **`/feature-to-adr`는 handoff와 재조정을 소유한다.** Section 7, NFR, 아키텍처 제약과 기능 그래프를 읽고 기능마다 `0..N` 결정 후보를 분리한 뒤 admission gate를 독립 적용한다. 새 결정만 `/adr-new`에 위임하고, 재실행 시 PRD 계약과 기존 ADR을 비교해 의도된 변경인지 확인한다. 기능 의존성은 실제 ADR 결정 의존성일 때만 `dependsOn`이 된다.
 - **새 초안은 한 번 검증하고, 두 번 리뷰하지 않는다.** `/adr-new`는 `adr-reviewer`가 적용하는 것과 같은 규칙(R1-R20)으로 작성하므로, 결정론적 하네스를 돌린 뒤 판단 규칙에 대한 자체 점검을 수행한다 — 방금 제대로 해낸 것을 대부분 되풀이할 리뷰어를 띄우지 않는다. `/adr-review`는 그 작성 컨텍스트가 사라진 자리에 독립적인 읽기를 공급한다. **손으로 고친, 다른 세션에서 바뀐, 물려받은** ADR이 그 대상이며, 작성 직후 자동으로가 아니라 요청 시에 실행된다.
 - **의존성 게이트는 필수다.** `/adr-impl`은 곧장 코딩으로 가지 않는다. `dependsOn`을 전이적으로 순회하고, 선행이 `Proposed`이거나 dangling이면 그것을 위상 순서로 먼저 구현한다.
+- **Stacked PR은 요청 기반 구현 전달 fallback이다.** 사용자가 리뷰 부담 감소를 요청했지만 Feature나 ADR을 더 나누면 의미 경계가 깨질 때, `/adr-impl`은 같은 승인된 ADR을 구현하는 dependency-ordered PR layer를 제안할 수 있다. 각 layer는 하나의 review question만 가지며 점수만으로 자동 생성하지 않고 ALPS·ADR·mapping에 Stack 상태를 저장하지 않는다.
 - **구현 완료 전 검증된 리팩터링을 수행한다.** 최초 테스트가 통과하면 `/adr-impl-refactor`의 읽기 전용 리뷰어가 실행 효율, 복잡도, 결합도, 중복과 현재 코드에 근거한 재사용 기회를 독립적으로 찾는다. 독립 reviewer가 없으면 제안만 남기고 자동 반영하지 않는다. 실제 변경이 없으면 동일 targeted test를 반복하지 않는다.
 - **최종 리뷰가 위험에 비례해 완료를 판정한다.** 보호 표면을 바꾸지 않는 국소 구현은 `standard`로 decision ledger, 독립 충분성 검토와 targeted test를 수행한다. 계약·공개 표면·데이터·상태·권한·보안·fallback·동시성·트랜잭션·오류 의미 또는 넓은 범위를 바꾸면 `full`로 구현 전에 승인된 기준선과 독립 필요성·충분성 검토를 사용한다. 의도와 재생성 완전성은 구현 전에 승인하므로 완료 검토에서 일상적인 사람 게이트를 반복하지 않는다. 불명확하면 `full`이다.
 - **진화 이력은 ADR 본문이 아니라 decision log에 산다.** ADR 본문은 현재 상태만 서술하고, 같은 결정이 진화하면 제자리에서 덮어쓴다. 주요 전이(채택 대안 교체, 핵심 알고리즘이나 아키텍처 변경, Driver 반전)는 카테고리별 `decision-log.md`에 최신순 한 줄로 남긴다 — `/adr-impl`과 `/adr-sync`가 추가하거나 수확하고, `/adr-rollup`은 통합 과정에서 체인의 주요 전이를 로그로 수확하고 현재 상태 통합 ADR만 남긴다. 로그는 관례 파일이므로 `.mapping.json`에 등록하지 않고 하네스도 검사하지 않는다. supersede(새 ADR)는 결정 주제가 갈라질 때만 일어나며, 진화 체인은 기본적으로 누적하지 않는다.
@@ -292,43 +293,43 @@ flowchart TD
 
 ## 5. /adr-impl-review 내부: 적대적 리뷰
 
-먼저 보호 표면으로 `standard`와 `full`을 고른다. 국소 변경은 decision ledger, 독립 충분성 검토와 targeted test만 수행한다. 요구사항, 공개 계약, 데이터, 상태, 권한, 보안, fallback, 동시성, 트랜잭션, 오류 의미 또는 넓은 범위가 바뀌면 `full`을 사용하며, 구현 전에 승인된 ADR 기준선을 대상으로 설명자·리뷰어 둘·리포트 작성자가 각각 새 컨텍스트에서 돈다.
+먼저 보호 표면으로 `standard`와 `full`을 고른다. 국소 변경은 decision ledger, 독립 충분성 검토와 targeted test만 수행한다. 요구사항, 공개 계약, 데이터, 상태, 권한, 보안, fallback, 동시성, 트랜잭션, 오류 의미 또는 넓은 범위가 바뀌면 `full`을 사용하며, 구현 전에 승인된 ADR 기준선을 대상으로 설명자·리뷰어 둘·리포트 작성자가 각각 새 컨텍스트에서 돈다. 두 모드 모두 ADR의 독립 계약 행을 사람이 읽을 수 있는 Evidence Package로 돌려준다.
 
 ```mermaid
 flowchart TD
     S(["/adr-impl-review [category]"]) --> Scope["1. 대상과 diff 범위 확정<br/>우선순위: 사용자가 준 PR/범위 또는 --base →<br/>staged + unstaged → 기본 브랜치와의 merge-base"]
     Scope --> Mat["원본 재료 수집:<br/>ADR 전문 + 매핑 항목 · 원본 diff · 호출 경로 + 테스트 ·<br/>레포가 실제로 가진 docs/adr/concepts.md + authoring-rules.md ·<br/>AGENTS/CONTRIBUTING/CLAUDE.md · 실행 가능한 테스트 커맨드"]
     Mat --> Mode{"보호 표면 또는<br/>넓은 범위 변경?"}
-    Mode -->|"아니오"| Ledger["standard<br/>ADR decision ledger 작성"]
+    Mode -->|"아니오"| Ledger["standard<br/>ADR decision ledger +<br/>요구사항별 coverage + 중요 구현 선택"]
     Ledger --> StdSuf["독립 sufficiency reviewer<br/>+ targeted test"]
     StdSuf --> StdRep["간결한 implementation-review.md<br/>+ findings.json<br/>HTML·필수 Mermaid 없음"]
     StdRep --> Validate["artifact validator"]
 
     Mode -->|"예 또는 불명확"| Art[("full 산출물 디렉터리<br/>${TMPDIR:-/tmp}/adr-impl-review-&lt;slug&gt;-&lt;ts&gt;/<br/>레포를 더럽히지 않는다")]
 
-    Art --> Exp["2. adr-impl-explainer (새 컨텍스트, 읽기 전용)<br/>ADR, diff, 코드 범위, 테스트만 받는다<br/>→ explanation.md"]
-    Art --> Base[("2. review-baseline.md<br/>ADR + 구현 전에 승인된 기준선<br/>+ 요구사항별 재생성 체크리스트")]
+    Art --> Exp["2. adr-impl-explainer (새 컨텍스트, 읽기 전용)<br/>ADR, diff, 코드 범위, 테스트만 받는다<br/>→ 필요한 경우 흐름 설명"]
+    Art --> Base[("2. review-baseline.md<br/>ADR + 구현 전에 승인된 기준선<br/>+ 결정에 영향을 주는 가정 + 요구사항별 재생성 체크리스트")]
     Base --> Gap{"ADR 계약 자체가<br/>불완전하거나 모순인가?"}
     Gap -->|"예"| Out(["코드를 고치지 않고 밖으로 라우팅:<br/>ADR 갱신 또는 /adr-review"])
     Gap -->|"아니오"| Par
     subgraph Par["3. 리뷰어 둘을 병렬로 — 원본 재료 + review-baseline.md만 준다"]
         direction LR
         Nec["3.1 adr-impl-necessity-reviewer<br/>“이 diff의 모든 변경이 정말 필요한가?”<br/>제거 가능한 범위, 더 단순한 대안을 공격<br/>요구사항을 강제하는 코드는 불필요로 올릴 수 없다"]
-        Suf["3.2 adr-impl-sufficiency-reviewer<br/>“이 구현을 실패시키는 반례가 있는가?”<br/>결정 원장을 도출하고, 요구사항 값을<br/>하나하나 대조하고, 표적 테스트를 실행"]
+        Suf["3.2 adr-impl-sufficiency-reviewer<br/>“이 구현을 실패시키는 반례가 있는가?”<br/>계약별 PROVEN/VIOLATED/UNVERIFIED/CONTRADICTED와<br/>중요 구현 선택의 ADR intent fit을 한 번 도출"]
     end
     Note1["가능하면 서로 다른 모델 계열로 —<br/>같은 계열은 가정을 공유해서<br/>“괜찮아 보인다”는 거짓 합의에 이른다.<br/>불가능하면 리뷰 한계로 기록한다."]
     Note1 -.- Par
 
-    Par --> Syn["4. 증거 검증 — 메인 세션은 투표로 병합하지 않는다<br/>같은 문제는 합치되 관점은 모두 보존 ·<br/>모순은 Contradiction finding으로 남긴다 ·<br/>실행하지 못한 주장은 Unverified risk로 강등"]
+    Par --> Syn["4. 증거 검증 — 메인 세션은 투표로 병합하지 않는다<br/>같은 문제는 합치되 관점은 모두 보존 ·<br/>ADR 대상 선택은 Undecided behavior · 구현 재량은 읽기 전용 요약 ·<br/>확인 못한 값은 Unverified risk"]
     Syn --> V{"판정"}
     V --> P1["PASS"]
     V --> P2["FIX_REQUIRED"]
     V --> P3["INCONCLUSIVE"]
     V --> P4["BLOCK — 사람의 아키텍처 결정이 필요"]
 
-    P1 & P2 & P3 & P4 --> Rep["5. adr-impl-review-report-writer (새 컨텍스트)<br/>→ implementation-review.md (파일명 고정)<br/>확인된 코드 관계만으로 그린 Mermaid +<br/>수리 순서 + 검증 체크리스트 +<br/>7축 머지 판단 체크리스트"]
+    P1 & P2 & P3 & P4 --> Rep["5. adr-impl-review-report-writer (새 컨텍스트)<br/>→ implementation-review.md (파일명 고정)<br/>요구사항별 달성 내용 · 중요 구현 선택 · finding · 테스트 · 잔여 위험<br/>다이어그램과 수리 가이드는 증거상 필요할 때만 추가"]
     Exp -.->|"리뷰어 판단에는 전달하지 않고<br/>리포트 작성에만 사용"| Rep
-    Rep --> Json["6. findings.json → 검증 → HTML 리포트<br/>완료 보고 전에 adr-impl-review-validate.mjs가<br/>반드시 0으로 종료해야 한다"]
+    Rep --> Json["6. findings.json → 검증 → HTML 리포트<br/>coverage와 구현 선택은 읽기 전용 · finding만 판정 가능<br/>PASS는 모든 coverage 행이 PROVEN일 때만 허용"]
     Json --> Validate
     Validate --> Caller{"호출 경로"}
     Caller -->|"독립 호출"| Standalone["보고 전용:<br/>결과와 권장 경로를 반환"]
@@ -350,6 +351,9 @@ flowchart TD
 
 - **언제나 보고 전용이다.** 리뷰 산출물만 쓰고, 코드와 ADR과 매핑은 건드리지 않는다.
 - **ADR이 동작 스펙이고, 리뷰어들은 구조적으로 그것을 옳다고 전제한다.** spec fitness와 regeneration checklist는 구현 전에 한 번 승인하며, 완료 검토는 그 기준선을 다시 묻지 않고 반증한다. `standard`는 보호 표면이 바뀌지 않은 국소 구현에만 허용되며, 분류가 불명확하면 `full`로 올린다.
+- **요구사항별 달성 내용이 첫 화면이다.** 각 ADR 계약 행은 상태, 구현 내용, ADR 근거, 코드·실행 증거와 테스트를 가진다. `PASS`는 모든 행이 `PROVEN`일 때만 가능하며, `PROVEN`은 수학적 증명이 아니라 현재 증거에서 반례를 찾지 못했다는 뜻이다.
+- **AI가 정한 값을 숨기지 않되 ADR로 끌어올리지 않는다.** admission gate를 통과한 미결정은 `Undecided behavior`, 코드에서 복구 가능한 중요한 구현 재량은 선택값 또는 동작·코드 근거·ADR 의도와 양립하는 이유·중요성을 가진 일시적 읽기 전용 요약, 확인하지 못한 값은 `Unverified risk`다.
+- **리포트는 점진적으로 읽힌다.** 기본 Markdown과 HTML은 coverage와 중요한 구현 선택을 findings보다 먼저 읽기 전용으로 보여준다. Mermaid 설명과 상세 수리 가이드는 흐름이 복잡하거나 실제 수정이 필요할 때만 추가한다.
 - **독립 호출과 완료 게이트의 후속 동작이 다르다.** 독립 `/adr-impl-review`는 결과만 보고한다. `/adr-impl`이 호출한 완료 게이트에서는 계약을 바꾸지 않는 증거 기반 코드·테스트 결함을 호출자가 자동 수정하고 같은 모드로 다시 검토한다. 사용자 판단은 계약 변경, 모순, 중대한 미검증 위험, 파괴적인 범위 확장에만 남긴다.
 - **source-of-truth 구분이 카테고리를 결정한다.** enum 식별자 이름이 다른 것은 `Impl-fact mismatch`(ADR을 고친다)이고, 허용 집합이나 전이 규칙이 다른 것은 `Spec violation`(코드를 고친다)이다.
 

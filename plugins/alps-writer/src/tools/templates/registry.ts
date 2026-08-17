@@ -40,7 +40,7 @@ export class TemplateRegistry {
     const normalizedId = subsectionId.trim();
     const normalizedTitle = title.trim();
 
-    // Section 7 stores one complete feature per 7.x entry. Its nested 7.x.1-6
+    // Section 7 stores one complete feature per 7.x entry. Its nested 7.x.1-7
     // template describes the content inside that dynamic feature entry.
     if (section === 7) {
       if (!/^[1-9]\d*$/.test(normalizedId)) {

@@ -67,10 +67,14 @@ export default {
       },
     });
 
+    const dispatchReference = {
+      references: ["references/subagent-dispatch.md"],
+    };
+
     return [
-      skillText("adr-review"),
-      skillText("adr-impl-review"),
-      skillText("adr-impl-refactor"),
+      skillText("adr-review", dispatchReference),
+      skillText("adr-impl-review", dispatchReference),
+      skillText("adr-impl-refactor", dispatchReference),
       ruleText("concepts.md"),
       `\n---\n# This run`,
       `Repository: ${dir}`,

@@ -61,6 +61,18 @@ An ADR's goal is **not to reproduce the same code, but to make regenerated code 
 
 These two sentences govern every other rule here. The filters below are tools for "what to drop"; the regeneration test is the standard for "what may never be dropped."
 
+### Reviewable contract rows and observable evidence
+
+An ADR carries the intent that implementation review later checks. Write each requirement-contract row as **one independently reviewable obligation**. Do not bundle several values, permissions, transitions, or failure guarantees into a sentence whose partial implementation could look complete.
+
+For each obligation, record implementation-independent **observable evidence**: what result would let a reviewer distinguish a conforming implementation from a violating one. Examples:
+
+- Requirement: "Free plan users upload at most 5 files per month." Observable evidence: "the sixth upload in one month is rejected and the stored file count remains 5."
+- Prohibition: "A cancelled order never moves to shipping." Observable evidence: "a shipping request from cancelled leaves the order cancelled."
+- Failure guarantee: "Provider failure never records payment completion." Observable evidence: "a failed provider call leaves no completed payment."
+
+Observable evidence is a review oracle, not a test prescription. Do not name test files, commands, libraries, functions, classes, fixtures, internal tables, or data representations. Different implementations may use different tests and structures while producing the same observable result.
+
 ## The requirement gate and two filters
 
 Apply three questions to each line of the body, **in this order**:
@@ -185,7 +197,8 @@ Exclude everything discoverable by reading the code, plus detail outside the gra
 Keep only the gray zone — what code cannot reveal, or what loses its intent unless gathered in one place. **Everything that passed the requirement gate is added to this** — a contract the result must honor stays even when it looks obvious in the code.
 
 - **Requirements the result must honor** — [requirement values](#concrete-numbers--keep-requirement-values-drop-tuning-values) (limits, quotas, cycles, retention, allowed ranges) and [non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering) (allowed sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units), plus user-visible behavior contracts and required validation conditions. With the code gone, this alone must be enough to rebuild code honoring the same contract
-- **Problem background and motivation** (WHY) — why this decision was needed; which constraints and premises forced this choice
+- **Problem background and motivation** (WHY) — why this decision was needed; which constraints and assumptions forced this choice
+- **Decision-changing assumptions** — only facts or expectations that materially change which alternative is preferred. Keep each as one line in Context or the relevant Decision Driver: `<assumption> — reconsider <decision> if false`. A requirement belongs in the requirement contract instead; a replaceable implementation default belongs in code and the implementation review
 - **Decision Drivers** — the pressures, constraints, and requirements that discriminate between options (see [Decision Drivers](#decision-drivers))
 - **Decision summary** — what was decided and why over the alternatives (the rationale is the point: the decision shows up in code, but "why not the other way" does not)
 - **Alternatives table** — the options considered and why they were not adopted (see [Alternatives](#alternatives--at-least-two))
@@ -218,6 +231,21 @@ Record only the pressures, constraints, and requirements that **actually discrim
 Note that every Good entry **keeps its numbers and constraints intact** — blur a driver's figures and it can no longer discriminate, so it stops being a driver. A target used as a driver ("p95 within 3s") is itself a requirement the result must honor, so do not blur it in the Decision body either.
 
 Thin drivers make [alternatives](#alternatives--at-least-two) thin too — they come as a pair.
+
+## Decision-changing assumptions — use the existing structure
+
+An assumption is not a requirement and not an implementation default. It is a fact or expectation the alternatives comparison relies on: for example, an upstream provider guarantees idempotent requests, the organization cannot operate a second data store, or traffic is expected to remain inside one region.
+
+Record an assumption only when changing it could change the adopted architecture. Put one short line in Context or the relevant Decision Driver:
+
+`Assumption: <fact> — reconsider <decision or trade-off> if false`
+
+Do not add a separate assumptions section, confidence taxonomy, evidence table, or placeholder row. The ADR already has Context and Decision Drivers for facts that shape the choice.
+
+- A value or rule the result must honor goes in the requirement contract.
+- An unresolved assumption that changes a contract or durable boundary is a question to resolve before approval.
+- A library, SDK, adapter, pool size, timeout chosen only for implementation convenience, internal module shape, or other replaceable default stays in code. The implementation review may expose it in its ephemeral Notable implementation choices, but the ADR does not persist it.
+- Omit assumptions when the choice does not depend on one. A short ADR is clearer than an empty taxonomy.
 
 ## Alternatives — at least two
 
@@ -382,8 +410,12 @@ For the PR reviewer or the author before merge.
 - [ ] **Status is a valid value** (`Proposed`/`Accepted`/`Deprecated`/`Superseded by [...]`)
 - [ ] **The one-line decision summary** is updated in the matching `.mapping.json` `adrs[]` record
 - [ ] **Regeneration test** — imagining all code deleted and only this ADR left, could requirement-honoring code be rebuilt? Is any contract missing (limits, cycles, permissions, required validation, state transitions)?
+- [ ] **Reviewable contract rows** — each requirement row states one obligation, so implementation review can assign it one coverage status without hiding partial completion
+- [ ] **Observable evidence** — each obligation has an implementation-independent result that distinguishes compliance from violation; no test file, command, library, function, class, fixture, or internal representation is pinned
 - [ ] **Requirement values appear verbatim** — numbers the result must honor (max turns, count limits, retention, size caps, NFR targets) are not blurred into "appropriately" or "is limited". Does each carry a scrap of justification (policy, contract, regulation)?
 - [ ] **Non-numeric requirements survived too** — allowed value sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units and formats, forbidden transitions were not dropped as "obvious from the code" ([non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering))
+- [ ] **Decision-changing assumptions are explicit and correctly routed** — every assumption that could change the adopted alternative appears in Context or the relevant Driver with what must be reconsidered if false; requirements remain in the contract, implementation defaults remain in code
+- [ ] **No unresolved material assumption is hidden** — an assumption affecting the requirement contract or durable architecture boundary was resolved before approval, or remains an explicit blocking question
 - [ ] **No tuning values** — values a developer may change without violating a requirement (pool sizes, backoff, cache TTL, worker counts) are absent
 - [ ] **Code-readthrough test** — for every paragraph, asking "is this obvious from reading the code this ADR governs?", nothing obvious remains (the code is the source of truth for those). Items that passed the requirement gate stay even when obvious
 - [ ] **Final-state wording** — the body and `.mapping.json` summary state the current result directly. No evolution narration ("originally it was", "added in v2", "changed from before") or comparison residue ("not X but Y", "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만") remains outside Alternatives or [`decision-log.md`](#decision-log-decision-logmd). Current prohibitions and forbidden transitions that passed the requirement gate remain intact
@@ -396,11 +428,11 @@ For the PR reviewer or the author before merge.
 - [ ] **No forbidden items** (code snippets, tuning values, call graphs, field-type tables, env var names, pseudocode, full JSON, migration commands) — requirement values and business limits are _not_ forbidden items
 - [ ] **Decision Drivers** number 3-5 and are discriminating facts or constraints, not opinions
 - [ ] **At least two alternatives**, each with pros and cons weighed against the Decision Drivers (no strawmen)
-- [ ] **A Mermaid diagram** is not missing where the decision needs one
+- [ ] **A grounded Mermaid diagram** is not missing where a flow, state, boundary, or alternative relationship is clearer visually, and no diagram copies a code call graph or invents a relationship
 - [ ] **If a DB key pattern changed**, `docs/tables/{name}.md` (or the equivalent) exists with bidirectional links
 - [ ] **No PRD back-references** — no ALPS path, section number, or feature ID in the body (Context and Related included)
 - [ ] **Related** dependency ADR links (if any) resolve — ADR ↔ ADR references are fine; PRD links are not
 - [ ] **One ADR = one decision** holds (no split signals)
 - [ ] **`.mapping.json`** has the matching category entry including the new ADR
 
-<!-- adr-writer:rules-version 0.6.7 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.7.0 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

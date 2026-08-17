@@ -58,19 +58,23 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 
 **alps-writer (PRD)**
 
-- 9-section ALPS (PRD) template with structured XML templates and conversation guides
+- 9-section ALPS (PRD) template with structured XML templates, conversation guides, and per-Feature demos connected to the end-to-end demo scenario
 - Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
+- **Disposable comprehension signal** — Section 7 Features are internally assessed on five axes and shown only as an ephemeral `1–10` score; splitting is suggested only when requested
 - **ALPS → ADR bridge** — `/feature-to-adr` discovers `0..N` decisions per Section 7 feature, reconciles existing contracts, and delegates each new decision to `/adr-new`
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client (MCP server only)
 
 **adr-writer (ADR)**
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
+- **Decision-first presentation** — authoring leads with a Decision Digest and exposes decision-changing premises; edits and sync lead with semantic changes; document review leads with Decision, Contract, Rationale, and Risk before detailed evidence
+- **Disposable comprehension signal** — ADR digests, implementation plans, and document reviews show only an ephemeral `1–10` score from an internal five-axis assessment; the score never becomes an ADR field or workflow gate
+- **Requested Stacked PR fallback** — when one Feature and ADR must stay intact, `/adr-impl` can offer dependency-ordered PR layers with one review question each; it never creates a Stack from the score alone
 - **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
-- **Risk-based implementation review** — localized changes use a decision ledger, isolated sufficiency pass, and targeted tests; protected-surface changes add independent necessity/sufficiency reviews and a Mermaid repair guide. Intent and regeneration completeness are approved before implementation, so completion review does not repeat a routine human gate
+- **Risk-based implementation review** — every review returns a human-readable Evidence Package with one status/evidence row per ADR obligation plus read-only material implementation choices and their ADR-intent fit. Localized changes use an isolated sufficiency pass and targeted tests; protected-surface changes add independent necessity/sufficiency reviews. Intent is approved before implementation, so completion review does not repeat a routine human gate; it informs the human and escalates only exceptions
 - **Provider-aware review fallback** — Codex sessions on Amazon Bedrock avoid unsupported subagent dispatch and retries; document/implementation reviews continue in the main session, while refactoring remains proposal-only without an isolated reviewer
 - **ADR-first hook** — one `SessionStart` hook runs only on startup, resume, clear, and compaction recovery, injecting the admission-aware directive without mapping contents; admitted work reads `docs/adr/.mapping.json` before coding
 - Fully standalone — no ALPS PRD required

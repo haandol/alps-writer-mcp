@@ -151,6 +151,9 @@ test("/adr-new verifies its own draft instead of delegating to adr-reviewer", ()
 
   // the reviewer agent names /adr-review as its path, and disclaims /adr-new
   const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  const reviewerDescription = reviewer.match(/^description:\s*(.+)$/m)?.[1] ?? "";
+  assert.match(reviewerDescription, /existing|hand-edited|independent/i);
+  assert.doesNotMatch(reviewerDescription, /before finalizing a new ADR via \/adr-new/i);
   assert.match(reviewer, /\*\*Not from `\/adr-new`\.\*\*/);
   assert.match(reviewer, /nobody holds an authoring context for/);
   // the sweep owns the independent read, and runs on request rather than always
@@ -912,4 +915,142 @@ test("every automatic Status correction uses the exact-path transition script", 
       `${skill} must forbid manual Status edits`,
     );
   }
+});
+
+test("ADR interactions lead with reviewable digest and semantic changes without creating a second authority", () => {
+  const template = read(path.join(ADR_ROOT, "templates", "adr", "README.md"));
+  for (const group of [
+    "Required guarantees",
+    "Prohibitions",
+    "Failure guarantees",
+    "Observable evidence",
+  ]) {
+    assert.match(template, new RegExp(group));
+  }
+  assert.match(template, /This grouping changes presentation only/);
+  assert.match(template, /one independently reviewable obligation per row/i);
+  assert.match(template, /never a test file, command, function, class, library, fixture/i);
+
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+  assert.match(adrNew, /Decision Digest/);
+  assert.match(adrNew, /Decision question/);
+  assert.match(adrNew, /Why this decision/);
+  assert.match(adrNew, /Main risks/);
+  assert.match(adrNew, /Observable evidence/);
+  assert.match(adrNew, /one obligation per row/i);
+  assert.match(adrNew, /could a reviewer tell requirement by requirement/i);
+  assert.match(adrNew, /not a second artifact or source of truth/);
+
+  const impl = read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md"));
+  assert.match(impl, /semantic diff/);
+  for (const group of ["Decision", "Requirement contract", "Decision Drivers", "Consequences"]) {
+    assert.match(impl, new RegExp(group));
+  }
+  assert.match(impl, /never present `Unverified` as `Unchanged`/);
+
+  const review = read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md"));
+  for (const question of ["Decision", "Contract", "Rationale", "Risk"]) {
+    assert.match(review, new RegExp(`\\*\\*${question}\\*\\*`));
+  }
+  assert.match(review, /must never hide a requirement value, a `BLOCK`, or an unjudged axis/);
+
+  const sync = read(path.join(ADR_ROOT, "skills", "adr-sync", "SKILL.md"));
+  assert.match(sync, /semantic diff/);
+  assert.match(sync, /`Unchanged` means that axis was inspected/);
+  assert.match(sync, /`Unverified` means the available evidence could not establish it/);
+});
+
+test("ADR authoring keeps decision-changing assumptions inside existing ADR sections", () => {
+  const template = read(path.join(ADR_ROOT, "templates", "adr", "README.md"));
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+  const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+  assert.match(reviewer, /Regeneration and reviewability test/);
+  assert.match(reviewer, /one coverage row/);
+
+  for (const source of [template, rules, adrNew]) {
+    assert.doesNotMatch(source, /^#{2,3} Decision premises$/m);
+    assert.match(source, /assumption/i);
+    assert.match(source, /reconsider/i);
+  }
+
+  assert.match(rules, /requirement contract/);
+  assert.match(rules, /Notable implementation choices/);
+  assert.match(adrNew, /if it were false/i);
+  assert.match(adrNew, /replaceable library, SDK, adapter/);
+  assert.match(adrNew, /Use diagrams to explain, not decorate/);
+  assert.match(reviewer, /decision-changing assumption/i);
+  assert.match(reviewer, /never only as an assumption/i);
+  assert.doesNotMatch(reviewer, /When Decision premises exist/);
+});
+
+test("Feature and ADR comprehension load is scored internally but shown as one advisory line", () => {
+  const sources = [
+    read(path.join(PLUGINS_ROOT, "alps-writer", "src", "guides", "07.md")),
+    read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md")),
+    read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md")),
+    read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md")),
+    read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md")),
+  ];
+  const axes = [
+    "conceptual breadth",
+    "contract density",
+    "state and flow complexity",
+    "boundary coupling",
+    "uncertainty and verification burden",
+  ];
+
+  for (const source of sources) {
+    for (const axis of axes) {
+      assert.match(
+        source,
+        new RegExp(axis.split(" ").join("\\s+"), "i"),
+        `missing comprehension-load axis: ${axis}`,
+      );
+    }
+    assert.match(source, /인지비용:\s*<N>\/10|Comprehension load:\s*<N>\/10/i);
+    assert.match(source, /show\s+1\s+rather\s+than\s+0|합계가\s*0이면\s*1점/i);
+    assert.match(source, /do not (?:show|expose)[\s\S]{0,80}axis|축별[\s\S]{0,80}출력하지/i);
+    assert.match(
+      source,
+      /do not (?:write|persist|store)[\s\S]{0,160}ADR|ADR[\s\S]{0,160}저장하지/i,
+    );
+    assert.match(source, /does not\s+block|must not\s+block|차단하지/i);
+  }
+
+  const alpsGuide = sources[0];
+  assert.match(
+    alpsGuide,
+    /only when the user asks[\s\S]{0,80}split|사용자가[\s\S]{0,80}분할[\s\S]{0,80}요청/i,
+  );
+  assert.match(alpsGuide, /observable user behavior|관찰 가능한 사용자 행동/i);
+
+  for (const source of sources.slice(2)) {
+    assert.match(
+      source,
+      /only when the user asks[\s\S]{0,80}split|사용자가[\s\S]{0,80}분할[\s\S]{0,80}요청/i,
+    );
+    assert.match(source, /independent decisions|독립 결정/i);
+    assert.match(source, /implementation steps|구현 단계/i);
+  }
+});
+
+test("adr-impl offers Stacked PR only as a requested delivery fallback", () => {
+  const impl = read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md"));
+
+  assert.match(impl, /Stacked PR/i);
+  assert.match(impl, /Feature or ADR split|Feature.*ADR.*split/i);
+  assert.match(impl, /one review question/i);
+  assert.match(impl, /dependency order|dependency-ordered/i);
+  assert.match(impl, /one approved ADR contract|same approved ADR contract/i);
+  assert.match(impl, /only when the user asks|user asks/i);
+  assert.match(impl, /do not automatically|never automatically|must not automatically/i);
+  assert.match(impl, /publishing|publish/i);
+  assert.match(impl, /GitHub.*capability|capability.*GitHub/i);
+  assert.match(impl, /Individual layers do not complete or promote the ADR/i);
+  assert.match(impl, /complete Stack[\s\S]{0,100}final tests[\s\S]{0,100}implementation review/i);
+  assert.match(
+    impl,
+    /do not (?:write|persist|store)[\s\S]{0,180}(?:ADR|\.mapping\.json|registry)/i,
+  );
 });

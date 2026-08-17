@@ -95,7 +95,9 @@ export default {
     );
 
     return [
-      skillText("adr-sync"),
+      skillText("adr-sync", {
+        references: ["skills/adr-sync/references/repository-hygiene.md"],
+      }),
       `\n---\n\n# This run`,
       `Repository: ${dir}`,
       `Target category: runtime/event`,

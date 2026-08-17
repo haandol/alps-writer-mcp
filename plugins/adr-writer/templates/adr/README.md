@@ -39,6 +39,8 @@ Proposed | Accepted (YYYY-MM-DD) | Deprecated (YYYY-MM-DD) | Superseded by [ADR 
 
 The background and problem requiring the decision. _Absorb_ the PRD's business motivation and narrate it here — never write an ALPS file path, section number, or feature ID in the body. Never point at the PRD (adr-writer does not reference ALPS).
 
+When the adopted alternative depends on an assumption, add one short line here or under the relevant Decision Driver: `Assumption: <fact> — reconsider <decision> if false`. Do not add a separate assumptions section or confidence table. Requirement values and rules belong in the requirement contract below. Replaceable libraries, SDKs, adapters, internal structures, and tuning defaults belong in code and the implementation review's ephemeral Notable implementation choices.
+
 ## Decision Drivers
 
 - The 3-5 pressures, constraints, and requirements that discriminate this decision. Not generic quality attributes ("maintainability") but only what genuinely decides between the options.
@@ -52,9 +54,11 @@ The currently valid decision and why. State the result directly; do not describe
 
 (What the result must honor — so it can be rebuilt from this alone once the code is gone. Record **requirement values with their number and basis verbatim**, such as limits, quotas, cycles, retention periods, and allowed ranges. Example: "a chat session is capped at 20 turns — pricing policy". **Record non-numeric requirements here too** — allowed value sets and forbidden transitions, mandatory fields, permissions and visibility, ordering and uniqueness, units. Example: "an order is paid, shipping, delivered, or cancelled, and a cancelled order never moves to shipping". Do not record implementation tuning values (pool sizes, backoff, cache TTL) or enum identifier names.)
 
+Group populated contract rows under **Required guarantees**, **Prohibitions**, **Failure guarantees**, and **Observable evidence** so a reader can recover what must happen, what must never happen, what remains guaranteed when an operation fails, and what result shows whether each obligation was met. Write one independently reviewable obligation per row. Observable evidence is implementation-independent: record the result to observe, never a test file, command, function, class, library, fixture, or internal data representation. Omit an empty group instead of writing filler. This grouping changes presentation only: preserve every exact value, allowed state, permission, ordering rule, uniqueness rule, and basis.
+
 ### Sequence diagram
 
-If the decision involves async processing, cross-service integration, or event flow, add a Mermaid diagram.
+If a flow, state, boundary, or alternative relationship is clearer visually, add a grounded Mermaid diagram. Draw only relationships that belong at architectural resolution; never copy a code call graph or add a decorative diagram.
 
 ### Alternatives
 
@@ -89,4 +93,4 @@ The ADR list is held solely by [`docs/adr/.mapping.json`](./structure.md#the-adr
 - [Michael Nygard — Documenting Architecture Decisions](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions) — the original ADR article
 - [adr-writer plugin](https://github.com/haandol/alps-writer-plugins) — this plugin itself
 
-<!-- adr-writer:rules-version 0.6.7 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.7.0 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
