@@ -62,6 +62,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 - Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
+- **Disposable comprehension signal** — Section 7 Features are internally assessed on five axes and shown only as an ephemeral `1–10` score; splitting is suggested only when requested
 - **ALPS → ADR bridge** — `/feature-to-adr` discovers `0..N` decisions per Section 7 feature, reconciles existing contracts, and delegates each new decision to `/adr-new`
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client (MCP server only)
 
@@ -69,6 +70,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
 - **Decision-first presentation** — authoring leads with a Decision Digest and exposes decision-changing premises; edits and sync lead with semantic changes; document review leads with Decision, Contract, Rationale, and Risk before detailed evidence
+- **Disposable comprehension signal** — ADR digests, implementation plans, and document reviews show only an ephemeral `1–10` score from an internal five-axis assessment; the score never becomes an ADR field or workflow gate
 - **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
 - **Risk-based implementation review** — localized changes use decision and implementation-choice ledgers, an isolated sufficiency pass, and targeted tests; protected-surface changes add independent necessity/sufficiency reviews, grounded Mermaid explanations, and interactive rulings for findings and AI-selected defaults. Intent and regeneration completeness are approved before implementation, so completion review does not repeat a routine human gate

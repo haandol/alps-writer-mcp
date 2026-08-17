@@ -198,10 +198,24 @@ Fix what the pass finds before step 7. If the draft needs splitting, or a DB sch
 
 Show a verified **Decision Digest** and ask for approval. The digest is an ephemeral reading view over the ADR, not a second artifact or source of truth; the complete ADR body and `.mapping.json` remain authoritative. Show the full ADR body or detailed Alternatives only when the user asks or when the digest cannot expose a material ambiguity:
 
+Before showing the digest, evaluate five internal axes from 0 to 2 and sum them
+to 1-10: conceptual breadth, contract density, state and flow complexity,
+boundary coupling, and uncertainty and verification burden. Do not show or
+expose the axis scores or rationale. Show only
+`Comprehension load: <N>/10`. Do not write or persist this score in the ADR,
+`.mapping.json`, Status, or any other authoritative artifact. It is advisory and
+does not block approval or implementation.
+
+Only when the user asks to split, offer up to three candidates. Split into
+separate ADRs only for independent decisions. Keep one inherently difficult
+decision in one ADR and offer implementation steps instead; never split by
+technical layer.
+
 ```
 ## Decision Digest — ADR <NNNN>: <title>
 
 **Category**: <category key — e.g. identity/login (context: identity, subdomain: core)>
+**Comprehension load**: <N>/10
 **Decision question**: <the architectural question this ADR answers>
 **Current decision**: <2-3 sentences stating the final state>
 **Decision Drivers**: <3-5, one line each>

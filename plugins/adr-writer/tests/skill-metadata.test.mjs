@@ -968,3 +968,53 @@ test("ADR authoring exposes decision premises without pulling implementation def
   assert.match(reviewer, /never only as a premise/);
   assert.match(reviewer, /including Decision premises/);
 });
+
+test("Feature and ADR comprehension load is scored internally but shown as one advisory line", () => {
+  const sources = [
+    read(path.join(PLUGINS_ROOT, "alps-writer", "src", "guides", "07.md")),
+    read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md")),
+    read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md")),
+    read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md")),
+    read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md")),
+  ];
+  const axes = [
+    "conceptual breadth",
+    "contract density",
+    "state and flow complexity",
+    "boundary coupling",
+    "uncertainty and verification burden",
+  ];
+
+  for (const source of sources) {
+    for (const axis of axes) {
+      assert.match(
+        source,
+        new RegExp(axis.split(" ").join("\\s+"), "i"),
+        `missing comprehension-load axis: ${axis}`,
+      );
+    }
+    assert.match(source, /인지비용:\s*<N>\/10|Comprehension load:\s*<N>\/10/i);
+    assert.match(source, /do not (?:show|expose)[\s\S]{0,80}axis|축별[\s\S]{0,80}출력하지/i);
+    assert.match(
+      source,
+      /do not (?:write|persist|store)[\s\S]{0,160}ADR|ADR[\s\S]{0,160}저장하지/i,
+    );
+    assert.match(source, /does not\s+block|must not\s+block|차단하지/i);
+  }
+
+  const alpsGuide = sources[0];
+  assert.match(
+    alpsGuide,
+    /only when the user asks[\s\S]{0,80}split|사용자가[\s\S]{0,80}분할[\s\S]{0,80}요청/i,
+  );
+  assert.match(alpsGuide, /observable user behavior|관찰 가능한 사용자 행동/i);
+
+  for (const source of sources.slice(2)) {
+    assert.match(
+      source,
+      /only when the user asks[\s\S]{0,80}split|사용자가[\s\S]{0,80}분할[\s\S]{0,80}요청/i,
+    );
+    assert.match(source, /independent decisions|독립 결정/i);
+    assert.match(source, /implementation steps|구현 단계/i);
+  }
+});

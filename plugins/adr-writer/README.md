@@ -2,6 +2,8 @@
 
 ADR-driven development cycle for Codex and Claude Code. The ADR admission gate records only durable requirements and architectural decisions, leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring in code. User-facing authoring leads with a Decision Digest, makes decision-changing premises explicit, and keeps implementation defaults below ADR resolution. Edits and sync lead with semantic changes, while implementation review explains grounded flows and lists the exact AI-selected code-level values in an ephemeral Implementation Choice Ledger. The complete ADR remains authoritative for decisions and contracts; the ledger remains a disposable review view over code.
 
+ADR digests, implementation plans, and document reviews also show an ephemeral `Comprehension load: N/10` line. Skills calculate it internally from five axes, but never persist the score or use it as an approval or completion gate. Split candidates are offered only when the user asks.
+
 **Standalone**: adr-writer requires no ALPS PRD and never references the `alps-writer` plugin. ADRs are its first-class artifact; code is implemented from ADRs. `docs/adr/.mapping.json` (the ADR index) stores no PRD reference. The ADR ↔ code link is not stored anywhere — an agent finds the code an ADR governs by reading the ADR and searching the repo, so refactors never churn a stored mapping.
 
 ## Install

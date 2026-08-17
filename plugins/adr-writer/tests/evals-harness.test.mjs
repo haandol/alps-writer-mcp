@@ -95,6 +95,7 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /alps-batch-preserves-mandatory-nfr/);
   assert.match(out, /impl-review-selects-risk-mode/);
   assert.match(out, /bedrock-subagent-fallback/);
+  assert.match(out, /comprehension-load-score-only/);
 });
 
 // The prompt has to carry the SHIPPED instruction text. If a scenario ever
@@ -394,6 +395,24 @@ FULL | B retention 30 to 90 days and public API change
       bad: `=== EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
 STANDARD | B public API retention change
+=== EVAL-END ===`,
+    },
+    {
+      name: "comprehension-load-score-only",
+      good: `A — 인지비용: 2/10
+B — 인지비용: 9/10
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+FEATURE_SCORE | A 2/10
+ADR_SCORE | B 9/10
+=== EVAL-END ===`,
+      bad: `A — 인지비용: 2/10
+B — 인지비용: 9/10
+B는 여러 시스템이 연결되어 있어서 이해하기 어렵다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+FEATURE_SCORE | A 2/10
+ADR_SCORE | B 9/10
 === EVAL-END ===`,
     },
     {
