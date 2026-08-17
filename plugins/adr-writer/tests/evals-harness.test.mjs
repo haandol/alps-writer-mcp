@@ -438,8 +438,10 @@ ADR_SCORE | B 9/10
 === EVAL-FINDINGS ===
 KEEP_ONE_ADR | 하나의 Feature와 하나의 ADR 계약을 유지
 STACK_FALLBACK | Stacked PR을 dependency 순서로 구성하고 PR마다 하나의 review question 사용
+STACK_BOUNDARY | 하나의 conceptual change와 review question 단위로 나눔
 EPHEMERAL | Stack 계획은 ADR, mapping, registry에 저장하지 않음
 NO_AUTOPUBLISH | 사용자의 게시 요청과 GitHub capability 확인 전에는 publish하지 않음
+STATUS_LIFECYCLE | 전체 Stack의 테스트와 review가 끝날 때까지 ADR은 Proposed이고 이후에만 Accepted
 === EVAL-END ===`,
       bad: `인지비용이 높으므로 ADR 세 개를 만들고 PR도 즉시 게시했다.
 === EVAL-VERDICT: PASS ===
@@ -487,6 +489,41 @@ PASS_PATH | 사용자 승인 대기
     assert.equal(badRun.code, 0, badRun.out);
     assert.match(badRun.out, /✗/, `${name} scorer failed to reject the collapsed behavior`);
   }
+});
+
+test("score-only scorer rejects visible scores that disagree with the machine tail", () => {
+  const reply = `A — 인지비용: 9/10 — 단순하지만 높게 평가했다.
+B — 인지비용: 1/10 — 복잡하지만 낮게 평가했다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+FEATURE_SCORE | A 2/10
+ADR_SCORE | B 9/10
+=== EVAL-END ===`;
+  const { code, out } = runEvals(["--only", "comprehension-load-score-only"], stubAgent(reply));
+  assert.equal(code, 0, out);
+  assert.match(out, /✗.*matches the visible Feature score to the machine tail/);
+  assert.match(out, /✗.*matches the visible ADR score to the machine tail/);
+  assert.match(out, /✗.*shows only the exact two score lines/);
+});
+
+test("stack scorer rejects technical-layer delivery and premature ADR promotion", () => {
+  const reply = `하나의 ADR은 유지하지만 PR은 frontend, backend, database 기술 계층으로 나눈다.
+각 layer가 끝날 때 ADR을 Accepted로 바꾼다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+KEEP_ONE_ADR | 하나의 ADR 유지
+STACK_FALLBACK | Stacked PR을 dependency 순서로 만들고 PR마다 one review question 사용
+STACK_BOUNDARY | frontend, backend, database 기술 계층으로 나눔
+EPHEMERAL | Stack 상태는 ADR과 mapping에 저장하지 않음
+NO_AUTOPUBLISH | GitHub capability 확인 후 publish
+STATUS_LIFECYCLE | 각 layer가 끝나면 ADR을 Accepted로 변경
+=== EVAL-END ===`;
+  const { code, out } = runEvals(["--only", "impl-offers-stacked-pr-fallback"], stubAgent(reply));
+  assert.equal(code, 0, out);
+  assert.match(out, /✗.*keeps every layer under the same approved ADR contract/);
+  assert.match(out, /✗.*splits by conceptual review unit, not technical layer/);
+  assert.match(out, /✗.*requires both an explicit publish request and GitHub capability/);
+  assert.match(out, /✗.*keeps the ADR Proposed until the whole Stack is verified/);
 });
 
 test("final-state sync scorer rejects transition residue and preserves current prohibitions", async () => {
@@ -746,6 +783,20 @@ test("an agent that produces nothing is an error, not a silent pass", () => {
   const { code, out } = runEvals(["--only", "review-requirement-value"], "true");
   assert.equal(code, 2);
   assert.match(out, /agent never produced output|did not run/);
+});
+
+test("a nonzero agent exit is an error even when it prints partial output", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-failed-agent-"));
+  const script = path.join(dir, "stub.sh");
+  writeFileSync(
+    script,
+    `#!/bin/bash\ncat > /dev/null\necho 'partial response that must not be scored'\nexit 1\n`,
+  );
+  chmodSync(script, 0o755);
+
+  const { code, out } = runEvals(["--only", "review-requirement-value"], script);
+  assert.equal(code, 2);
+  assert.match(out, /agent command failed \(status 1\)/);
 });
 
 // The real-repo scenario copies a shipped ADR into a throwaway fixture. If it

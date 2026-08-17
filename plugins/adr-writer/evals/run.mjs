@@ -93,6 +93,16 @@ async function runOnce(scenario, opts) {
   if (opts.dryRun) return { fixture: dir, prompt, dry: true, checks: [] };
 
   const res = runAgent(prompt, { cmd: opts.cmd, cwd: dir });
+  if (!res.ok) {
+    return {
+      fixture: dir,
+      error:
+        `agent command failed (status ${res.status}${res.error ? `: ${res.error}` : ""}). ` +
+        `${res.stderr.slice(0, 300) || res.stdout.slice(0, 300)}`,
+      checks: [],
+      ms: res.ms,
+    };
+  }
   // Empty output is an error whatever the exit code. A command that exits 0
   // saying nothing (a wrong ADR_EVAL_CMD, a CLI that needs a flag it did not
   // get) would otherwise be scored as a real run — and since most checks here

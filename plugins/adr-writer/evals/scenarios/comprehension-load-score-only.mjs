@@ -4,7 +4,6 @@ import {
   seedRuleDocs,
   seedMapping,
   TAIL_SPEC,
-  expectText,
   expectNoText,
 } from "../lib/harness.mjs";
 
@@ -21,6 +20,20 @@ function scoreValue(findings, tag) {
   const summary = findings.find((finding) => new RegExp(tag, "i").test(finding.tag))?.summary ?? "";
   const value = Number(summary.match(/\b(10|[1-9])\s*\/\s*10\b/)?.[1]);
   return { summary, value };
+}
+
+function visibleScore(lines, label) {
+  const match = lines
+    .map((line) =>
+      line.match(
+        new RegExp(
+          `^${label}\\s*(?:—|-|:)?\\s*(?:인지비용|Comprehension load)\\s*:\\s*(10|[1-9])\\s*\\/\\s*10\\s*$`,
+          "i",
+        ),
+      ),
+    )
+    .find(Boolean);
+  return match ? Number(match[1]) : null;
 }
 
 export default {
@@ -53,6 +66,8 @@ export default {
       .trim()
       .split(/\r?\n/)
       .filter((line) => line.trim());
+    const visibleFeature = visibleScore(visibleLines, "A");
+    const visibleAdr = visibleScore(visibleLines, "B");
     return [
       {
         pass: Number.isInteger(feature.value) && feature.value >= 1 && feature.value <= 5,
@@ -64,20 +79,20 @@ export default {
         detail: adr.summary || "missing ADR_SCORE",
         label: "scores the cross-boundary ADR as high load",
       },
-      expectText(
-        visible,
-        /A[^\n]*(?:인지비용|Comprehension load)[^\n]*(?:10|[1-9])\s*\/\s*10/i,
-        "shows one Feature score line",
-      ),
-      expectText(
-        visible,
-        /B[^\n]*(?:인지비용|Comprehension load)[^\n]*(?:10|[1-9])\s*\/\s*10/i,
-        "shows one ADR score line",
-      ),
       {
-        pass: visibleLines.length === 2,
-        detail: `visible lines: ${visibleLines.length}`,
-        label: "shows only the two requested score lines",
+        pass: visibleLines.length === 2 && visibleFeature !== null && visibleAdr !== null,
+        detail: `visible lines: ${visibleLines.join(" | ") || "none"}`,
+        label: "shows only the exact two score lines",
+      },
+      {
+        pass: visibleFeature !== null && visibleFeature === feature.value,
+        detail: `visible A: ${visibleFeature ?? "missing"}; tail A: ${feature.value || "missing"}`,
+        label: "matches the visible Feature score to the machine tail",
+      },
+      {
+        pass: visibleAdr !== null && visibleAdr === adr.value,
+        detail: `visible B: ${visibleAdr ?? "missing"}; tail B: ${adr.value || "missing"}`,
+        label: "matches the visible ADR score to the machine tail",
       },
       expectNoText(
         visible,

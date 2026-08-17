@@ -44,9 +44,10 @@ ADR_EVAL_CMD="claude -p --add-dir . --allowedTools 'Read Write Edit Bash'" \
   node evals/run.mjs --only author-
 ```
 
-Exit code is 0 whenever the run completed, **including when checks fail** — a
-failing check is the finding, not an error. Exit 2 means the harness itself could
-not run (bad `--only`, agent produced nothing).
+Exit code is 0 whenever the agent command completed successfully, **including
+when checks fail** — a failing check is the finding, not an error. Exit 2 means
+the harness could not run or the agent command failed (bad `--only`, nonzero
+agent exit, or no output).
 
 ## Reproducing a reported bug
 
