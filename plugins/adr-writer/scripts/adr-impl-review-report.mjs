@@ -81,6 +81,7 @@
 //     ],
 //     "contractCoverage": [                               // required, non-empty
 //       {
+//         "contractId": "D0" | "R1" | "R2" | "...",
 //         "requirement": "a payment is completed at most once",
 //         "status": "PROVEN" | "VIOLATED" | "UNVERIFIED" | "CONTRADICTED",
 //         "adrBasis": "Requirement contract — Required guarantees",
@@ -206,6 +207,7 @@ function normalizeImplementationChoices(data) {
 function normalizeContractCoverage(data) {
   const rows = Array.isArray(data.contractCoverage) ? data.contractCoverage : [];
   return rows.map((row) => ({
+    contractId: row.contractId || "",
     requirement: row.requirement || "",
     status: row.status || "UNVERIFIED",
     adrBasis: row.adrBasis || "",
@@ -225,7 +227,7 @@ function contractCoverageCard(row, index, total) {
   return `
   <article class="coverage coverage--${statusClass}">
     <header class="finding__head">
-      <span class="coverage__status">${esc(status)}</span>
+      <span class="coverage__status">${esc(row.contractId)} · ${esc(status)}</span>
       <span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span>
     </header>
     <h3 class="finding__title">${esc(row.requirement) || "(no requirement)"}</h3>
@@ -419,7 +421,7 @@ function buildHtml(data) {
       ? `<div class="conforms">
            <div class="conforms__stamp">Conforms</div>
            <p class="conforms__lead">No unnecessary changes or counterexamples were confirmed.</p>
-           <p class="conforms__sub">See the detailed repair guide for the decision-ledger and targeted-test evidence.</p>
+           <p class="conforms__sub">The contract coverage above contains the implementation and targeted-test evidence.</p>
          </div>`
       : count === 0
         ? `<div class="conforms">

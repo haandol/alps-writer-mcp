@@ -27,6 +27,7 @@ const REQUIRED_REPAIR_TEXT = [
   "Completion criteria:",
   "Needs confirmation:",
 ];
+const PASS_ADVISORY_CATEGORIES = new Set(["Refactor"]);
 
 function usage(message) {
   if (message) process.stderr.write(`adr-impl-review-validate: ${message}\n`);
@@ -46,6 +47,84 @@ function readJson(file, errors) {
 function resolveArtifact(baseDir, value) {
   if (!value || typeof value !== "string") return null;
   return path.isAbsolute(value) ? value : path.resolve(baseDir, value);
+}
+
+function stripFencedBlocks(source) {
+  return source.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1\s*$/gm, "");
+}
+
+function sectionBody(source, headingPattern, stopPattern) {
+  const lines = stripFencedBlocks(source).split(/\r?\n/);
+  const start = lines.findIndex((line) => headingPattern.test(line));
+  if (start < 0) return "";
+  const body = [];
+  for (let index = start + 1; index < lines.length; index++) {
+    if (stopPattern.test(lines[index])) break;
+    body.push(lines[index]);
+  }
+  return body.join("\n").trim();
+}
+
+function topLevelBullets(source) {
+  const bullets = [];
+  let current = null;
+  for (const line of source.split(/\r?\n/)) {
+    const bullet = line.match(/^[-*]\s+(.+)$/);
+    if (bullet) {
+      if (current) bullets.push(current);
+      current = bullet[1].trim();
+      continue;
+    }
+    if (current && /^\s{2,}\S/.test(line)) {
+      current += ` ${line.trim()}`;
+      continue;
+    }
+    if (current && line.trim()) {
+      bullets.push(current);
+      current = null;
+    }
+  }
+  if (current) bullets.push(current);
+  return bullets;
+}
+
+function resolveAdrPath(artifactDir, value) {
+  if (!value || typeof value !== "string") return null;
+  if (path.isAbsolute(value)) return value;
+  const cwdPath = path.resolve(process.cwd(), value);
+  if (existsSync(cwdPath)) return cwdPath;
+  return path.resolve(artifactDir, value);
+}
+
+function expectedContractRows(artifactDir, adrValue, errors) {
+  const adrPath = resolveAdrPath(artifactDir, adrValue);
+  if (!adrPath || !existsSync(adrPath)) {
+    errors.push(
+      `findings.json adr does not resolve to an existing file: ${adrValue ?? "(missing)"}`,
+    );
+    return [];
+  }
+
+  const source = readFileSync(adrPath, "utf8");
+  const decision = sectionBody(source, /^## Decision\s*$/i, /^##\s+/);
+  const decisionCore = decision.split(/^###\s+/m)[0].trim();
+  if (!decisionCore) {
+    errors.push("ADR Decision section must contain reviewable text");
+    return [];
+  }
+
+  const requirementContract = sectionBody(
+    source,
+    /^### Requirement contract\s*$/i,
+    /^### (?!#)|^##\s+/,
+  );
+  return [
+    { contractId: "D0", adrBasis: "Decision" },
+    ...topLevelBullets(requirementContract).map((adrBasis, index) => ({
+      contractId: `R${index + 1}`,
+      adrBasis,
+    })),
+  ];
 }
 
 function validateFinding(finding, index, errors) {
@@ -103,6 +182,7 @@ function validateContractCoverage(row, index, errors) {
   }
 
   for (const field of [
+    "contractId",
     "requirement",
     "status",
     "adrBasis",
@@ -118,6 +198,90 @@ function validateContractCoverage(row, index, errors) {
   if (row.status && !ALLOWED_COVERAGE_STATUSES.has(row.status)) {
     errors.push(`${label}.status must be PROVEN, VIOLATED, UNVERIFIED, or CONTRADICTED`);
   }
+}
+
+function validateContractCompleteness(rows, expectedRows, errors) {
+  const expected = new Map(expectedRows.map((row) => [row.contractId, row]));
+  const seen = new Set();
+
+  for (const [index, row] of rows.entries()) {
+    if (!row || typeof row !== "object") continue;
+    const contractId = row.contractId;
+    if (seen.has(contractId)) {
+      errors.push(`contractCoverage contains duplicate contractId: ${contractId}`);
+      continue;
+    }
+    seen.add(contractId);
+
+    const expectedRow = expected.get(contractId);
+    if (!expectedRow) {
+      errors.push(`contractCoverage[${index}].contractId is not present in the ADR: ${contractId}`);
+      continue;
+    }
+    if (row.adrBasis !== expectedRow.adrBasis) {
+      errors.push(
+        `contractCoverage[${index}].adrBasis must exactly match ${contractId}'s ADR source row`,
+      );
+    }
+  }
+
+  for (const contractId of expected.keys()) {
+    if (!seen.has(contractId)) {
+      errors.push(`contractCoverage is missing ADR contract row: ${contractId}`);
+    }
+  }
+}
+
+function validatePass(data, errors) {
+  if (data.verdict !== "PASS") return;
+
+  if (data.contractCoverage.some((row) => row?.status !== "PROVEN")) {
+    errors.push("PASS requires every contractCoverage row to be PROVEN");
+  }
+  if (
+    data.contractCoverage.some((row) =>
+      /\b(?:NOT RUN|FAIL(?:ED)?)\b|미실행|실행하지 못/i.test(row?.tests ?? ""),
+    )
+  ) {
+    errors.push("PASS contractCoverage tests must not contain failed or unexecuted results");
+  }
+  if (!Number.isInteger(data.metrics?.testCommandCount) || data.metrics.testCommandCount < 1) {
+    errors.push("PASS requires at least one executed test or reproduction command");
+  }
+  if (data.metrics?.unverifiedRiskCount > 0) {
+    errors.push("PASS cannot contain an Unverified risk");
+  }
+
+  const blocking = data.findings.filter(
+    (finding) =>
+      finding &&
+      !PASS_ADVISORY_CATEGORIES.has(finding.category) &&
+      !(finding.category === "Best practice" && finding.weight === "next-cycle"),
+  );
+  if (blocking.length > 0) {
+    errors.push(`PASS cannot contain unresolved blocking findings: ${blocking.length}`);
+  }
+}
+
+function tableRows(report, heading, nextHeading) {
+  const section = sectionBody(
+    report,
+    new RegExp(`^## ${heading}\\s*$`, "i"),
+    new RegExp(`^## ${nextHeading}\\s*$`, "i"),
+  );
+  const rows = section
+    .split(/\r?\n/)
+    .filter((line) => /^\s*\|.*\|\s*$/.test(line))
+    .map((line) =>
+      line
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cell.trim().replace(/^`([^`]*)`$/, "$1")),
+    );
+  const separator = rows.findIndex(
+    (cells) => cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell)),
+  );
+  return separator >= 0 ? rows.slice(separator + 1) : [];
 }
 
 function validateMetrics(metrics, findings, errors) {
@@ -164,12 +328,32 @@ function validateReport(report, data, errors) {
     if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
   }
 
+  const coverageRows = tableRows(report, "ADR contract coverage", "Notable implementation choices");
+  const coverageById = new Map(coverageRows.map((cells) => [cells[0], cells]));
   for (const [index, row] of (data.contractCoverage ?? []).entries()) {
-    if (!report.includes(row.requirement)) {
-      errors.push(`implementation-review.md missing contractCoverage[${index}].requirement text`);
+    const cells = coverageById.get(row.contractId);
+    if (!cells) {
+      errors.push(`implementation-review.md missing contractCoverage[${index}] table row`);
+    } else if (cells.length < 7 || cells.some((cell) => !cell)) {
+      errors.push(
+        `implementation-review.md contractCoverage[${index}] must have seven non-empty columns`,
+      );
+    } else if (cells[2] !== row.status) {
+      errors.push(`implementation-review.md contractCoverage[${index}] status does not match JSON`);
     }
-    if (!report.includes(row.status)) {
-      errors.push(`implementation-review.md missing contractCoverage[${index}].status`);
+  }
+
+  const choiceRows = tableRows(report, "Notable implementation choices", "Findings");
+  if (choiceRows.length < (data.implementationChoices ?? []).length) {
+    errors.push(
+      `implementation-review.md has ${choiceRows.length} complete implementation-choice rows for ${data.implementationChoices.length} choices`,
+    );
+  }
+  for (const [index, cells] of choiceRows.entries()) {
+    if (cells.length < 4 || cells.some((cell) => !cell)) {
+      errors.push(
+        `implementation-review.md implementationChoices[${index}] must have four non-empty columns`,
+      );
     }
   }
 
@@ -244,12 +428,12 @@ function main() {
       errors.push("findings.json contractCoverage must be a non-empty array");
     } else {
       data.contractCoverage.forEach((row, index) => validateContractCoverage(row, index, errors));
-      if (
-        data.verdict === "PASS" &&
-        data.contractCoverage.some((row) => row?.status !== "PROVEN")
-      ) {
-        errors.push("PASS requires every contractCoverage row to be PROVEN");
-      }
+      validateContractCompleteness(
+        data.contractCoverage,
+        expectedContractRows(artifactDir, data.adr, errors),
+        errors,
+      );
+      validatePass(data, errors);
     }
 
     const reportPath = resolveArtifact(artifactDir, data.report);

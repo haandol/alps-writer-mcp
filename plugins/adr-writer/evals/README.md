@@ -98,11 +98,16 @@ agent exit, or no output).
      `PROVEN` obligations must produce `PASS` with no new human gate. Both
      scenarios require complete per-obligation rows, ADR-intent fit for material
      implementation discretion, coverage-first presentation, no invented code
-     paths, and no per-row approval.
+     paths, and no per-row approval. Their scorers also turn the visible reply
+     into a real review artifact, then run the shipped artifact validator and
+     HTML renderer so a prompt-only success cannot hide a broken report path.
    - `bedrock-subagent-fallback` checks that a known Amazon Bedrock provider
      prevents named and generic subagent dispatch, the known input validation
      error is not retried, document and implementation review continue as
      main-session passes, and refactoring remains `PROPOSE_ONLY`.
+   - `comprehension-load-score-only` checks the `0 → 1` display clamp directly,
+     keeps the five-axis calculation hidden, and rejects added gates or
+     explanatory output.
    - `impl-completes-without-reconfirmation` checks that a pre-approved ADR is
      not reconfirmed after implementation, evidence-backed defects are repaired
      and re-reviewed automatically, and only a real contract change escalates.

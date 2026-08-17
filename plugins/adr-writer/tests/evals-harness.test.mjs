@@ -291,17 +291,25 @@ test("the implementation-detail admission scorer distinguishes rejection from ov
 
 test("the implementation-review Evidence Package scorer distinguishes verified and unverified rows", async () => {
   const scenario = await loadScenario("impl-review-evidence-package-unverified.mjs");
+  const goodDir = mkdtempSync(path.join(tmpdir(), "adr-eval-evidence-good-"));
+  await scenario.build(goodDir);
   const goodChecks = scenario.score({
+    dir: goodDir,
     tail: {
       verdict: "INCONCLUSIVE",
       findings: [
         {
-          tag: "COVERAGE_C1",
+          tag: "COVERAGE_D0",
+          summary:
+            "status=UNVERIFIED; implementation=idempotency verified but provider failure unverified; evidence=injection unavailable; tests=NOT RUN",
+        },
+        {
+          tag: "COVERAGE_R1",
           summary:
             "status=PROVEN; implementation=idempotency guard; evidence=duplicate remains one; tests=PASS",
         },
         {
-          tag: "COVERAGE_C2",
+          tag: "COVERAGE_R2",
           summary:
             "status=UNVERIFIED; implementation=failure leaves pending; evidence=failure injection unavailable; tests=NOT RUN",
         },
@@ -317,14 +325,27 @@ test("the implementation-review Evidence Package scorer distinguishes verified a
         },
       ],
     },
-    output: `## ADR 계약 커버리지
-| Requirement | Status | Implementation | Evidence | Tests |
-| Payment completes at most once | PROVEN | idempotency guard | duplicate remains one | PASS |
-| Provider failure never records completion | UNVERIFIED | remains pending | injection unavailable | NOT RUN |
-## 중요한 구현 재량
+    output: `# ADR implementation review
+## Review mode
+full
+## Scope
+payment settlement
+## ADR contract coverage
+| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
+| --- | --- | --- | --- | --- | --- | --- |
+| D0 | Settlement decision | UNVERIFIED | Decision | Partly verified | Injection unavailable | NOT RUN |
+| R1 | Payment completes at most once | PROVEN | R1 basis | Idempotency guard | Duplicate remains one | PASS |
+| R2 | Provider failure never records completion | UNVERIFIED | R2 basis | Remains pending | Injection unavailable | NOT RUN |
+## Notable implementation choices
+| Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
+| --- | --- | --- | --- |
 | 250 ms | fixed delay | bounded retries preserve failure contract | recovery latency |
-## 검토 결과
+## Findings
 Provider failure remains unverified. Coverage and choices are read-only.
+## Tests
+Duplicate settlement PASS; provider failure NOT RUN.
+## Residual risks
+Provider failure remains unverified.
 === EVAL-VERDICT: INCONCLUSIVE ===`,
   });
   assert.ok(
@@ -332,16 +353,23 @@ Provider failure remains unverified. Coverage and choices are read-only.
     JSON.stringify(goodChecks, null, 2),
   );
 
+  const badDir = mkdtempSync(path.join(tmpdir(), "adr-eval-evidence-bad-"));
+  await scenario.build(badDir);
   const badChecks = scenario.score({
+    dir: badDir,
     tail: {
       verdict: "PASS",
       findings: [
         {
-          tag: "COVERAGE_C1",
+          tag: "COVERAGE_D0",
+          summary: "status=PROVEN; implementation=partial; evidence=unknown; tests=NOT RUN",
+        },
+        {
+          tag: "COVERAGE_R1",
           summary: "status=PROVEN; implementation=idempotency guard; evidence=guard; tests=PASS",
         },
         {
-          tag: "COVERAGE_C2",
+          tag: "COVERAGE_R2",
           summary: "status=UNVERIFIED; implementation=pending; evidence=unknown; tests=NOT RUN",
         },
         {
@@ -372,17 +400,25 @@ Approve each row?
 
 test("the PASS Evidence Package scorer rejects a new human gate", async () => {
   const scenario = await loadScenario("impl-review-evidence-package-pass.mjs");
+  const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-evidence-pass-gate-"));
+  await scenario.build(dir);
   const checks = scenario.score({
+    dir,
     tail: {
       verdict: "PASS",
       findings: [
         {
-          tag: "COVERAGE_C1",
+          tag: "COVERAGE_D0",
+          summary:
+            "status=PROVEN; implementation=guarded settlement flow; evidence=both paths verified; tests=PASS",
+        },
+        {
+          tag: "COVERAGE_R1",
           summary:
             "status=PROVEN; implementation=idempotency guard; evidence=duplicate remains one; tests=PASS",
         },
         {
-          tag: "COVERAGE_C2",
+          tag: "COVERAGE_R2",
           summary:
             "status=PROVEN; implementation=failure leaves pending; evidence=injection confirmed pending; tests=PASS",
         },
@@ -397,14 +433,25 @@ test("the PASS Evidence Package scorer rejects a new human gate", async () => {
         },
       ],
     },
-    output: `## ADR contract coverage
-| Requirement | Status | Implementation | Evidence | Tests |
-| Payment completes at most once | PROVEN | idempotency guard | duplicate remains one | PASS |
-| Provider failure never records completion | PROVEN | remains pending | injection confirmed | PASS |
+    output: `# ADR implementation review
+## Review mode
+full
+## Scope
+payment settlement
+## ADR contract coverage
+| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
+| --- | --- | --- | --- | --- | --- | --- |
+| D0 | Settlement decision | PROVEN | Decision | Both paths verified | Guard and failure injection | PASS |
+| R1 | Payment completes at most once | PROVEN | R1 basis | Idempotency guard | Duplicate remains one | PASS |
+| R2 | Provider failure never records completion | PROVEN | R2 basis | Remains pending | Injection confirmed | PASS |
 ## Notable implementation choices
+| Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
+| --- | --- | --- | --- |
 | 250 ms | fixed delay | bounded retries preserve failure contract | recovery latency |
 ## Findings
 Approve each choice?
+## Tests
+Both targeted tests passed.
 ## Residual risks
 Unverified core risk: none.
 === EVAL-VERDICT: PASS ===`,
@@ -547,19 +594,19 @@ STANDARD | B public API retention change
     },
     {
       name: "comprehension-load-score-only",
-      good: `A — 인지비용: 2/10
+      good: `A — 인지비용: 1/10
 B — 인지비용: 9/10
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
-FEATURE_SCORE | A 2/10
+FEATURE_SCORE | A 1/10
 ADR_SCORE | B 9/10
 === EVAL-END ===`,
-      bad: `A — 인지비용: 2/10
+      bad: `A — 인지비용: 0/10
 B — 인지비용: 9/10
 B는 여러 시스템이 연결되어 있어서 이해하기 어렵다.
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
-FEATURE_SCORE | A 2/10
+FEATURE_SCORE | A 0/10
 ADR_SCORE | B 9/10
 === EVAL-END ===`,
     },
@@ -628,7 +675,7 @@ test("score-only scorer rejects visible scores that disagree with the machine ta
 B — 인지비용: 1/10 — 복잡하지만 낮게 평가했다.
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
-FEATURE_SCORE | A 2/10
+FEATURE_SCORE | A 1/10
 ADR_SCORE | B 9/10
 === EVAL-END ===`;
   const { code, out } = runEvals(["--only", "comprehension-load-score-only"], stubAgent(reply));

@@ -97,7 +97,7 @@ For `standard`, execute this section and then continue at section 7. Sections 2-
 2. Run `adr-impl-sufficiency-reviewer` in one fresh isolated context with only the ADR, raw diff, changed code and tests, project rule documents, and the ledger. If subagents are unavailable, including on Amazon Bedrock, perform one separate sufficiency pass in the main session and record the isolation limitation.
 3. Execute the related targeted tests and any minimal reproduction needed to account for every ledger row. An unexecuted core path makes the verdict `INCONCLUSIVE`, not `PASS`.
 4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, report-writer agent, HTML page, mandatory Mermaid, or post-implementation spec-fitness gate.
-5. Write a concise `implementation-review.md` with these headings: `Review mode`, `Scope`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, and `Residual risks`. Under contract coverage, show one row per ledger obligation with `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`, how the implementation meets it, and the evidence and tests. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, the structured non-empty `contractCoverage` array, the structured `implementationChoices` array, and the normal evidence fields.
+5. Write a concise `implementation-review.md` with these headings: `Review mode`, `Scope`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, and `Residual risks`. Under contract coverage, assign `D0` to the Decision and `R1..Rn` to every top-level Requirement contract bullet in source order. Show every ID exactly once with `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`, its exact ADR basis, how the implementation meets it, and the evidence and tests. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, the structured non-empty `contractCoverage` array, the structured `implementationChoices` array, and the normal evidence fields.
 6. Run the artifact validator. `PASS` requires every contract-coverage row to be `PROVEN`, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk.
 
 ## Full mode
@@ -170,7 +170,7 @@ The main session does not merge the two reviews by vote. Verify findings with th
 4. Downgrade to `Unverified risk` any claim you could not execute or whose call path you could not fully confirm.
 5. Distinguish the fact that a test exists from the fact that a test detects the defect.
 6. A necessity PASS means "no unnecessary change was found"; a sufficiency PASS means "no counterexample was found at present and the decision ledger is accounted for."
-7. Normalize the decision ledger into contract coverage independently from findings. Every ADR decision and contract obligation gets exactly one row with `requirement`, `status`, `adrBasis`, `implementation`, `evidence`, and `tests`. Use only `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`. `PROVEN` means the inspected or executed evidence supports the row and no counterexample was found; it is not a mathematical proof.
+7. Normalize the decision ledger into contract coverage independently from findings. Derive deterministic IDs from the ADR: `D0` is the Decision and `R1..Rn` are every top-level bullet under `### Requirement contract` in source order. Every derived ID gets exactly one row with `contractId`, `requirement`, `status`, `adrBasis`, `implementation`, `evidence`, and `tests`; omissions, duplicates, and invented IDs are invalid. `D0.adrBasis` is `Decision`; each `Rn.adrBasis` is the complete source bullet verbatim. Use only `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`. `PROVEN` means the inspected or executed evidence supports the row and no counterexample was found; it is not a mathematical proof.
 8. Normalize Notable implementation choices independently from findings. Every row has only a concrete selected value or behavior, code evidence, why it fits the ADR intent, and why it matters. Explain fit by naming the preserved contract or boundary, not by guessing why the implementer chose it. A row that changes a requirement contract or durable boundary is removed from the list and raised as `Undecided behavior`.
 
 The synthesized verdict:
@@ -204,11 +204,11 @@ Include Mermaid diagrams only when they reduce the amount of flow or state a rea
 
 Diagrams must provide a repair map, not decoration. Tie each node to a real symbol or filename, and point clearly in the prose to where the finding occurs and the expected flow after the fix. Never guess at an edge you could not confirm in the actual code. Never use ASCII or box-drawing diagrams.
 
-Render ADR contract coverage before findings as a read-only table with `Requirement`, `Status`, `How the implementation meets it`, `Evidence`, and `Tests`. Keep the ADR wording recognizable so the reader can trace each row without reopening the whole document. Never merge several obligations into one row.
+Render ADR contract coverage before findings as a read-only table with `Contract ID`, `Requirement`, `Status`, `ADR basis`, `How the implementation meets it`, `Evidence`, and `Tests`. Keep the ADR wording recognizable so the reader can trace each row without reopening the whole document. Never merge several obligations into one row.
 
 Render Notable implementation choices as a read-only table with `Selected value or behavior`, `Code evidence`, `Why it fits the ADR intent`, and `Why it matters`. These rows are below ADR resolution and do not amend the ADR. If a row would alter the ADR contract or durable boundary, it must be an `Undecided behavior` finding instead.
 
-Concise means short cells, not fewer columns. Never collapse implementation, evidence, and tests into one generic evidence column, and never replace the four-column implementation-choice table with prose. The human-facing package must preserve these separate fields even when there is only one row.
+Concise means short cells, not fewer columns. Never collapse ADR basis, implementation, evidence, and tests into fewer columns, and never replace the four-column implementation-choice table with prose. The human-facing package must preserve these separate fields even when there is only one row.
 
 For each actionable finding in a conditional repair guide, include:
 
@@ -256,6 +256,7 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
   ],
   "contractCoverage": [
     {
+      "contractId": "R1",
       "requirement": "a payment is completed at most once",
       "status": "PROVEN",
       "adrBasis": "Requirement contract — Prohibitions",
@@ -282,7 +283,7 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
 }
 ```
 
-`reviewMode`, `metrics`, `contractCoverage`, and `implementationChoices` are mandatory even for `PASS` with zero findings or zero choices. `contractCoverage` is non-empty because the ADR Decision itself is reviewable even when there is no explicit requirement-contract subsection. Count the raw findings each independent perspective produced before deduplication, count `Unverified risk` entries after synthesis, and count distinct test or reproduction commands actually executed. In standard mode the necessity count is zero by definition.
+`reviewMode`, `metrics`, `contractCoverage`, and `implementationChoices` are mandatory even for `PASS` with zero findings or zero choices. `contractCoverage` is non-empty because `D0` always represents the ADR Decision even when there is no explicit requirement-contract subsection. The artifact validator reads the ADR, derives `D0/R1..Rn`, rejects missing or duplicate IDs, and rejects `PASS` when tests were not executed, a coverage row is not `PROVEN`, an unverified risk remains, or a blocking finding remains. Count the raw findings each independent perspective produced before deduplication, count `Unverified risk` entries after synthesis, and count distinct test or reproduction commands actually executed. In standard mode the necessity count is zero by definition.
 
 Allowed categories:
 

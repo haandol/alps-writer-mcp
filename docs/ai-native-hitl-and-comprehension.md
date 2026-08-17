@@ -470,8 +470,10 @@ flowchart TD
 ### 4. ADR에서 derived contract ledger 생성
 
 ADR의 독립 계약 행과 Observable evidence를 derived contract ledger로
-정규화한다. 현재 구현 리뷰는 최종 코드에서 이 ledger를 재생성한다. 같은
-ledger를 구현 전부터 재사용하는 것은 후속 확장으로 남긴다.
+정규화한다. `D0`는 Decision, `R1..Rn`은 requirement contract의 최상위
+행을 원문 순서대로 가리키는 일시적 식별자다. 현재 구현 리뷰는 최종 코드에서
+이 ledger를 재생성한다. 같은 ledger를 구현 전부터 재사용하는 것은 후속
+확장으로 남긴다.
 
 ```text
 승인된 ALPS/ADR
@@ -485,16 +487,19 @@ ledger를 구현 전부터 재사용하는 것은 후속 확장으로 남긴다.
 예:
 
 ```text
-C1 Required
+D0 Decision
+결제는 중복 완료와 provider 실패에서 일관된 상태를 보존한다.
+
+R1 Required
 한 주문은 한 번만 결제 완료된다.
 
-C2 Prohibition
+R2 Prohibition
 취소된 주문은 배송 상태로 전환되지 않는다.
 
-C3 Failure guarantee
+R3 Failure guarantee
 Provider 실패 시 결제 완료 상태를 기록하지 않는다.
 
-C4 NFR
+R4 NFR
 결제 요청은 p95 2초 이내에 응답한다.
 ```
 
@@ -551,8 +556,11 @@ Automatic repairs            2
 Human decision required      YES
 ```
 
-각 coverage 행은 요구사항, 상태, ADR 근거, 구현이 달성한 내용, 코드·실행
-증거와 테스트를 포함한다. `PASS`는 모든 행이 `PROVEN`일 때만 가능하다.
+각 coverage 행은 일시적 contract ID, 요구사항, 상태, ADR 근거, 구현이 달성한
+내용, 코드·실행 증거와 테스트를 포함한다. Validator는 ADR에서 `D0/R1..Rn`
+집합을 다시 파생해 누락, 중복과 임의 ID를 거부한다. `PASS`는 모든 행이
+`PROVEN`이고 필수 테스트가 실제로 실행됐으며 blocking finding과 미검증
+위험이 없을 때만 가능하다.
 
 Notable implementation choices는 별도의 읽기 전용 목록으로 항상 중요한
 항목만 보여준다.
@@ -963,14 +971,16 @@ flowchart LR
   - 완료 시 requirement-by-requirement Evidence Package를 사용자에게 제공
 - `skills/adr-impl-review/SKILL.md`
   - `contractCoverage`를 필수 non-empty artifact로 생성
-  - `PASS`는 모든 계약 행이 `PROVEN`일 때만 허용
+  - ADR에서 파생한 `D0/R1..Rn` 전체 집합의 누락과 중복을 검증
+  - `PASS`는 모든 계약 행이 `PROVEN`이고 필수 테스트와 위험 조건을 만족할 때만 허용
   - 구현 선택에 ADR intent fit을 포함
 - `skills/adr-impl-refactor/SKILL.md`
   - 현재의 국소적·동작 보존 자동 반영 정책 유지
 - review agents, validator와 HTML renderer
-  - 계약 행별 상태, 구현 내용, 증거와 테스트 검증
+  - 계약 행별 ID, ADR 근거, 상태, 구현 내용, 증거와 테스트 검증
   - coverage와 구현 재량을 findings보다 먼저 읽기 전용으로 표시
 - eval scenarios
+  - 모델 응답을 실제 artifact validator와 HTML renderer에 통과
   - routine plan approval을 요구하지 않는지 검증
   - low-risk exploration은 자율 진행하는지 검증
   - contract-changing discovery만 escalation하는지 검증

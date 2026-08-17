@@ -65,6 +65,7 @@ test("necessity and sufficiency evidence survives into the interactive report", 
     ],
     contractCoverage: [
       {
+        contractId: "D0",
         requirement: "Cancellation stops the upstream request",
         status: "PROVEN",
         adrBasis: "Requirement contract — Required guarantees",
@@ -73,6 +74,7 @@ test("necessity and sufficiency evidence survives into the interactive report", 
         tests: "pnpm test -- cancel — PASS",
       },
       {
+        contractId: "R1",
         requirement: "Restart recovery preserves queued work",
         status: "UNVERIFIED",
         adrBasis: "Requirement contract — Failure guarantees",
@@ -119,6 +121,8 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   assert.match(result.stdout, /changes recovery latency and request rate/);
   assert.match(result.stdout, /Cancellation stops the upstream request/);
   assert.match(result.stdout, /Restart recovery preserves queued work/);
+  assert.match(result.stdout, /D0 · PROVEN/);
+  assert.match(result.stdout, /R1 · UNVERIFIED/);
   assert.match(result.stdout, /1 \/ 2 proven/);
   assert.match(result.stdout, /How the implementation meets it/);
   assert.match(result.stdout, /Review report/);
@@ -144,6 +148,7 @@ test("notable implementation choice content is escaped and read-only", () => {
     findings: [],
     contractCoverage: [
       {
+        contractId: "D0",
         requirement: "The response remains backward compatible",
         status: "PROVEN",
         adrBasis: "Decision",
@@ -177,6 +182,7 @@ test("INCONCLUSIVE with no findings does not render a false conforming claim", (
     findings: [],
     contractCoverage: [
       {
+        contractId: "D0",
         requirement: "Cancellation survives process restart",
         status: "UNVERIFIED",
         adrBasis: "Failure guarantees",

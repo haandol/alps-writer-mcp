@@ -1009,6 +1009,7 @@ test("Feature and ADR comprehension load is scored internally but shown as one a
       );
     }
     assert.match(source, /인지비용:\s*<N>\/10|Comprehension load:\s*<N>\/10/i);
+    assert.match(source, /show\s+1\s+rather\s+than\s+0|합계가\s*0이면\s*1점/i);
     assert.match(source, /do not (?:show|expose)[\s\S]{0,80}axis|축별[\s\S]{0,80}출력하지/i);
     assert.match(
       source,

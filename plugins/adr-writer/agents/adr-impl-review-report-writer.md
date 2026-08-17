@@ -30,14 +30,14 @@ Every report must let the reader answer five questions without reconstructing th
 
 Under `ADR contract coverage`, state Contract compliance explicitly: compare every recorded value, allowed set, transition, permission, mandatory field, ordering rule, uniqueness rule, and unit against the code. Keep one row per independent ADR obligation and include the implementation-independent observable evidence when selecting verification. The existence of similar logic is not enough when its value or rule differs.
 
-Render coverage as a read-only table before findings:
+Render coverage as a read-only table before findings. `D0` is the ADR Decision; `R1..Rn` are the top-level `### Requirement contract` bullets in source order. Keep every ID exactly once:
 
-| Requirement | Status | How the implementation meets it | Evidence | Tests |
-| ----------- | ------ | ------------------------------- | -------- | ----- |
+| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
+| ----------- | ----------- | ------ | --------- | ------------------------------- | -------- | ----- |
 
 Use exactly `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`. Keep the ADR wording recognizable. `PROVEN` means the inspected or executed evidence supports the row and no counterexample was found; it is not a mathematical proof. Never merge several obligations into one row.
 
-Concise means short cells, not fewer columns. Do not merge implementation, evidence, and tests into a three-column summary or a prose sentence.
+Concise means short cells, not fewer columns. Do not merge ADR basis, implementation, evidence, and tests into a smaller summary or a prose sentence.
 
 Use progressive disclosure. The default report is concise, including in full mode and for PASS. Keep this structure:
 

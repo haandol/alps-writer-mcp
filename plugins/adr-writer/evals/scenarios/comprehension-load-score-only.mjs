@@ -8,8 +8,10 @@ import {
 } from "../lib/harness.mjs";
 
 const CASES = `
-A. Feature: 사용자가 알림 설정 화면에서 주간 이메일 수신 여부를 켜거나 끈다.
-   저장 성공과 실패 메시지만 있으며 외부 시스템, 상태 전이, 동시성은 없다.
+A. Feature: 이미 승인된 정적 안내 문구 한 줄을 그대로 표시한다.
+   이 fixture에서는 서로 다른 사용자 행동이나 결정, 요구사항 계약, 상태·흐름,
+   경계 결합, 불확실성·검증 부담이 모두 없어 다섯 내부 축의 합계가 0이다.
+   계산 근거는 사용자에게 노출하지 않는다.
 
 B. ADR: 결제 요청을 idempotency key로 중복 방지하고, 승인/실패/취소 상태 전이를
    관리하며, 외부 결제사 timeout 시 fallback을 수행한다. webhook 중복·역순 도착,
@@ -27,7 +29,7 @@ function visibleScore(lines, label) {
     .map((line) =>
       line.match(
         new RegExp(
-          `^${label}\\s*(?:—|-|:)?\\s*(?:인지비용|Comprehension load)\\s*:\\s*(10|[1-9])\\s*\\/\\s*10\\s*$`,
+          `^${label}\\s*(?:[.—:-])?\\s*(?:(?:기능|Feature|ADR)\\s*(?:[.—:-])?\\s*)?(?:인지\\s*비용|이해\\s*(?:부하|부담|비용)|Comprehension\\s+load)\\s*:\\s*(10|[1-9])\\s*\\/\\s*10\\s*$`,
           "i",
         ),
       ),
@@ -53,7 +55,8 @@ export default {
       `one labeled score line for A and one for B, with no rationale, axis breakdown,`,
       `automatic split proposal, checkpoint, approval request, or blocking action.`,
       CASES,
-      `In the machine-readable tail use FEATURE_SCORE and ADR_SCORE tags.`,
+      `In the machine-readable tail include exactly one FEATURE_SCORE and one ADR_SCORE tag.`,
+      `Do not replace those required score records with NONE.`,
       TAIL_SPEC,
     ].join("\n");
   },
@@ -65,14 +68,14 @@ export default {
     const visibleLines = visible
       .trim()
       .split(/\r?\n/)
-      .filter((line) => line.trim());
+      .filter((line) => line.trim() && !/^(?:```|~~~)(?:text)?\s*$/i.test(line.trim()));
     const visibleFeature = visibleScore(visibleLines, "A");
     const visibleAdr = visibleScore(visibleLines, "B");
     return [
       {
-        pass: Number.isInteger(feature.value) && feature.value >= 1 && feature.value <= 5,
+        pass: feature.value === 1,
         detail: feature.summary || "missing FEATURE_SCORE",
-        label: "scores the simple Feature in the lower half",
+        label: "clamps an all-zero Feature score to 1/10",
       },
       {
         pass: Number.isInteger(adr.value) && adr.value >= 7 && adr.value <= 10,
