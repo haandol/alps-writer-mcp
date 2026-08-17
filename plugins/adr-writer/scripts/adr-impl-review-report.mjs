@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // adr-impl-review-report.mjs — render an ADR impl-review punch list as a
-// self-contained HTML review page, and collect the user's per-finding
-// decisions back as feedback.json.
+// self-contained HTML review page, and collect the user's per-finding and
+// per-implementation-choice decisions back as feedback.json.
 //
 // This is the full-mode "show the report, get feedback as a file" half of
 // /adr-impl-review. Independent necessity and sufficiency reviewers produce
@@ -12,6 +12,8 @@
 // item: the ADR decision (the intended design) set against the code as built,
 // with a direction indicator that says which side is authoritative — so the
 // reviewer can see the tension and rule on it (apply / skip / defer + a note).
+// Material code-level choices absent from the ADR render separately so the
+// reviewer can accept, request a change, or investigate each exact value.
 // "Export rulings" builds the JSON in-browser and downloads feedback.json,
 // which the main session reads to route follow-ups (fix the code, /adr-sync,
 // update the ADR).
@@ -68,6 +70,18 @@
 //         "evidence": "why the claim is supported",
 //         "test": "targeted command or proposed reproduction",
 //         "testResult": "PASS/FAIL/NOT RUN plus the observed result"
+//       }
+//     ],
+//     "implementationChoices": [                          // required (may be [])
+//       {
+//         "kind": "implementation-default" | "project-convention" | "inherited-behavior",
+//         "topic": "retry delay",
+//         "selectedValue": "250 ms fixed delay",
+//         "basis": "matches the existing client policy",
+//         "evidence": "src/client.ts:42 — retryDelayMs: 250",
+//         "impactIfChanged": "changes recovery latency and upstream request rate",
+//         "confidence": "high" | "medium" | "low",
+//         "alternatives": "exponential backoff; no retry"
 //       }
 //     ],
 //     "notes": "…"                                        // optional free text
@@ -172,6 +186,65 @@ function normalizeFindings(data) {
       return pa - pb || a.i - b.i;
     })
     .map((x) => x.f);
+}
+
+function normalizeImplementationChoices(data) {
+  const choices = Array.isArray(data.implementationChoices) ? data.implementationChoices : [];
+  return choices.map((choice, index) => ({
+    id: choice.id || `c${index + 1}`,
+    kind: choice.kind || "implementation-default",
+    topic: choice.topic || "",
+    selectedValue: choice.selectedValue || "",
+    basis: choice.basis || "",
+    evidence: choice.evidence || "",
+    impactIfChanged: choice.impactIfChanged || "",
+    confidence: choice.confidence || "",
+    alternatives: choice.alternatives || "",
+  }));
+}
+
+function implementationChoiceCard(choice, index, total) {
+  const idx = String(index + 1).padStart(2, "0");
+  const conf = String(choice.confidence || "").toLowerCase();
+  const confChip =
+    conf === "low" || conf === "medium" || conf === "high"
+      ? `<span class="conf conf--${conf}" title="evidence strength">${conf}</span>`
+      : "";
+  const defaultDecision = conf === "high" ? "accept" : "investigate";
+  const opt = (value, label, checked = false) => {
+    const id = `choice-${index}-${value}`;
+    return `<input type="radio" class="seg__input" id="${id}" name="choice-dec-${index}" value="${value}"${
+      checked ? " checked" : ""
+    }><label class="seg__label" for="${id}">${label}</label>`;
+  };
+
+  return `
+  <article class="choice">
+    <header class="finding__head">
+      <span class="tag choice__tag">${esc(choice.kind)}</span>
+      <span class="finding__head-right">${confChip}<span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span></span>
+    </header>
+    <h3 class="finding__title">${esc(choice.topic) || "(no topic)"}</h3>
+    <div class="choice__value">
+      <span class="side__label">Selected value or behavior</span>
+      <p>${esc(choice.selectedValue)}</p>
+    </div>
+    <div class="meta">
+      <div class="meta__row"><span class="meta__k">Basis</span><span class="meta__v">${esc(choice.basis)}</span></div>
+      <div class="meta__row"><span class="meta__k">Evidence</span><span class="meta__v meta__v--mono">${esc(choice.evidence)}</span></div>
+      <div class="meta__row"><span class="meta__k">Impact</span><span class="meta__v">${esc(choice.impactIfChanged)}</span></div>
+      <div class="meta__row"><span class="meta__k">Options</span><span class="meta__v">${esc(choice.alternatives)}</span></div>
+    </div>
+    <footer class="ruling">
+      <span class="ruling__label">Review this implementation choice</span>
+      <div class="seg" role="radiogroup" aria-label="${esc(choice.topic)} review">
+        ${opt("accept", "accept", defaultDecision === "accept")}
+        ${opt("change", "request change")}
+        ${opt("investigate", "investigate", defaultDecision === "investigate")}
+      </div>
+      <textarea class="ruling__note" data-choice-index="${index}" rows="2" placeholder="note (optional) — preferred value, concern, or question"></textarea>
+    </footer>
+  </article>`;
 }
 
 function findingCard(f, i, total) {
@@ -312,8 +385,13 @@ function buildHtml(data) {
   const scope = Array.isArray(data.scope) ? data.scope : [];
   const metrics = data.metrics && typeof data.metrics === "object" ? data.metrics : null;
   const findings = normalizeFindings(data);
+  const implementationChoices = normalizeImplementationChoices(data);
   const cards = findings.map((f, i) => findingCard(f, i, findings.length)).join("\n");
+  const choiceCards = implementationChoices
+    .map((choice, index) => implementationChoiceCard(choice, index, implementationChoices.length))
+    .join("\n");
   const count = findings.length;
+  const choiceCount = implementationChoices.length;
 
   const empty =
     count === 0 && verdictKey === "PASS"
@@ -332,7 +410,12 @@ function buildHtml(data) {
 
   // Embed the findings so the download echoes the original context back
   // alongside the reviewer's rulings — the main session gets both in one file.
-  const embedded = inlineScriptJson({ adr: data.adr || "", verdict: verdictKey, findings });
+  const embedded = inlineScriptJson({
+    adr: data.adr || "",
+    verdict: verdictKey,
+    findings,
+    implementationChoices,
+  });
 
   return `<!doctype html>
 <html lang="ko">
@@ -421,6 +504,18 @@ function buildHtml(data) {
     border-left: 3px solid var(--sev); border-radius: 10px;
     padding: 16px 18px 14px; margin-bottom: 14px;
   }
+  .choice {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 3px solid #217a68; border-radius: 8px;
+    padding: 16px 18px 14px; margin-bottom: 14px;
+  }
+  .choice__tag { background: #217a68; }
+  .choice__value {
+    background: color-mix(in srgb, #217a68 9%, var(--card));
+    border: 1px solid var(--line); border-radius: 7px;
+    padding: 11px 13px; margin: 10px 0 12px;
+  }
+  .choice__value p { margin: 0; font: 600 13.5px/1.5 var(--mono); word-break: break-word; }
   .finding__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .tag {
     font: 600 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
@@ -579,8 +674,13 @@ function buildHtml(data) {
     ${vmeta.note ? `<p class="vnote">${esc(vmeta.note)}</p>` : ""}
   </header>
 
-  ${count ? `<p class="count">${count} finding(s) · rule on each one</p>` : ""}
   ${empty}
+  ${
+    choiceCount
+      ? `<p class="count">${choiceCount} implementation choice(s) · review each exact value</p>${choiceCards}`
+      : ""
+  }
+  ${count ? `<p class="count">${count} finding(s) · rule on each one</p>` : ""}
   ${cards}
 
   ${
@@ -592,7 +692,7 @@ function buildHtml(data) {
 
 <div class="bar">
   <div class="bar__inner">
-    <span class="hint">Rule on each finding, add a note where useful, then export.</span>
+    <span class="hint">Review implementation choices and findings, add notes, then export.</span>
     <button class="export" id="export">Export rulings</button>
   </div>
 </div>
@@ -614,7 +714,23 @@ function buildHtml(data) {
         comment: note ? note.value.trim() : "",
       };
     });
-    const out = { adr: EMBED.adr, verdict: EMBED.verdict, reviews, status: "complete" };
+    const choice_reviews = EMBED.implementationChoices.map((choice, index) => {
+      const picked = document.querySelector('input[name="choice-dec-' + index + '"]:checked');
+      const note = document.querySelector('textarea.ruling__note[data-choice-index="' + index + '"]');
+      return {
+        ...choice,
+        choice_id: choice.id,
+        decision: picked ? picked.value : "investigate",
+        comment: note ? note.value.trim() : "",
+      };
+    });
+    const out = {
+      adr: EMBED.adr,
+      verdict: EMBED.verdict,
+      reviews,
+      choice_reviews,
+      status: "complete",
+    };
     const blob = new Blob([JSON.stringify(out, null, 2) + "\\n"], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

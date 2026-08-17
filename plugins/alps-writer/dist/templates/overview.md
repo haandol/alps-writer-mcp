@@ -10,7 +10,7 @@ This document provides a comprehensive framework to capture and validate all ess
 4. High-Level Architecture - Provide both C4 Context and Container diagrams; exclude Component and Code levels
 5. Design Specification - Detail the UX and page flow _(references: Section 6)_
 6. Requirements Summary - Enumerate all core functional and non-functional requirements
-7. Feature-Level Specification - Present complete user stories for each feature _(references: Section 6)_
+7. Feature-Level Specification - Present complete user stories and an observable demo for each feature _(references: Sections 3, 6)_
 8. MVP Metrics - Detail methods for collecting and analyzing data _(references: Section 2, 6)_
 9. Out of Scope - List features deferred for future iterations
 
@@ -27,7 +27,7 @@ Some sections depend on other sections. Before working on a section with referen
 <reference-map>
 - Section 3 (Demo Scenario) → MUST review Section 2 (MVP Goals)
 - Section 5 (Design Specification) → MUST review Section 6 (Requirements Summary)
-- Section 7 (Feature-Level Specification) → MUST review Section 6 (Requirements Summary)
+- Section 7 (Feature-Level Specification) → MUST review Section 3 (Demo Scenario) AND Section 6 (Requirements Summary)
 - Section 8 (MVP Metrics) → MUST review Section 2 (MVP Goals) AND Section 6.2 (Non-Functional Requirements)
 </reference-map>
 
@@ -87,6 +87,7 @@ Section 7 (Feature-Level Specification) is the most common place to cut corners.
 - Atomic mode: present, confirm, and save one Feature before moving to the next.
 - Batch mode: present multiple Features only as separately labeled approval units, then save each approved Feature with a separate call.
 - Never skip a Feature because it "looks small", "looks similar to a previous one", or "can be inferred". Each Feature is a separate vertical slice.
+- Every Feature includes a Feature Demo that states its role in the Section 3 end-to-end demo, preconditions, user actions, observable results, representative failure behavior, and success judgment.
 </section-7-rule>
 </conversation-flow>
 
@@ -112,6 +113,7 @@ When user provides PDF, ALPS (PRD), or any reference:
 - ALWAYS confirm at the section level — never skip a section without the user approving it
 - Batch confirmation requires explicit opt-in or a complete structured source
 - For Section 7, ALWAYS preserve each Feature subsection (7.x) as a separate approval and save unit
+- For Section 7, ALWAYS review Sections 3 and 6 first and include a complete Feature Demo in every Feature
 - ALWAYS ask 1-2 questions at a time (1 for complex topics)
 - When saving, ALWAYS call `save_alps_section(section, subsection_id, title, content)` with all four arguments; `subsection_id` and `title` must match the section's XML template
 - Author Section 6 (Requirements) before Section 5 (Design) — see the recommended authoring order

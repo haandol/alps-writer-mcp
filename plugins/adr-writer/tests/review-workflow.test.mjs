@@ -48,8 +48,43 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
     skill,
     /record in the report that models could not be diversified, along with the model each reviewer actually used/,
   );
+  assert.match(skill, /Implementation Choice Ledger/);
+  assert.match(skill, /exact selected value or behavior/);
+  assert.match(skill, /progressive disclosure/i);
+  assert.match(skill, /implementationChoices/);
+  assert.match(
+    skill,
+    /accept, request a change, or investigate|accept.*request change.*investigate/i,
+  );
   // No provider's model ID may be embedded in the prompt.
   assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
+});
+
+test("implementation review separates ADR decisions from code-level AI choices", () => {
+  const impl = read("skills/adr-impl/SKILL.md");
+  const review = read("skills/adr-impl-review/SKILL.md");
+  const explainer = read("agents/adr-impl-explainer.md");
+  const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
+  const reportWriter = read("agents/adr-impl-review-report-writer.md");
+
+  assert.match(impl, /never written into the ADR/);
+  assert.match(review, /admission gate/);
+  assert.match(review, /Unverified risk/);
+  assert.match(explainer, /Implementation choices not specified by the ADR/);
+  assert.match(sufficiency, /Implementation Choice Ledger/);
+  assert.match(sufficiency, /not a finding and does not change the verdict/);
+  assert.match(sufficiency, /Build the separate Implementation Choice Ledger from code outward/);
+  assert.match(sufficiency, /replaceable tuning value or implementation means goes into/);
+  assert.doesNotMatch(
+    sufficiency,
+    /Tuning values and replaceable libraries[\s\S]{0,200}are out of scope/,
+  );
+  assert.match(
+    reportWriter,
+    /These are material code-level choices the ADR intentionally does not own/,
+  );
+  assert.match(reportWriter, /do not amend the ADR/);
+  assert.match(reportWriter, /Use progressive disclosure/);
 });
 
 test("generic subagent fallbacks load agent instructions inside the child context", () => {
@@ -426,5 +461,5 @@ test("junior repair report requires grounded Mermaid and executable fix guidance
   assert.match(writer, /Scope not to touch/);
   assert.match(writer, /Completion criteria/);
   assert.match(writer, /Verification checklist/);
-  assert.match(writer, /## 11\. Review limits and questions/);
+  assert.match(writer, /## 12\. Review limits and questions/);
 });

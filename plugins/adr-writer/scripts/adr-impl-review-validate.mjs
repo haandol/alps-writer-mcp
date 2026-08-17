@@ -12,6 +12,11 @@ const ALLOWED_CATEGORIES = CATEGORY_NAMES;
 const ALLOWED_MODES = new Set(["standard", "full"]);
 const ALLOWED_PERSPECTIVES = new Set(["necessity", "sufficiency", "both"]);
 const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
+const ALLOWED_CHOICE_KINDS = new Set([
+  "implementation-default",
+  "project-convention",
+  "inherited-behavior",
+]);
 const REQUIRED_REPORT_TEXT = [
   "# ADR implementation review and repair guide",
   "## 1. Verdict summary",
@@ -20,11 +25,12 @@ const REQUIRED_REPORT_TEXT = [
   "## 4. Map of the current implementation",
   "## 5. Runtime flow",
   "## 6. State, data, and failure model",
-  "## 7. Findings",
-  "## 8. Fix execution order",
-  "## 9. Verification checklist",
-  "## 10. Merge decision checklist",
-  "## 11. Review limits and questions",
+  "## 7. Implementation choices and assumptions",
+  "## 8. Findings",
+  "## 9. Fix execution order",
+  "## 10. Verification checklist",
+  "## 11. Merge decision checklist",
+  "## 12. Review limits and questions",
 ];
 const REQUIRED_FINDING_TEXT = [
   "Files and symbols to change:",
@@ -50,6 +56,7 @@ const REQUIRED_STANDARD_REPORT_TEXT = [
   "## Review mode",
   "## Scope",
   "## Decision ledger",
+  "## Implementation choices and assumptions",
   "## Findings",
   "## Tests",
   "## Review limits",
@@ -108,6 +115,38 @@ function validateFinding(finding, index, errors) {
   }
 }
 
+function validateImplementationChoice(choice, index, errors) {
+  const label = `implementationChoices[${index}]`;
+  if (!choice || typeof choice !== "object" || Array.isArray(choice)) {
+    errors.push(`${label} must be an object`);
+    return;
+  }
+
+  for (const field of [
+    "kind",
+    "topic",
+    "selectedValue",
+    "basis",
+    "evidence",
+    "impactIfChanged",
+    "confidence",
+    "alternatives",
+  ]) {
+    if (typeof choice[field] !== "string" || !choice[field].trim()) {
+      errors.push(`${label}.${field} must be a non-empty string`);
+    }
+  }
+
+  if (choice.kind && !ALLOWED_CHOICE_KINDS.has(choice.kind)) {
+    errors.push(
+      `${label}.kind must be implementation-default, project-convention, or inherited-behavior`,
+    );
+  }
+  if (choice.confidence && !ALLOWED_CONFIDENCE.has(choice.confidence)) {
+    errors.push(`${label}.confidence must be high, medium, or low`);
+  }
+}
+
 function validateMetrics(metrics, findings, errors) {
   if (!metrics || typeof metrics !== "object" || Array.isArray(metrics)) {
     errors.push("findings.json metrics must be an object");
@@ -147,7 +186,7 @@ function validateMetrics(metrics, findings, errors) {
   }
 }
 
-function validateReport(report, findingCount, mode, errors) {
+function validateReport(report, findingCount, choiceCount, mode, errors) {
   if (mode === "standard") {
     for (const text of REQUIRED_STANDARD_REPORT_TEXT) {
       if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
@@ -186,6 +225,15 @@ function validateReport(report, findingCount, mode, errors) {
     }
     for (const text of REQUIRED_FINDING_TEXT) {
       if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
+    }
+  }
+
+  if (choiceCount > 0) {
+    const choiceSections = report.match(/^### C\d+\.\s+/gm) ?? [];
+    if (choiceSections.length < choiceCount) {
+      errors.push(
+        `implementation-review.md has ${choiceSections.length} implementation-choice sections for ${choiceCount} choices`,
+      );
     }
   }
 }
@@ -238,6 +286,13 @@ function main() {
         errors.push("standard review findings must use the sufficiency perspective");
       }
     }
+    if (!Array.isArray(data.implementationChoices)) {
+      errors.push("findings.json implementationChoices must be an array");
+    } else {
+      data.implementationChoices.forEach((choice, index) =>
+        validateImplementationChoice(choice, index, errors),
+      );
+    }
 
     const reportPath = resolveArtifact(artifactDir, data.report);
     if (!reportPath || path.resolve(reportPath) !== path.resolve(expectedReport)) {
@@ -254,6 +309,7 @@ function main() {
       validateReport(
         readFileSync(expectedReport, "utf8"),
         Array.isArray(data.findings) ? data.findings.length : 0,
+        Array.isArray(data.implementationChoices) ? data.implementationChoices.length : 0,
         data.reviewMode,
         errors,
       );

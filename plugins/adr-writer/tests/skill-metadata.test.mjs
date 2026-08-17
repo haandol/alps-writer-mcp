@@ -913,3 +913,58 @@ test("every automatic Status correction uses the exact-path transition script", 
     );
   }
 });
+
+test("ADR interactions lead with digest and semantic changes without creating a second authority", () => {
+  const template = read(path.join(ADR_ROOT, "templates", "adr", "README.md"));
+  for (const group of ["Required guarantees", "Prohibitions", "Failure guarantees"]) {
+    assert.match(template, new RegExp(group));
+  }
+  assert.match(template, /This grouping changes presentation only/);
+
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+  assert.match(adrNew, /Decision Digest/);
+  assert.match(adrNew, /Decision question/);
+  assert.match(adrNew, /Why this decision/);
+  assert.match(adrNew, /Main risks/);
+  assert.match(adrNew, /not a second artifact or source of truth/);
+
+  const impl = read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md"));
+  assert.match(impl, /semantic diff/);
+  for (const group of ["Decision", "Requirement contract", "Decision Drivers", "Consequences"]) {
+    assert.match(impl, new RegExp(group));
+  }
+  assert.match(impl, /never present `Unverified` as `Unchanged`/);
+
+  const review = read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md"));
+  for (const question of ["Decision", "Contract", "Rationale", "Risk"]) {
+    assert.match(review, new RegExp(`\\*\\*${question}\\*\\*`));
+  }
+  assert.match(review, /must never hide a requirement value, a `BLOCK`, or an unjudged axis/);
+
+  const sync = read(path.join(ADR_ROOT, "skills", "adr-sync", "SKILL.md"));
+  assert.match(sync, /semantic diff/);
+  assert.match(sync, /`Unchanged` means that axis was inspected/);
+  assert.match(sync, /`Unverified` means the available evidence could not establish it/);
+});
+
+test("ADR authoring exposes decision premises without pulling implementation defaults upward", () => {
+  const template = read(path.join(ADR_ROOT, "templates", "adr", "README.md"));
+  const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
+  const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
+  const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
+
+  for (const source of [template, rules, adrNew]) {
+    assert.match(source, /Decision premises/);
+    assert.match(source, /basis/i);
+    assert.match(source, /confidence/i);
+  }
+
+  assert.match(rules, /requirement contract/);
+  assert.match(rules, /Implementation Choice Ledger/);
+  assert.match(adrNew, /what would we reconsider if it were false/i);
+  assert.match(adrNew, /replaceable library, SDK, adapter/);
+  assert.match(adrNew, /Use diagrams to explain, not decorate/);
+  assert.match(reviewer, /When Decision premises exist/);
+  assert.match(reviewer, /never only as a premise/);
+  assert.match(reviewer, /including Decision premises/);
+});

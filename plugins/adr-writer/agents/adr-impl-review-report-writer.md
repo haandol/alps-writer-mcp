@@ -18,16 +18,19 @@ Return the content to be saved under the caller's artifact directory with the **
 - `explanation.md`
 - `necessity-review.md`
 - `sufficiency-review.md`
+- The normalized Implementation Choice Ledger
 - The findings and test results the main session verified and normalized
 
 ## Writing principles
 
-- Write so that this one document conveys the goal, the current behavior, where the problem is, the fix order, and how to verify it.
-- Explain jargon and symbols on first use.
+- Use progressive disclosure: result and user impact first, grounded flows second, implementation choices third, detailed findings and repair evidence last.
+- Write so that this one document conveys the goal, the current behavior, where the problem is, which choices the AI made, the fix order, and how to verify it.
+- Use short sentences and one concept per paragraph. Explain jargon and symbols on first use, and prefer domain language over internal symbol names.
 - Tie every claim about code to `file:line` and a real symbol.
 - Mark any claim you could not reproduce as `needs confirmation`, and never write it as a confirmed defect.
 - Ban vague instructions such as "handle appropriately" or "add the necessary tests".
 - Do not rewrite the whole codebase. Give the responsibility and boundary of each change, the steps, and the completion criteria.
+- Keep the abstraction ladder explicit: the ADR supplies architecture decisions, premises, and contracts; the Implementation Choice Ledger supplies replaceable code-level choices; the report never invents product intent or writes implementation choices back into the ADR.
 
 ## Mermaid rules
 
@@ -35,8 +38,8 @@ Draw only relationships confirmed in the actual code. Never use ASCII or box-dra
 
 Include at least:
 
-1. **A change-structure `flowchart`**: entry points, core services, stores and external dependencies, changed files.
-2. **A runtime `sequenceDiagram`**: the normal request plus the failure and cancellation points relevant to the findings.
+1. **A change-structure `flowchart`**: entry points, core services, stores and external dependencies. Keep detailed paths in the grounding prose.
+2. **A runtime `sequenceDiagram`**: the normal request plus the failure and cancellation points relevant to the findings or review scope.
 3. If there is state, a **`stateDiagram-v2`**: allowed transitions, forbidden or missing transitions, terminal states.
 
 Add these only when they apply:
@@ -51,7 +54,7 @@ Immediately after each diagram, explain:
 - The node or edge where the finding occurs
 - What must be different after the fix
 
-Never connect an edge you could not confirm. Self-review the Mermaid syntax for renderability. Keep node labels short and put detailed paths in the prose.
+Never connect an edge you could not confirm. Self-review the Mermaid syntax for renderability. Keep node labels short and put detailed paths in the prose. If the implementation is small, keep the required flowchart and sequence diagram correspondingly small rather than inventing complexity. Each diagram must replace an explanation the reader would otherwise reconstruct mentally.
 
 ## Output structure
 
@@ -64,6 +67,8 @@ Follow the Markdown structure below. Write each Mermaid marker as a real fenced 
 - ADR:
 - Diff scope:
 - Verdict:
+- One-sentence result:
+- User or operator impact:
 - Necessity findings:
 - Sufficiency findings:
 - Tests executed:
@@ -93,7 +98,24 @@ Mermaid `sequenceDiagram`
 
 The Mermaid diagrams needed, with their grounding
 
-## 7. Findings
+## 7. Implementation choices and assumptions
+
+These are material code-level choices the ADR intentionally does not own. They do not amend the ADR.
+
+### C1. <choice topic>
+
+- Kind: implementation-default | project-convention | inherited-behavior
+- Selected value or behavior:
+- Why this was selected:
+- Code evidence:
+- What changes if this choice changes:
+- Confidence:
+- Alternatives:
+- Suggested review: accept | request change | investigate
+
+If a candidate changes a requirement contract or durable architecture boundary, do not include it here. Put it in Findings as `Undecided behavior`. If the actual value or basis cannot be confirmed, use `Unverified risk`.
+
+## 8. Findings
 
 ### F1. <title>
 
@@ -114,15 +136,15 @@ The Mermaid diagrams needed, with their grounding
 - Completion criteria:
 - Needs confirmation:
 
-## 8. Fix execution order
+## 9. Fix execution order
 
 Number them in dependency order.
 
-## 9. Verification checklist
+## 10. Verification checklist
 
 - [ ] ...
 
-## 10. Merge decision checklist
+## 11. Merge decision checklist
 
 Functional adequacy is only one axis of good code. Fill in the seven axes below as `met | not met | undetermined`, mapping each to the approved ADR baseline, findings, and tests. Never pass an axis as "met" without evidence — record which finding, test, or `review-baseline.md` item you based it on.
 
@@ -138,10 +160,10 @@ Functional adequacy is only one axis of good code. Fill in the seven axes below 
 
 - **Problem fitness** is an axis about the spec rather than the code, so base it on the approved ADR and `review-baseline.md`. If the baseline contains a concrete unresolved contract gap, mark it `not met` and route to an ADR update or `adr-reviewer`; do not ask the routine intent questions again after implementation.
 - **Contract compliance** exists as its own axis because the ADR and the code are the same system at two resolutions — the ADR records the contract, the code enforces it — so a fix at the wrong level looks like a fix and is not one. A differing value, allowed set, or transition rule means **the code** changes (the ADR owns the contract). A differing name, signature, wire representation, library, SDK, or credential/auth adapter means `/adr-sync` removes the stale code-level detail from the ADR, unless it is an admitted public/architectural contract. Never write a fix step that edits the ADR's value to match the code.
-- **Contract compliance** is a different axis from functional adequacy — limit logic can exist and work (functional adequacy met) while the number differs from the ADR, in which case the product violates a requirement. **Non-numeric requirements share this axis** — state management can work while the allowed set differs, a forbidden transition is open, or a mandatory input is optional, all of which are requirement violations. Using the requirement rows of the sufficiency decision ledger, compare **the ADR's value/set/rule ↔ the code's value/set/rule** and record it; if the ledger has no such row, mark `undetermined`. If the ADR records no requirements, write `not applicable`, but if that looks like an omission in the ADR itself, leave a question for the owner in `11. Review limits and questions`.
+- **Contract compliance** is a different axis from functional adequacy — limit logic can exist and work (functional adequacy met) while the number differs from the ADR, in which case the product violates a requirement. **Non-numeric requirements share this axis** — state management can work while the allowed set differs, a forbidden transition is open, or a mandatory input is optional, all of which are requirement violations. Using the requirement rows of the sufficiency decision ledger, compare **the ADR's value/set/rule ↔ the code's value/set/rule** and record it; if the ledger has no such row, mark `undetermined`. If the ADR records no requirements, write `not applicable`, but if that looks like an omission in the ADR itself, leave a question for the owner in `12. Review limits and questions`.
 - **Maintainability** includes whether the code and tests, rather than long comments, carry the explanation (`/adr-impl` step 4 caps comments at roughly three lines, moving the _what_ into tests past that). Ground it in the `Refactor` findings about over-long comment blocks and non-documenting test names, plus the `Test gap` findings for cases a comment enumerated but no test covers. When a comment block's cases are uncovered, say so in the fix steps as "add the test first, then shorten the comment" — never as "delete the comment", which would drop the knowledge.
 - For any axis you cannot judge because no finding grounds it, mark `undetermined` and connect it to the `INCONCLUSIVE` reason in the verdict.
 
-## 11. Review limits and questions
+## 12. Review limits and questions
 
-Even a PASS report with no findings must not omit the diagrams and test evidence. In that case, replace "fix steps" with an explanation of why keeping the current implementation is acceptable, plus the residual risk.
+Even a PASS report with no findings must include the required grounded diagrams, test evidence, and any material implementation choices. Replace "fix steps" with an explanation of why keeping the current implementation is acceptable, plus the residual risk.

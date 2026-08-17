@@ -58,7 +58,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 
 **alps-writer (PRD)**
 
-- 9-section ALPS (PRD) template with structured XML templates and conversation guides
+- 9-section ALPS (PRD) template with structured XML templates, conversation guides, and per-Feature demos connected to the end-to-end demo scenario
 - Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
@@ -68,9 +68,10 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 **adr-writer (ADR)**
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
+- **Decision-first presentation** — authoring leads with a Decision Digest and exposes decision-changing premises; edits and sync lead with semantic changes; document review leads with Decision, Contract, Rationale, and Risk before detailed evidence
 - **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
-- **Risk-based implementation review** — localized changes use a decision ledger, isolated sufficiency pass, and targeted tests; protected-surface changes add independent necessity/sufficiency reviews and a Mermaid repair guide. Intent and regeneration completeness are approved before implementation, so completion review does not repeat a routine human gate
+- **Risk-based implementation review** — localized changes use decision and implementation-choice ledgers, an isolated sufficiency pass, and targeted tests; protected-surface changes add independent necessity/sufficiency reviews, grounded Mermaid explanations, and interactive rulings for findings and AI-selected defaults. Intent and regeneration completeness are approved before implementation, so completion review does not repeat a routine human gate
 - **Provider-aware review fallback** — Codex sessions on Amazon Bedrock avoid unsupported subagent dispatch and retries; document/implementation reviews continue in the main session, while refactoring remains proposal-only without an isolated reviewer
 - **ADR-first hook** — one `SessionStart` hook runs only on startup, resume, clear, and compaction recovery, injecting the admission-aware directive without mapping contents; admitted work reads `docs/adr/.mapping.json` before coding
 - Fully standalone — no ALPS PRD required

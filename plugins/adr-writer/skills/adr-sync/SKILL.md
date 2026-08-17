@@ -127,7 +127,11 @@ For each target ADR:
 - ADRs inspected: <n>
 
 ### Fixed
-- [ADR <category>/NNNN: ...] — section X now says Y (reason: <basis>)
+- [ADR <category>/NNNN: semantic diff]
+  - Decision: <Changed: old meaning → current meaning | Unchanged | Unverified>
+  - Requirement contract: <Changed: exact values/rules | Unchanged | Unverified>
+  - Decision Drivers: <Changed: old pressure → current pressure | Unchanged | Unverified>
+  - Consequences: <Changed: old risk/trade-off → current risk/trade-off | Unchanged | Unverified>
 - [ADR <category>/NNNN: document cleanup] — removed evolution narration / rewrote in present tense: <what, and how>. Gray-zone decisions preserved: <rationale, alternatives>. (only for the ADRs affected)
 - [decision-log <category>] — major transitions harvested: <what>. (only when major narration was moved into the log)
 
@@ -150,6 +154,8 @@ For each target ADR:
 - [Missing requirement] — <category>: a contract the code honors (<what>) is absent from the ADR. If it is a requirement, add it with its value and basis (user confirmation required)
 - [Requirement value drift] — <category>: ADR "<value/set/rule>" ↔ code "<value/set/rule>". Needs a ruling on whether it was an intended change or a violation (this bucket covers not only numbers but also mismatched allowed value sets, mandatory fields, permissions, and transition rules)
 ```
+
+In chat, lead each changed ADR with the `Decision` and `Requirement contract` semantic diff; keep file locations, code evidence, and harness detail in the full report unless they explain an unresolved contradiction. `Unchanged` means that axis was inspected and still matches. `Unverified` means the available evidence could not establish it and must never be rendered as `Unchanged`.
 
 ## Notes
 

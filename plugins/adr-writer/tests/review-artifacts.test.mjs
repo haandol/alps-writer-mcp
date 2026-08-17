@@ -40,15 +40,18 @@ sequenceDiagram
   A->>B: request
 \`\`\`
 ## 6. State, data, and failure model
-## 7. Findings
+## 7. Implementation choices and assumptions
+### C1. Retry delay
+- Selected value or behavior: 250 ms fixed delay
+## 8. Findings
 ### F1. Duplicate settlement
 - Files and symbols to change: src/stream.mjs
 - Scope not to touch: protocol
 - Completion criteria: one record
 - Needs confirmation: none
-## 8. Fix execution order
-## 9. Verification checklist
-## 10. Merge decision checklist
+## 9. Fix execution order
+## 10. Verification checklist
+## 11. Merge decision checklist
 | Axis | Verdict |
 | --- | --- |
 | Problem fitness | met |
@@ -58,7 +61,7 @@ sequenceDiagram
 | Verification strength | met |
 | Operational safety | undetermined |
 | Maintainability | met |
-## 11. Review limits and questions
+## 12. Review limits and questions
 `;
 }
 
@@ -78,6 +81,18 @@ function validFindings(dir) {
       unverifiedRiskCount: 0,
       testCommandCount: 1,
     },
+    implementationChoices: [
+      {
+        kind: "implementation-default",
+        topic: "retry delay",
+        selectedValue: "250 ms fixed delay",
+        basis: "matches the existing client retry policy",
+        evidence: "src/stream.mjs:8 — retryDelayMs: 250",
+        impactIfChanged: "changes recovery latency and request rate",
+        confidence: "high",
+        alternatives: "exponential backoff; no retry",
+      },
+    ],
     findings: [
       {
         category: "Spec violation",
@@ -104,6 +119,9 @@ src/parser.mjs
 
 ## Decision ledger
 - Existing parsing behavior remains unchanged: accounted for by parser tests
+
+## Implementation choices and assumptions
+None found.
 
 ## Findings
 None
@@ -174,6 +192,23 @@ test("review artifact validator requires internally consistent review metrics", 
   });
 });
 
+test("review artifact validator rejects incomplete implementation choices", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "implementation-review.md"), validReport());
+    const findings = validFindings(dir);
+    delete findings.implementationChoices[0].impactIfChanged;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /implementationChoices\[0\]\.impactIfChanged must be a non-empty string/,
+    );
+  });
+});
+
 test("review artifact validator accepts concise standard-mode artifacts without Mermaid or explanation", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
@@ -181,6 +216,7 @@ test("review artifact validator accepts concise standard-mode artifacts without 
     findings.reviewMode = "standard";
     findings.verdict = "PASS";
     findings.findings = [];
+    findings.implementationChoices = [];
     findings.metrics.sufficiencyFindingCount = 0;
     delete findings.explanation;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));

@@ -39,6 +39,16 @@ Proposed | Accepted (YYYY-MM-DD) | Deprecated (YYYY-MM-DD) | Superseded by [ADR 
 
 The background and problem requiring the decision. _Absorb_ the PRD's business motivation and narrate it here — never write an ALPS file path, section number, or feature ID in the body. Never point at the PRD (adr-writer does not reference ALPS).
 
+### Decision premises
+
+(Optional. Record only facts or expectations that materially change which architectural alternative is preferred. For each premise, state its basis, confidence, and which part of the decision must be reconsidered if it is false. Omit this section when there are no material premises.)
+
+| Premise | Basis | Confidence | If false, reconsider |
+| ------- | ----- | ---------- | -------------------- |
+|         |       |            |                      |
+
+Requirement values and rules belong in the requirement contract below, not here. Replaceable libraries, SDKs, adapters, internal structures, and tuning defaults belong in code and the implementation review's ephemeral Implementation Choice Ledger.
+
 ## Decision Drivers
 
 - The 3-5 pressures, constraints, and requirements that discriminate this decision. Not generic quality attributes ("maintainability") but only what genuinely decides between the options.
@@ -52,9 +62,11 @@ The currently valid decision and why. State the result directly; do not describe
 
 (What the result must honor — so it can be rebuilt from this alone once the code is gone. Record **requirement values with their number and basis verbatim**, such as limits, quotas, cycles, retention periods, and allowed ranges. Example: "a chat session is capped at 20 turns — pricing policy". **Record non-numeric requirements here too** — allowed value sets and forbidden transitions, mandatory fields, permissions and visibility, ordering and uniqueness, units. Example: "an order is paid, shipping, delivered, or cancelled, and a cancelled order never moves to shipping". Do not record implementation tuning values (pool sizes, backoff, cache TTL) or enum identifier names.)
 
+Group populated contract rows under **Required guarantees**, **Prohibitions**, and **Failure guarantees** so a reader can recover what must happen, what must never happen, and what remains guaranteed when an operation fails. Omit an empty group instead of writing filler. This grouping changes presentation only: preserve every exact value, allowed state, permission, ordering rule, uniqueness rule, and basis.
+
 ### Sequence diagram
 
-If the decision involves async processing, cross-service integration, or event flow, add a Mermaid diagram.
+If a flow, state, boundary, or alternative relationship is clearer visually, add a grounded Mermaid diagram. Draw only relationships that belong at architectural resolution; never copy a code call graph or add a decorative diagram.
 
 ### Alternatives
 

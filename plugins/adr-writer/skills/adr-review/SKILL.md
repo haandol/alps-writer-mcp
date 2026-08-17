@@ -136,6 +136,8 @@ Order the per-ADR section **worst first** (BLOCK, then FIX_REQUIRED, then PASS) 
 
 **Summarize in chat rather than dumping the whole report**: the verdict counts, the cross-ADR findings, and the two or three ADRs that need attention most. For a large sweep, write the full report to a file and give the path.
 
+Lead the chat summary with the four questions a reader must answer: **Decision** (what was chosen), **Contract** (what the result must honor), **Rationale** (why this option won), and **Risk** (what remains costly, uncertain, or unjudged). Keep rule IDs, quotations, paths, confidence, and detailed evidence in the full report unless they are needed to understand an actionable finding. Progressive disclosure must never hide a requirement value, a `BLOCK`, or an unjudged axis.
+
 ### 7. Route the follow-ups
 
 This command stays report-only. Route what the user approves:
