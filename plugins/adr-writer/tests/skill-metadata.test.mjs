@@ -947,26 +947,26 @@ test("ADR interactions lead with digest and semantic changes without creating a 
   assert.match(sync, /`Unverified` means the available evidence could not establish it/);
 });
 
-test("ADR authoring exposes decision premises without pulling implementation defaults upward", () => {
+test("ADR authoring keeps decision-changing assumptions inside existing ADR sections", () => {
   const template = read(path.join(ADR_ROOT, "templates", "adr", "README.md"));
   const rules = read(path.join(ADR_ROOT, "templates", "adr", "authoring-rules.md"));
   const adrNew = read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md"));
   const reviewer = read(path.join(ADR_ROOT, "agents", "adr-reviewer.md"));
 
   for (const source of [template, rules, adrNew]) {
-    assert.match(source, /Decision premises/);
-    assert.match(source, /basis/i);
-    assert.match(source, /confidence/i);
+    assert.doesNotMatch(source, /^#{2,3} Decision premises$/m);
+    assert.match(source, /assumption/i);
+    assert.match(source, /reconsider/i);
   }
 
   assert.match(rules, /requirement contract/);
-  assert.match(rules, /Implementation Choice Ledger/);
-  assert.match(adrNew, /what would we reconsider if it were false/i);
+  assert.match(rules, /Notable implementation choices/);
+  assert.match(adrNew, /if it were false/i);
   assert.match(adrNew, /replaceable library, SDK, adapter/);
   assert.match(adrNew, /Use diagrams to explain, not decorate/);
-  assert.match(reviewer, /When Decision premises exist/);
-  assert.match(reviewer, /never only as a premise/);
-  assert.match(reviewer, /including Decision premises/);
+  assert.match(reviewer, /decision-changing assumption/i);
+  assert.match(reviewer, /never only as an assumption/i);
+  assert.doesNotMatch(reviewer, /When Decision premises exist/);
 });
 
 test("Feature and ADR comprehension load is scored internally but shown as one advisory line", () => {

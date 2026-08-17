@@ -22,7 +22,6 @@ Read the ADR and the actual diff, then explain **what the code does now** in pla
 1. Summarize the ADR's goal and its out-of-scope items in one paragraph.
 2. Trace the real request flow from the diff's entry point through data/state changes to external dependency calls.
    2-a. Extract the **requirements** the ADR records (max counts and turns, usage quotas, retention periods, size caps, response targets, and allowed value sets, transition rules, mandatory fields, permissions, visibility, ordering, uniqueness, units) and, for each, find how the code actually enforces it, listing the value or set verbatim side by side. Do not skip the non-numeric items — requirements do not arrive only as numbers. **Do not judge** whether they match (that is the sufficiency reviewer's job) — this agent's role ends at showing both sides so a human can compare them by eye. If you cannot find where the code enforces it, write "not found in code".
-   2-b. Enumerate **material implementation choices the ADR does not specify**. Include a dependency, tuning value, internal default, inherited convention, or fallback behavior only when it affects runtime behavior, failure handling, operations, cost, or future maintenance. Record the exact selected value or behavior, its basis, `file:line` evidence, the impact if changed, confidence, and plausible alternatives. Do not list every variable name or local expression. Do not judge whether the choice belongs in the ADR; the sufficiency reviewer applies the admission gate.
 3. Distinguish before from after.
 4. Check how the code handles failure, cancellation, retries, duplicates, and concurrent execution — not just the happy path.
 5. Call out any new dependencies, configuration, stored state, or operational observability points.
@@ -46,13 +45,6 @@ Return only the following Markdown structure. Put a real fenced Mermaid block un
 | ---------------------- | ------------------------ | ------------------------------------- |
 
 (Include a row for both numeric requirements and non-numeric ones — allowed value sets, transition rules, mandatory fields, permissions, ordering, units. If the ADR records no requirements, write "not applicable". Do not use judging or evaluative wording.)
-
-## Implementation choices not specified by the ADR
-
-| Topic | Selected value or behavior | Basis | Code evidence | Impact if changed | Confidence | Alternatives |
-| ----- | -------------------------- | ----- | ------------- | ----------------- | ---------- | ------------ |
-
-(Include only material choices. If none were found, write "none found". If a value or basis cannot be established, write `cannot determine` rather than guessing.)
 
 ## Order in which a request is handled
 

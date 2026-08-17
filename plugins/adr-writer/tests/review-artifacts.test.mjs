@@ -24,44 +24,35 @@ function validate(dir) {
 }
 
 function validReport() {
-  return `# ADR implementation review and repair guide
+  return `# ADR implementation review
 
-## 1. Verdict summary
-## 2. What to know first
-## 3. Order to read the code
-## 4. Map of the current implementation
-\`\`\`mermaid
-flowchart LR
-  A --> B
-\`\`\`
-## 5. Runtime flow
-\`\`\`mermaid
-sequenceDiagram
-  A->>B: request
-\`\`\`
-## 6. State, data, and failure model
-## 7. Implementation choices and assumptions
-### C1. Retry delay
-- Selected value or behavior: 250 ms fixed delay
-## 8. Findings
+## Review mode
+full
+
+## Scope
+stream settlement
+
+## ADR contract coverage
+The settlement invariant is implemented.
+
+## Notable implementation choices
+- 250 ms fixed retry — src/stream.mjs:8 — affects recovery latency
+
+## Findings
 ### F1. Duplicate settlement
 - Files and symbols to change: src/stream.mjs
 - Scope not to touch: protocol
 - Completion criteria: one record
 - Needs confirmation: none
-## 9. Fix execution order
-## 10. Verification checklist
-## 11. Merge decision checklist
-| Axis | Verdict |
-| --- | --- |
-| Problem fitness | met |
-| Functional adequacy | not met |
-| Contract compliance | met |
-| Change minimality | met |
-| Verification strength | met |
-| Operational safety | undetermined |
-| Maintainability | met |
-## 12. Review limits and questions
+
+## Tests
+node --test test/stream.test.mjs — FAIL
+
+## Residual risks
+None beyond F1.
+
+## Repair guide
+Fix F1 before merge.
 `;
 }
 
@@ -83,14 +74,9 @@ function validFindings(dir) {
     },
     implementationChoices: [
       {
-        kind: "implementation-default",
-        topic: "retry delay",
-        selectedValue: "250 ms fixed delay",
-        basis: "matches the existing client retry policy",
+        choice: "retry uses a 250 ms fixed delay",
         evidence: "src/stream.mjs:8 — retryDelayMs: 250",
-        impactIfChanged: "changes recovery latency and request rate",
-        confidence: "high",
-        alternatives: "exponential backoff; no retry",
+        whyItMatters: "changes recovery latency and request rate",
       },
     ],
     findings: [
@@ -117,10 +103,10 @@ standard — localized implementation reinforcement
 ## Scope
 src/parser.mjs
 
-## Decision ledger
+## ADR contract coverage
 - Existing parsing behavior remains unchanged: accounted for by parser tests
 
-## Implementation choices and assumptions
+## Notable implementation choices
 None found.
 
 ## Findings
@@ -129,12 +115,12 @@ None
 ## Tests
 node --test test/parser.test.mjs — PASS
 
-## Review limits
+## Residual risks
 One isolated sufficiency pass; no protected surface changed.
 `;
 }
 
-test("review artifact validator accepts a self-contained junior repair guide", () => {
+test("review artifact validator accepts a concise full report without Mermaid", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
     writeFileSync(path.join(dir, "implementation-review.md"), validReport());
@@ -145,25 +131,7 @@ test("review artifact validator accepts a self-contained junior repair guide", (
   });
 });
 
-// A report can carry heading 10 and still omit an axis from the table. The axis
-// most likely to vanish is "Contract compliance" — a review that found no bug reads complete
-// without ever checking whether the ADR's requirement values were honored.
-test("review artifact validator rejects a merge-fitness table missing an axis", () => {
-  withArtifacts((dir) => {
-    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
-    writeFileSync(
-      path.join(dir, "implementation-review.md"),
-      validReport().replace("| Contract compliance | met |\n", ""),
-    );
-    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
-
-    const result = validate(dir);
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /missing axis: Contract compliance/);
-  });
-});
-
-test("review artifact validator rejects missing Mermaid and evidence fields", () => {
+test("review artifact validator rejects missing core headings and evidence fields", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
     writeFileSync(path.join(dir, "implementation-review.md"), "# short report\n");
@@ -174,7 +142,8 @@ test("review artifact validator rejects missing Mermaid and evidence fields", ()
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /evidence must be a non-empty string/);
-    assert.match(result.stderr, /at least two Mermaid diagrams/);
+    assert.match(result.stderr, /missing: ## ADR contract coverage/);
+    assert.doesNotMatch(result.stderr, /Mermaid|flowchart|sequenceDiagram/);
   });
 });
 
@@ -192,19 +161,19 @@ test("review artifact validator requires internally consistent review metrics", 
   });
 });
 
-test("review artifact validator rejects incomplete implementation choices", () => {
+test("review artifact validator rejects incomplete notable implementation choices", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
     writeFileSync(path.join(dir, "implementation-review.md"), validReport());
     const findings = validFindings(dir);
-    delete findings.implementationChoices[0].impactIfChanged;
+    delete findings.implementationChoices[0].whyItMatters;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
 
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(
       result.stderr,
-      /implementationChoices\[0\]\.impactIfChanged must be a non-empty string/,
+      /implementationChoices\[0\]\.whyItMatters must be a non-empty string/,
     );
   });
 });
@@ -226,7 +195,7 @@ test("review artifact validator accepts concise standard-mode artifacts without 
   });
 });
 
-test("standard-mode artifacts reject necessity findings and missing ledger headings", () => {
+test("standard-mode artifacts reject necessity findings and missing contract coverage", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "implementation-review.md"), "# ADR implementation review\n");
     const findings = validFindings(dir);
@@ -238,6 +207,6 @@ test("standard-mode artifacts reject necessity findings and missing ledger headi
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /necessityFindingCount must be 0/);
-    assert.match(result.stderr, /missing: ## Decision ledger/);
+    assert.match(result.stderr, /missing: ## ADR contract coverage/);
   });
 });

@@ -39,15 +39,7 @@ Proposed | Accepted (YYYY-MM-DD) | Deprecated (YYYY-MM-DD) | Superseded by [ADR 
 
 The background and problem requiring the decision. _Absorb_ the PRD's business motivation and narrate it here — never write an ALPS file path, section number, or feature ID in the body. Never point at the PRD (adr-writer does not reference ALPS).
 
-### Decision premises
-
-(Optional. Record only facts or expectations that materially change which architectural alternative is preferred. For each premise, state its basis, confidence, and which part of the decision must be reconsidered if it is false. Omit this section when there are no material premises.)
-
-| Premise | Basis | Confidence | If false, reconsider |
-| ------- | ----- | ---------- | -------------------- |
-|         |       |            |                      |
-
-Requirement values and rules belong in the requirement contract below, not here. Replaceable libraries, SDKs, adapters, internal structures, and tuning defaults belong in code and the implementation review's ephemeral Implementation Choice Ledger.
+When the adopted alternative depends on an assumption, add one short line here or under the relevant Decision Driver: `Assumption: <fact> — reconsider <decision> if false`. Do not add a separate assumptions section or confidence table. Requirement values and rules belong in the requirement contract below. Replaceable libraries, SDKs, adapters, internal structures, and tuning defaults belong in code and the implementation review's ephemeral Notable implementation choices.
 
 ## Decision Drivers
 

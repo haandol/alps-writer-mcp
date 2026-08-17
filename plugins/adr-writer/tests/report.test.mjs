@@ -57,14 +57,9 @@ test("necessity and sufficiency evidence survives into the interactive report", 
     },
     implementationChoices: [
       {
-        kind: "implementation-default",
-        topic: "retry delay",
-        selectedValue: "250 ms fixed delay",
-        basis: "matches the existing stream client",
+        choice: "retry uses a 250 ms fixed delay",
         evidence: "src/stream/client.ts:20 — retryDelayMs: 250",
-        impactIfChanged: "changes recovery latency and request rate",
-        confidence: "high",
-        alternatives: "exponential backoff; no retry",
+        whyItMatters: "changes recovery latency and request rate",
       },
     ],
     findings: [
@@ -99,14 +94,16 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   assert.match(result.stdout, /explanation\.md/);
   assert.match(result.stdout, /Review metrics/);
   assert.match(result.stdout, /42s/);
-  assert.match(result.stdout, /retry delay/);
-  assert.match(result.stdout, /250 ms fixed delay/);
-  assert.match(result.stdout, /request change/);
-  assert.match(result.stdout, /investigate/);
-  assert.match(result.stdout, /choice_reviews/);
+  assert.match(result.stdout, /retry uses a 250 ms fixed delay/);
+  assert.match(result.stdout, /src\/stream\/client\.ts:20/);
+  assert.match(result.stdout, /changes recovery latency and request rate/);
+  assert.match(result.stdout, /Review report/);
+  assert.doesNotMatch(result.stdout, /Repair guide ·/);
+  assert.doesNotMatch(result.stdout, /Review this implementation choice/);
+  assert.doesNotMatch(result.stdout, /choice_reviews/);
 });
 
-test("implementation choice content is escaped and uses stable DOM indexes", () => {
+test("notable implementation choice content is escaped and read-only", () => {
   const payload = "</script><script>globalThis.__choiceInjected = true</script>";
   const result = render({
     adr: "docs/adr/test.md",
@@ -114,34 +111,19 @@ test("implementation choice content is escaped and uses stable DOM indexes", () 
     findings: [],
     implementationChoices: [
       {
-        id: 'x"] script[',
-        kind: "project-convention",
-        topic: payload,
-        selectedValue: payload,
-        basis: "AGENTS.md",
+        choice: payload,
         evidence: "src/example.ts:1",
-        impactIfChanged: "different local convention",
-        confidence: "medium",
-        alternatives: "another convention",
+        whyItMatters: "different local convention",
       },
     ],
   });
 
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(result.stdout, /<\/script><script>globalThis\.__choiceInjected/);
-  assert.match(result.stdout, /name="choice-dec-0"/);
-  assert.match(result.stdout, /data-choice-index="0"/);
-  assert.match(
-    result.stdout,
-    /name="choice-dec-0" value="investigate" checked/,
-    "medium-confidence choices should default to investigate",
-  );
-  assert.doesNotMatch(
-    result.stdout,
-    /name="choice-dec-0" value="accept" checked/,
-    "uncertain choices must not be pre-accepted",
-  );
-  assert.equal(result.stdout.includes('name="choice-dec-x"]'), false);
+  assert.match(result.stdout, /src\/example\.ts:1/);
+  assert.match(result.stdout, /different local convention/);
+  assert.doesNotMatch(result.stdout, /name="choice-dec-/);
+  assert.doesNotMatch(result.stdout, /data-choice-index=/);
 });
 
 test("INCONCLUSIVE with no findings does not render a false conforming claim", () => {

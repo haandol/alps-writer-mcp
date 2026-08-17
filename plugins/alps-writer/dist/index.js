@@ -31534,7 +31534,7 @@ var server = new McpServer(
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 
-ALPS defines each feature as a vertical slice \u2014 a single feature that cuts through all layers (UI \u2192 API \u2192 Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store. Also include a Feature Demo that explains the feature's role in the Section 3 end-to-end demo, its preconditions, user actions, observable results, representative failure behavior, and success judgment.
+ALPS defines each feature as a vertical slice \u2014 a single feature that cuts through all layers (UI \u2192 API \u2192 Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store. End each Feature's Acceptance Criteria with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result; do not duplicate the Feature's flow, errors, or acceptance rules in a separate demo subsection.
 
 <TRIGGER>
 MUST use this server's tools when the user wants to:

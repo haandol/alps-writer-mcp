@@ -48,14 +48,11 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
     skill,
     /record in the report that models could not be diversified, along with the model each reviewer actually used/,
   );
-  assert.match(skill, /Implementation Choice Ledger/);
-  assert.match(skill, /exact selected value or behavior/);
+  assert.match(skill, /Notable implementation choices/);
+  assert.match(skill, /selected value or behavior, code evidence, and why it matters/i);
   assert.match(skill, /progressive disclosure/i);
   assert.match(skill, /implementationChoices/);
-  assert.match(
-    skill,
-    /accept, request a change, or investigate|accept.*request change.*investigate/i,
-  );
+  assert.doesNotMatch(skill, /accept.*request change.*investigate/i);
   // No provider's model ID may be embedded in the prompt.
   assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
 });
@@ -70,10 +67,10 @@ test("implementation review separates ADR decisions from code-level AI choices",
   assert.match(impl, /never written into the ADR/);
   assert.match(review, /admission gate/);
   assert.match(review, /Unverified risk/);
-  assert.match(explainer, /Implementation choices not specified by the ADR/);
-  assert.match(sufficiency, /Implementation Choice Ledger/);
+  assert.doesNotMatch(explainer, /Implementation choices not specified by the ADR/);
+  assert.match(sufficiency, /Notable implementation choices/);
   assert.match(sufficiency, /not a finding and does not change the verdict/);
-  assert.match(sufficiency, /Build the separate Implementation Choice Ledger from code outward/);
+  assert.match(sufficiency, /Build Notable implementation choices once from code outward/);
   assert.match(sufficiency, /replaceable tuning value or implementation means goes into/);
   assert.doesNotMatch(
     sufficiency,
@@ -85,6 +82,7 @@ test("implementation review separates ADR decisions from code-level AI choices",
   );
   assert.match(reportWriter, /do not amend the ADR/);
   assert.match(reportWriter, /Use progressive disclosure/);
+  assert.match(reportWriter, /read-only/);
 });
 
 test("generic subagent fallbacks load agent instructions inside the child context", () => {
@@ -405,61 +403,32 @@ test("the comment cap moves explanation into tests without ever dropping it", ()
   assert.match(writer, /add the test first, then shorten the comment/);
 });
 
-test("junior repair report ends with a seven-axis merge-fitness checklist", () => {
+test("implementation review keeps contract evidence without a mandatory merge checklist", () => {
   const writer = read("agents/adr-impl-review-report-writer.md");
   const skill = read("skills/adr-impl-review/SKILL.md");
-  assert.match(writer, /Merge decision checklist/);
-  const axes = [
-    "Problem fitness",
-    "Functional adequacy",
-    "Contract compliance",
-    "Change minimality",
-    "Verification strength",
-    "Operational safety",
-    "Maintainability",
-  ];
-  for (const axis of axes) {
-    // Case-insensitive: the writer names each axis as a table row ("Problem
-    // fitness") while the skill lists them inline in prose ("problem fitness,
-    // functional adequacy, ..."). The invariant is that both name the axis, not
-    // that both capitalize it.
-    assert.match(writer, new RegExp(axis, "i"));
-    // the skill advertises the same axis list, or a caller writing the report
-    // by hand (no subagent available) drops one silently
-    assert.match(skill, new RegExp(axis, "i"), `SKILL.md must name the ${axis} axis`);
-  }
-  // Both must state the axis COUNT, so a dropped row is visible against it.
-  // Spelled out ("seven axes" / "seven-axis") rather than digits, so key off the
-  // word — and keep it derived from axes.length, so adding an axis here fails
-  // until both documents are updated too.
-  const COUNT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight"];
-  const countWord = COUNT_WORDS[axes.length];
-  assert.ok(countWord, `no spelled-out word for ${axes.length} axes — extend COUNT_WORDS`);
-  assert.match(writer, new RegExp(`${countWord}[ -]ax(is|es)`, "i"));
-  assert.match(skill, new RegExp(`${countWord}[ -]ax(is|es)`, "i"));
-  // Problem fitness is a spec axis, so it is grounded in the pre-implementation baseline.
-  assert.match(writer, /approved ADR and `review-baseline\.md`/i);
-  assert.match(writer, /concrete unresolved contract gap/);
-  // Contract compliance is a separate axis from functional adequacy — logic can exist while the value differs.
-  assert.match(writer, /a different axis from functional adequacy/);
+  assert.match(writer, /ADR contract coverage/);
+  assert.match(skill, /ADR contract coverage/);
+  assert.match(writer, /Tests/);
+  assert.match(writer, /Residual risks/);
+  assert.doesNotMatch(writer, /Merge decision checklist/);
+  assert.doesNotMatch(skill, /seven-axis merge decision checklist/);
 });
 
-test("junior repair report requires grounded Mermaid and executable fix guidance", () => {
+test("repair guidance and Mermaid are conditional on the review evidence", () => {
   const writer = read("agents/adr-impl-review-report-writer.md");
 
-  assert.match(
-    writer,
-    /junior developer seeing this code for the first time can fix it from alone/,
-  );
+  assert.match(writer, /FIX_REQUIRED|BLOCK/);
+  assert.match(writer, /user asks/i);
+  assert.match(writer, /only when/i);
   assert.match(writer, /flowchart/);
   assert.match(writer, /sequenceDiagram/);
   assert.match(writer, /stateDiagram-v2/);
   assert.match(writer, /erDiagram/);
   assert.match(writer, /Never use ASCII or box-drawing diagrams/);
   assert.match(writer, /Draw only relationships confirmed in the actual code/);
+  assert.doesNotMatch(writer, /Include at least:/);
   assert.match(writer, /Files and symbols to change/);
   assert.match(writer, /Scope not to touch/);
   assert.match(writer, /Completion criteria/);
-  assert.match(writer, /Verification checklist/);
-  assert.match(writer, /## 12\. Review limits and questions/);
+  assert.match(writer, /Residual risks/);
 });

@@ -28,7 +28,7 @@
         {
           "path": "docs/adr/adr-authoring/decision-presentation/0001-present-decision-digest-and-semantic-diff.md",
           "status": "Accepted (2026-08-17)",
-          "summary": "ADR 상호작용은 결정·계약·근거·위험과 Decision premises를 먼저 보여주고 구현 재량은 구현 리뷰의 선택 원장으로 분리한다"
+          "summary": "ADR 상호작용은 Decision Digest와 semantic diff를 우선하며 결정에 중요한 가정은 Context나 Decision Driver에 한 줄로만 기록한다"
         }
       ],
       "dependsOn": ["adr-authoring/current-state"]
@@ -50,7 +50,7 @@
         {
           "path": "docs/adr/alps-authoring/feature-demo/0001-require-feature-level-demo.md",
           "status": "Accepted (2026-08-17)",
-          "summary": "Section 7의 모든 Feature는 Section 3에서의 역할과 사전 조건·행동·관찰 결과·실패 시나리오·성공 판정을 Feature Demo로 기록한다"
+          "summary": "Section 7의 각 Feature는 Acceptance Criteria에 전체 데모 역할과 관찰 결과를 잇는 한 줄 Demo checkpoint만 기록하고 상세 데모는 기존 명세에서 요청 시 파생한다"
         }
       ],
       "dependsOn": []
@@ -94,7 +94,7 @@
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
           "status": "Accepted (2026-08-17)",
-          "summary": "구현 리뷰는 위험 비례 검토와 안전한 자동 수정을 유지하며 주니어 설명·근거 기반 다이어그램·AI 구현 선택 원장과 인터랙티브 판정을 제공한다"
+          "summary": "구현 리뷰는 계약 대조와 테스트 증거를 항상 유지하고 상세 guide·다이어그램·중요 구현 선택은 판정에 필요할 때만 한 번 생성한다"
         }
       ],
       "dependsOn": []

@@ -185,8 +185,8 @@ Exclude everything discoverable by reading the code, plus detail outside the gra
 Keep only the gray zone — what code cannot reveal, or what loses its intent unless gathered in one place. **Everything that passed the requirement gate is added to this** — a contract the result must honor stays even when it looks obvious in the code.
 
 - **Requirements the result must honor** — [requirement values](#concrete-numbers--keep-requirement-values-drop-tuning-values) (limits, quotas, cycles, retention, allowed ranges) and [non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering) (allowed sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units), plus user-visible behavior contracts and required validation conditions. With the code gone, this alone must be enough to rebuild code honoring the same contract
-- **Problem background and motivation** (WHY) — why this decision was needed; which constraints and premises forced this choice
-- **Decision premises** — only facts or expectations that materially change which alternative is preferred. Record the premise, its evidence or source, confidence, and what part of the decision must be reconsidered if it is false. A requirement belongs in the requirement contract instead; a replaceable implementation default belongs in code and the implementation review
+- **Problem background and motivation** (WHY) — why this decision was needed; which constraints and assumptions forced this choice
+- **Decision-changing assumptions** — only facts or expectations that materially change which alternative is preferred. Keep each as one line in Context or the relevant Decision Driver: `<assumption> — reconsider <decision> if false`. A requirement belongs in the requirement contract instead; a replaceable implementation default belongs in code and the implementation review
 - **Decision Drivers** — the pressures, constraints, and requirements that discriminate between options (see [Decision Drivers](#decision-drivers))
 - **Decision summary** — what was decided and why over the alternatives (the rationale is the point: the decision shows up in code, but "why not the other way" does not)
 - **Alternatives table** — the options considered and why they were not adopted (see [Alternatives](#alternatives--at-least-two))
@@ -220,24 +220,20 @@ Note that every Good entry **keeps its numbers and constraints intact** — blur
 
 Thin drivers make [alternatives](#alternatives--at-least-two) thin too — they come as a pair.
 
-## Decision premises — expose assumptions without pulling code upward
+## Decision-changing assumptions — use the existing structure
 
-A premise is not a requirement and not an implementation default. It is a fact or expectation the alternatives comparison relies on: for example, an upstream provider guarantees idempotent requests, the organization cannot operate a second data store, or traffic is expected to remain inside one region.
+An assumption is not a requirement and not an implementation default. It is a fact or expectation the alternatives comparison relies on: for example, an upstream provider guarantees idempotent requests, the organization cannot operate a second data store, or traffic is expected to remain inside one region.
 
-Record a premise only when changing it could change the adopted architecture. For each premise state:
+Record an assumption only when changing it could change the adopted architecture. Put one short line in Context or the relevant Decision Driver:
 
-- the premise in plain language
-- its basis: contract, measurement, existing system behavior, policy, or an explicitly named user assumption
-- confidence: high, medium, or low
-- which decision or trade-off must be revisited if it is false
+`Assumption: <fact> — reconsider <decision or trade-off> if false`
 
-Do not use premises as a parking place for missing decisions.
+Do not add a separate assumptions section, confidence taxonomy, evidence table, or placeholder row. The ADR already has Context and Decision Drivers for facts that shape the choice.
 
 - A value or rule the result must honor goes in the requirement contract.
-- An unresolved premise that changes a contract or durable boundary is a question to resolve before approval.
-- A library, SDK, adapter, pool size, timeout chosen only for implementation convenience, internal module shape, or other replaceable default stays in code. The implementation review may expose it in its ephemeral Implementation Choice Ledger, but the ADR does not persist it.
-
-Omit the section when no material premise exists. A short ADR with no assumptions is clearer than a table filled with "none".
+- An unresolved assumption that changes a contract or durable boundary is a question to resolve before approval.
+- A library, SDK, adapter, pool size, timeout chosen only for implementation convenience, internal module shape, or other replaceable default stays in code. The implementation review may expose it in its ephemeral Notable implementation choices, but the ADR does not persist it.
+- Omit assumptions when the choice does not depend on one. A short ADR is clearer than an empty taxonomy.
 
 ## Alternatives — at least two
 
@@ -404,8 +400,8 @@ For the PR reviewer or the author before merge.
 - [ ] **Regeneration test** — imagining all code deleted and only this ADR left, could requirement-honoring code be rebuilt? Is any contract missing (limits, cycles, permissions, required validation, state transitions)?
 - [ ] **Requirement values appear verbatim** — numbers the result must honor (max turns, count limits, retention, size caps, NFR targets) are not blurred into "appropriately" or "is limited". Does each carry a scrap of justification (policy, contract, regulation)?
 - [ ] **Non-numeric requirements survived too** — allowed value sets, mandatory fields, permission and visibility rules, ordering and uniqueness, units and formats, forbidden transitions were not dropped as "obvious from the code" ([non-numeric requirements](#non-numeric-requirements--value-sets-mandatory-fields-permissions-ordering))
-- [ ] **Decision premises are explicit and correctly routed** — every premise that could change the adopted alternative states its basis, confidence, and reconsideration impact; requirements remain in the contract, implementation defaults remain in code
-- [ ] **No unresolved material premise is hidden** — a premise affecting the requirement contract or durable architecture boundary was resolved before approval, or remains an explicit blocking question
+- [ ] **Decision-changing assumptions are explicit and correctly routed** — every assumption that could change the adopted alternative appears in Context or the relevant Driver with what must be reconsidered if false; requirements remain in the contract, implementation defaults remain in code
+- [ ] **No unresolved material assumption is hidden** — an assumption affecting the requirement contract or durable architecture boundary was resolved before approval, or remains an explicit blocking question
 - [ ] **No tuning values** — values a developer may change without violating a requirement (pool sizes, backoff, cache TTL, worker counts) are absent
 - [ ] **Code-readthrough test** — for every paragraph, asking "is this obvious from reading the code this ADR governs?", nothing obvious remains (the code is the source of truth for those). Items that passed the requirement gate stay even when obvious
 - [ ] **Final-state wording** — the body and `.mapping.json` summary state the current result directly. No evolution narration ("originally it was", "added in v2", "changed from before") or comparison residue ("not X but Y", "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만") remains outside Alternatives or [`decision-log.md`](#decision-log-decision-logmd). Current prohibitions and forbidden transitions that passed the requirement gate remain intact

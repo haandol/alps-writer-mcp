@@ -4,62 +4,27 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { CATEGORY_NAMES, VERDICT_NAMES } from "./adr-impl-review-categories.mjs";
 
-// The category and verdict vocabularies come from the shared table the HTML
-// renderer draws from, so a findings.json this validator accepts is always one
-// the report can render (and rank) — the two lists used to be separate copies.
 const ALLOWED_VERDICTS = VERDICT_NAMES;
 const ALLOWED_CATEGORIES = CATEGORY_NAMES;
 const ALLOWED_MODES = new Set(["standard", "full"]);
 const ALLOWED_PERSPECTIVES = new Set(["necessity", "sufficiency", "both"]);
 const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
-const ALLOWED_CHOICE_KINDS = new Set([
-  "implementation-default",
-  "project-convention",
-  "inherited-behavior",
-]);
 const REQUIRED_REPORT_TEXT = [
-  "# ADR implementation review and repair guide",
-  "## 1. Verdict summary",
-  "## 2. What to know first",
-  "## 3. Order to read the code",
-  "## 4. Map of the current implementation",
-  "## 5. Runtime flow",
-  "## 6. State, data, and failure model",
-  "## 7. Implementation choices and assumptions",
-  "## 8. Findings",
-  "## 9. Fix execution order",
-  "## 10. Verification checklist",
-  "## 11. Merge decision checklist",
-  "## 12. Review limits and questions",
+  "# ADR implementation review",
+  "## Review mode",
+  "## Scope",
+  "## ADR contract coverage",
+  "## Notable implementation choices",
+  "## Findings",
+  "## Tests",
+  "## Residual risks",
 ];
-const REQUIRED_FINDING_TEXT = [
+const REQUIRED_REPAIR_TEXT = [
+  "## Repair guide",
   "Files and symbols to change:",
   "Scope not to touch:",
   "Completion criteria:",
   "Needs confirmation:",
-];
-// The merge-fitness axes under "## 10". Checking the heading alone let a writer
-// ship a table with an axis quietly missing — and the one most likely to be
-// dropped is "Contract compliance" (requirement-value conformance), because a
-// report that found no bug reads as complete without it.
-const REQUIRED_MERGE_AXES = [
-  "Problem fitness",
-  "Functional adequacy",
-  "Contract compliance",
-  "Change minimality",
-  "Verification strength",
-  "Operational safety",
-  "Maintainability",
-];
-const REQUIRED_STANDARD_REPORT_TEXT = [
-  "# ADR implementation review",
-  "## Review mode",
-  "## Scope",
-  "## Decision ledger",
-  "## Implementation choices and assumptions",
-  "## Findings",
-  "## Tests",
-  "## Review limits",
 ];
 
 function usage(message) {
@@ -122,28 +87,10 @@ function validateImplementationChoice(choice, index, errors) {
     return;
   }
 
-  for (const field of [
-    "kind",
-    "topic",
-    "selectedValue",
-    "basis",
-    "evidence",
-    "impactIfChanged",
-    "confidence",
-    "alternatives",
-  ]) {
+  for (const field of ["choice", "evidence", "whyItMatters"]) {
     if (typeof choice[field] !== "string" || !choice[field].trim()) {
       errors.push(`${label}.${field} must be a non-empty string`);
     }
-  }
-
-  if (choice.kind && !ALLOWED_CHOICE_KINDS.has(choice.kind)) {
-    errors.push(
-      `${label}.kind must be implementation-default, project-convention, or inherited-behavior`,
-    );
-  }
-  if (choice.confidence && !ALLOWED_CONFIDENCE.has(choice.confidence)) {
-    errors.push(`${label}.confidence must be high, medium, or low`);
   }
 }
 
@@ -186,53 +133,19 @@ function validateMetrics(metrics, findings, errors) {
   }
 }
 
-function validateReport(report, findingCount, choiceCount, mode, errors) {
-  if (mode === "standard") {
-    for (const text of REQUIRED_STANDARD_REPORT_TEXT) {
-      if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
-    }
-    return;
-  }
-
+function validateReport(report, findingCount, verdict, errors) {
   for (const text of REQUIRED_REPORT_TEXT) {
     if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
   }
 
-  const mermaidBlocks = [...report.matchAll(/^```mermaid\s*\n([\s\S]*?)^```/gm)].map(
-    (match) => match[1],
-  );
-  if (mermaidBlocks.length < 2) {
-    errors.push("implementation-review.md must contain at least two Mermaid diagrams");
-  }
-  if (!mermaidBlocks.some((block) => /^\s*flowchart\b/m.test(block))) {
-    errors.push("implementation-review.md missing a Mermaid flowchart");
-  }
-  if (!mermaidBlocks.some((block) => /^\s*sequenceDiagram\b/m.test(block))) {
-    errors.push("implementation-review.md missing a Mermaid sequenceDiagram");
-  }
-
-  for (const axis of REQUIRED_MERGE_AXES) {
-    if (!report.includes(axis))
-      errors.push(`implementation-review.md merge-fitness checklist missing axis: ${axis}`);
-  }
-
-  if (findingCount > 0) {
+  if (["FIX_REQUIRED", "BLOCK"].includes(verdict)) {
+    for (const text of REQUIRED_REPAIR_TEXT) {
+      if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
+    }
     const findingSections = report.match(/^### F\d+\.\s+/gm) ?? [];
     if (findingSections.length < findingCount) {
       errors.push(
         `implementation-review.md has ${findingSections.length} finding sections for ${findingCount} findings`,
-      );
-    }
-    for (const text of REQUIRED_FINDING_TEXT) {
-      if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
-    }
-  }
-
-  if (choiceCount > 0) {
-    const choiceSections = report.match(/^### C\d+\.\s+/gm) ?? [];
-    if (choiceSections.length < choiceCount) {
-      errors.push(
-        `implementation-review.md has ${choiceSections.length} implementation-choice sections for ${choiceCount} choices`,
       );
     }
   }
@@ -247,12 +160,8 @@ function main() {
   const expectedReport = path.join(artifactDir, "implementation-review.md");
   const errors = [];
 
-  if (!existsSync(findingsPath)) {
-    errors.push("missing findings.json");
-  }
-  if (!existsSync(expectedReport)) {
-    errors.push("missing implementation-review.md");
-  }
+  if (!existsSync(findingsPath)) errors.push("missing findings.json");
+  if (!existsSync(expectedReport)) errors.push("missing implementation-review.md");
   if (errors.length) {
     process.stderr.write(`${errors.join("\n")}\n`);
     process.exit(1);
@@ -261,12 +170,13 @@ function main() {
   const data = readJson(findingsPath, errors);
   if (data) {
     if (!ALLOWED_MODES.has(data.reviewMode)) {
-      errors.push(`findings.json reviewMode must be standard or full`);
+      errors.push("findings.json reviewMode must be standard or full");
     }
     if (typeof data.adr !== "string" || !data.adr.trim()) errors.push("findings.json missing adr");
     if (!ALLOWED_VERDICTS.has(data.verdict)) {
       errors.push(`findings.json verdict is invalid: ${data.verdict ?? "(missing)"}`);
     }
+
     if (!Array.isArray(data.findings)) {
       errors.push("findings.json findings must be an array");
     } else {
@@ -286,6 +196,7 @@ function main() {
         errors.push("standard review findings must use the sufficiency perspective");
       }
     }
+
     if (!Array.isArray(data.implementationChoices)) {
       errors.push("findings.json implementationChoices must be an array");
     } else {
@@ -309,8 +220,7 @@ function main() {
       validateReport(
         readFileSync(expectedReport, "utf8"),
         Array.isArray(data.findings) ? data.findings.length : 0,
-        Array.isArray(data.implementationChoices) ? data.implementationChoices.length : 0,
-        data.reviewMode,
+        data.verdict,
         errors,
       );
     }

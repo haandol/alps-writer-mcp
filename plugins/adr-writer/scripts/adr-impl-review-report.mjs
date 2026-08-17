@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // adr-impl-review-report.mjs — render an ADR impl-review punch list as a
-// self-contained HTML review page, and collect the user's per-finding and
-// per-implementation-choice decisions back as feedback.json.
+// self-contained HTML review page, and collect the user's per-finding
+// decisions back as feedback.json.
 //
 // This is the full-mode "show the report, get feedback as a file" half of
 // /adr-impl-review. Independent necessity and sufficiency reviewers produce
@@ -12,8 +12,7 @@
 // item: the ADR decision (the intended design) set against the code as built,
 // with a direction indicator that says which side is authoritative — so the
 // reviewer can see the tension and rule on it (apply / skip / defer + a note).
-// Material code-level choices absent from the ADR render separately so the
-// reviewer can accept, request a change, or investigate each exact value.
+// Material code-level choices absent from the ADR render as read-only context.
 // "Export rulings" builds the JSON in-browser and downloads feedback.json,
 // which the main session reads to route follow-ups (fix the code, /adr-sync,
 // update the ADR).
@@ -74,14 +73,9 @@
 //     ],
 //     "implementationChoices": [                          // required (may be [])
 //       {
-//         "kind": "implementation-default" | "project-convention" | "inherited-behavior",
-//         "topic": "retry delay",
-//         "selectedValue": "250 ms fixed delay",
-//         "basis": "matches the existing client policy",
+//         "choice": "retry uses a 250 ms fixed delay",
 //         "evidence": "src/client.ts:42 — retryDelayMs: 250",
-//         "impactIfChanged": "changes recovery latency and upstream request rate",
-//         "confidence": "high" | "medium" | "low",
-//         "alternatives": "exponential backoff; no retry"
+//         "whyItMatters": "changes recovery latency and upstream request rate"
 //       }
 //     ],
 //     "notes": "…"                                        // optional free text
@@ -190,60 +184,30 @@ function normalizeFindings(data) {
 
 function normalizeImplementationChoices(data) {
   const choices = Array.isArray(data.implementationChoices) ? data.implementationChoices : [];
-  return choices.map((choice, index) => ({
-    id: choice.id || `c${index + 1}`,
-    kind: choice.kind || "implementation-default",
-    topic: choice.topic || "",
-    selectedValue: choice.selectedValue || "",
-    basis: choice.basis || "",
+  return choices.map((choice) => ({
+    choice: choice.choice || "",
     evidence: choice.evidence || "",
-    impactIfChanged: choice.impactIfChanged || "",
-    confidence: choice.confidence || "",
-    alternatives: choice.alternatives || "",
+    whyItMatters: choice.whyItMatters || "",
   }));
 }
 
 function implementationChoiceCard(choice, index, total) {
   const idx = String(index + 1).padStart(2, "0");
-  const conf = String(choice.confidence || "").toLowerCase();
-  const confChip =
-    conf === "low" || conf === "medium" || conf === "high"
-      ? `<span class="conf conf--${conf}" title="evidence strength">${conf}</span>`
-      : "";
-  const defaultDecision = conf === "high" ? "accept" : "investigate";
-  const opt = (value, label, checked = false) => {
-    const id = `choice-${index}-${value}`;
-    return `<input type="radio" class="seg__input" id="${id}" name="choice-dec-${index}" value="${value}"${
-      checked ? " checked" : ""
-    }><label class="seg__label" for="${id}">${label}</label>`;
-  };
 
   return `
   <article class="choice">
     <header class="finding__head">
-      <span class="tag choice__tag">${esc(choice.kind)}</span>
-      <span class="finding__head-right">${confChip}<span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span></span>
+      <span class="tag choice__tag">implementation choice</span>
+      <span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span>
     </header>
-    <h3 class="finding__title">${esc(choice.topic) || "(no topic)"}</h3>
+    <h3 class="finding__title">${esc(choice.choice) || "(no choice)"}</h3>
     <div class="choice__value">
-      <span class="side__label">Selected value or behavior</span>
-      <p>${esc(choice.selectedValue)}</p>
+      <span class="side__label">Why it matters</span>
+      <p>${esc(choice.whyItMatters)}</p>
     </div>
     <div class="meta">
-      <div class="meta__row"><span class="meta__k">Basis</span><span class="meta__v">${esc(choice.basis)}</span></div>
       <div class="meta__row"><span class="meta__k">Evidence</span><span class="meta__v meta__v--mono">${esc(choice.evidence)}</span></div>
-      <div class="meta__row"><span class="meta__k">Impact</span><span class="meta__v">${esc(choice.impactIfChanged)}</span></div>
-      <div class="meta__row"><span class="meta__k">Options</span><span class="meta__v">${esc(choice.alternatives)}</span></div>
     </div>
-    <footer class="ruling">
-      <span class="ruling__label">Review this implementation choice</span>
-      <div class="seg" role="radiogroup" aria-label="${esc(choice.topic)} review">
-        ${opt("accept", "accept", defaultDecision === "accept")}
-        ${opt("change", "request change")}
-        ${opt("investigate", "investigate", defaultDecision === "investigate")}
-      </div>
-      <textarea class="ruling__note" data-choice-index="${index}" rows="2" placeholder="note (optional) — preferred value, concern, or question"></textarea>
-    </footer>
   </article>`;
 }
 
@@ -659,7 +623,7 @@ function buildHtml(data) {
         }
         ${data.conventions ? `<div>Project conventions · <code>${esc(data.conventions)}</code></div>` : ""}
         ${data.explanation ? `<div>Plain explanation · <code>${esc(data.explanation)}</code></div>` : ""}
-        ${data.report ? `<div>Repair guide · <code>${esc(data.report)}</code></div>` : ""}
+        ${data.report ? `<div>Review report · <code>${esc(data.report)}</code></div>` : ""}
         ${
           metrics
             ? `<div>Review metrics · ${esc(metrics.elapsedSeconds)}s · necessity ${esc(metrics.necessityFindingCount)} · sufficiency ${esc(metrics.sufficiencyFindingCount)} · tests ${esc(metrics.testCommandCount)}</div>`
@@ -677,7 +641,7 @@ function buildHtml(data) {
   ${empty}
   ${
     choiceCount
-      ? `<p class="count">${choiceCount} implementation choice(s) · review each exact value</p>${choiceCards}`
+      ? `<p class="count">${choiceCount} notable implementation choice(s) · read-only context</p>${choiceCards}`
       : ""
   }
   ${count ? `<p class="count">${count} finding(s) · rule on each one</p>` : ""}
@@ -692,7 +656,7 @@ function buildHtml(data) {
 
 <div class="bar">
   <div class="bar__inner">
-    <span class="hint">Review implementation choices and findings, add notes, then export.</span>
+    <span class="hint">Review the findings, add notes, then export.</span>
     <button class="export" id="export">Export rulings</button>
   </div>
 </div>
@@ -714,21 +678,10 @@ function buildHtml(data) {
         comment: note ? note.value.trim() : "",
       };
     });
-    const choice_reviews = EMBED.implementationChoices.map((choice, index) => {
-      const picked = document.querySelector('input[name="choice-dec-' + index + '"]:checked');
-      const note = document.querySelector('textarea.ruling__note[data-choice-index="' + index + '"]');
-      return {
-        ...choice,
-        choice_id: choice.id,
-        decision: picked ? picked.value : "investigate",
-        comment: note ? note.value.trim() : "",
-      };
-    });
     const out = {
       adr: EMBED.adr,
       verdict: EMBED.verdict,
       reviews,
-      choice_reviews,
       status: "complete",
     };
     const blob = new Blob([JSON.stringify(out, null, 2) + "\\n"], { type: "application/json" });

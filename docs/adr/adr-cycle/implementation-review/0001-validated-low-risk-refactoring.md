@@ -10,53 +10,41 @@ Accepted (2026-08-17)
 
 구현 완료 전 검토는 ADR 충족 여부, 불필요한 변경, 누락된 동작과 검증 강도를 다룬다. 공개 계약이나 상태 전이를 바꾸는 구현에는 독립적인 다관점 검토가 필요하지만, 보호 표면을 건드리지 않는 국소 구현까지 동일한 보고서와 시각화 절차를 강제하면 검토 비용이 변경 위험과 무관해진다.
 
-구현이 끝난 뒤 ADR의 재생성 가능성과 사용자 의도를 다시 확인하면 작성 단계에서 이미 승인한 계약을 반복해서 묻게 된다. 완료 검토가 발견한 모든 항목을 사용자 선택에 맡기면 명확한 코드·테스트 결함도 자동으로 고치지 못하고 구현 흐름이 중단된다.
+full 리뷰에서도 모든 PASS 결과에 긴 repair guide, 고정 개수의 다이어그램과 구현 선택 판정을 요구하면 사용자는 실제 위험보다 보고서 형식을 더 많이 읽게 된다. ADR이 정하지 않은 구현 재량은 필요할 때 드러나야 하지만, 여러 agent가 같은 목록을 반복 추출하거나 모든 기본값에 근거와 대안을 요구하면 검토가 새로운 프레임워크가 된다.
 
-검토 강도는 낮추더라도 완료 판정의 근거와 저위험 리팩토링 안전 조건은 유지해야 한다. 사용자 의도와 ADR 완전성은 구현 전에 확정하고, 구현 후 검토는 그 승인된 계약을 기준으로 스스로 반증·수정·재검증해야 한다.
+구현 전 승인한 ADR을 기준선으로 사용하고, 구현 후에는 계약 대조와 테스트 증거를 항상 유지해야 한다. 상세 설명, 다이어그램과 구현 선택은 판정에 기여할 때만 추가해야 한다.
 
-AI가 짧은 시간에 많은 코드를 생성하면 사용자는 같은 시간에 결과를 이해하고 신뢰해야 한다. finding과 코드 위치만 나열한 보고서는 주니어 개발자에게 시스템 흐름을 다시 구성하는 일을 떠넘긴다. 또한 ADR이 정하지 않은 라이브러리, 튜닝 값, 오류 처리 기본값과 내부 구조를 AI가 선택해도 그 선택이 보고서에 드러나지 않으면 사용자는 무엇을 검토해야 하는지 알기 어렵다.
-
-독립 검토는 실행 중인 provider가 다중 agent orchestration을 지원한다는 전제에 의존한다. Amazon Bedrock 경로처럼 이 기능을 제공하지 않는 환경에서 하위 agent를 낙관적으로 실행하면 요청 본문 검증 단계에서 실패하고, 같은 요청을 재시도해도 검토 격리가 회복되지 않는다. 이런 환경에서도 검토 계약은 중단되지 않아야 하지만, 독립 컨텍스트가 없다는 사실을 숨기거나 자동 리팩토링의 안전 조건을 낮춰서는 안 된다.
+독립 검토는 provider의 다중 agent orchestration 지원에 의존한다. 지원하지 않는 환경에서도 검토 계약은 중단되지 않아야 하며, 독립 컨텍스트가 없다는 사실을 숨기거나 자동 리팩토링의 안전 조건을 낮춰서는 안 된다.
 
 ## Decision Drivers
 
 - 계약과 보호 표면 변경은 독립적인 필요성·충분성 검토가 필요하다.
-- 보고서는 주니어 개발자가 목표, 흐름, 위험과 수정 순서를 혼자 복구하지 않아도 이해할 수 있어야 한다.
-- ADR이 정하지 않은 AI 선택값과 가정은 정확한 값, 근거와 변경 영향을 함께 보여야 한다.
-- 다이어그램과 인터랙션은 이해와 판정을 줄이는 데 기여해야 하며 근거 없는 관계를 만들면 안 된다.
-- 검증하지 못한 경로는 통과로 처리하지 않고 provider fallback과 자동 수정의 안전 경계를 유지해야 한다.
+- 모든 리뷰는 승인된 계약, finding, 테스트와 잔여 위험을 짧게 파악할 수 있어야 한다.
+- 상세 설명과 다이어그램은 독자가 실제로 재구성해야 할 흐름이 있을 때만 생성해야 한다.
+- 구현 재량은 런타임, 운영, 비용이나 향후 변경에 중요한 항목만 한 번 추출해야 한다.
+- provider fallback과 자동 수정의 안전 경계를 유지해야 한다.
 
 ## Decision
 
 구현 리뷰를 **standard**와 **full** 두 모드로 운영한다.
 
-`full`은 요구사항 계약, 공개 API나 wire form, 데이터 스키마, 상태와 전이, 권한과 가시성, 보안 경계, 외부 fallback, 동시성·트랜잭션·오류 의미 또는 여러 모듈에 걸친 변경에 적용한다. 구현 전에 승인된 ADR을 기준선으로 사용하고 독립 필요성·충분성 검토, 재현 증거와 상세 repair artifact를 유지한다.
+`full`은 요구사항 계약, 공개 API나 wire form, 데이터 스키마, 상태와 전이, 권한과 가시성, 보안 경계, 외부 fallback, 동시성·트랜잭션·오류 의미 또는 여러 모듈에 걸친 변경에 적용한다. 구현 전에 승인된 ADR을 기준선으로 사용하고 독립 필요성·충분성 검토와 재현 증거를 유지한다.
 
-`standard`는 위 보호 표면을 바꾸지 않는 국소 구현과 기존 결정의 강화에 적용한다. ADR decision ledger, 관련 테스트, 한 번의 독립 충분성 검토와 간결한 결과를 요구하지만 별도 report writer, HTML, 필수 Mermaid는 요구하지 않는다. 분류가 모호하면 `full`을 선택한다.
+`standard`는 위 보호 표면을 바꾸지 않는 국소 구현과 기존 결정의 강화에 적용한다. ADR decision ledger, 관련 테스트, 한 번의 독립 충분성 검토와 간결한 결과를 요구한다. 분류가 모호하면 `full`을 선택한다.
 
-모든 모드는 ADR이 정하지 않은 구현 선택을 **Implementation Choice Ledger**로 기록한다. 각 항목은 선택 주제, 실제 선택값이나 동작, 선택 근거, 코드 증거, 변경 시 영향, 검토 신뢰도와 대안을 포함한다. 값에는 단위가 있으면 단위를 함께 기록하고, 값이 없으면 선택한 동작을 구체적으로 적는다.
+두 모드의 기본 결과는 verdict, ADR contract coverage, findings, tests와 residual risks다. `full`도 finding이 없으면 이 기본 결과로 끝낼 수 있다.
 
-reviewer는 각 선택에 admission gate를 먼저 적용한다.
+다이어그램은 상태, 비동기 호출, 외부 경계, 실패·rollback 또는 여러 구성 요소의 관계를 문장보다 명확하게 설명할 때만 추가한다. 개수나 종류를 고정하지 않는다. 모든 diagram node와 edge는 실제 코드 근거를 가져야 한다.
 
-- 요구사항 계약이나 지속적인 아키텍처 경계를 바꾸면 `Undecided behavior` finding으로 올리고 ADR 결정을 요구한다.
-- 프로젝트 규약, 기존 코드와 구현 재량 안의 선택이면 Implementation Choice Ledger에 남기되 ADR을 수정하지 않는다.
-- 선택 근거나 실제 값을 확인할 수 없으면 `Unverified risk`로 남긴다.
+상세 repair guide는 `FIX_REQUIRED`나 `BLOCK` finding이 있거나 사용자가 요청할 때만 만든다. 이때 수정 순서, 변경 범위와 완료 기준을 finding에 연결한다.
 
-`full` 리포트는 세 단계로 읽힌다. 첫 화면은 한 문장 결과와 사용자 영향, 두 번째는 근거가 확인된 Mermaid로 시스템과 변경 흐름을 보여주며, 세 번째는 finding, 코드 증거, 테스트와 수정 절차를 제공한다. 리포트는 용어를 처음 사용할 때 설명하고 한 문단에 한 개념만 담는다.
+구현 리뷰는 sufficiency 검토의 code-outward pass에서 **Notable implementation choices**를 한 번만 추출한다. 런타임 동작, 실패 처리, 운영, 비용 또는 향후 변경에 중요한 구현 재량만 `선택된 값이나 동작`, `코드 근거`, `왜 중요한가`로 기록한다. admission gate를 통과하는 항목은 `Undecided behavior` finding으로 올린다. 근거나 대안을 코드에서 알 수 없다는 이유만으로 위험으로 만들지 않으며, 안전이나 계약에 영향을 주는 미확정 사항만 `Unverified risk`로 처리한다.
 
-full HTML은 finding 판정뿐 아니라 Implementation Choice Ledger를 인터랙티브 카드로 제공한다. 사용자는 각 선택을 `accept`, `request change`, `investigate` 중 하나로 판정하고 메모를 남긴다. export 결과는 finding 판정과 선택 판정을 모두 포함한다. 인터랙션이 없어도 Markdown 리포트만으로 같은 내용을 읽을 수 있어야 한다.
+HTML은 findings의 판정과 메모를 지원할 수 있지만 구현 선택별 판정을 요구하지 않는다. Notable implementation choices는 Markdown과 HTML에서 동일한 읽기 전용 목록으로 표시한다.
 
-자동 리팩토링은 두 모드 모두에서 독립 검토가 확인한 국소적이고 동작 보존적인 후보만 적용한다.
+자동 리팩토링은 두 모드 모두에서 독립 검토가 확인한 국소적이고 동작 보존적인 후보만 적용한다. `/adr-impl`은 계약을 바꾸지 않는 증거 기반 결함을 자동 수정하고 같은 검토를 다시 실행한다. ADR 계약 변경, 모순된 전제, 중대한 미검증 위험 또는 파괴적 범위 변경만 사용자에게 판단을 요청한다.
 
-`/adr-impl` 완료 경로에서 검토가 찾은 증거 기반 코드·테스트 결함과 국소 리팩토링은 구현 세션이 자동으로 수정하고 테스트와 같은 리뷰 모드를 다시 실행한다. 사용자 판단은 ADR 계약을 바꾸는 선택, 서로 모순된 전제, 재현하지 못한 중대한 위험 또는 파괴적인 범위 변경에만 요청한다. 검토가 통과하면 사용자의 추가 승인을 기다리지 않고 `Accepted`로 전환하며, 마지막 보고에 적용한 수정과 검증 결과를 요약한다.
-
-독립적으로 호출한 `/adr-impl-review`는 report-only를 유지한다. 이 경우 결과와 권장 조치를 보고하지만, `/adr-impl`의 pre-promotion 호출처럼 사용자 판정을 완료 조건으로 요구하지 않는다.
-
-검토를 위임하기 전에 현재 provider가 다중 agent orchestration을 지원하는지 판단한다. Amazon Bedrock으로 식별된 세션은 하위 agent가 없는 환경으로 취급해 dispatch하지 않는다. provider 정보가 사전에 드러나지 않아 하위 agent 요청이 `validation_error`와 `Invalid 'input': value did not match any expected variant`로 거부되면 같은 요청이나 다른 하위 agent로 재시도하지 않고 그 세션에서 orchestration을 사용할 수 없는 것으로 확정한다.
-
-하위 agent를 사용할 수 없을 때 `/adr-review`는 ADR별 검토를 메인 세션의 분리된 순차 패스로 수행하고, `/adr-impl-review`는 필요성·충분성 관점을 서로의 결과를 읽지 않는 별도 패스로 수행한 뒤 같은 보고 계약을 지킨다. 두 경로 모두 독립 컨텍스트를 사용하지 못했다는 제한을 결과에 기록한다. `/adr-impl-refactor`는 독립 read-only reviewer가 없으면 메인 세션이 후보를 분석하되 모든 항목을 `PROPOSE_ONLY`로 남기고 자동 적용하지 않는다.
-
-사용자 전역 설정은 플러그인이 수정하지 않는다. Bedrock 사용자가 validation error 자체를 예방하려면 세션 시작 전에 Codex의 `multi_agent` 기능을 비활성화하고 새 세션을 시작하도록 운영 문서에서 안내한다.
+하위 agent를 사용할 수 없을 때 `/adr-review`와 `/adr-impl-review`는 메인 세션에서 관점별 패스를 분리하고 독립 컨텍스트 부재를 결과에 기록한다. `/adr-impl-refactor`는 모든 후보를 `PROPOSE_ONLY`로 남긴다.
 
 ```mermaid
 flowchart LR
@@ -64,101 +52,78 @@ flowchart LR
     Risk{보호 표면 변경?}
     Standard[standard 리뷰]
     Full[full 리뷰]
-    Complete[완료 판정]
+    Evidence[계약·finding·test·risk]
 
     Change --> Risk
     Risk -->|아니오| Standard
     Risk -->|예 또는 불명확| Full
-    Standard --> Complete
-    Full --> Complete
+    Standard --> Evidence
+    Full --> Evidence
 ```
 
 ### Requirement contract
 
 - 요구사항 값이나 규칙, 공개 계약, 스키마, 상태 전이, 권한, 보안, fallback, 동시성, 트랜잭션 또는 오류 의미가 바뀌면 `full`을 사용한다.
 - 여러 bounded context나 광범위한 모듈을 변경하거나 사용자가 전체 검토를 요청하면 `full`을 사용한다.
-- 새 ADR이나 변경된 ADR은 구현 전에 Decision, Decision Drivers, requirement contract와 regeneration checklist를 사용자에게 제시해 의도와 완전성을 한 번 확인한다.
-- 모든 리뷰 결과는 ADR에 명시되지 않은 구현 선택을 Implementation Choice Ledger로 포함하며, 선택 주제, 실제 값이나 동작, 근거, 코드 증거, 변경 영향, 신뢰도와 고려한 대안을 기록한다.
-- requirement contract나 지속적인 경계를 바꾸는 선택은 Implementation Choice Ledger로 낮추지 않고 `Undecided behavior` finding으로 처리한다.
-- 선택의 실제 값이나 근거를 확인할 수 없으면 추측으로 채우지 않고 `Unverified risk`로 처리한다.
+- 새 ADR이나 변경된 ADR은 구현 전에 Decision, Decision Drivers, requirement contract와 regeneration checklist를 사용자에게 한 번 제시한다.
 - `standard`는 decision ledger의 모든 행이 구현됐고 관련 테스트가 통과하며 필수 수정과 미검증 위험이 없을 때만 통과한다.
 - `full`은 승인된 ADR을 기준으로 독립적인 필요성·충분성 검토와 증거 검증을 완료해야 한다.
-- `full` Markdown 리포트는 주니어 개발자를 위한 평이한 설명, 읽기 순서, Implementation Choice Ledger와 최소 하나의 구조 flowchart 및 runtime sequenceDiagram을 포함한다.
-- 상태, 데이터 관계, 재시도·rollback이나 의존성이 핵심이면 해당 Mermaid 다이어그램을 추가하되 실제 코드에서 확인하지 못한 관계를 그리지 않는다.
-- `full` HTML은 finding과 구현 선택을 각각 판정하고 메모할 수 있으며 export에 두 판정을 모두 포함한다.
-- 인터랙티브 HTML을 열지 않아도 Markdown 리포트가 목표, 흐름, 선택값, finding, 수정 순서와 검증 기준을 독립적으로 설명해야 한다.
-- 현재 provider가 Amazon Bedrock으로 식별되면 하위 agent를 dispatch하지 않고 subagent unavailable fallback을 사용한다.
-- 하위 agent 요청이 `validation_error`와 `Invalid 'input': value did not match any expected variant`로 거부되면 같은 세션에서 하위 agent 요청을 재시도하지 않는다.
-- `/adr-review`와 `/adr-impl-review`의 메인 세션 fallback은 관점별 패스를 분리하고 독립 컨텍스트 부재를 결과에 기록한다.
-- `/adr-impl-refactor`는 독립 read-only reviewer가 없을 때 모든 후보를 `PROPOSE_ONLY`로 남기고 자동 적용하지 않는다.
-- 플러그인은 사용자 Codex 설정을 자동 변경하지 않으며, Bedrock 예방 설정과 새 세션 요구사항을 운영 문서에 제공한다.
+- 모든 리뷰 결과는 verdict, ADR contract coverage, findings, tests와 residual risks를 포함한다.
+- 다이어그램은 판정에 필요한 흐름이나 관계를 문장보다 명확하게 설명할 때만 포함하며 개수나 종류를 강제하지 않는다.
+- 상세 repair guide는 수정이 필요한 finding이 있거나 사용자가 요청할 때만 생성한다.
+- Notable implementation choices는 sufficiency 검토에서 한 번만 추출하고 선택된 값이나 동작, 코드 근거와 중요성만 기록한다.
+- admission gate를 통과한 구현 선택은 `Undecided behavior` finding으로 처리한다.
+- 코드에서 선택의 역사적 근거나 대안을 알 수 없다는 이유만으로 `Unverified risk`를 만들지 않는다.
+- 안전이나 계약에 영향을 주는 미확정 구현 동작은 `Unverified risk`로 처리한다.
+- HTML은 구현 선택별 판정을 요구하지 않으며 Notable implementation choices를 읽기 전용으로 표시한다.
+- 현재 provider가 Amazon Bedrock으로 식별되면 하위 agent를 dispatch하지 않고 fallback을 사용한다.
+- 하위 agent 요청이 알려진 validation error로 거부되면 같은 세션에서 재시도하지 않는다.
+- 메인 세션 fallback은 관점별 패스를 분리하고 독립 컨텍스트 부재를 결과에 기록한다.
+- `/adr-impl-refactor`는 독립 read-only reviewer가 없을 때 모든 후보를 `PROPOSE_ONLY`로 남긴다.
 - 구현 후에는 ADR이 구현 전 승인 이후 바뀌지 않은 한 재생성 가능성이나 사용자 의도를 다시 묻지 않는다.
 - `/adr-impl`은 증거가 있고 계약을 바꾸지 않는 코드·테스트 수정과 국소 리팩토링을 자동 적용하고 같은 검토를 다시 실행한다.
-- ADR 변경, 모순된 전제, 중대한 미검증 위험 또는 파괴적 변경이 필요할 때만 사용자 판단을 요청한다.
 - 어떤 모드에서도 실행하지 못한 핵심 경로나 테스트를 `PASS`로 바꾸지 않는다.
 - 자동 반영 후보는 국소적이고 신뢰도가 높으며 ADR 결정과 사용자 관찰 동작을 보존해야 한다.
 - 공개 계약, 데이터, 상태, 권한, 검증, 동시성, 트랜잭션, fallback, 자원 수명 또는 오류 의미를 건드리는 리팩토링은 자동 반영하지 않는다.
 - 자동 변경 전후 관련 테스트가 통과해야 하며 실패하거나 범위가 넓어지면 제안으로 남긴다.
 - 리뷰 결과는 모드, 실행 시간, 관점별 발견 건수, 미검증 위험과 실행한 테스트 수를 기록한다.
-- 리뷰 결과 JSON은 Implementation Choice Ledger를 구조화해 HTML renderer와 Markdown report가 같은 선택 목록을 사용하게 한다.
 
 ### Alternatives
 
-1. **모든 변경에 full 리뷰 적용**
-   - 장점: 한 가지 강한 절차만 운영한다.
-   - 단점: 작은 변경도 다수의 agent와 상세 artifact 비용을 지불한다.
+1. **모든 full 리뷰에 고정 보고서와 다이어그램 적용**
+   - 장점: 산출물 형식이 항상 같다.
+   - 단점: 실제 finding이 없는 변경도 최대 설명 비용을 지불한다.
 
-2. **구현자가 임의로 검토 단계를 선택**
-   - 장점: 가장 빠른 경로를 선택할 수 있다.
-   - 단점: 위험한 변경이 가벼운 검토로 내려갈 수 있다.
+2. **구현 선택을 여러 agent가 독립적으로 추출하고 사용자가 모두 판정**
+   - 장점: 선택 누락 가능성을 낮춘다.
+   - 단점: 같은 정보를 반복 생성하고 구현 재량까지 승인 절차로 만든다.
 
-3. **보호 표면 기준으로 standard와 full을 선택**
-   - 장점: 안전 경계를 유지하면서 비용을 실제 위험에 맞춘다.
-   - 단점: 모드 분류와 fallback 규칙을 지속적으로 검증해야 한다.
-
-4. **full 리뷰에서 구현 후 사람의 의도 확인을 필수화**
-   - 장점: 구현 결과를 본 뒤 사용자가 계약을 다시 판단할 수 있다.
-   - 단점: 구현 전에 승인한 ADR을 반복 확인하고 자동 완료를 막는다.
-
-5. **지원 여부와 무관하게 하위 agent를 먼저 실행하고 실패 시 재시도**
-   - 장점: provider capability를 사전에 판단할 필요가 없다.
-   - 단점: 지원하지 않는 provider에서 사용자가 validation error를 반복해서 보고, 재시도로 검토 격리는 회복되지 않는다.
-
-6. **Bedrock에서는 검토 명령 전체를 차단**
-   - 장점: 독립 검토가 불가능한 환경에서 검토 강도를 과장하지 않는다.
-   - 단점: 메인 세션으로 수행할 수 있는 계약 대조와 테스트 검증까지 잃는다.
+3. **계약 검증은 항상 유지하고 상세 산출물은 필요할 때만 확장**
+   - 장점: 완료 안전성을 유지하면서 기본 검토량을 줄인다.
+   - 단점: 상세 설명이 필요한지 모델이 판단해야 한다.
 
 ## Consequences
 
 ### Positive
 
-- 보호 표면 변경은 기존의 적대적 검토 강도를 유지한다.
-- 국소 구현은 불필요한 report writer, HTML과 시각화 비용을 피한다.
-- 사용자는 전체 코드를 먼저 읽지 않고 시스템 흐름과 AI가 선택한 구현 기본값을 검토할 수 있다.
-- 주니어 개발자는 용어, 읽기 순서, 다이어그램과 구체적인 수정 절차를 한 보고서에서 확인할 수 있다.
-- ADR 미결정과 구현 재량이 분리되어 누락된 아키텍처 결정을 숨기지 않으면서 ADR의 추상화 수준을 유지한다.
-- 리뷰 비용과 발견 효과를 모드별로 비교할 수 있다.
-- 저위험 리팩토링의 자동 반영 조건은 유지된다.
-- 구현 후 반복 확인 없이 증거 기반 수정과 재검증을 마치고 완료할 수 있다.
-- Bedrock 세션은 알려진 비호환 요청을 피하면서 메인 세션 검토를 계속할 수 있다.
-- 독립 reviewer가 없는 리팩토링은 제안으로만 남아 자동 변경의 안전 경계를 유지한다.
+- 보호 표면 변경은 기존의 독립 검토와 계약 대조 강도를 유지한다.
+- PASS 결과와 단순 finding은 짧은 보고서로 검토할 수 있다.
+- 다이어그램과 repair guide는 실제 이해 비용을 줄일 때만 생성된다.
+- 구현 선택이 ADR로 올라가지 않으면서도 중요한 재량은 확인할 수 있다.
+- 구현 선택을 한 번만 추출하고 별도 판정을 제거해 prompt와 renderer 유지비가 줄어든다.
+- 저위험 리팩토링과 자동 수정의 안전 조건은 유지된다.
 
 ### Negative
 
-- 두 리뷰 경로를 문서와 테스트에서 함께 유지해야 한다.
-- Implementation Choice Ledger와 HTML 선택 판정 스키마를 함께 유지해야 한다.
-- 경계 사례는 보수적으로 full 리뷰에 들어간다.
-- 구현 전 ADR 확인이 부실하면 구현 후 리뷰는 잘못된 계약을 정확히 구현했다고 판정할 수 있다.
-- 메인 세션 fallback은 실제 독립 컨텍스트보다 반증력이 낮으며 결과에 그 제한이 남는다.
+- 보고서 형태가 finding과 변경 특성에 따라 달라진다.
+- diagram과 상세 guide 필요성을 모델이 판단해야 한다.
+- 읽기 전용 구현 선택 목록은 사용자별 판정 상태를 저장하지 않는다.
 
 ### Risks
 
-- standard 범위가 넓어질 수 있다. 보호 표면 조건과 불명확하면 full이라는 기본값으로 제한한다.
-- 구현 선택 목록이 사소한 모든 코드 표현을 나열할 수 있다. 동작, 값, dependency나 운영 특성에 영향을 주는 선택만 포함한다.
-- AI가 자신의 선택을 합리화하는 방향으로 근거를 쓸 수 있다. 코드 증거, 프로젝트 규약과 대안을 함께 요구하고 근거가 없으면 Unverified로 남긴다.
-- 다이어그램이 실제 코드보다 그럴듯한 관계를 추가할 수 있다. 확인된 node와 edge만 허용한다.
-- 자동 수정이 ADR 계약을 바꾸는 변경까지 흡수할 수 있다. 계약 변경·모순·중대한 미검증 위험은 자동 수정 범위에서 제외한다.
-- provider 식별 정보가 세션에 드러나지 않으면 첫 하위 agent 요청에서 validation error가 한 번 발생할 수 있다. 운영 문서의 Bedrock 설정으로 요청 생성 자체를 예방하고, 오류 이후에는 재시도하지 않는다.
+- 모델이 필요한 diagram을 생략할 수 있다. 상태, 비동기, 외부 경계와 실패 복구가 판정에 중요하면 diagram을 추가하도록 기준을 명시한다.
+- 구현 선택 목록이 사소한 표현을 나열할 수 있다. 런타임, 운영, 비용과 향후 변경에 중요한 항목만 허용한다.
+- 상세 guide가 필요한 finding을 짧게 끝낼 수 있다. `FIX_REQUIRED`와 `BLOCK`에는 finding별 변경 범위와 완료 기준을 요구한다.
 
 ## Related
 

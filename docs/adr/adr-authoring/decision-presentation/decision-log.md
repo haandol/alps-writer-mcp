@@ -4,6 +4,13 @@ This document is the **major decision-change history** of the adr-authoring/deci
 category. Each ADR body describes only the current state, while the timeline of "what
 changed and why" accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-08-17 — 결정 가정을 기존 ADR 구조에 흡수
+
+- **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)
+- **Change type**: architecture
+- **What**: 별도 Decision premises section과 신뢰도 taxonomy를 제거하고, 대안 선택을 바꾸는 가정만 Context 또는 Decision Driver에 한 줄로 기록한다.
+- **Why**: 중요한 가정은 드러내면서 Context와 Drivers를 반복하는 추가 구조와 검토 비용을 없앤다.
+
 ## 2026-08-17 — 결정 전제와 구현 재량을 분리해 노출
 
 - **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)
