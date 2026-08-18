@@ -2,7 +2,7 @@
   <description>
 - Section 4 answers "what is the system MADE OF" — the cross-cutting picture: overall topology, the technology stack, and external integrations. State each of these ONCE here.
 - It does NOT describe how an individual feature uses that stack — that is Section 7.3 (the vertical slice of each feature through UI → API → Data). Section 7.3 *uses* what Section 4 declares; it must not re-declare or fork the stack.
-- Keep system-wide technical facts here so there is a single source: if the same fact (e.g., the auth mechanism, the database choice) also appears per-feature in Section 7.3, readers can't tell which is authoritative and the two drift apart.
+- Keep system-wide planning facts here so the PRD has one source before handoff: if the same fact (e.g., the auth mechanism, the database choice) also appears per-feature in Section 7.3, the PRD drifts internally. `/feature-to-adr` later transfers durable contracts and boundaries into ADRs and classifies replaceable technology means as code discretion. After successful handoff, ADRs are the implementation authority and this section may remain as legacy planning context.
   </description>
   <subsection id="4.1" title="System Diagram">
     <description>

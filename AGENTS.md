@@ -28,7 +28,7 @@ Two leaks break it, and nearly every rule in `plugins/adr-writer/templates/adr/`
 - **Detail pulled up from a lower level** (signatures, field types, pool sizes, pseudocode, file paths in an ADR) — the level stops being trustworthy alone, because it asserts things the level below may already have changed. A reader must open the code to learn which half still holds.
 - **A requirement pushed out of the ADR** ("the PRD or code has the number, so drop it") — worse, because code shows enforcement and the PRD shows user intent, but neither explains the admitted architectural contract and rationale. This is the failure mode the plugin guards hardest, and why the requirement gate is asked before any exclusion filter.
 
-Section 7 may state reproducible requirement values and rules at user-problem resolution. `/feature-to-adr` transfers only the admitted subset into ADR contracts and reconciles later PRD changes. This is a controlled one-way handoff, not two independent sources of truth: ADRs remain authoritative for implementation, while the importer makes PRD↔ADR disagreement explicit.
+Section 7 may state reproducible requirement values and rules at user-problem resolution. `/feature-to-adr` classifies every implementation-relevant input and completes the handoff only when ADRs own the full contract. From that point ADRs are the sole implementation authority and the PRD remains a legacy planning document. A later PRD edit has no effect unless the user explicitly re-imports it; equivalent input is a no-op, and changed or removed contracts require an ADR-first decision.
 
 Both reduce to one test, and it is the test to apply when reviewing a change to any prompt, template, or rule here:
 
@@ -137,7 +137,7 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
     └── mapping.schema.json   # Schema for docs/adr/.mapping.json
 ```
 
-The two plugins are split so adr-writer never references ALPS. The only coupling is one-way: alps-writer's `/feature-to-adr` discovers zero, one, or several admitted decisions per feature, reconciles existing ADR contracts, and delegates each new decision to adr-writer's `/adr-new`.
+The two plugins are split so adr-writer never references ALPS. The only coupling is one-way: alps-writer's `/feature-to-adr` transfers each implementable Feature's complete contract into one or several ADRs and delegates each new decision owner to adr-writer's `/adr-new`. Normal implementation then reads only ADRs; explicit PRD re-import remains an alps-writer-side semantic comparison.
 
 ADR folders are organized along two axes — a DDD **bounded context** (top-level folder / first key segment) containing one or more **features** (vertical slices, the second segment). A single-feature context stays flat (`auth/`, workshop `f1/`), so existing flat repos need no migration. The ADR index lives in `docs/adr/.mapping.json` itself (path/status/summary per ADR), and admitted work reads it on demand; the README keeps no separate ADR list. The mapping carries an optional advisory `subdomainType` (core/supporting/generic) per context and stores no PRD reference. Context grouping is only applied when ALPS already groups features or the user asks for it — `/feature-to-adr` never invents a domain boundary the PRD doesn't assert, so the one-way alps-writer → adr-writer coupling and "adr-writer never references ALPS" both hold. The DDD overlay is metadata + framing only; it adds no folder depth (keys stay ≤2 segments) and `scripts/adr-invariants.sh` is unaffected.
 

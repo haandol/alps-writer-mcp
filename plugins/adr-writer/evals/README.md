@@ -75,9 +75,14 @@ agent exit, or no output).
      the replaced mode and comparison narration, but preserve the current
      forbidden transition. A blanket "remove negative sentences" rule fails the
      second half.
-   - `feature-handoff-zero-or-many` checks that replaceable implementation work
-     produces zero ADRs, independent durable decisions remain separate, and a
-     feature-only prerequisite does not manufacture a placeholder ADR.
+   - `feature-handoff-ownership-transfer` checks each Feature's shipping
+     `ADR-owned` inventory and complete transfer coverage, keeps independent
+     durable decisions separate, leaves replaceable SDK choices in
+     `Implementation discretion`, and turns required Feature prerequisites into
+     real `dependsOn` edges.
+   - `feature-handoff-idempotent-reimport` checks that equivalent PRD wording is
+     a semantic no-op and a contract omitted from the changed PRD is never
+     deleted automatically.
    - `impl-blocks-proposed-prerequisite` checks the mandatory dependency gate;
      user confirmation must not create a downstream-only override.
    - `hook-admission-routing` pairs one replaceable SDK swap with one requirement

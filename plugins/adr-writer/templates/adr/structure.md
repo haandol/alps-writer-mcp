@@ -100,7 +100,7 @@ docs/adr/
 
 ## Implementation references
 
-- ALPS PRD: `prd/<doc>.alps.xml` (Section 7 is the source of truth for feature specs — it is merely the original the `/feature-to-adr` importer reads once, and the mapping never references this path)
+- ALPS PRD: `prd/<doc>.alps.xml` (planning source before handoff; after complete transfer it remains a legacy planning document and normal ADR implementation does not read it. Explicit re-import may read it as a change proposal, but the mapping never references this path)
 - Mapping: `docs/adr/.mapping.json` (the ADR registry/index. **It stores no code paths and no PRD reference** — the related code is found by reading the ADR each time)
 
 > **Recommended**: state your project's **feature entry points** below this section. In a vertical-slice structure, one feature's UI/API/Data code gathers in the same folder tree, so the feature (leaf) → entry point mapping is naturally 1:1. A context usually holds several features, so context → code may be 1:many.
@@ -227,4 +227,4 @@ When `/adr-sync`, `/adr-impl`, `/adr-rollup`, and others verify an ADR's code al
 
 **No guessing**: never assert a scope without having looked at the codebase — always confirm the real structure with `Glob`/`Grep` before verifying.
 
-<!-- adr-writer:rules-version 0.7.0 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.7.1 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

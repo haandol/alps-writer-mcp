@@ -26,7 +26,7 @@ So the two are one test, asked in both directions:
 
 Note that the ADR row's "7-day" stays intact rather than blurring into "a short window" — that value is the ADR's own resolution, so it stays verbatim, while the tuning values realizing the same decision (pool sizes, backoff) sit one level down and stay out.
 
-**Never maintain the same information as two independent authorities.** The controlled PRD → ADR handoff is a deliberate overlap: the PRD states the reproducible requirement in the user's problem context, and an admitted ADR carries the exact contract at architectural resolution. The handoff direction is one-way, and the importer reconciles later PRD changes rather than silently treating either copy as current. The other deliberate overlap is a requirement contract in the ADR and its enforcement in code; those are [different things, not a duplicate](#requirements-live-in-both-the-adr-and-the-code--and-the-adr-comes-first).
+**Never maintain the same information as two current authorities.** Before handoff, the PRD owns the planning intent. `/feature-to-adr` transfers every implementation-relevant obligation into ADRs and proves that nothing required was left behind. After that commit, the ADR set is the only implementation authority and the PRD remains a legacy planning document; implementation, review, and sync do not read it. A user may explicitly re-import a changed PRD, but the importer compares it with the current ADR target state and proposes only semantic contract changes. Repeating equivalent input is a no-op. The remaining deliberate overlap is a requirement contract in the ADR and its enforcement in code; those are [different things, not a duplicate](#requirements-live-in-both-the-adr-and-the-code--and-the-adr-comes-first).
 
 Rule: never copy ALPS's user stories or acceptance-criteria prose into an ADR. Transfer only admitted motivation, decision pressures, and requirement contracts, without a PRD reference; adr-writer remains standalone. Design token values go to the design docs; function signatures and file paths go to the code and its docstrings.
 
@@ -136,27 +136,33 @@ Only what the gate kept plus what passed both filters stays in the ADR body. For
 
 ## Dependencies run one way; references are written in neither direction
 
-PRD → ADR → code is a **logical one-way dependency.** When an inner (upstream) layer changes, the outer layers follow, but never the reverse.
+PRD → ADR → code is a **one-way ownership transfer followed by a logical dependency.** Before handoff, the PRD supplies planning intent. After handoff, ADRs own the implementation contract and code depends on them. A later PRD edit has no operational effect until the user explicitly re-imports and approves an ADR contract change.
 
 ```mermaid
-flowchart RL
-    PRD["ALPS / PRD<br/>(most stable)"]
-    ADR["ADR<br/>(the gray zone)"]
-    Code["Code<br/>(most volatile)"]
+flowchart LR
+    PRD["ALPS / PRD<br/>planning authority"]
+    Handoff["complete ownership handoff"]
+    ADR["ADR<br/>implementation authority"]
+    Code["Code<br/>implementation"]
+    Legacy["PRD<br/>legacy planning document"]
+    Reimport["explicit re-import<br/>semantic comparison"]
 
-    Code -. logical dependency .-> ADR
-    ADR -. logical dependency .-> PRD
+    PRD --> Handoff --> ADR --> Code
+    Handoff --> Legacy
+    Legacy -. user request .-> Reimport
+    ADR --> Reimport
+    Reimport -. approved contract change .-> ADR
 ```
 
 References are **written directly on neither edge (PRD↔ADR, ADR↔code).** PRD↔ADR is not stored at all (adr-writer does not reference ALPS), and only the linkage of categories, ADRs, and `dependsOn` lives in one external mapping layer (`.mapping.json`).
 
 - **No ADR → code references**: never write files, functions, or line numbers in an ADR. For the detailed rule see [`authoring-rules.md`](./authoring-rules.md#code-references--folder-level-only).
 - **No code → ADR references**: never leave an ADR ID or path in comments, constants, or imports. ADR numbers move through split / rollup / supersede, so code holding an ADR ID forces a cascade of code edits on a structural change even when the decision did not change.
-- **No ADR → PRD references**: never write an ALPS file path, section number, or feature ID in the ADR body (Context and Related included). An ADR _absorbs_ the PRD's motivation but never _points at_ it — because if a PRD feature is split, renumbered, or restructured, that would force ADR body edits even though the decision did not change. Never copy the PRD's user stories or acceptance criteria into an ADR either (duplication → drift).
-- **No PRD → ADR references**: an ALPS document never writes a specific ADR ID or path in its body. The PRD is the most stable contract and knows nothing of its downstream artifacts.
-- **When an ADR decision changes, the code changes / when the PRD changes, the ADR and code change** — that is the normal flow a one-way dependency intends. The reverse (a code change dragging the ADR, or an ADR change dragging the PRD) must never happen.
+- **No ADR → PRD references**: never write an ALPS file path, section number, or feature ID in the ADR body (Context and Related included). An ADR _absorbs_ the PRD's motivation but never _points at_ it — because after handoff the ADR must stand alone even when the legacy PRD is stale, moved, or absent. Never copy the PRD's user stories or acceptance-criteria prose into an ADR either; transfer independently reviewable obligations at ADR resolution.
+- **No PRD → ADR references**: an ALPS document never writes a specific ADR ID or path in its body. Handoff evidence is ephemeral, and the legacy PRD does not track downstream artifacts.
+- **When an ADR decision changes, the code changes. A PRD edit alone changes nothing after handoff.** Only an explicit re-import may propose an ADR contract change, and the existing ADR remains authoritative until that change is approved. The reverse (a code change dragging the ADR, or an ADR change dragging the legacy PRD) must never happen.
 - **Keep the linkage in the external mapping layer**: [`docs/adr/.mapping.json`](./structure.md#the-adr-registry-mappingjson) records the ADR index (categories → adrs, each with path, status, summary) and the `dependsOn` between categories in one place. **PRD references are not stored in the mapping** — adr-writer does not reference ALPS. ADR↔code is likewise not pointed at from the body (the code is searched for as needed), and this mapping is the only coupling point joining categories, ADRs, and dependencies.
-- **Verifying the stability gradient**: change frequency must follow `Code >> ADR >> PRD`. If a change in a volatile layer drags a change in a stable one, an arrow is drawn wrong — usually because the ADR holds code detail, or the code holds an ADR ID, or the ADR holds an ALPS path.
+- **Verifying the stability gradient**: change frequency must follow `Code >> ADR >> PRD` while the PRD is active planning input. After handoff, the live dependency is `Code >> ADR`; a legacy PRD revision enters it only through explicit re-import. If a volatile-layer change drags a stable layer, an arrow is drawn wrong — usually because the ADR holds code detail, the code holds an ADR ID, or the ADR holds an ALPS path.
 
 ## Kinds of decisions an ADR covers
 
@@ -227,4 +233,4 @@ An ADR body is **a requirements and architecture document describing the current
 
 **Three layers preserve different things**: the ADR body = current state / `decision-log.md` = the timeline of major changes / Git = the verbatim diff. The log is a **convention file** rather than an ADR, so it is not registered in `.mapping.json` and the deterministic harness does not check it — for the recording criteria and format see [`authoring-rules.md` "Decision log (decision-log.md)"](./authoring-rules.md#decision-log-decision-logmd), and for the directory and non-indexing policy see [`structure.md`](./structure.md#decision-log-decision-logmd--a-convention-file-not-registered-in-the-mapping).
 
-<!-- adr-writer:rules-version 0.7.0 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->
+<!-- adr-writer:rules-version 0.7.1 — seeded by /adr-new. `adr-structure-lint` warns when this trails the installed plugin; refresh with /adr-new (it re-seeds a stale doc set). Keep this line on re-seed. -->

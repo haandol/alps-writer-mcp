@@ -21,13 +21,13 @@ flowchart LR
     E -.-> R
 ```
 
-ADRs are the primary artifact the adr-writer plugin manages. The default authoring path is `/adr-new <category>` — write the decision directly, with or without an ALPS PRD. `/feature-to-adr` discovers zero, one, or several admitted decisions per Section 7 feature, reconciles existing contracts, and delegates each new decision to `/adr-new`.
+ADRs are the primary artifact the adr-writer plugin manages. The default authoring path is `/adr-new <category>` — write the decision directly, with or without an ALPS PRD. `/feature-to-adr` transfers each implementable Section 7 Feature's complete contract into one or several ADRs and delegates each new decision owner to `/adr-new`. After handoff, normal implementation no longer reads the PRD.
 
 The default for the same logical decision is edit-in-place plus a decision-log entry for a major transition. Add a new ADR when the topic is a distinct durable decision or the old decision must remain separately referenceable. Use `/adr-rollup` only when one logical decision's evolution history was already scattered across several ADRs.
 
 ## End-to-end flow — from ALPS to ADR management
 
-The loop above is the steady-state summary. The full picture — from an ALPS PRD through decision discovery and reconciliation, dependency-gated implementation, and ongoing maintenance — is below.
+The loop above is the steady-state summary. The full picture — from an ALPS PRD through ownership handoff, dependency-gated implementation, and ongoing maintenance — is below.
 
 ```mermaid
 flowchart TD
@@ -40,7 +40,7 @@ flowchart TD
 
     subgraph adr["ADR layer — adr-writer"]
         direction TB
-        F2A(["/feature-to-adr<br/>0..N decisions per feature<br/>+ contract reconciliation"])
+        F2A(["/feature-to-adr<br/>complete contract transfer<br/>1..N ADRs per Feature"])
         New(["/adr-new &lt;category&gt;<br/>author one decision directly"])
         Proposed["Proposed ADR<br/>+ .mapping.json entry<br/>(canonical key, adrs{path,status,summary}, dependsOn)"]
         Impl(["/adr-impl [id]"])
@@ -74,7 +74,7 @@ flowchart TD
     Mapping[(".mapping.json<br/>read on demand for admitted work")]
     Log[("docs/adr/&lt;category&gt;/decision-log.md<br/>timeline of major changes<br/>(convention file, not indexed)")]
 
-    S7 -.->|"reads Section 7 + 6.3<br/>and reconciles existing ADR contracts"| F2A
+    S7 -.->|"reads all implementation-relevant intent<br/>and proves complete transfer"| F2A
     Start(["ADR-only entry:<br/>no PRD"]) --> New
     Review -.->|impl-fact drift found| Sync
     Sync -.-> Review
@@ -98,8 +98,8 @@ flowchart TD
 
 **How to read it:**
 
-- **Two entry points.** PRD-first starts at `/alps-init` and crosses into the ADR layer via `/feature-to-adr` (the only place `alps-writer` hands off to `adr-writer` — a one-way dependency; `adr-writer` never reads ALPS back). ADR-only skips the PRD box entirely and starts at `/adr-new`.
-- **`/feature-to-adr` owns the controlled handoff.** It reads Section 7, NFRs, architecture constraints, and the feature dependency graph; discovers `0..N` durable decisions per feature; and delegates each admitted decision to `/adr-new`. Re-running it compares current PRD contracts with existing ADRs and reports intended-change candidates. Feature implementation dependencies become ADR `dependsOn` edges only when an actual ADR decision depends on another actual ADR decision.
+- **Two entry points.** PRD-first starts at `/alps-init` and crosses into the ADR layer via `/feature-to-adr`. A successful transfer makes ADRs the implementation authority and leaves the PRD as a legacy planning document. ADR-only skips the PRD box entirely and starts at `/adr-new`.
+- **`/feature-to-adr` owns the ownership handoff.** It classifies every implementation-relevant item as ADR-owned, implementation discretion, legacy context, or unresolved. Transfer commits only with full coverage and no unresolved material. Each transferred Feature has `1..N` real ADRs, including at least one requirement-contract owner; replaceable implementation means stay in code. Explicit re-import compares a changed PRD with current ADRs, leaves equivalent semantics untouched, and never removes a contract automatically.
 - **The gate is mandatory.** `/adr-impl` never skips straight to coding — it reads `dependsOn`, walks prerequisites transitively, and refuses to build on a `Proposed` or dangling prerequisite until you implement it first (in topological order). Status flips to `Accepted` only after tests and final review pass — it records a fact, not an intent.
 - **Stacked PR is a requested delivery fallback, not a new specification layer.** When the user asks to lower review load but splitting the Feature or ADR would break its semantic boundary, `/adr-impl` can keep the same approved ADR and offer dependency-ordered PR layers with one review question each. It never derives or publishes a Stack from the score alone, and no Stack state is stored in ALPS, ADRs, or `.mapping.json`.
 - **Verified refactoring happens before completion.** After the initial implementation tests pass, `/adr-impl` invokes `/adr-impl-refactor`. Its independent read-only reviewer checks concrete execution efficiency, complexity, coupling, duplication, and reuse already justified by current same-semantics code. The main session applies only high-confidence local behavior-preserving candidates with before/after tests and leaves wider opportunities as proposals. If no isolated reviewer exists, all findings are proposal-only; if no code changed, the passing targeted baseline is reused.
@@ -113,13 +113,13 @@ flowchart TD
 ### A. PRD-first — start from an ALPS spec (both plugins)
 
 1. `/alps-init` → use atomic confirmation by default, or explicitly opt into batch confirmation for complete structured input. Batch items remain separate save units.
-2. After Section 7, run `/feature-to-adr` → it discovers `0..N` decisions per feature, creates only admitted ADRs, and reports feature-only dependencies without placeholder ADRs.
+2. After Section 7, run `/feature-to-adr` → it transfers each implementable Feature's complete contract into `1..N` real ADRs, preserves required Feature prerequisites as `dependsOn`, and leaves replaceable means to code.
 3. `/adr-impl <category>` → implement an accepted-in-spirit ADR in code + tests.
 4. `/adr-impl-refactor <category>` runs automatically inside implementation → apply only independently reviewed, verified local behavior-preserving improvements and keep the rest as proposals.
 5. `/adr-impl-review <category>` selects `standard` or `full` from the protected surfaces changed. `PASS` promotes the ADR to `Accepted`; other verdicts keep it `Proposed`.
 6. Run `/adr-sync` only when review finds implementation-fact drift, after broad refactors or manual ADR edits, or as a periodic audit.
 
-Re-run `/feature-to-adr` when the PRD changes. It does not overwrite ADRs automatically: it compares the current contract, reports differences, and routes a confirmed change through the ADR-first implementation path. ADRs remain authoritative for code.
+After handoff the PRD remains on disk as a legacy planning document, but implementation, review, and sync read only ADRs. Re-run `/feature-to-adr` only when you explicitly want to import a changed PRD. Equivalent semantics are a no-op; additions and changes become ADR-first proposals; removals require confirmation. Current ADRs remain authoritative until a change is approved.
 
 ### B. ADR-only — no PRD (adr-writer standalone)
 
@@ -140,10 +140,10 @@ In all flows the hook runs automatically once adr-writer is installed. Session s
 
 ### alps-writer
 
-| Command                | Role                                                                                                       |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `/alps-init`           | Author or resume ALPS with atomic confirmation by default and explicit batch confirmation when appropriate |
-| `/feature-to-adr [id]` | Discover `0..N` ADR decisions per feature, reconcile contracts, and delegate admitted new decisions        |
+| Command                | Role                                                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `/alps-init`           | Author or resume ALPS with atomic confirmation by default and explicit batch confirmation when appropriate         |
+| `/feature-to-adr [id]` | Transfer a Feature's complete implementation contract into `1..N` ADRs; explicitly re-import semantic changes only |
 
 ### adr-writer
 
@@ -183,4 +183,4 @@ That one command covers both ADR-well-formedness scripts, since the lint invokes
 
 ## ADR index (.mapping.json)
 
-`docs/adr/.mapping.json` is the single ADR index (categories → `adrs` objects `{path, status, summary}`) plus decision-level `dependsOn`. It stores no code paths, Feature IDs, or PRD references. `/feature-to-adr` writes an edge only when one admitted ADR decision actually requires another; feature-only ordering remains implementation guidance.
+`docs/adr/.mapping.json` is the single ADR index (categories → `adrs` objects `{path, status, summary}`) plus contract-level `dependsOn`. It stores no code paths, Feature IDs, or PRD references. A completed `/feature-to-adr` handoff writes an edge only when one transferred Feature contract cannot be satisfied before another; SDK reuse and convenient work order remain implementation discretion.

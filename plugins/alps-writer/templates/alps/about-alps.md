@@ -72,9 +72,9 @@ flowchart TD
     CODE -->|"/adr-sync"| SYNC
 ```
 
-Each ALPS feature produces zero, one, or several ADRs according to the admission gate; each ADR drives implementation; drift between code and ADR is detected and repaired. ALPS sits at the top of this chain — the cleaner it is, the cleaner everything downstream.
+Each transferable ALPS Feature produces one or several ADRs. At least one ADR owns its reproducible requirement contract, while independent durable decisions remain separate and replaceable implementation means stay in code. Each ADR drives implementation; drift between code and ADR is detected and repaired.
 
-The chain is a one-way dependency (PRD → ADR → code): a change to ALPS may propagate forward to ADRs and code, but the reverse never happens. None of the three artifacts references another in its own body — `docs/adr/.mapping.json` is the ADR index (category → ADRs) and stores no PRD reference (adr-writer is standalone), and the code an ADR governs is found by searching the repo, not stored. Re-running `/feature-to-adr` compares current Section 7 contracts with existing ADRs, reports differences, and asks the user whether a PRD change is intended before routing the ADR-first update. ADRs remain authoritative for implementation; the importer owns reconciliation without making adr-writer depend on ALPS.
+The chain performs a one-way ownership handoff (PRD → ADR → code). Before handoff, ALPS owns planning intent. A complete `/feature-to-adr` transfer moves every implementation-relevant contract into ADRs; afterward the ADR set is the only implementation authority and ALPS remains a legacy planning document. Normal implementation does not read it. If the user explicitly re-imports a changed PRD, the importer compares semantic obligations with current ADRs: equivalent input is a no-op, changed or new contracts become ADR change proposals, and removals require explicit confirmation. None of the artifacts references another in its own body — `docs/adr/.mapping.json` is the ADR index and stores no PRD reference, while related code is found by searching the repo.
 
 ## Further reading
 

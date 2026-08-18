@@ -98,7 +98,7 @@ If provider identity was unavailable and the validation error occurs once, the s
 
 ## Relationship to alps-writer
 
-The companion [`alps-writer`](https://github.com/haandol/alps-writer-plugins) plugin writes ALPS documents. `/feature-to-adr` discovers zero, one, or several admitted decisions per feature, reconciles existing contracts, and delegates each new decision to this plugin's `/adr-new`. The dependency is one-way.
+The companion [`alps-writer`](https://github.com/haandol/alps-writer-plugins) plugin writes ALPS documents. `/feature-to-adr` transfers each implementable Feature's complete contract into one or several ADRs and delegates new decision owners to this plugin's `/adr-new`. After handoff, ADRs are the implementation authority and the PRD is a legacy planning document. Explicit re-import is an ALPS-side semantic comparison; this standalone plugin never reads the PRD.
 
 ## License
 

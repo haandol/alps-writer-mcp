@@ -1,119 +1,143 @@
 ---
 name: feature-to-adr
-description: Helper — analyze ALPS features, reconcile existing ADR contracts, and delegate each admitted durable decision to adr-writer's /adr-new. A feature may produce zero, one, or several ADRs. Requires an existing ALPS PRD and the adr-writer plugin.
+description: Helper — transfer an ALPS feature's complete implementation contract into one or several ADRs, leaving the PRD as a legacy planning document after handoff. Explicit re-import compares a changed PRD with the authoritative ADRs and applies only semantic contract changes. Requires an existing ALPS PRD and the adr-writer plugin.
 argument-hint: "[category-or-feature-id?]"
 ---
 
 # feature-to-adr
 
-Analyze ALPS feature specifications at the PRD → ADR handoff. This skill owns ALPS-side feature discovery, requirement transfer, and reconciliation. ADR authoring remains delegated to `/adr-new` in the separate `adr-writer` plugin.
+Transfer ALPS feature specifications at the PRD → ADR ownership boundary. This
+skill owns ALPS-side discovery, complete requirement transfer, and explicit
+re-import comparison. ADR authoring remains delegated to `/adr-new` in the
+separate `adr-writer` plugin.
 
-**Cardinality is decision-driven, not feature-driven:** one feature may produce zero, one, or several ADRs. A category is the feature boundary; each ADR inside it is one admitted durable decision.
+**After a successful handoff, ADRs are the only implementation authority.** The
+PRD remains on disk as a legacy planning document, but normal implementation,
+review, and sync do not read it.
 
-> **Language**: talk to the user and write ADR content in the language the user writes in. User-facing wording below is guidance, not a literal string.
+**Cardinality:** every transferable, implementable Feature produces one or
+several ADRs. At least one ADR owns the Feature's reproducible requirement
+contract; additional independent durable decisions remain separate ADRs. A
+source item that contains only a replaceable implementation swap and no product
+contract is implementation discretion, not a transferable Feature and not a
+placeholder ADR.
+
+> **Language**: talk to the user and write ADR content in the language the user
+> writes in. User-facing wording below is guidance, not a literal string.
 
 ## 1. Load and validate the ALPS input
 
-Confirm that `/adr-new` is available. If adr-writer is not installed, stop and give the client-specific installation command.
+Confirm that `/adr-new` is available. If adr-writer is not installed, stop and
+give the client-specific installation command.
 
 Load:
 
 - the current ALPS document
+- every section needed to understand the selected Feature's motivation and
+  observable behavior
 - the feature-level specification
-- the requirements summary, including measurable NFRs and the feature dependency graph
-- the high-level architecture constraints
+- the requirements summary, measurable NFRs, non-goals, and feature dependency
+  graph
+- the high-level architecture constraints and external boundaries
 - `docs/adr/.mapping.json` when it exists
 
 Parse the dependency graph before processing features:
 
-- A self-edge is invalid input. Stop and ask the user to correct the graph; never ignore it.
-- A cycle is invalid input. Show the cycle and stop before writing ADRs or mapping edges.
-- A missing feature referenced by an edge is invalid input. Stop before writing.
+- A self-edge is invalid input. Stop and ask the user to correct the graph;
+  never ignore it.
+- A cycle is invalid input. Show the cycle and stop before writing ADRs or
+  mapping edges.
+- A missing Feature referenced by an edge is invalid input. Stop before
+  writing.
 
-The graph describes **feature implementation order**. It is not copied wholesale into ADR `dependsOn`.
+The graph is source material. Transfer only prerequisites that the implementation
+must preserve; do not treat code reuse or convenient work order as a durable
+dependency.
 
-## 2. Select the feature queue
+## 2. Select the Feature queue
 
-- With no argument, inspect every feature in dependency topological order.
-- With an argument, inspect that feature and its transitive feature prerequisites in topological order. This expands the analysis scope, but does not force any prerequisite to produce an ADR.
-- If the user explicitly asks to inspect only one feature, still show its feature prerequisites as implementation-planning context.
+- With no argument, inspect every Feature in dependency topological order.
+- With an argument, inspect that Feature and its transitive prerequisites in
+  topological order.
+- If the user explicitly asks to inspect only one Feature, still show its
+  prerequisites as handoff context.
 
-Derive each category key canonically from the feature name. Use a two-segment `<context>/<feature>` key only when the PRD already supplies the grouping or the user explicitly requests it. Never invent a bounded context, and never use a technical layer name as either segment.
+Derive each category key canonically from the Feature name. Use a two-segment
+`<context>/<feature>` key only when the PRD already supplies the grouping or the
+user explicitly requests it. Never invent a bounded context, and never use a
+technical layer name as either segment.
 
-## 3. Reconcile an already-mapped feature
+## 3. Preflight a complete ownership transfer
 
-Do not silently exclude a feature because its category already exists.
+Before writing any ADR for a Feature, classify every relevant source item into
+exactly one route:
 
-Before classifying any material as a new candidate, run the adr-writer **decision identity check** across the mapping. Start with the feature's category, then inspect plausible summaries and ADR bodies in other categories. Match by the architectural question and owned requirement or system/data/security/external boundary, not by the current provider, product name, adopted alternative, or direction of change.
+1. **ADR-owned** — motivation, a discriminating Driver, requirement contract,
+   domain invariant, state/permission rule, system/data/security boundary,
+   external provider or fallback, adopted algorithm, consistency model, durable
+   trade-off, or implementation-independent observable evidence.
+2. **Implementation discretion** — replaceable libraries, SDKs, frameworks,
+   middleware, module structure, credential/auth wiring, signers, adapters,
+   tuning values, names, signatures, schemas, and other code-level choices that
+   preserve the same contract and boundaries.
+3. **Legacy planning context** — narrative, workshop history, duplicate
+   explanation, and other material whose loss cannot change a compliant
+   implementation.
+4. **Unresolved** — ambiguous, contradictory, or unowned material that could
+   change user behavior, a requirement contract, a boundary, or the adopted
+   decision.
 
-For every existing or plausible owning category:
+Apply the ADR admission gate independently to each durable decision. Apply the
+requirement gate before excluding any requirement value or rule. The Feature's
+reproducible requirement contract itself passes admission and must have an ADR
+owner even when every library or adapter choice remains implementation
+discretion.
 
-1. Read all current ADRs in that category.
-2. Compare the current PRD material with the ADR decision and requirement contracts:
-   - requirement values and their basis
-   - allowed value sets and transitions
-   - mandatory fields
-   - permissions and visibility
-   - ordering, uniqueness, units, and failure guarantees
-   - NFRs and architecture constraints that discriminate between alternatives
-3. Report:
-   - `In sync`
-   - `PRD contract changed / Existing decision changed`
-   - `New durable decision candidate`
-   - `PRD-only detail` that does not pass the ADR admission gate
+The transfer inventory is ephemeral. Do not store it in the PRD, ADR,
+`.mapping.json`, or a handoff registry.
 
-When an existing decision changed, the user rules that the new PRD requirement or boundary is intended. If confirmed, route it through `/adr-impl <owning-category>` so it updates that exact ADR first, logs a major transition when required, then changes code. Provider replacements and reversals remain the same decision when one current-state ADR can still describe the provider boundary. Use `/adr-new <category>` only when no existing ADR owns the topic or a distinct durable decision must live independently.
+Preflight succeeds only when:
 
-This reconciliation belongs to alps-writer. adr-writer remains standalone and never reads the PRD itself. Do not add PRD paths, section numbers, or feature IDs to ADR bodies or `.mapping.json`.
+- every implementation-relevant item has one route
+- `Unresolved` is empty
+- every requirement value and non-numeric rule has an ADR owner
+- every transferable Feature has at least one real contract-owning ADR
+- independent decisions are split rather than combined
+- the proposed ADR set passes the regeneration test without reading the PRD
 
-## 4. Discover decision candidates for a new feature
-
-Separate the feature material into candidate decisions before invoking `/adr-new`.
-
-Candidate sources include:
-
-- a requirement contract or domain invariant
-- an allowed state set or transition policy
-- a system, data, key, deployment, or security boundary
-- an external provider/model and its fallback policy
-- an adopted algorithm or consistency model
-- another durable cross-implementation trade-off
-
-Apply the ADR admission gate independently to every candidate.
-
-- **Pass** → one ADR candidate.
-- **Fail** → implementation planning material; do not create an ADR.
-
-Libraries, SDKs, frameworks, middleware, module layout, credential/auth wiring, signers, adapters, and tuning values fail when they can be replaced while preserving the same contract and boundaries.
-
-For every candidate that passes, run the decision identity check against all mapped summaries and plausible ADR bodies before counting it as new. If an existing ADR owns it, classify it as `Existing decision changed` and route it through step 3 instead of `/adr-new`.
-
-Estimate the current Feature and each admitted ADR candidate with the same
-internal five-axis comprehension-load rubric: conceptual breadth, contract
-density, state and flow complexity, boundary coupling, and uncertainty and
-verification burden. Score each axis from 0 to 2 and sum them. Show 1 rather than
-0, so the displayed range is 1-10. Do not show or expose the axis scores or
-rationale. Show only `Comprehension load: <N>/10`
-for each item. Do not write or persist this score in the ALPS document, an ADR,
-or `.mapping.json`; it is advisory and does not block drafting, approval, or
-implementation.
-
-Show the user a compact decision-discovery result before drafting:
+Show a compact result before drafting:
 
 ```text
 Feature: <name>
 Comprehension load: <N>/10
-ADR candidates:
-- <decision A> — admitted because <durable contract/boundary> — Comprehension load: <N>/10
-- <decision B> — admitted because <durable trade-off> — Comprehension load: <N>/10
 
-Implementation-only:
-- <choice> — replaceable without changing the contract
+ADR-owned:
+- <contract or decision> — owner: <existing ADR | new candidate>
 
-Result: 0 | 1 | N ADRs
+Implementation discretion:
+- <replaceable choice>
+
+Legacy planning context:
+- <non-implementation context>
+
+Unresolved:
+- none | <blocking item>
+
+Transfer coverage: <covered>/<implementation-relevant items>
+Result: BLOCKED | 1 | N ADRs
 ```
 
-If there are zero admitted decisions, finish that feature without creating a category or placeholder ADR. Keep the feature and its dependency order in the implementation plan.
+If anything is unresolved or unowned, stop before writing ADRs. Do not report
+the Feature as transferred.
+
+Estimate the current Feature and each ADR candidate with the same internal
+five-axis comprehension-load rubric: conceptual breadth, contract density,
+state and flow complexity, boundary coupling, and uncertainty and verification
+burden. Score each axis from 0 to 2 and sum them. Show 1 rather than 0, so the
+displayed range is 1-10. Do not show or expose the axis scores or rationale.
+Show only `Comprehension load: <N>/10` for each item. Do not write or persist
+this score in the ALPS document, an ADR, or `.mapping.json`; it is advisory and
+does not block drafting, approval, or implementation.
 
 Only when the user asks to split a high-load item, offer up to three candidates.
 Split a Feature only at independently observable user-behavior boundaries.
@@ -121,52 +145,127 @@ Split ADR work only when it contains independent decisions; keep one inherently
 difficult decision in one ADR and offer implementation steps instead. Never
 split by frontend/backend/data layers, and never make splitting a prerequisite.
 
-## 5. Delegate each admitted decision
+## 4. Transfer a new Feature
 
-For each admitted decision, invoke `/adr-new <category>` separately. Never combine independent decisions just because they came from one feature.
+Run the adr-writer decision identity check across the full mapping before
+allocating a new ADR. Match by the architectural question and owned requirement
+or system/data/security/external boundary, not by the current provider, product
+name, adopted alternative, or direction of change.
+
+For each new admitted owner, invoke `/adr-new <category>` separately. Never
+combine independent decisions just because they came from one Feature.
 
 Pass:
 
 - the category key
 - the candidate decision and its business motivation
-- only the PRD material relevant to that decision
 - discriminating NFRs and architecture constraints
 - requirement values and non-numeric rules verbatim with their basis
-- feature-scope hints for locating the vertical slice, without storing code paths
+- user-observable behavior, failure guarantees, related non-goals, and
+  implementation-independent observable evidence
+- feature-scope hints for locating the vertical slice, without storing code
+  paths
 
-Do not copy user stories or acceptance criteria as prose into the ADR. Extract the motivation, decision pressures, and requirement contract at ADR resolution.
+Do not copy user stories or acceptance criteria as prose into the ADR. Absorb
+their motivation and independently reviewable obligations at ADR resolution.
 
-The `/adr-new` path owns drafting, verification, mapping registration, user approval, and the initial `Proposed` Status.
+The `/adr-new` path owns drafting, verification, mapping registration, user
+approval, and the initial `Proposed` Status.
 
-## 6. Record only real ADR prerequisites
+A Feature's ownership transfer commits only after all of its ADR owners are
+approved and saved, every contract item has an owner, and mapping validation
+passes. Until then, the PRD remains authoritative for that Feature and
+implementation must not start from a partial ADR set. After commit, the PRD
+scope is legacy planning context and ADRs alone drive implementation.
 
-After admitted ADRs exist, derive category-level `dependsOn` edges from **decision prerequisites**, not directly from every feature dependency.
+## 5. Explicitly re-import a changed PRD
+
+Do not continuously reconcile PRD and ADR content. Enter this path only when
+the user explicitly asks to re-import a changed PRD.
+
+The current ADR set is the target-state authority during comparison. Read all
+plausible owning ADRs and compare semantic obligations, not wording:
+
+- requirement values and their basis
+- allowed value sets and transitions
+- mandatory fields
+- permissions and visibility
+- ordering, uniqueness, units, and failure guarantees
+- NFRs and architecture constraints that discriminate between alternatives
+- system/data/security/external boundaries and fallback policy
+
+Classify each difference:
+
+- **Semantic no-op** — wording, order, examples, or explanation changed while
+  the obligations and decision remain the same. Do not edit ADR files,
+  `.mapping.json`, Status, or decision logs.
+- **Existing decision changed / contract changed** — propose an edit-in-place to the ADR that
+  already owns the decision identity. The current ADR remains authoritative
+  until the user approves the changed contract; then route implementation
+  through `/adr-impl <owning-category>`.
+- **New durable contract or decision** — run the decision identity check. Update
+  an existing owner when one exists; invoke `/adr-new` only for a genuinely new
+  decision identity.
+- **Source contract removed** — never delete or weaken the ADR automatically.
+  Ask whether the removal is an intended contract change.
+- **Implementation-only change** — leave it to code and do not mutate an ADR.
+- **Unresolved conflict** — block the re-import without changing the current ADR
+  authority.
+
+Re-import is idempotent:
+
+> Importing the same PRD against the same ADR state repeatedly must produce no
+> ADR, mapping, Status, or decision-log changes.
+
+Do not rewrite an ADR merely to mirror new PRD phrasing. Do not store PRD paths,
+section numbers, Feature IDs, semantic fingerprints, approval state, or import
+reports in ADR bodies or `.mapping.json`.
+
+This comparison belongs to alps-writer. adr-writer remains standalone and never
+reads the PRD itself.
+
+## 6. Record implementation prerequisites
+
+After every ADR owner exists, derive category-level `dependsOn` edges from
+implementation prerequisites.
 
 Record an edge only when:
 
 - the target category already exists in `.mapping.json`
-- the current admitted decision cannot be implemented meaningfully before that target decision
+- the current Feature cannot satisfy its contract meaningfully before the
+  target Feature contract is implemented
 - the edge remains acyclic
 
-If a feature prerequisite has no admitted ADR, leave it out of `dependsOn` and report it as implementation-order guidance. Never create a placeholder ADR to make the graph closed.
-
-If the feature produced no ADR, do not create an empty mapping category.
+Do not create edges for shared SDKs, helper reuse, preferred work order, or
+technical-layer sequencing. Never create an empty placeholder ADR. Every
+dependency target from a completed handoff is a real contract-owning category.
 
 ## 7. Approval and completion
 
-For two or more queued features, show the analysis order once and get one approval. Each admitted ADR still uses `/adr-new`'s own approval.
+For two or more queued Features, show the analysis order once and get one
+approval. Each new or changed ADR still uses the adr-writer path's own baseline
+approval.
 
 At completion report:
 
-- features inspected
-- existing ADRs updated by category
+- Features whose ownership transfer committed
+- transfer coverage for each committed Feature
+- existing ADRs changed by category
 - ADRs created by category
-- features requiring no ADR
-- PRD↔ADR contract differences found
-- feature dependencies retained only as implementation guidance
+- explicit re-import semantic no-ops
+- removals or conflicts left unresolved
+- implementation discretion and legacy context excluded from ADRs
 - actual ADR `dependsOn` edges written
+- that committed PRD scopes are now legacy planning documents and normal
+  implementation reads only ADRs
+
+Do not persist this report as another source of truth.
 
 If the user says "implement without an ADR", apply the admission gate:
 
-- No admitted decision → comply without warning or deferred ADR.
-- An admitted decision exists → explain that the contract or boundary must be recorded first. If the user still declines, comply but report the specific unrecorded decision; do not tell `/adr-sync` to manufacture an ADR later from code.
+- A source item containing only implementation discretion → comply without an
+  ADR.
+- A transferable Feature contract or another admitted decision exists → explain
+  that handoff must complete first. If the user still declines, comply but
+  report the specific unrecorded contract; do not tell `/adr-sync` to
+  manufacture an ADR later from code.

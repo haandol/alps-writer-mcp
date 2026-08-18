@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Status
 
-Accepted (2026-08-15)
+Accepted (2026-08-17)
 
 ## Context
 
@@ -23,7 +23,7 @@ Accepted (2026-08-15)
 
 영속 상태나 계약 소유권을 바꾸는 prompt 분류에는 정적 테스트와 별도의 행동 시나리오를 둔다.
 
-대상에는 ADR admission, 기능당 0..N 결정 handoff, 선행 ADR 차단, 요구사항 값·집합 보존, PRD 변경 reconciliation, ALPS 승인 모드와 NFR 보존, implementation-review routing이 포함된다.
+대상에는 ADR admission, 완전한 PRD 계약 소유권 이전, 반복 import의 semantic no-op, 삭제 계약의 자동 제거 금지, 선행 ADR 차단, 요구사항 값·집합 보존, ALPS 승인 모드와 NFR 보존, implementation-review routing이 포함된다.
 
 행동 시나리오는 실제 skill·agent·hook text를 사용하고 서로 반대되는 기대를 pair로 검증한다. Live model 평가는 CI에 넣지 않고 릴리스 또는 defect 재현 시 여러 번 실행해 hit rate를 기록한다.
 

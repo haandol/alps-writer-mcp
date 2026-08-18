@@ -9,7 +9,7 @@ A Codex and Claude Code **marketplace** that ships two independent plugins for s
 | **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
 | **`adr-writer`** (ADR)  | ADR-driven development: author, implement, adversarially review, and sync; an ADR-first hook runs when session context starts.   | nothing — fully standalone       |
 
-The two are split so that **adr-writer never references ALPS**. The only coupling is one-way (`alps-writer → adr-writer`): `/feature-to-adr` discovers zero, one, or several durable decisions per feature and reconciles PRD contract changes before delegating ADR work.
+The two are split so that **adr-writer never references ALPS**. The only coupling is one-way (`alps-writer → adr-writer`): `/feature-to-adr` transfers each implementable Feature's complete contract into one or several ADRs. After handoff the PRD remains a legacy planning document; explicit re-import compares it with authoritative ADRs and applies only approved semantic changes.
 
 ## What is ALPS?
 
@@ -63,7 +63,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
 - **Disposable comprehension signal** — Section 7 Features are internally assessed on five axes and shown only as an ephemeral `1–10` score; splitting is suggested only when requested
-- **ALPS → ADR bridge** — `/feature-to-adr` discovers `0..N` decisions per Section 7 feature, reconciles existing contracts, and delegates each new decision to `/adr-new`
+- **ALPS → ADR ownership handoff** — `/feature-to-adr` transfers every implementation-relevant Feature contract into `1..N` real ADRs, leaves replaceable means to code, and makes equivalent explicit re-imports no-ops
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client (MCP server only)
 
 **adr-writer (ADR)**

@@ -89,7 +89,8 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /refactor-safe-local-duplicate/);
   assert.match(out, /refactor-protected-state-transition/);
   assert.match(out, /refactor-no-subagent-proposal-only/);
-  assert.match(out, /feature-handoff-zero-or-many/);
+  assert.match(out, /feature-handoff-ownership-transfer/);
+  assert.match(out, /feature-handoff-idempotent-reimport/);
   assert.match(out, /impl-blocks-proposed-prerequisite/);
   assert.match(out, /hook-admission-routing/);
   assert.match(out, /alps-batch-preserves-mandatory-nfr/);
@@ -527,18 +528,59 @@ test("Bedrock fallback scorer requires no dispatch, no retry, main-session revie
 test("critical workflow scorers accept compliant classifications and reject collapsed ones", () => {
   const cases = [
     {
-      name: "feature-handoff-zero-or-many",
-      good: `SDK 교체는 ADR이 아니다. placeholder ADR도 만들지 않는다.
+      name: "feature-handoff-ownership-transfer",
+      good: `Feature: F1 워크스페이스 멤버 초대
+ADR-owned:
+- 관리자만 이메일로 초대할 수 있다.
+- 같은 워크스페이스와 이메일의 활성 초대가 있으면 요청을 거부한다.
+- 초대는 7일 뒤 만료된다.
+
+Implementation discretion:
+- SendGrid SDK와 대체 이메일 클라이언트
+
+Transfer coverage: 4/4
+Result: 1 ADR
+
+Feature: F2 워크스페이스 내보내기
+ADR-owned:
+- 활성 워크스페이스 멤버만 내보내기를 요청할 수 있다.
+- 완료된 export는 30일 뒤 삭제한다.
+
+ADR-owned:
+- ArchiveCo 장애 시 24시간 fallback 후 재전송한다.
+
+Implementation discretion:
+- ArchiveCo SDK와 adapter
+
+Transfer coverage: 5/5
+Result: 2 ADRs
+
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
-ZERO_ADR | F1 SDK와 credential 교체는 구현 디테일
-ADR_CANDIDATE | F2 export는 30일 뒤 삭제
-ADR_CANDIDATE | F2 ArchiveCo와 24시간 fallback 정책
-FEATURE_DEP_ONLY | F2가 F1 구현을 재사용하지만 ADR dependsOn은 만들지 않음
+ADR_CANDIDATE | workspace-member-invitation: 워크스페이스 멤버 초대 계약
+ADR_CANDIDATE | workspace-export: 내보내기 권한 및 완료 데이터 수명 계약
+ADR_CANDIDATE | workspace-export: 장기 보관 경계 및 장애 복구 정책
+ADR_DEPENDENCY | workspace-member-invitation is prerequisite for workspace-export
 === EVAL-END ===`,
       bad: `=== EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
 ADR_CANDIDATE | F1 AWS SDK v3 선택
+=== EVAL-END ===`,
+    },
+    {
+      name: "feature-handoff-idempotent-reimport",
+      good: `동일한 30일과 ArchiveCo 계약은 변경하지 않고, PRD에서 빠진 24시간 fallback은 자동 삭제하지 않는다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+SEMANTIC_NOOP | 30일 삭제 계약은 표현만 변경됨
+SEMANTIC_NOOP | ArchiveCo 경계는 표현만 변경됨
+REMOVAL_REVIEW | 24시간 fallback 누락은 명시적 contract change 확인 필요
+NO_MUTATION | ADR과 mapping은 현재 상태 유지
+=== EVAL-END ===`,
+      bad: `=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+ADR_UPDATE | PRD 문장에 맞춰 ADR을 다시 작성
+CONTRACT_DELETE | PRD에서 빠진 24시간 fallback 삭제
 === EVAL-END ===`,
     },
     {

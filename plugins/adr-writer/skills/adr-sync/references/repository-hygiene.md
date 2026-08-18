@@ -21,7 +21,7 @@ Check whether the ADR count in each feature sub-folder, or directly under a cont
 - Record `[Sub-folder split recommended] <category> holds <n> ADRs — candidate sub-features: ...` in `Suggestions`.
 - If evolution-chain signals also appear, state that rollup comes first.
 
-Sync does not track PRD changes. Once `/feature-to-adr` has reflected the PRD into ADRs, decisions are managed at the ADR level and sync checks only ADR ↔ code consistency.
+Sync does not track PRD changes. Once `/feature-to-adr` completes ownership transfer, the PRD is legacy planning context, decisions are managed at the ADR level, and sync checks only ADR ↔ code consistency. A changed PRD enters the cycle only through an explicit alps-writer re-import.
 
 ## Canonical stale Feature-ID naming
 

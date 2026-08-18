@@ -68,7 +68,7 @@ Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계
 
 새 ADR을 작성하거나 기존 ADR의 결정·요구사항 계약을 바꾸면 구현 전에 현재 Decision, Decision Drivers, requirement contract와 regeneration checklist를 제시하고 사용자에게 의도 일치를 한 번 확인받는다. 이 승인은 command가 아니라 정확한 ADR revision에 귀속된다. `/adr-new`나 `/feature-to-adr`에서 승인한 ADR 내용이 바뀌지 않았다면 `/adr-impl`은 그 기준선을 재사용하고 의도·재생성 질문을 다시 하지 않는다. 승인 후 ADR이 바뀌지 않았다면 구현 완료 뒤에도 같은 질문을 반복하지 않는다.
 
-선행 ADR이 있는 구현은 모든 prerequisite가 `Accepted`일 때만 진행한다. 사용자가 downstream 구현을 먼저 요청해도 완료 가능한 구현으로 취급하지 않는다. 선행 기능에 ADR 대상 결정이 없다면 그 기능 의존성은 구현 계획에서 다루고, ADR 의존성을 만들기 위해 빈 ADR을 생성하지 않는다.
+선행 ADR이 있는 구현은 모든 prerequisite가 `Accepted`일 때만 진행한다. 사용자가 downstream 구현을 먼저 요청해도 완료 가능한 구현으로 취급하지 않는다. 완료된 PRD handoff는 이전된 각 Feature에 실제 requirement contract 소유 ADR을 두므로 구현에 필요한 Feature prerequisite를 category `dependsOn`으로 보존한다. 단순 코드 재사용과 작업 편의 순서는 dependency로 저장하지 않으며 빈 placeholder ADR을 생성하지 않는다.
 
 검증은 보호 표면과 변경 범위에 따라 표준 또는 전체 구현 리뷰를 선택한다. 저장소 상태가 바뀌지 않은 검증 기준선은 재사용하고, 깊은 ADR 동기화는 drift 근거가 있거나 주기적 감사가 필요할 때 수행한다.
 
@@ -80,7 +80,8 @@ Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계
 - 승인된 ADR revision이 바뀌지 않으면 command 경계를 넘어 같은 의도 기준선을 재사용한다. ADR 내용이 바뀐 경우에만 새 revision 승인을 받는다.
 - `dependsOn`의 모든 선행 category는 현재 mapping에 존재하고 target 구현 전에 `Accepted`여야 한다.
 - `Proposed` 또는 dangling prerequisite가 있으면 downstream 구현을 완료 경로로 진행하지 않는다.
-- 기능 구현 의존성은 ADR 대상 결정의 의존성과 구분한다. ADR 대상 결정이 없는 기능을 표현하기 위해 placeholder ADR을 만들지 않는다.
+- 완료된 PRD handoff의 이전 대상 Feature는 실제 requirement contract 소유 ADR을 가지며 구현에 필요한 Feature prerequisite는 category `dependsOn`으로 보존한다.
+- 단순 코드 재사용과 작업 편의 순서는 `dependsOn`으로 저장하지 않고, dependency 표현을 위한 빈 placeholder ADR을 만들지 않는다.
 - 구현 리뷰 모드는 계약, 공개 표면, 상태, 권한, 보안, 데이터, 외부 fallback, 동시성 및 변경 범위의 위험으로 선택한다.
 - 최종 구현 리뷰가 필수 수정이나 미검증 위험을 남기면 구현은 완료 상태가 될 수 없다.
 - 증거가 있고 ADR 계약을 바꾸지 않는 구현·테스트 결함과 국소 리팩토링은 자동 수정 후 재검증한다.
@@ -142,7 +143,7 @@ Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계
 ### Positive
 
 - downstream 구현은 구현된 선행 결정 위에서만 완료된다.
-- ADR이 필요 없는 기능 의존성 때문에 placeholder ADR이 생기지 않는다.
+- 이전된 Feature의 구현 prerequisite가 ADR-only 흐름에서도 보존되고 빈 placeholder ADR은 생기지 않는다.
 - 작은 변경은 표준 리뷰를 사용하고 보호 표면 변경은 전체 리뷰를 유지한다.
 - 완료 상태와 실제 검증 결과가 일치한다.
 - 구현 후 반복 승인 없이 검토 발견을 수정하고 완료 결과를 받을 수 있다.

@@ -5,25 +5,25 @@
 핵심 불변식:
 
 - **`.mapping.json`이 유일한 ADR 인덱스다** — 카테고리마다 각 ADR을 `{path, status, summary}`로 한 번씩 보유하고 `dependsOn`을 기록한다. README는 ADR 목록을 두지 않으며(개념 색인만), admission gate를 통과한 요청이 코드 변경 전에 이 인덱스를 읽는다.
-- **adr-writer는 독립적이다** — 매핑은 코드 경로도, Feature ID도, PRD 참조도 저장하지 않는다. `/feature-to-adr`가 ALPS를 읽어 기능별 `0..N` 결정을 찾고 기존 ADR 계약과 재조정하지만, adr-writer는 ALPS를 읽지 않는다.
-- **의존성은 한 방향(PRD → ADR → 코드)으로만 흐르며**, 어떤 산출물도 본문에서 다른 산출물을 직접 가리키지 않는다.
+- **adr-writer는 독립적이다** — 매핑은 코드 경로도, Feature ID도, PRD 참조도 저장하지 않는다. `/feature-to-adr`가 ALPS의 구현 관련 계약을 ADR로 완전 이전하고 명시적 재import를 비교하지만, adr-writer는 ALPS를 읽지 않는다.
+- **소유권은 한 방향(PRD → ADR → 코드)으로 이전되며**, handoff 뒤에는 ADR만 구현 권위로 남는다. 어떤 산출물도 본문에서 다른 산출물을 직접 가리키지 않는다.
 - **ADR admission gate가 생성보다 먼저다.** 요구사항 계약, 지속적인 시스템·데이터·보안 경계, 외부 제공자·모델과 fallback, 키 설계, 알고리즘과 트레이드오프만 ADR 레이어로 올린다. 같은 계약과 경계를 유지한 채 교체할 수 있는 라이브러리, SDK, 프레임워크, credential/auth adapter, 모듈 구조는 코드 레이어에 둔다.
 - **ADR 본문 = 현재 상태, decision-log.md = 주요 변경 이력.** ADR은 현재 코드를 서술하는 요구사항 문서이고, 그 진화의 타임라인은 카테고리별 `decision-log.md`가 보존한다(관례 파일이며 인덱스에 등록하지 않는다). 진화는 기본적으로 제자리 수정 + 로그 한 줄이고, supersede는 결정 주제 자체가 갈라졌을 때만 쓴다.
 - **ADR 완결성의 기준은 재생성 테스트다** — "코드를 전부 지우고 이 ADR만 남았을 때, 요구사항을 지키는 코드를 이것만으로 다시 세울 수 있는가?" 구현과 구조, 이름은 달라져도 된다(ADR에 없으므로 재량이다). 하지만 **결과가 지켜야 하는 계약은 하나도 빠져서는 안 된다.** 그래서 요구사항 값(최대 턴 수, 사용량 쿼터, 보존 기간, 상한, 목표치)은 숫자와 근거를 그대로 ADR에 넣고, 구현 튜닝 값(커넥션 풀, 백오프, 캐시 TTL)은 넣지 않는다. 판단 기준은 `templates/adr/authoring-rules.md`의 "Concrete numbers"를 본다.
 
 목차 — 사이클을 처음부터 끝까지 본 뒤 핵심 커맨드, 라우팅, 운영 구조를 차례로 본다:
 
-| §                                              | 다이어그램         | 답하는 질문                                                |
-| ---------------------------------------------- | ------------------ | ---------------------------------------------------------- |
-| [1](#1-전체-라이프사이클)                      | 전체 라이프사이클  | PRD부터 유지 단계까지, 어떤 커맨드가 언제 실행되는가       |
-| [2](#2-alps-init-내부-섹션-단위-작성-루프)     | `/alps-init`       | ALPS 9개 섹션이 어떻게 작성되고, 왜 순서가 어긋나는가      |
-| [3](#3-feature-to-adr-내부-결정-발견과-재조정) | `/feature-to-adr`  | 기능별 0..N 결정과 계약 변경을 어떻게 전달하는가           |
-| [4](#4-adr-impl-내부-선행-의존성-게이트)       | `/adr-impl`        | 대상을 어떻게 찾고, 의존성 게이트를 왜 건너뛸 수 없는가    |
-| [5](#5-adr-impl-review-내부-적대적-리뷰)       | `/adr-impl-review` | 격리와 승인된 기준선이 어떻게 반증 기반 판정을 만드는가    |
-| [6](#6-이-변경은-어느-커맨드-소유인가)         | 라우팅             | 어떤 이견이나 변경 요청이 들어왔을 때 어느 커맨드가 맡는가 |
-| [7](#7-adr-status-전이)                        | Status             | Proposed / Accepted / Superseded 사이를 누가 옮기는가      |
-| [8](#8-의존성-모델과-결합-지점)                | PRD → ADR → 코드   | 연결이 어디에 살고, 어디에는 의도적으로 두지 않는가        |
-| [9](#9-실행-계층과-효율성-검토)                | 운영 내부 구조     | 어디서 비용이 발생하고, 현재 최적화와 다음 개선은 무엇인가 |
+| §                                                       | 다이어그램         | 답하는 질문                                                |
+| ------------------------------------------------------- | ------------------ | ---------------------------------------------------------- |
+| [1](#1-전체-라이프사이클)                               | 전체 라이프사이클  | PRD부터 유지 단계까지, 어떤 커맨드가 언제 실행되는가       |
+| [2](#2-alps-init-내부-섹션-단위-작성-루프)              | `/alps-init`       | ALPS 9개 섹션이 어떻게 작성되고, 왜 순서가 어긋나는가      |
+| [3](#3-feature-to-adr-내부-계약-소유권-이전과-재import) | `/feature-to-adr`  | 기능 계약을 어떻게 완전 이전하고 멱등하게 다시 가져오는가  |
+| [4](#4-adr-impl-내부-선행-의존성-게이트)                | `/adr-impl`        | 대상을 어떻게 찾고, 의존성 게이트를 왜 건너뛸 수 없는가    |
+| [5](#5-adr-impl-review-내부-적대적-리뷰)                | `/adr-impl-review` | 격리와 승인된 기준선이 어떻게 반증 기반 판정을 만드는가    |
+| [6](#6-이-변경은-어느-커맨드-소유인가)                  | 라우팅             | 어떤 이견이나 변경 요청이 들어왔을 때 어느 커맨드가 맡는가 |
+| [7](#7-adr-status-전이)                                 | Status             | Proposed / Accepted / Superseded 사이를 누가 옮기는가      |
+| [8](#8-의존성-모델과-결합-지점)                         | PRD → ADR → 코드   | 연결이 어디에 살고, 어디에는 의도적으로 두지 않는가        |
+| [9](#9-실행-계층과-효율성-검토)                         | 운영 내부 구조     | 어디서 비용이 발생하고, 현재 최적화와 다음 개선은 무엇인가 |
 
 ## 1. 전체 라이프사이클
 
@@ -39,7 +39,7 @@ flowchart TD
 
     subgraph author["ADR 작성 (adr-writer)"]
         direction TB
-        F2A(["/feature-to-adr<br/>기능별 0..N 결정<br/>+ 계약 재조정"])
+        F2A(["/feature-to-adr<br/>기능 계약 완전 이전<br/>Feature당 1..N ADR"])
         Admit{"ADR admission gate<br/>지속적인 결정인가?"}
         Detail["구현 계획 · 코드 · 테스트<br/>SDK · 라이브러리 · credential wiring"]
         New(["/adr-new &lt;category&gt;<br/>결정 하나를 직접 작성"])
@@ -79,7 +79,7 @@ flowchart TD
     Mapping[(".mapping.json<br/>유일한 ADR 인덱스<br/>category → adrs{path,status,summary}<br/>+ dependsOn<br/>(코드 경로 없음, PRD 참조 없음)")]
     Hook[["SessionStart 훅<br/>시작 · 재개 · 초기화 · 압축 복구"]]
 
-    S7 -.->|"Section 7 + 6.3을 읽고<br/>기존 ADR 계약과 비교"| F2A
+    S7 -.->|"구현 관련 의도를 분류하고<br/>완전 이전을 증명"| F2A
     Proposed --> Impl
     Review -.->|"구현 사실 drift 발견"| Sync
     Sync -.-> Review
@@ -102,7 +102,7 @@ flowchart TD
 **읽는 법**
 
 - **진입점은 둘이지만 ADR 생성보다 admission gate가 먼저다.** PRD-first는 `/feature-to-adr`가 `/adr-new`에 위임하고, ADR-only는 직접 결정을 제시한다. 두 경로 모두 요구사항 계약이나 지속적인 아키텍처 경계를 바꾸는 결정만 ADR로 만들며, SDK·라이브러리·credential wiring처럼 교체 가능한 구현 수단은 코드와 테스트로 내려보낸다.
-- **`/feature-to-adr`는 handoff와 재조정을 소유한다.** Section 7, NFR, 아키텍처 제약과 기능 그래프를 읽고 기능마다 `0..N` 결정 후보를 분리한 뒤 admission gate를 독립 적용한다. 새 결정만 `/adr-new`에 위임하고, 재실행 시 PRD 계약과 기존 ADR을 비교해 의도된 변경인지 확인한다. 기능 의존성은 실제 ADR 결정 의존성일 때만 `dependsOn`이 된다.
+- **`/feature-to-adr`는 소유권 handoff를 소유한다.** 구현 관련 입력을 ADR 소유, 구현 재량, legacy context, unresolved로 분류하고 빠짐없이 소유자가 정해진 경우에만 완료한다. 이전된 Feature는 실제 계약 소유 ADR을 1개 이상 가지며, 완료 후 PRD는 legacy 문서가 된다. 명시적 재import만 현재 ADR과 의미를 비교하며 동일한 입력은 no-op이다.
 - **새 초안은 한 번 검증하고, 두 번 리뷰하지 않는다.** `/adr-new`는 `adr-reviewer`가 적용하는 것과 같은 규칙(R1-R20)으로 작성하므로, 결정론적 하네스를 돌린 뒤 판단 규칙에 대한 자체 점검을 수행한다 — 방금 제대로 해낸 것을 대부분 되풀이할 리뷰어를 띄우지 않는다. `/adr-review`는 그 작성 컨텍스트가 사라진 자리에 독립적인 읽기를 공급한다. **손으로 고친, 다른 세션에서 바뀐, 물려받은** ADR이 그 대상이며, 작성 직후 자동으로가 아니라 요청 시에 실행된다.
 - **의존성 게이트는 필수다.** `/adr-impl`은 곧장 코딩으로 가지 않는다. `dependsOn`을 전이적으로 순회하고, 선행이 `Proposed`이거나 dangling이면 그것을 위상 순서로 먼저 구현한다.
 - **Stacked PR은 요청 기반 구현 전달 fallback이다.** 사용자가 리뷰 부담 감소를 요청했지만 Feature나 ADR을 더 나누면 의미 경계가 깨질 때, `/adr-impl`은 같은 승인된 ADR을 구현하는 dependency-ordered PR layer를 제안할 수 있다. 각 layer는 하나의 review question만 가지며 점수만으로 자동 생성하지 않고 ALPS·ADR·mapping에 Stack 상태를 저장하지 않는다.
@@ -167,9 +167,9 @@ flowchart TD
 
 **Section 7은 특별히 조심해야 하는 예외다.** 원자 모드에서는 각 Feature를 하나씩 확인·저장한다. batch 모드에서도 각 7.x는 독립 초안과 저장 호출을 유지하며, 작거나 비슷하다는 이유로 합치거나 생략하지 않는다.
 
-## 3. /feature-to-adr 내부: 결정 발견과 재조정
+## 3. /feature-to-adr 내부: 계약 소유권 이전과 재import
 
-alps-writer가 adr-writer에 넘기는 유일한 지점이다. ALPS를 읽어 결정 후보와 요구사항 계약을 분리하고 기존 ADR과 비교하지만, ADR 작성 규칙 자체는 `/adr-new`에 남는다.
+alps-writer가 adr-writer에 넘기는 유일한 지점이다. 최초 실행은 PRD의 구현 관련 의도를 ADR 집합으로 완전 이전한다. 이후 일반 구현은 PRD를 읽지 않는다. 사용자가 변경된 PRD의 재import를 명시한 경우에만 현재 ADR과 semantic comparison을 수행한다.
 
 ```mermaid
 sequenceDiagram
@@ -198,35 +198,37 @@ sequenceDiagram
     end
     Note over F2A: self-edge·순환·없는 기능 참조는<br/>쓰기 전에 중단하고 6.3 수정을 요청
 
-    F2A->>F2A: 위상 순서로 분석 큐 구성<br/>기존 카테고리도 계약 비교 대상
+    F2A->>F2A: 위상 순서로 분석 큐 구성
     F2A->>U: 분석 순서 제시 — 한 번만 확인
 
     loop 한 기능씩 순차적으로
         F2A->>F2A: 기능 이름에서 카테고리 키를 도출<br/>kebab-case, 기본은 단일 세그먼트
-        F2A->>F2A: 요구사항·경계·trade-off를<br/>서로 독립적인 결정 후보로 분리
-        F2A->>F2A: 후보마다 admission gate 적용
-        alt 기존 ADR이 있음
-            F2A->>U: In sync / PRD contract changed /<br/>new durable decision / PRD-only detail 보고
-        else admitted 후보가 있음
-            loop admitted 결정마다
-                F2A->>New: 카테고리 + 해당 결정 재료<br/>+ 관련 계약과 근거만 전달
+        F2A->>F2A: 모든 입력을 ADR-owned / implementation discretion /<br/>legacy context / unresolved로 분류
+        alt unresolved 또는 계약 owner 누락
+            F2A->>U: handoff BLOCKED — 쓰기 전에 해결
+        else 최초 handoff
+            loop 계약 owner와 독립 decision마다
+                F2A->>New: 카테고리 + motivation + Drivers<br/>+ 계약·근거·observable evidence 전달
                 New->>Map: adrs[] 레코드 기록
             end
-        else admitted 후보가 없음
-            F2A->>U: ADR 없음 — 구현 계획에만 유지
+            F2A->>U: transfer coverage 완료<br/>PRD scope는 legacy
+        else 사용자가 명시한 재import
+            F2A->>F2A: 현재 ADR을 target state로 semantic comparison
+            F2A->>U: no-op / existing contract changed /<br/>new contract / removal / unresolved 보고
         end
-        F2A->>Map: 실제 결정 prerequisite만 dependsOn으로 기록
+        F2A->>Map: 구현에 필요한 Feature prerequisite만 dependsOn으로 기록
     end
 ```
 
 **이 핸드셰이크가 지키는 불변식.**
 
-- **기능과 ADR은 1:1이 아니다.** admission gate 결과에 따라 한 기능은 ADR을 만들지 않거나, 하나 또는 여러 개의 독립 결정을 만든다. 빈 category나 placeholder ADR은 만들지 않는다.
-- **재실행은 계약 재조정이다.** 기존 카테고리를 제외하지 않고 PRD 값·규칙·NFR과 ADR 계약을 비교한다. 차이가 있으면 자동 덮어쓰지 않고 사용자가 의도된 변경인지 판정한 뒤 ADR-first 경로로 보낸다.
-- **기능 의존성과 결정 의존성을 분리한다.** 선행 기능에 ADR 대상 결정이 없으면 구현 순서로만 남긴다. 실제 ADR 결정이 다른 실제 ADR 결정을 전제로 할 때만 `dependsOn`을 기록한다.
+- **이전된 Feature는 `1..N` ADR을 가진다.** 최소 하나는 실제 사용자 계약과 observable evidence를 소유한다. 독립 결정은 별도 ADR이고, 라이브러리·SDK 같은 교체 가능한 수단은 코드에 둔다. 제품 계약 없이 구현 교체만 적힌 입력은 transferable Feature가 아니다.
+- **Handoff는 completeness transaction이다.** 모든 구현 관련 입력이 ADR-owned, implementation discretion, legacy context 중 하나로 분류되고 unresolved가 0일 때만 완료한다. 이후 PRD는 legacy 문서이며 구현·리뷰·sync는 ADR만 읽는다.
+- **재import는 명시적이고 멱등적이다.** 같은 의미의 PRD를 같은 ADR 상태에 반복 적용하면 ADR, mapping, Status와 decision log를 바꾸지 않는다. 계약 추가·변경은 ADR 변경 제안이고, 삭제는 자동 적용하지 않는다.
+- **구현 prerequisite를 영속화한다.** 이전된 Feature마다 실제 계약 owner가 있으므로, 계약을 만족하기 위해 필요한 선행 Feature는 category `dependsOn`으로 보존한다. 코드 재사용과 편의 순서는 저장하지 않는다.
 - **임포터는 도메인 경계를 발명하지 않는다.** ALPS에는 기능보다 상위의 개념이 없으므로, 2세그먼트 `<context>/<feature>` 키는 두 경우에만 쓴다. Section 7이 이미 기능을 그룹으로 묶고 있을 때(PRD가 경계를 주장한 경우), 또는 사용자가 명시적으로 그룹화를 요청할 때다. 그 외에는 flat이 기본이며, 이것이 "adr-writer는 ALPS를 참조하지 않는다"를 참으로 유지한다.
 - **Feature ID는 절대 키가 되지 않는다.** `F1` / `F-AUTH-01`이 있어도 키는 기능 이름에서 나오고, ID는 어디에도 저장하지 않는다. 이름이 숫자뿐인 기능은 소문자 id(`f1`)를 평범한 리터럴 키로 쓰는 것이지, ID를 보존하는 필드가 아니다.
-- **그대로 넘어가는 것**: 근거를 포함한 요구사항 값(상한, 쿼터, 보존 기간, 목표치)과 비수치 요구사항(허용 값 집합과 전이, 필수 여부, 가시성, 유일성, 단위). 여기서 숫자를 "적절히"로 일반화하면 파이프라인에서 영구히 잃는다. ADR은 PRD를 되짚어 가리키지 않기 때문이다.
+- **그대로 넘어가는 것**: motivation, 근거를 포함한 요구사항 값, 상태·전이, 필수 여부, 권한·가시성, 순서·유일성·단위, 실패 보장, NFR, 외부 경계·fallback, 관련 non-goal과 구현 독립적인 observable evidence다. 여기서 내용을 일반화하면 handoff 뒤 복구할 상위 권위가 없다.
 
 ## 4. /adr-impl 내부: 선행 의존성 게이트
 
@@ -369,7 +371,7 @@ flowchart TD
     Exempt -.->|"단 결정이 바뀌었다면<br/>(채택 대안, 상태 기계,<br/>핵심 설계, 폴백)"| Q
 
     Q -->|"새로운 결정"| New(["/adr-new &lt;category&gt;"])
-    Q -->|"ALPS Section 7 기능 분석<br/>또는 PRD 계약 재조정"| F2A(["/feature-to-adr"])
+    Q -->|"ALPS 계약 ownership handoff<br/>또는 명시적 재import"| F2A(["/feature-to-adr"])
     Q -->|"Proposed ADR에 코드가 필요"| Impl(["/adr-impl"])
 
     Q -->|"요구사항 값이나 규칙이 바뀜<br/>(“최대 7턴 → 10턴”)"| Impl
@@ -432,25 +434,30 @@ stateDiagram-v2
 
 ## 8. 의존성 모델과 결합 지점
 
-PRD → ADR → 코드는 논리적 단방향 의존성이다. 세 산출물 중 어느 것도 본문에서 다른 것을 물리적으로 가리키지 않으며, 연결은 정확히 한 곳 `.mapping.json`(category → ADR + `dependsOn`)에만 산다. 매핑은 PRD 참조도, 코드 경로도 갖지 않는다.
+PRD → ADR → 코드는 단방향 소유권 이전과 의존성이다. Handoff 전에는 PRD, 완료 후에는 ADR이 구현 의도를 소유한다. 세 산출물 중 어느 것도 본문에서 다른 것을 물리적으로 가리키지 않으며, `.mapping.json`은 ADR index와 `dependsOn`만 가진다.
 
 ```mermaid
-flowchart RL
-    PRD["ALPS / PRD<br/>비즈니스 요구사항<br/>(가장 안정적)"]
-    ADR["ADR<br/>아키텍처 결정<br/>(회색 지대)"]
-    Code["코드<br/>구현 상세<br/>(가장 변동이 심함)"]
+flowchart LR
+    PRD["ALPS / PRD<br/>기획 권위"]
+    Handoff["완전한 ownership handoff"]
+    ADR["ADR<br/>구현 권위"]
+    Code["코드<br/>구현 상세"]
+    Legacy["PRD<br/>legacy planning document"]
+    Reimport["명시적 재import"]
     Mapping[(".mapping.json<br/>유일한 ADR 인덱스<br/>category → adrs + dependsOn<br/>(코드 경로 없음, PRD 참조 없음)")]
 
-    Code -. 논리적 의존 .-> ADR
-    ADR -. 논리적 의존 .-> PRD
-
+    PRD --> Handoff --> ADR --> Code
+    Handoff --> Legacy
+    Legacy -. 사용자 요청 .-> Reimport
+    ADR --> Reimport
+    Reimport -. 승인된 계약 변경 .-> ADR
     Mapping -- adrs --> ADR
     ADR == "레포 검색<br/>(경로를 저장하지 않는다)" ==> Code
 ```
 
-- **PRD↔ADR 참조는 저장되지 않는다** — adr-writer는 ALPS를 참조하지 않는다. `/feature-to-adr`가 PRD의 동기와 admitted 계약을 전달하고 재실행 시 차이를 비교하지만, ADR 본문과 매핑에는 PRD 경로나 Feature ID를 남기지 않는다(가드레일 R15 / `adr-invariants.sh`의 검사 (b)).
+- **PRD↔ADR 참조는 저장되지 않는다** — `/feature-to-adr`가 motivation과 계약을 흡수하지만 ADR 본문과 매핑에는 PRD 경로나 Feature ID를 남기지 않는다. Handoff report도 일시적 evidence다.
 - **ADR↔코드도 본문에서 가리키지 않는다** — ADR이 다스리는 코드는 그때마다 결정의 키워드로 레포를 검색해서 찾는다. 리팩터링이 ADR이나 매핑을 끌고 다니는 일이 없다.
-- **안정성 기울기**: 변경 빈도는 `코드 >> ADR >> PRD`를 따라야 한다. 변동이 심한 레이어의 변경이 안정적인 레이어를 끌고 온다면, 화살표가 잘못 그려진 것이다.
+- **안정성 기울기**: PRD가 기획 권위일 때는 `코드 >> ADR >> PRD`, handoff 뒤의 live dependency는 `코드 >> ADR`이다. Legacy PRD 변경은 명시적 재import와 승인을 거쳐야만 이 흐름에 들어온다.
 
 ## 9. 실행 계층과 효율성 검토
 
@@ -471,7 +478,7 @@ flowchart RL
 | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | admission 이후 mapping on-demand | ADR과 무관한 요청이 전체 인덱스와 본문을 읽지 않는다.                                                    |
 | atomic 기본 + 명시적 batch       | 승인 단위를 보존하면서 완성된 입력에서는 왕복을 줄인다.                                                  |
-| feature당 `0..N` decision        | 기능마다 placeholder ADR을 만들지 않고 실제 결정 수만큼만 비용을 낸다.                                   |
+| Feature당 `1..N` contract owner  | 이전된 Feature의 계약을 ADR-only 흐름에서 보존하면서 독립 결정만 추가 ADR로 분리한다.                    |
 | harness-first                    | 형식·경로·Status·mapping 오류를 모델 토큰으로 다시 판단하지 않는다.                                      |
 | 작성 직후 중복 reviewer 제거     | `/adr-new`가 방금 사용한 R1-R20을 즉시 별도 agent가 반복하지 않는다.                                     |
 | `standard` / `full` 리뷰 분리    | 보호 표면이 없는 국소 변경은 necessity/report-writer/HTML 비용을 생략한다.                               |

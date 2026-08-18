@@ -716,19 +716,25 @@ test("every stage that filters an ADR body names the requirement-value rule", ()
   );
 });
 
-test("feature-to-adr separates feature order from zero-to-many ADR decisions", () => {
+test("feature-to-adr completes ownership transfer and makes explicit re-import idempotent", () => {
   const importer = read(
     path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md"),
   );
 
-  assert.match(importer, /zero, one, or several ADRs/);
-  assert.match(importer, /feature implementation order/);
-  assert.match(importer, /not copied wholesale into ADR `dependsOn`/);
-  assert.match(importer, /Do not silently exclude a feature because its category already exists/);
-  assert.match(importer, /PRD contract changed/);
-  assert.match(importer, /If there are zero admitted decisions/);
-  assert.match(importer, /Never create a placeholder ADR/);
-  assert.match(importer, /decision prerequisites/);
+  assert.match(importer, /one or several ADRs/);
+  assert.match(importer, /At least one ADR owns[\s\S]{0,40}Feature's reproducible requirement/);
+  assert.match(importer, /ADR-owned/);
+  assert.match(importer, /Implementation discretion/);
+  assert.match(importer, /Legacy planning context/);
+  assert.match(importer, /Unresolved/);
+  assert.match(importer, /Transfer coverage/);
+  assert.match(importer, /After commit,[\s\S]{0,30}PRD[\s\S]{0,30}legacy planning context/);
+  assert.match(importer, /Do not continuously reconcile PRD and ADR content/);
+  assert.match(importer, /Semantic no-op/);
+  assert.match(importer, /never delete or weaken the ADR automatically/i);
+  assert.match(importer, /Importing the same PRD against the same ADR state repeatedly/);
+  assert.match(importer, /implementation prerequisites/);
+  assert.match(importer, /Never create an empty placeholder ADR/);
 });
 
 test("alps-init resumes from status in the dependency-respecting section order", () => {
