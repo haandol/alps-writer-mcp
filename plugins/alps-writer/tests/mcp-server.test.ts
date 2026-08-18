@@ -83,5 +83,6 @@ test("stdio MCP server exposes schemas and enforces document validation", async 
     },
   });
   assert.match(textContent(saved), /Saved 1\.1/);
+  assert.doesNotMatch(textContent(saved), /saved through MCP/);
   assert.match(fs.readFileSync(target, "utf8"), /saved through MCP/);
 });

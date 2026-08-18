@@ -135,12 +135,25 @@ five-axis comprehension-load rubric: conceptual breadth, contract density,
 state and flow complexity, boundary coupling, and uncertainty and verification
 burden. Score each axis from 0 to 2 and sum them. Show 1 rather than 0, so the
 displayed range is 1-10. Do not show or expose the axis scores or rationale.
+Calibrate the total internally: 1 = one statement/rule; 2 = one action and one
+success condition; 3 = few flows or exceptions; 4 = recommended-range lower
+bound; 5 = best-balanced unit; 6 = recommended-range upper bound; 7 = high
+load; 8 = very high load; 9 = strongly coupled behaviors/contracts; 10 =
+maximum review load, first check for mixed Features or decisions. Treat 4-6 as
+the recommended range. A low score never requires merging and a high score
+never blocks work. Do not print the whole rubric.
 Show only `Comprehension load: <N>/10` for each item. Do not write or persist
 this score in the ALPS document, an ADR, or `.mapping.json`; it is advisory and
 does not block drafting, approval, or implementation.
 
-Only when the user asks to split a high-load item, offer up to three candidates.
-Split a Feature only at independently observable user-behavior boundaries.
+When the Feature scores 7/10 or higher, offer up to three Feature split
+candidates before transfer and explicitly offer keeping the original Feature.
+The proposal is advisory and never blocks drafting, approval, or transfer. Split
+a Feature only at independently observable user-behavior boundaries. If the user
+chooses a split, update the corresponding Section 6 and Section 7 Feature
+boundaries together before transfer.
+
+Only when the user asks to split ADR work, offer up to three ADR candidates.
 Split ADR work only when it contains independent decisions; keep one inherently
 difficult decision in one ADR and offer implementation steps instead. Never
 split by frontend/backend/data layers, and never make splitting a prerequisite.

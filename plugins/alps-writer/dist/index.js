@@ -31396,13 +31396,7 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
     const parts = [...existing.entries()].sort(bySubsectionId).map(([k, v]) => this.buildSubsection(k, v.title, v.content));
     sections.set(section, parts.join("\n"));
     this.writeAtomic(this.workingDoc, this.buildDocument(projectName, sections));
-    return `\u2705 Saved ${subId}. ${title}
-
----
-### ${subId}. ${title}
-
-${content}
----`;
+    return `Saved ${subId}. ${title}`;
   }
   readSection(section, subsectionId) {
     if (!(section in SECTION_TITLES)) return `Section ${section} not found.`;
@@ -31530,7 +31524,7 @@ var server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.7.1" },
+  { name: "alps-writer", version: "0.7.2" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
 
@@ -31554,8 +31548,8 @@ Keywords: PRD, ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \uC81C\uD488
    a. get_alps_section_guide(N)
    b. get_alps_section(N)
    c. Follow conversation guide from overview
-   d. Print the completed section and get explicit user confirmation
-   e. save_alps_section(section, subsection_id, title, content) \u2014 all four arguments; subsection_id and title MUST match the section's XML template \u2014 only AFTER confirmation
+   d. Present a concise plain-text approval digest and get explicit user confirmation
+   e. save_alps_section(section, subsection_id, title, content) \u2014 one call per X.n subsection; Section 7 uses one call per Feature 7.x \u2014 only AFTER confirmation
    f. Move to the next section only after this one is confirmed
 4. In batch mode, keep every section and Section 7 Feature as a separately labeled
    approval unit and persist each with its own save_alps_section call. Never merge,
@@ -31567,7 +31561,11 @@ Keywords: PRD, ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \uC81C\uD488
 - MUST call get_alps_overview() first to get detailed conversation guide
 - NEVER proceed without user confirmation
 - ALWAYS confirm progress at the SECTION level \u2014 do not skip a section without the user seeing and approving it
+- Approval digests MUST remain readable as raw text and include every contract-bearing value, rule, permission, state, transition, scope boundary, and success condition. Omit repeated explanation, examples, Markdown decoration, and implementation detail. Do not name omitted implementation details or add an exclusion list for them.
+- NEVER save a requirement contract that was absent from the approval digest. Show the full pending content when the user requests it.
 - Batch approval requires explicit opt-in or a complete structured source; each section and Feature remains a separate save unit.
+- For Section 7, each Feature 7.x is one approval and save unit. Its 7.x.1-7.x.6 fields stay together.
+- If a Section 7 Feature's comprehension load is 7/10 or higher, suggest up to three independently demonstrable user-behavior splits before approval. The suggestion never blocks approval or saving, and the user may keep the original Feature.
 </RULES>`
   }
 );
@@ -31641,9 +31639,10 @@ server.tool(
   "save_alps_section",
   `Save content to a subsection in the ALPS document.
 \u26A0\uFE0F BEFORE CALLING THIS TOOL:
-1. Print the completed content to the user first
-2. Ask them to confirm it ("Is there anything you want to change?")
-3. Call this tool only after the user has confirmed`,
+1. Present a concise plain-text approval digest in the conversation
+2. Include every requirement value and rule that the saved content will enforce
+3. Ask the user to approve, revise, or defer it
+4. Call this tool only after the user has confirmed`,
   {
     section: external_exports.number().min(FIRST_SECTION).max(LAST_SECTION).describe(`Section number (${SECTION_RANGE})`),
     subsection_id: external_exports.string().min(1).describe(

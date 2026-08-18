@@ -67,7 +67,7 @@ For EVERY section:
 2. Briefly explain section purpose (1-2 sentences)
 3. Ask 1 (max 2) focused questions from the guide
 4. Integrate answers iteratively
-5. When complete, print FULL section and ask for confirmation
+5. When complete, present a concise plain-text approval digest and ask for confirmation
 6. Call `save_alps_section(section, subsection_id, title, content)` — one call per X.n subsection — only AFTER explicit "yes". `subsection_id` and `title` MUST match the `<subsection id="N.x" title="...">` in that section's XML template.
 7. Move to the next section only after confirmation. Follow the recommended authoring order above — author Section 6 (Requirements) before Section 5 (Design).
 
@@ -75,17 +75,31 @@ For EVERY section:
 Atomic confirmation happens at the SECTION level by default. Batch confirmation is allowed only after explicit user opt-in or when a complete structured source covers several sections. In either mode, never silently skip a section; present every section as a separate approval unit.
 </section-level-checkpoint>
 
+<approval-digest>
+The approval view is a disposable reading aid, not the stored document.
+
+- Keep it readable as raw text without relying on rendered Markdown. Use short labels and lists; do not use tables, checkbox syntax, or decorative headings as the only structure.
+- Name the approval unit, then include only: purpose/user value, scope and non-goals, mandatory requirements, every contract-bearing value or rule with its basis, success or Demo outcome, and unresolved questions.
+- Contract-bearing information includes numeric values and units, allowed value sets, mandatory inputs, permissions and visibility, ordering and uniqueness, allowed or forbidden transitions, scope boundaries, and success conditions.
+- Omit repeated explanations, examples, Markdown decoration, and implementation detail. Do not name omitted implementation details or add an exclusion list for them.
+- Never save a requirement contract that was absent from the digest. The stored prose may expand explanation, but it may not add or change a requirement, scope boundary, or success condition the user did not see.
+- End with clear choices to approve, revise a named item, or defer. Show the full pending content when the user requests it.
+  </approval-digest>
+
 <confirmation-required-sections>
 Every section requires confirmation (see the section-level checkpoint above). These need EXTRA-strict, non-skippable confirmation:
 - Section 3. Demo Scenario
 - Section 6. Requirements Summary
-- Every subsection of Section 7 (separate approval/save unit; atomic by default)
+- Every Feature `7.x` of Section 7 (separate approval/save unit; atomic by default)
 </confirmation-required-sections>
 
 <section-7-rule>
 Section 7 (Feature-Level Specification) is the most common place to cut corners.
 - Atomic mode: present, confirm, and save one Feature before moving to the next.
 - Batch mode: present multiple Features only as separately labeled approval units, then save each approved Feature with a separate call.
+- A Feature `7.x` is the approval and save unit. Its `7.x.1`-`7.x.6` fields stay together.
+- If a Feature's comprehension load is 7/10 or higher, propose up to three independently demonstrable user-behavior splits before approval and include the option to keep the original Feature. The proposal never blocks approval or saving.
+- If the user chooses a split, update the corresponding Section 6 and Section 7 Feature boundaries together. Never split by frontend/backend/data layers.
 - Never skip a Feature because it "looks small", "looks similar to a previous one", or "can be inferred". Each Feature is a separate vertical slice.
 - Every Feature's Acceptance Criteria ends with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result.
 </section-7-rule>
@@ -93,10 +107,10 @@ Section 7 (Feature-Level Specification) is the most common place to cut corners.
 
 <change-requests>
 When user asks to edit/update/modify/remove/add anything:
-1. Print only the modified subsection with a `v{n}` DISPLAY marker (e.g., `### 1.1 Purpose v2`). This marker is a conversational diff cue only — it is NEVER persisted.
+1. Show only the modified approval digest with a `v{n}` DISPLAY marker (e.g., `[1.1 Purpose v2]`). This marker is a conversational diff cue only — it is NEVER persisted.
 2. Include short change-log (1-3 bullets)
 3. Ask ONE follow-up question
-4. Do NOT reprint entire section unless requested
+4. Do NOT repeat the entire section digest unless requested
 5. After "no more changes", call `save_alps_section` with the ORIGINAL title (e.g., `Purpose`, no `v2`) and the SAME `subsection_id` so it overwrites in place, then ask permission to proceed to the next section
 </change-requests>
 

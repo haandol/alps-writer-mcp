@@ -60,9 +60,10 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 
 - 9-section ALPS (PRD) template with structured XML templates, conversation guides, and per-Feature demos connected to the end-to-end demo scenario
 - Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
+- Contract-complete plain-text approval digests — concise raw-text views preserve every requirement value and rule before subsection-level persistence
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
-- **Disposable comprehension signal** — Section 7 Features are internally assessed on five axes and shown only as an ephemeral `1–10` score; splitting is suggested only when requested
+- **Disposable comprehension signal** — Section 7 Features use a calibrated `1–10` scale with `4–6` as the recommended range; Features at `7/10` or higher receive up to three non-blocking user-behavior split candidates
 - **ALPS → ADR ownership handoff** — `/feature-to-adr` transfers every implementation-relevant Feature contract into `1..N` real ADRs, leaves replaceable means to code, and makes equivalent explicit re-imports no-ops
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client (MCP server only)
 

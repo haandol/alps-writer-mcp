@@ -1022,14 +1022,26 @@ test("Feature and ADR comprehension load is scored internally but shown as one a
       /do not (?:write|persist|store)[\s\S]{0,160}ADR|ADR[\s\S]{0,160}저장하지/i,
     );
     assert.match(source, /does not\s+block|must not\s+block|차단하지/i);
+    assert.match(source, /1\s*=\s*one statement|1점.*단일 문구/i);
+    assert.match(source, /5\s*=\s*best-balanced|5점.*균형/i);
+    assert.match(source, /10\s*=\s*maximum review load|10점.*최대/i);
+    assert.match(source, /(?:Treat\s+)?4-6\s+as\s+the\s+recommended\s+range|4~6점.*권장 범위/i);
+    assert.match(source, /low score never requires merging|낮은 점수.*자동 병합/i);
+    assert.match(source, /Do not print the whole rubric|전체 rubric.*출력하지/i);
   }
 
   const alpsGuide = sources[0];
-  assert.match(
-    alpsGuide,
-    /only when the user asks[\s\S]{0,80}split|사용자가[\s\S]{0,80}분할[\s\S]{0,80}요청/i,
-  );
+  assert.match(alpsGuide, /7\/10 or higher[\s\S]{0,160}up to three/i);
+  assert.match(alpsGuide, /keep the original Feature/i);
+  assert.match(alpsGuide, /never blocks approval or saving/i);
   assert.match(alpsGuide, /observable user behavior|관찰 가능한 사용자 행동/i);
+
+  const featureHandoff = sources[1];
+  assert.match(featureHandoff, /Feature scores 7\/10 or higher[\s\S]{0,160}up to three/i);
+  assert.match(featureHandoff, /keeping the original Feature/i);
+  assert.match(featureHandoff, /never blocks drafting, approval, or transfer/i);
+  assert.match(featureHandoff, /Section 6 and Section 7 Feature\s+boundaries together/i);
+  assert.match(featureHandoff, /Only when the user asks to split ADR work/i);
 
   for (const source of sources.slice(2)) {
     assert.match(
