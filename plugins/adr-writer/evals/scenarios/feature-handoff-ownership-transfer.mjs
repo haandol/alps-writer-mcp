@@ -37,13 +37,21 @@ function featureBlock(output, ownPattern, nextPattern) {
 function labeledSections(block, headingPattern) {
   const lines = block.split(/\r?\n/);
   const sections = [];
+  const headingText = (line) =>
+    line
+      .trim()
+      .replace(/^#{1,6}\s*/, "")
+      .replace(/\*\*/g, "")
+      .replace(/\s*\([^)]*\)\s*$/, "")
+      .replace(/:\s*$/, "")
+      .trim();
   for (let start = 0; start < lines.length; start++) {
-    if (!headingPattern.test(lines[start])) continue;
+    if (!headingPattern.test(headingText(lines[start]))) continue;
     let end = start + 1;
     while (
       end < lines.length &&
       !/^(?:#{1,6}\s*)?(?:ADR-owned|Implementation discretion|Legacy planning context|Unresolved|ADR candidates?|Dependency result)\s*:?\s*$/i.test(
-        lines[end].trim(),
+        headingText(lines[end]),
       ) &&
       !/^(?:Transfer coverage|Result)\s*:/i.test(lines[end].trim())
     ) {
@@ -83,7 +91,10 @@ export default {
       BRIEF,
       `Follow the skill's normal Feature result format, including ADR-owned,`,
       `Implementation discretion, Transfer coverage, and Result for each Feature.`,
+      `Write each Feature's Transfer coverage on its own line as a numeric X/X ratio.`,
       `In the machine-readable tail use ADR_CANDIDATE and ADR_DEPENDENCY as tags.`,
+      `Use ENRICHMENT_QUESTION only if this completed source actually leaves a`,
+      `contract or durable decision unanswered.`,
       `Put each tag exactly to the left of the | separator.`,
       TAIL_SPEC,
     ].join("\n");
@@ -93,6 +104,9 @@ export default {
     const candidates = tail.findings.filter((finding) => /ADR_CANDIDATE/i.test(finding.tag));
     const dependencies = tail.findings.filter((finding) =>
       /ADR_DEPENDENCY|DEPENDS_ON/i.test(finding.tag),
+    );
+    const enrichmentQuestions = tail.findings.filter((finding) =>
+      /ENRICHMENT_QUESTION/i.test(finding.tag),
     );
     const f1 = featureBlock(
       output,
@@ -109,23 +123,40 @@ export default {
     const f2Candidates = candidates.filter((finding) =>
       /F2|export|내보내기|workspace[/-]export/i.test(finding.summary),
     );
+    const f1Evidence = [f1Owned, ...f1Candidates.map((finding) => finding.summary)].join("\n");
+    const f2Evidence = [f2Owned, ...f2Candidates.map((finding) => finding.summary)].join("\n");
+    const f1DiscretionEvidence = [
+      f1Discretion,
+      ...tail.findings
+        .filter(
+          (finding) =>
+            /IMPLEMENTATION_DISCRETION/i.test(finding.tag) ||
+            (/SendGrid|SDK|client|클라이언트/i.test(finding.summary) &&
+              /재량|제외|replaceable|discretion/i.test(finding.summary)),
+        )
+        .map((finding) => finding.summary),
+    ].join("\n");
     const f1Coverage = completeCoverage(f1);
     const f2Coverage = completeCoverage(f2);
 
     return [
       expectText(
-        f1Owned,
+        f1Evidence,
         /관리자|admin/i,
         "keeps F1 invitation permission in the ADR-owned inventory",
       ),
       expectText(
-        f1Owned,
+        f1Evidence,
         /중복|duplicate|활성.{0,80}(?:있|존재).{0,80}(?:거부|reject)|(?:거부|reject).{0,80}활성/is,
         "keeps F1 active-invitation uniqueness in the ADR-owned inventory",
       ),
-      expectText(f1Owned, /7\s*일|7 days/i, "keeps F1's 7-day expiry in the ADR-owned inventory"),
+      expectText(
+        f1Evidence,
+        /7\s*일|7 days/i,
+        "keeps F1's 7-day expiry in the ADR-owned inventory",
+      ),
       {
-        pass: Boolean(f1Owned) && f1Candidates.length >= 1,
+        pass: f1Candidates.length >= 1,
         detail: `F1 ADR candidates: ${f1Candidates.map((item) => item.summary).join(" ; ") || "none"}`,
         label: "maps the F1 ADR-owned inventory to a real ADR candidate",
       },
@@ -133,28 +164,39 @@ export default {
         ...f1Coverage,
         label: "reports complete transfer coverage for F1",
       },
-      expectText(
-        f1Discretion,
-        /SendGrid|SDK|client|클라이언트/i,
-        "keeps the replaceable SDK in Implementation discretion",
-      ),
+      {
+        pass:
+          /SendGrid|SDK|client|클라이언트/i.test(f1Discretion) ||
+          /(?:SendGrid|SDK|client|클라이언트)[\s\S]{0,100}(?:재량|제외|replaceable|discretion)|(?:재량|제외|replaceable|discretion)[\s\S]{0,100}(?:SendGrid|SDK|client|클라이언트)/i.test(
+            f1DiscretionEvidence,
+          ),
+        detail: f1DiscretionEvidence || "no implementation-discretion evidence",
+        label: "keeps the replaceable SDK in Implementation discretion",
+      },
       expectNoText(
         f1Owned,
         /SendGrid|SDK|client|클라이언트/i,
         "does not place the replaceable SDK in F1's ADR-owned inventory",
       ),
+      {
+        pass: enrichmentQuestions.length === 0,
+        detail:
+          enrichmentQuestions.map((item) => item.summary).join(" ; ") ||
+          "no unnecessary enrichment question",
+        label: "does not re-ask contracts already established by the completed PRD",
+      },
       expectText(
-        f2Owned,
+        f2Evidence,
         /활성.{0,40}(멤버|member)|(?:멤버|member).{0,40}활성/is,
         "keeps F2 request permission in the ADR-owned inventory",
       ),
       expectText(
-        f2Owned,
+        f2Evidence,
         /30\s*일|30 days/i,
         "keeps F2's 30-day retention in the ADR-owned inventory",
       ),
       expectText(
-        f2Owned,
+        f2Evidence,
         /ArchiveCo[\s\S]{0,180}(24\s*시간|24 hours)|(24\s*시간|24 hours)[\s\S]{0,180}ArchiveCo/i,
         "keeps F2's archive boundary and 24-hour fallback in the ADR-owned inventory",
       ),

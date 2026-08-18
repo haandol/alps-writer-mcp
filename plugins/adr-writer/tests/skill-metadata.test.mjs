@@ -727,6 +727,11 @@ test("feature-to-adr completes ownership transfer and makes explicit re-import i
   assert.match(importer, /Implementation discretion/);
   assert.match(importer, /Legacy planning context/);
   assert.match(importer, /Unresolved/);
+  assert.match(importer, /gap-driven enrichment/);
+  assert.match(importer, /Do not label an answerable PRD gap as final[\s\S]{0,20}`BLOCKED`/);
+  assert.match(importer, /Never invent a requirement value/);
+  assert.match(importer, /Do not suggest example[\s\S]{0,80}numeric multiple-choice options/);
+  assert.match(importer, /does not[\s\S]{0,20}ask the same questions again/);
   assert.match(importer, /Transfer coverage/);
   assert.match(importer, /After commit,[\s\S]{0,30}PRD[\s\S]{0,30}legacy planning context/);
   assert.match(importer, /Do not continuously reconcile PRD and ADR content/);

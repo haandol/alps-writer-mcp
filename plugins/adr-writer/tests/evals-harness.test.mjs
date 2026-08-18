@@ -90,6 +90,7 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /refactor-protected-state-transition/);
   assert.match(out, /refactor-no-subagent-proposal-only/);
   assert.match(out, /feature-handoff-ownership-transfer/);
+  assert.match(out, /feature-handoff-enriches-underspecified-prd/);
   assert.match(out, /feature-handoff-idempotent-reimport/);
   assert.match(out, /impl-blocks-proposed-prerequisite/);
   assert.match(out, /hook-admission-routing/);
@@ -531,28 +532,68 @@ test("Bedrock fallback scorer requires no dispatch, no retry, main-session revie
   );
 });
 
+test("feature enrichment scorer separates provider failure context from provider selection", async () => {
+  const scenario = await loadScenario("feature-handoff-enriches-underspecified-prd.mjs");
+  const baseFindings = [
+    { tag: "ENRICHMENT_QUESTION", summary: "초대 만료 기간과 정책 근거 확인" },
+    { tag: "ENRICHMENT_QUESTION", summary: "활성 중복 초대 처리 규칙 확인" },
+    {
+      tag: "ENRICHMENT_QUESTION",
+      summary: "provider 오류가 나도 유지할 이메일 전달 실패 보장과 초대 상태 확인",
+    },
+    {
+      tag: "IMPLEMENTATION_DISCRETION",
+      summary: "이메일 SDK와 provider 선택은 구현 재량",
+    },
+    { tag: "NOT_TRANSFERRED", summary: "Result: ASK — 답변 전 handoff 미완료" },
+  ];
+  const compliant = scenario.score({
+    tail: { verdict: "ASK", findings: baseFindings },
+    output: "Result: ASK",
+  });
+  const implementationChoiceCheck = compliant.find(
+    (check) => check.label === "does not ask the user to choose a replaceable email implementation",
+  );
+  assert.equal(implementationChoiceCheck?.pass, true);
+
+  const unsafe = scenario.score({
+    tail: {
+      verdict: "ASK",
+      findings: [
+        ...baseFindings,
+        { tag: "ENRICHMENT_QUESTION", summary: "어떤 이메일 provider를 선택할지 정해주세요" },
+      ],
+    },
+    output: "Result: ASK",
+  });
+  const unsafeImplementationChoiceCheck = unsafe.find(
+    (check) => check.label === "does not ask the user to choose a replaceable email implementation",
+  );
+  assert.equal(unsafeImplementationChoiceCheck?.pass, false);
+});
+
 test("critical workflow scorers accept compliant classifications and reject collapsed ones", () => {
   const cases = [
     {
       name: "feature-handoff-ownership-transfer",
       good: `Feature: F1 워크스페이스 멤버 초대
-ADR-owned:
+**ADR-owned** (category: workspace-member-invitation)
 - 관리자만 이메일로 초대할 수 있다.
 - 같은 워크스페이스와 이메일의 활성 초대가 있으면 요청을 거부한다.
 - 초대는 7일 뒤 만료된다.
 
-Implementation discretion:
+**Implementation discretion**
 - SendGrid SDK와 대체 이메일 클라이언트
 
 Transfer coverage: 4/4
 Result: 1 ADR
 
 Feature: F2 워크스페이스 내보내기
-ADR-owned:
+**ADR-owned** (category: workspace-export)
 - 활성 워크스페이스 멤버만 내보내기를 요청할 수 있다.
 - 완료된 export는 30일 뒤 삭제한다.
 
-ADR-owned:
+**ADR-owned** (category: workspace-export)
 - ArchiveCo 장애 시 24시간 fallback 후 재전송한다.
 
 Implementation discretion:
@@ -587,6 +628,32 @@ NO_MUTATION | ADR과 mapping은 현재 상태 유지
 === EVAL-FINDINGS ===
 ADR_UPDATE | PRD 문장에 맞춰 ADR을 다시 작성
 CONTRACT_DELETE | PRD에서 빠진 24시간 fallback 삭제
+=== EVAL-END ===`,
+    },
+    {
+      name: "feature-handoff-enriches-underspecified-prd",
+      good: `Feature: F1 워크스페이스 멤버 초대
+Enrichment needed:
+- 초대 만료 기간과 정책 근거는 무엇인가?
+- 활성 중복 초대는 거부, 기존 초대 대체, 재전송 중 어떤 동작이어야 하는가?
+- 이메일 전달 실패 시 사용자에게 보이는 결과와 초대 상태는 무엇이어야 하는가?
+
+Implementation discretion:
+- 교체 가능한 이메일 SDK/provider/client
+
+Result: ASK
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+ENRICHMENT_QUESTION | 초대 만료 기간과 정책 근거 확인
+ENRICHMENT_QUESTION | 활성 중복 초대의 계약 동작 확인
+ENRICHMENT_QUESTION | 이메일 전달 실패 보장과 초대 상태 확인
+IMPLEMENTATION_DISCRETION | 이메일 SDK와 provider는 교체 가능
+NOT_TRANSFERRED | 답변 전에는 ADR 작성과 handoff 완료를 진행하지 않음
+=== EVAL-END ===`,
+      bad: `초대는 3일 뒤 만료하고 SendGrid SDK를 사용하면 된다.
+=== EVAL-VERDICT: BLOCKED ===
+=== EVAL-FINDINGS ===
+ADR_CANDIDATE | 3일 초대와 SendGrid 구현으로 바로 ADR 작성
 === EVAL-END ===`,
     },
     {
