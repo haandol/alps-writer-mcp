@@ -67,10 +67,64 @@ Derive each category key canonically from the Feature name. Use a two-segment
 user explicitly requests it. Never invent a bounded context, and never use a
 technical layer name as either segment.
 
-## 3. Preflight a complete ownership transfer
+## 3. Enrich gaps and preflight a complete ownership transfer
 
-Before writing any ADR for a Feature, classify every relevant source item into
-exactly one route:
+A PRD is expected to be less specific than an ADR. Do not treat every missing
+ADR-resolution fact as an immediate blocker, and do not copy the PRD into an ADR
+unchanged. Before final classification, run a **gap-driven enrichment** pass.
+
+Start with the regeneration test: if the PRD disappeared after handoff, identify
+which missing fact could let rebuilt code violate the Feature contract or leave
+the adopted architectural decision unknowable. Probe these areas only when the
+loaded source does not already establish them:
+
+- requirement values and their basis
+- allowed values and transitions, mandatory inputs, permissions, visibility,
+  ordering, uniqueness, and units
+- success invariants, rejection behavior, and failure guarantees
+- system, data, security, and external-provider boundaries
+- fallback and degradation policy
+- discriminating Decision Drivers, realistic alternatives, and
+  decision-changing assumptions
+- implementation-independent observable evidence for each obligation
+
+Do not ask for facts whose change would preserve the contract and durable
+boundaries. Replaceable libraries, SDKs, frameworks, adapters, module layout,
+credential wiring, identifiers, schemas, and tuning values remain
+implementation discretion.
+
+Classify each discovered gap before asking:
+
+1. **Already established** — another loaded PRD section or an existing owning
+   ADR answers it. Carry it forward without asking again.
+2. **Enrichment question** — the missing answer could change compliant user
+   behavior, a requirement contract, a durable boundary, or the adopted
+   decision. Ask only for that gap.
+3. **Implementation discretion** — a developer may choose it while preserving
+   the contract and boundaries. Exclude it without asking.
+4. **Contradiction** — loaded sources assert incompatible obligations. Show the
+   conflict and ask which one is intended.
+
+Ask enrichment questions briefly, one item at a time unless the user supplied a
+complete structured answer covering several gaps. For an architectural choice,
+offer up to three realistic alternatives and their discriminating trade-offs,
+then let the user choose. For an unspecified requirement number, ask an
+open-ended question for the exact value and its basis. Do not suggest example
+numbers, ranges, common defaults, or numeric multiple-choice options; those
+anchor a contract the user has not chosen. Never invent a requirement value,
+allowed set, permission, failure guarantee, boundary, fallback, or decision
+rationale. If the user says a value can be "whatever is reasonable," classify it
+as a tuning value instead of recording a guessed contract.
+
+Treat confirmed answers as ephemeral handoff input. Do not persist a separate
+enrichment report or registry, and do not silently rewrite the PRD. Update the
+PRD only when the user explicitly requests it or accepts a Feature split that
+changes the Section 6 and Section 7 boundaries. Repeat the enrichment pass until
+there are no open questions, or until the user defers an answer that the
+complete transfer requires.
+
+After enrichment, classify every relevant source item and confirmed answer into
+exactly one final route:
 
 1. **ADR-owned** — motivation, a discriminating Driver, requirement contract,
    domain invariant, state/permission rule, system/data/security boundary,
@@ -83,7 +137,8 @@ exactly one route:
 3. **Legacy planning context** — narrative, workshop history, duplicate
    explanation, and other material whose loss cannot change a compliant
    implementation.
-4. **Unresolved** — ambiguous, contradictory, or unowned material that could
+4. **Unresolved** — a required enrichment answer the user deferred, a
+   contradiction the user did not resolve, or unowned material that could
    change user behavior, a requirement contract, a boundary, or the adopted
    decision.
 
@@ -98,6 +153,7 @@ The transfer inventory is ephemeral. Do not store it in the PRD, ADR,
 
 Preflight succeeds only when:
 
+- no enrichment question remains open
 - every implementation-relevant item has one route
 - `Unresolved` is empty
 - every requirement value and non-numeric rule has an ADR owner
@@ -120,15 +176,21 @@ Implementation discretion:
 Legacy planning context:
 - <non-implementation context>
 
+Enrichment needed:
+- none | <targeted question and why the ADR needs the answer>
+
 Unresolved:
 - none | <blocking item>
 
 Transfer coverage: <covered>/<implementation-relevant items>
-Result: BLOCKED | 1 | N ADRs
+Result: ASK | BLOCKED | 1 | N ADRs
 ```
 
-If anything is unresolved or unowned, stop before writing ADRs. Do not report
-the Feature as transferred.
+When enrichment questions remain, report `Result: ASK`, ask them, and resume
+this preflight after the answer. Do not label an answerable PRD gap as final
+`BLOCKED`. If anything remains unresolved or unowned after enrichment, stop
+before writing ADRs and report `Result: BLOCKED`. Do not report the Feature as
+transferred.
 
 Estimate the current Feature and each ADR candidate with the same internal
 five-axis comprehension-load rubric: conceptual breadth, contract density,
@@ -176,8 +238,16 @@ Pass:
 - requirement values and non-numeric rules verbatim with their basis
 - user-observable behavior, failure guarantees, related non-goals, and
   implementation-independent observable evidence
+- confirmed enrichment answers, realistic alternatives already considered, and
+  decision-changing assumptions
 - feature-scope hints for locating the vertical slice, without storing code
   paths
+
+Tell `/adr-new` which elicitation items are already established so it does not
+ask the same questions again. It may ask only for a newly discovered gap. A
+Feature handoff must remain complete: do not accept "leave it blank and fill it
+during implementation" for a missing contract, durable boundary, or adopted
+decision; return to the enrichment pass instead.
 
 Do not copy user stories or acceptance criteria as prose into the ADR. Absorb
 their motivation and independently reviewable obligations at ADR resolution.

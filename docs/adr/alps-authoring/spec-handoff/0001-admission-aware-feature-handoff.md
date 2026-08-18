@@ -4,13 +4,15 @@ Date: 2026-08-15
 
 ## Status
 
-Accepted (2026-08-17)
+Accepted (2026-08-18)
 
 ## Context
 
 PRD는 제품 기획 단계에서 사용자 의도, 기능 계약, NFR과 시스템 제약을 모은다. 구현 단계에서도 PRD를 계속 읽고 ADR과 대조하면 두 문서가 같은 계약의 공동 권위가 된다. 독자는 현재 기준을 알기 위해 두 수준을 함께 읽어야 하고, 오래된 PRD 문구가 ADR 변경을 되돌릴 수도 있다.
 
-Handoff 이후에는 ADR만으로 요구사항을 지키는 구현을 재생성하고 검토할 수 있어야 한다. PRD는 삭제하지 않아도 되지만 현재 구현 계약을 관리할 책임은 끝나야 한다.
+PRD와 ADR은 같은 시스템을 서로 다른 해상도로 설명한다. PRD가 사용자 문제와 관찰 가능한 동작을 충분히 설명해도, 대안 선택의 근거, 외부 경계, fallback과 구현자가 임의로 정하면 안 되는 계약 값까지 이미 확정했다고 가정할 수는 없다. Importer가 이 차이를 모두 unresolved material로 분류하고 즉시 중단하면 ADR을 구체화하는 단계에 도달하지 못한다.
+
+Handoff 이후에는 ADR만으로 요구사항을 지키는 구현을 재생성하고 검토할 수 있어야 한다. PRD는 삭제하지 않아도 되지만 현재 구현 계약을 관리할 책임은 끝나야 한다. 따라서 importer는 PRD를 그대로 복사하거나 부족한 내용을 추측하지 않고, handoff 중에 ADR 해상도에서 필요한 질문만 사용자와 해결해야 한다.
 
 사용자가 PRD를 수정한 뒤 명시적으로 다시 import할 수는 있다. 이 동작은 지속적인 동기화가 아니라 새 기획 내용을 현재 ADR 계약에 비교하는 변경 제안이어야 한다. 같은 내용이나 표현만 달라진 내용을 반복 import해도 ADR, mapping과 decision log가 바뀌면 안 된다.
 
@@ -26,12 +28,20 @@ Handoff 이후에는 ADR만으로 요구사항을 지키는 구현을 재생성�
 
 `/feature-to-adr`는 PRD에서 구현에 필요한 내용을 ADR 집합으로 이전하는 **소유권 handoff**를 수행한다.
 
-Importer는 쓰기 전에 각 입력을 다음 중 하나로 분류한다.
+Importer는 최종 분류 전에 **gap-driven enrichment**를 수행한다. PRD에서 확인된 계약은 그대로 보존하고, regeneration test로 ADR만 읽을 때 빠질 수 있는 요구사항 값과 규칙, 상태와 권한, 실패 보장, 외부 경계와 fallback, Decision Driver, 대안 선택 근거와 observable evidence를 찾는다.
+
+누락된 항목이 ADR이 소유할 계약이나 지속적인 결정이면 importer는 그 항목만 짧게 질문한다. 정성적인 아키텍처 선택에는 최대 세 개의 현실적인 대안과 trade-off를 제시하되 사용자의 답을 대신하지 않는다. 미정 요구사항 숫자에는 예시 값, 추천 범위, 관행적 기본값이나 숫자형 선택지를 제시하지 않고 값과 근거를 열린 질문으로 받는다. 요구사항 값, 허용 집합, 권한, 실패 보장과 경계를 합리적인 기본값으로 발명하지 않는다. 사용자가 개발자가 자유롭게 정해도 된다고 답한 값은 implementation tuning으로 분류한다. 교체 가능한 SDK, library, adapter와 내부 구조는 구현 재량이므로 보완 질문을 만들지 않는다.
+
+사용자가 확인한 답은 일시적인 handoff input으로 사용하고 ADR에 이전한다. 별도 enrichment report를 저장하거나 PRD를 자동으로 다시 쓰지 않는다. `/adr-new`에는 이미 확인된 계약, 근거, 대안과 evidence를 전달하며 같은 질문을 반복하지 않는다. `/adr-new`가 새 gap을 발견한 경우에만 그 항목을 다시 사용자에게 묻는다.
+
+Enrichment 뒤 importer는 각 입력과 확인된 답을 다음 중 하나로 분류한다.
 
 1. ADR이 소유할 motivation, Decision Driver 또는 requirement contract
 2. 코드가 자유롭게 정할 수 있는 implementation discretion
 3. 구현에 필요하지 않은 legacy planning context
 4. 소유 위치나 의미가 확정되지 않은 unresolved material
+
+모호하거나 빠진 항목은 즉시 최종 `BLOCKED`로 처리하지 않는다. 먼저 enrichment question으로 해결하고 분류를 다시 실행한다. 사용자가 답을 보류하거나 답만으로도 제품 동작, 계약, 경계 또는 채택 결정을 확정할 수 없는 항목만 unresolved material로 남긴다.
 
 모든 구현 관련 입력이 앞의 세 분류에 들어가고 unresolved material이 0일 때만 handoff를 완료한다. 이 시점부터 ADR 집합이 구현 의도와 계약의 유일한 권위다. PRD는 삭제하거나 수정할 필요가 없는 legacy planning document로 남는다. 일반적인 `/adr-impl`, `/adr-impl-review`, `/adr-sync` 흐름은 PRD를 읽지 않는다.
 
@@ -46,7 +56,8 @@ ADR 본문과 mapping은 PRD 경로, section 번호와 Feature ID를 저장하�
 ```mermaid
 flowchart LR
     PRD["PRD<br/>기획 권위"]
-    Classify["전체 입력 분류"]
+    Enrich["ADR 해상도 gap 탐지<br/>사용자 확인"]
+    Classify["확인된 입력 분류"]
     Complete{"미해결 0<br/>계약 coverage 완료?"}
     ADR["1..N ADR<br/>구현 권위"]
     Legacy["PRD<br/>legacy planning document"]
@@ -55,8 +66,8 @@ flowchart LR
     Noop["의미 동일<br/>no-op"]
     Change["ADR 변경 제안"]
 
-    PRD --> Classify --> Complete
-    Complete -->|아니오| PRD
+    PRD --> Enrich --> Classify --> Complete
+    Complete -->|추가 답변 필요| Enrich
     Complete -->|예| ADR
     Complete -->|예| Legacy
     Legacy -. 사용자 요청 .-> Reimport --> Compare
@@ -72,6 +83,12 @@ flowchart LR
 - 완료된 handoff 이후 PRD는 보존할 수 있지만 구현, 리뷰와 sync의 입력으로 읽거나 ADR과 지속적으로 동기화하지 않는다.
 - 이전 대상으로 선택된 구현 가능한 Feature는 requirement contract를 소유하는 ADR을 1개 이상 가진다.
 - Feature 계약 ADR은 사용자 관찰 동작, 요구사항 값과 규칙, 불변식, 실패 보장과 구현 독립적인 observable evidence를 포함한다.
+- Importer는 최종 분류 전에 regeneration test로 PRD와 완전한 ADR 사이의 계약·결정 gap을 찾는다.
+- 빠진 ADR 소유 계약이나 지속적인 결정은 즉시 최종 차단하지 않고 사용자에게 해당 gap만 질문한 뒤 다시 분류한다.
+- 정성적인 아키텍처 gap은 현실적인 대안과 trade-off를 제시할 수 있지만, 미정 요구사항 숫자에는 예시·범위·기본값·숫자형 선택지를 제시하지 않으며 요구사항 값, 규칙, 상태, 권한, 실패 보장과 경계를 사용자 답 없이 확정하지 않는다.
+- 교체 가능한 구현 수단과 개발자가 자유롭게 정할 tuning 값에는 enrichment question을 만들지 않는다.
+- 사용자가 확인한 enrichment 답은 handoff input으로 ADR에 이전하며 별도 report나 registry로 저장하거나 PRD에 자동 반영하지 않는다.
+- `/adr-new`는 importer가 이미 확인한 계약과 결정을 다시 질문하지 않고 새로 발견한 gap만 확인한다.
 - 서로 독립적으로 변경 가능한 결정은 하나의 ADR에 합치지 않는다.
 - 교체 가능한 라이브러리, SDK, framework, credential wiring과 module layout은 기능에 포함돼도 ADR을 만들지 않는다.
 - 제품 계약 없이 구현 교체만 기술한 입력은 transferable Feature가 아니라 implementation discretion으로 분류한다.
@@ -108,6 +125,7 @@ flowchart LR
 
 - 구현과 리뷰가 PRD 없이 ADR만 읽고 진행된다.
 - PRD를 역사적 기획문서로 보존하면서 현재 계약의 권위를 분리한다.
+- PRD가 ADR보다 덜 구체적이어도 handoff가 필요한 질문을 통해 계약과 결정을 완성한다.
 - 반복 import가 의미 없는 ADR churn을 만들지 않는다.
 - 요구사항 계약과 feature prerequisite가 handoff 뒤에도 영속 소유자를 가진다.
 - adr-writer는 PRD를 직접 읽지 않는다.
@@ -115,11 +133,14 @@ flowchart LR
 ### Negative
 
 - importer가 전체 transfer coverage와 semantic no-op을 판단해야 한다.
+- 불완전한 PRD는 handoff 중 추가 사용자 상호작용이 필요하다.
 - 구현 가능한 Feature는 순수 아키텍처 결정이 없어도 실제 requirement contract를 소유하는 ADR이 필요하다.
 
 ### Risks
 
 - 입력 분류가 누락되면 handoff가 불완전해질 수 있다. importer는 unresolved material이 0이고 모든 구현 관련 입력의 분류가 보일 때만 완료를 선언한다.
+- importer가 질문 대신 합리적인 기본값을 채우면 제품 계약을 발명할 수 있다. 요구사항과 경계는 사용자 확인 전까지 enrichment question 또는 unresolved material로 유지한다.
+- 모든 세부사항을 질문하면 PRD와 코드 해상도를 ADR로 끌어올릴 수 있다. regeneration test를 통과하는 ADR 소유 항목만 묻고 implementation discretion은 제외한다.
 - 재import에서 표현 변경을 계약 변경으로 오인할 수 있다. 비교는 문구가 아니라 값, 상태, 권한, 순서, 실패 보장, 경계와 트레이드오프를 기준으로 한다.
 - PRD에서 사라진 계약을 폐기로 오인할 수 있다. 삭제는 자동 적용하지 않고 명시적 contract change로 확인한다.
 

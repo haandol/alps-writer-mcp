@@ -75,11 +75,14 @@ agent exit, or no output).
      the replaced mode and comparison narration, but preserve the current
      forbidden transition. A blanket "remove negative sentences" rule fails the
      second half.
-   - `feature-handoff-ownership-transfer` checks each Feature's shipping
-     `ADR-owned` inventory and complete transfer coverage, keeps independent
-     durable decisions separate, leaves replaceable SDK choices in
-     `Implementation discretion`, and turns required Feature prerequisites into
-     real `dependsOn` edges.
+   - `feature-handoff-ownership-transfer` ↔
+     `feature-handoff-enriches-underspecified-prd` check both sides of initial
+     import. A complete Feature proceeds with a shipping `ADR-owned` inventory,
+     complete transfer coverage, separate durable decisions, implementation
+     discretion, and real `dependsOn` edges. An underspecified Feature asks only
+     for missing contracts or durable decisions, does not invent values, does
+     not interrogate replaceable SDK choices, and does not declare transfer
+     complete before the answers arrive.
    - `feature-handoff-idempotent-reimport` checks that equivalent PRD wording is
      a semantic no-op and a contract omitted from the changed PRD is never
      deleted automatically.
