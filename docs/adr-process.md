@@ -262,10 +262,13 @@ flowchart TD
     Sort --> Plan
     Say --> Plan
 
-    Plan["3. 계획 — Decision / Mermaid에서<br/>수직 슬라이스 추출 (UI → API → 데이터),<br/>ADR 키워드로 Glob/Grep 해서 코드를 찾고,<br/>변경 계획을 승인받는다"]
+    Plan["3. 계획 — Decision / Mermaid에서<br/>수직 슬라이스 추출 (UI → API → 데이터),<br/>ADR 키워드로 Glob/Grep 해서 코드를 찾고,<br/>비차단 진행 상황을 공유한다"]
     Plan --> AntiP{"안티패턴 카테고리?<br/>frontend/ backend/ api/ db/"}
     AntiP -->|그렇다| StopA["중단: 추출할 수직 슬라이스가 없다<br/>→ /adr-sync로 카테고리 재정렬"]
-    AntiP -->|아니다| Impl4["4. 구현 — ADR의 요구사항 값을<br/>액면 그대로 강제한다. ADR이 말하지 않은<br/>값은 구현 재량이다.<br/>주석은 3줄 이내, 나머지는 테스트로 옮긴다"]
+    AntiP -->|아니다| Gaps{"요구사항 gap 분류<br/>계약에서 도출되는 의무?<br/>프로젝트·도메인 기본값?<br/>제품 판단?"}
+    Gaps -->|"derived obligation<br/>또는 가역적 기본값"| Impl4["4. 구현 — ADR 계약과 도출 의무를<br/>강제하고, 근거 있는 프로젝트·도메인<br/>기본값은 구현 재량으로 선택한다.<br/>주석은 3줄 이내, 나머지는 테스트로 옮긴다"]
+    Gaps -->|"여러 제품 결과가 유효"| DecisionReq["하나의 Decision request<br/>추천안 + 근거 · 2~3개 대안 · 영향 ·<br/>정확한 ADR 계약 문구"]
+    DecisionReq --> FixAdr
     Impl4 --> Test{"5. 테스트 통과?"}
     Test -->|"구현 버그"| Impl4
     Test -->|"ADR의 결정이 틀렸다"| FixAdr["ADR을 먼저 고친다"]
@@ -273,10 +276,10 @@ flowchart TD
     Test -->|통과| Refactor["5.1 /adr-impl-refactor<br/>읽기 전용 reviewer가 효율·복잡도·중복·재사용성 검토<br/>안전 게이트 통과 항목만 변경 전후 테스트와 함께 적용<br/>나머지는 제안으로 기록"]
     Refactor --> FinalTest{"5.2 코드가 바뀌었으면<br/>전체 프로젝트 테스트 재통과?"}
     FinalTest -->|"리팩터링 문제"| Refactor
-    FinalTest -->|통과| Lint["6. adr-structure-lint &lt;category&gt;<br/>유효한 Proposed 기준선 확인"]
+    FinalTest -->|통과| Lint["6. adr-structure-lint &lt;category&gt;<br/>현재 ADR 기준선 확인"]
     Lint --> Rev(["6.1 /adr-impl-review &lt;category&gt;<br/>보고 전용 완료 게이트"])
     Rev --> Verdict{"판정"}
-    Verdict -->|PASS| Promote["7. 묻지 않고 자동 승격:<br/>본문 ## Status → Accepted (YYYY-MM-DD)<br/>+ 매핑 status를 함께"]
+    Verdict -->|PASS| Promote["7. Proposed면 묻지 않고 Accepted로 승격<br/>기존 Accepted의 계약이 그대로면 Status 유지"]
     Verdict -->|"FIX_REQUIRED · BLOCK · INCONCLUSIVE"| Impl4
     Promote --> PostLint["전이 후 lint 재실행<br/>날짜 형식 + status lockstep"]
 
@@ -289,6 +292,8 @@ flowchart TD
 ```
 
 - **의존성 순서가 입력 순서를 이긴다.** 대상이 여럿일 때 — 사용자가 `checkout, identity/login, cart`를 직접 고른 경우든 게이트가 선행을 추가한 경우든 — 항상 위상 정렬해서 가장 깊은 선행부터 구현하고, 그 순서를 한 줄로 사용자에게 보여준다.
+- **계획은 승인 게이트가 아니라 진행 상황이다.** 같은 승인된 ADR revision이면 범위와 테스트를 공유하고 바로 진행한다. 명시 계약에서 도출되는 의무와 반복된 저장소·도메인 기본값은 자동으로 채우고, 금액·권한·보존·규제·비가역 데이터·public contract·durable fallback처럼 여러 제품 선택지가 남는 gap만 하나의 Decision request로 묶는다.
+- **변경 없는 `Accepted` ADR은 다시 `Proposed`로 내리지 않는다.** 계약이 그대로인 보강 구현과 리뷰는 기존 Status를 유지하고, 완료 시 전이 script 없이 body/index lockstep만 검증한다.
 - **요구사항 값 변경은 코드 수정이 아니다.** "최대 7턴 → 10턴"은 상수 하나처럼 보이지만 시스템 동작 요구사항이 바뀐 것이다. ADR의 요구사항 계약을 먼저 갱신하고(제자리 수정, 그리고 최소 major이므로 `decision-log.md` 한 줄도), 테스트와 최종 리뷰가 통과한 뒤 다시 `Accepted`로 승격한다.
 - **자동 리팩터링은 보수적이다.** 공개 계약, 스키마, 의존성, 상태 전이, 권한, 필수 검증, 동시성, 트랜잭션, 폴백과 오류 의미를 건드리는 항목은 즉시 반영하지 않는다. 독립 reviewer가 없으면 제안 전용이며, 실제 변경이 없으면 기준선 테스트를 재사용한다.
 - **Status는 사실을 기록하며 의도를 기록하지 않는다** — 최초 테스트, 리팩터링 뒤 필요한 전체 테스트, 최종 구현 리뷰가 모두 통과하기 전에는 승격하지 않는다.

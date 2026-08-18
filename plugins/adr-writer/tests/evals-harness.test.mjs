@@ -48,8 +48,16 @@ function needsEnv(scenario) {
 // command so the scorer can be exercised without a model.
 function stubAgent(reply) {
   const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-stub-"));
-  const script = path.join(dir, "stub.sh");
-  writeFileSync(script, `#!/bin/bash\ncat > /dev/null\ncat <<'ADREOF'\n${reply}\nADREOF\n`);
+  const script = path.join(dir, "stub.mjs");
+  writeFileSync(
+    script,
+    `#!/usr/bin/env node
+process.stdin.resume();
+process.stdin.on("end", () => {
+  process.stdout.write(${JSON.stringify(`${reply}\n`)});
+});
+`,
+  );
   chmodSync(script, 0o755);
   return script;
 }
@@ -100,6 +108,9 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /impl-review-selects-risk-mode/);
   assert.match(out, /impl-review-evidence-package/);
   assert.match(out, /impl-review-evidence-package-pass/);
+  assert.match(out, /impl-review-surfaces-hidden-contract-assumption/);
+  assert.match(out, /impl-resolves-domain-gaps-before-escalation/);
+  assert.match(out, /impl-plans-without-routine-approval/);
   assert.match(out, /bedrock-subagent-fallback/);
   assert.match(out, /comprehension-load-score-only/);
   assert.match(out, /comprehension-load-calibration-bands/);
@@ -470,6 +481,217 @@ Unverified core risk: none.
   );
   assert.equal(
     checks.find((check) => check.label.includes("approve each coverage row"))?.pass,
+    false,
+  );
+});
+
+test("the hidden-assumption scorer rejects PASS when a contract premise is omitted", async () => {
+  const scenario = await loadScenario("impl-review-surfaces-hidden-contract-assumption.mjs");
+
+  const goodDir = mkdtempSync(path.join(tmpdir(), "adr-eval-assumption-good-"));
+  await scenario.build(goodDir);
+  const goodChecks = scenario.score({
+    dir: goodDir,
+    tail: {
+      verdict: "INCONCLUSIVE",
+      findings: [
+        {
+          tag: "CONTRACT_R1",
+          summary:
+            "status=UNVERIFIED; reason=x-tenant-id provenance and authenticated tenant binding are not established",
+        },
+        {
+          tag: "ASSUMPTION_RISK",
+          summary:
+            "premise=the gateway supplies a trusted x-tenant-id that callers cannot override; impactIfFalse=cross-tenant mutation violates tenant isolation and R1; evidenceMissing=gateway configuration, callback signature verification, or a provenance test",
+        },
+        {
+          tag: "SAFE_CHOICE",
+          summary:
+            "value=250 ms retry delay; classification=Notable implementation choice below ADR resolution; reason=verified timing preserves both contracts",
+        },
+        {
+          tag: "HUMAN_REVIEW",
+          summary:
+            "verdict=INCONCLUSIVE; action=verify gateway header provenance or callback signature before completion; routineApproval=false",
+        },
+      ],
+    },
+    output:
+      "The tenant-header premise is an Unverified risk. The 250 ms retry remains implementation discretion.",
+  });
+  assert.ok(
+    goodChecks.every((check) => check.pass),
+    JSON.stringify(goodChecks, null, 2),
+  );
+
+  const badDir = mkdtempSync(path.join(tmpdir(), "adr-eval-assumption-bad-"));
+  await scenario.build(badDir);
+  const badChecks = scenario.score({
+    dir: badDir,
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "CONTRACT_R1",
+          summary: "status=PROVEN; reason=repository query includes the tenant header",
+        },
+        {
+          tag: "SAFE_CHOICE",
+          summary:
+            "value=250 ms retry delay; classification=implementation discretion; reason=preserves contracts",
+        },
+        {
+          tag: "HUMAN_REVIEW",
+          summary: "verdict=PASS; action=none; routineApproval=false",
+        },
+      ],
+    },
+    output: "All contract rows are proven, so the review passes.",
+  });
+  assert.equal(badChecks.find((check) => check.label.includes("instead of PASS"))?.pass, false);
+  assert.equal(
+    badChecks.find((check) => check.label.includes("premise, contract impact"))?.pass,
+    false,
+  );
+  assert.equal(
+    badChecks.find((check) => check.label.includes("tenant-isolation contract"))?.pass,
+    false,
+  );
+});
+
+test("the gap-resolution scorer separates domain defaults from product decisions", async () => {
+  const scenario = await loadScenario("impl-resolves-domain-gaps-before-escalation.mjs");
+
+  const goodDir = mkdtempSync(path.join(tmpdir(), "adr-eval-gap-resolution-good-"));
+  await scenario.build(goodDir);
+  const goodChecks = scenario.score({
+    dir: goodDir,
+    tail: {
+      verdict: "INCONCLUSIVE",
+      findings: [
+        {
+          tag: "AUTO_RESOLVE",
+          summary:
+            "gap=retry timing; resolution=capped exponential backoff with full jitter, 100 ms base and 5 s cap; basis=three neighboring workers establish the project convention; approval=false",
+        },
+        {
+          tag: "DECISION_REQUEST",
+          summary:
+            "gap=terminal delivery failure; recommendation=send to a DLQ and raise an operator alert; basis=preserves durability and observable recovery; alternatives=drop the event or keep it pending for manual recovery; impact=changes durability, recovery operations, and cost; adrPatch=After delivery failure is exhausted, place the event in the DLQ and alert operators.",
+        },
+        {
+          tag: "PROGRESS",
+          summary:
+            "proceed=implement Gap A retry timing; blockedOn=Gap B durable fallback decision; routinePlanApproval=false",
+        },
+      ],
+    },
+    output:
+      "Retry timing follows the established project convention. Only terminal fallback needs a product decision.",
+  });
+  assert.ok(
+    goodChecks.every((check) => check.pass),
+    JSON.stringify(goodChecks, null, 2),
+  );
+
+  const badDir = mkdtempSync(path.join(tmpdir(), "adr-eval-gap-resolution-bad-"));
+  await scenario.build(badDir);
+  const badChecks = scenario.score({
+    dir: badDir,
+    tail: {
+      verdict: "INCONCLUSIVE",
+      findings: [
+        {
+          tag: "AUTO_RESOLVE",
+          summary:
+            "gap=retry timing; resolution=ask the user to choose; basis=ADR omitted it; approval=true",
+        },
+        {
+          tag: "DECISION_REQUEST",
+          summary:
+            "gap=terminal delivery failure; recommendation=drop it; basis=simple; alternatives=none; impact=unknown; adrPatch=todo",
+        },
+        {
+          tag: "PROGRESS",
+          summary: "proceed=none; blockedOn=Gap A and Gap B; routinePlanApproval=true",
+        },
+      ],
+    },
+    output: "Please approve the 100 ms retry timing and terminal behavior.",
+  });
+  assert.equal(badChecks.find((check) => check.label.includes("auto-resolves"))?.pass, false);
+  assert.equal(
+    badChecks.find((check) => check.label.includes("complete Decision request"))?.pass,
+    false,
+  );
+  assert.equal(badChecks.find((check) => check.label.includes("blocks only"))?.pass, false);
+});
+
+test("the planning scorer rejects a routine approval gate for an unchanged ADR", async () => {
+  const scenario = await loadScenario("impl-plans-without-routine-approval.mjs");
+
+  const goodDir = mkdtempSync(path.join(tmpdir(), "adr-eval-plan-progress-good-"));
+  await scenario.build(goodDir);
+  const goodChecks = scenario.score({
+    dir: goodDir,
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "PLAN_UPDATE",
+          summary:
+            "presentation=non-blocking progress update; scope=existing webhook handler signature verification; tests=signature rejection, duplicate redelivery, and audit emission; comprehensionLoad=4/10; proceed=true",
+        },
+        {
+          tag: "APPROVAL",
+          summary: "required=no; reason=the exact approved ADR revision is unchanged",
+        },
+        {
+          tag: "ADR_CHANGE",
+          summary: "required=no; status=Accepted unchanged; reason=no contract or decision change",
+        },
+      ],
+    },
+    output:
+      "Signature, duplicate, and audit tests are scoped. This is a non-blocking progress update and implementation proceeds now. The existing Accepted (2026-08-18) status is retained without a transition.",
+  });
+  assert.ok(
+    goodChecks.every((check) => check.pass),
+    JSON.stringify(goodChecks, null, 2),
+  );
+
+  const badDir = mkdtempSync(path.join(tmpdir(), "adr-eval-plan-progress-bad-"));
+  await scenario.build(badDir);
+  const badChecks = scenario.score({
+    dir: badDir,
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "PLAN_UPDATE",
+          summary:
+            "presentation=non-blocking progress update; scope=webhook handler; tests=signature and duplicate tests; comprehensionLoad=4/10; proceed=true",
+        },
+        {
+          tag: "APPROVAL",
+          summary: "required=false; reason=the approved ADR is unchanged",
+        },
+        {
+          tag: "ADR_CHANGE",
+          summary: "required=false; status=Proposed until review passes; reason=no contract change",
+        },
+      ],
+    },
+    output:
+      "Progress update: the webhook handler and tests are scoped. Please approve the implementation plan before I proceed. Status stays Proposed until review passes.",
+  });
+  assert.equal(
+    badChecks.find((check) => check.label.includes("visible report does not ask"))?.pass,
+    false,
+  );
+  assert.equal(
+    badChecks.find((check) => check.label.includes("authoritative and Accepted"))?.pass,
     false,
   );
 });

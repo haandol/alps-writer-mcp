@@ -93,8 +93,8 @@
       "adrs": [
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
-          "status": "Accepted (2026-08-17)",
-          "summary": "구현 리뷰는 위험 비례 검토를 유지하며 ADR 계약별 Evidence Package와 의도 적합성이 설명된 구현 재량을 사람에게 제공한다"
+          "status": "Accepted (2026-08-18)",
+          "summary": "구현 리뷰는 계약 증거와 외부 전제를 검증하고 completeness gap을 derived obligation·domain default·product decision으로 분류한다"
         }
       ],
       "dependsOn": []
@@ -104,8 +104,8 @@
       "adrs": [
         {
           "path": "docs/adr/adr-cycle/behavior-evaluation/0001-evaluate-critical-prompt-decisions.md",
-          "status": "Accepted (2026-08-17)",
-          "summary": "영속 상태와 계약 소유권을 결정하는 prompt 분류는 정적 테스트와 shipping prompt 행동 시나리오로 검증하며 handoff 소유권 이전과 멱등 재import를 포함한다"
+          "status": "Accepted (2026-08-18)",
+          "summary": "행동 eval은 숨은 계약·안전 전제 누락과 domain default 대 product decision gap 분류의 과소·과잉 escalation을 검증한다"
         }
       ],
       "dependsOn": []
@@ -116,7 +116,7 @@
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
           "status": "Accepted (2026-08-18)",
-          "summary": "인지비용은 1~10 점별 내부 보정 가이드와 4~6점 권장 범위를 사용하고 Section 7 Feature가 7점 이상이면 비차단 사용자 행동 분할 후보를 제안한다"
+          "summary": "승인된 ADR revision의 구현 계획은 비차단 공유하고 derived obligation·domain default를 자동 해소하며 제품 판단만 Decision request로 요청한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]

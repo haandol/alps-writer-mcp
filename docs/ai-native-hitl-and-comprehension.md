@@ -331,6 +331,12 @@ flowchart TD
 수행한다. 이 단계의 목적은 구현 계획 승인이 아니라 계약으로 결정할 수 없는
 사항이 있는지 찾는 것이다.
 
+빈칸은 즉시 질문하지 않는다. 명시 계약에서 논리적으로 도출되는 의무,
+저장소의 반복된 관례, 권위 있는 protocol·platform·도메인 규칙과 가역적인
+저위험 기본값 순서로 해소한다. 여러 제품 결과가 유효하거나 금액, 권한,
+보존기간, 규제, 비가역 데이터, public contract와 durable fallback을 결정해야
+할 때만 추천안·근거·대안·영향·ADR 문구를 하나의 Decision request로 묶는다.
+
 ### 4. 예외 기반 HITL
 
 사람에게는 계약 변경, 모순, 중대한 미검증 위험과 파괴적 범위만 전달한다.
@@ -460,6 +466,8 @@ flowchart TD
 다음 발견은 에이전트가 처리한다.
 
 - 관련 코드와 기존 패턴 탐색
+- 명시 계약에서 도출되는 의무
+- 반복된 저장소 관례와 권위 있는 도메인 기본값
 - 재사용 가능한 abstraction 판단
 - 내부 모듈과 함수 구조 선택
 - 되돌릴 수 있는 dependency와 adapter 선택
@@ -467,6 +475,7 @@ flowchart TD
 
 다음 발견만 semantic delta로 사람에게 전달한다.
 
+- 여러 domain-valid 결과가 남는 제품 정책 gap
 - 사용자 관찰 행동을 바꿔야 함
 - requirement value나 규칙을 바꿔야 함
 - public contract 또는 persistent data semantics를 바꿔야 함
@@ -854,10 +863,11 @@ AI-native 개발에서 인지부하와 HITL을 함께 줄이는 핵심은 더 �
 
 ## 현재 구조에서 실제로 바뀌는 것
 
-이 절은 앞의 원칙을 현재 `alps-writer`와 `adr-writer`에 적용할 경우의
-구체적인 변경점을 요약한다. 이번 변경은 ADR의 reviewability와 최종 Evidence
-Package를 구현한다. exception-driven ALPS 작성, routine plan approval 제거,
-구현 전 ledger 재사용과 autonomous proof unit은 후속 제안이다.
+이 절은 앞의 원칙을 현재 `alps-writer`와 `adr-writer`에 적용한 변경점을
+요약한다. ADR의 reviewability와 최종 Evidence Package, routine plan approval
+제거, 숨은 계약·안전 전제 탐지와 domain-aware gap resolution은 구현되었다.
+Exception-driven ALPS 작성, 구현 전 영속 ledger와 autonomous proof unit은
+후속 제안이다.
 
 ### 전체 흐름 비교
 
@@ -868,7 +878,7 @@ flowchart LR
     ALPS["ALPS 작성<br/>section·Feature 승인"]
     Handoff["feature-to-adr<br/>결정 발견"]
     ADR["ADR 작성·승인"]
-    Plan["구현 계획 승인"]
+    Plan["구현 계획<br/>비차단 진행 상황"]
     Implement["구현"]
     Review["테스트·구현 리뷰"]
     Accepted["Accepted"]
@@ -901,19 +911,19 @@ flowchart LR
 
 ### 단계별 변경 요약
 
-| 단계                 | 현재 구조                                                         | 변경 후 구조                                                                                  | 인지부하와 HITL 효과                               |
-| -------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `/alps-init`         | Atomic이 기본이며 미완성 section과 Feature를 각각 확인하고 저장   | 입력을 `Source-backed`, `Agent-derived`, `Decision required`로 분류하고 미확정 계약만 질문    | 반복적인 문장 승인을 줄이고 제품 판단에만 집중     |
-| Section 7            | 사용자 행동, 값, 규칙, edge case와 Acceptance Criteria 작성       | 기존 구조를 유지하되 Acceptance Criteria를 proof obligation의 입력으로 사용                   | 문서를 늘리지 않고 검증 가능성을 높임              |
-| `/feature-to-adr`    | Feature 계약을 `1..N` ADR로 완전 이전하고 PRD를 legacy로 전환     | 승인된 ADR 계약에서 derived contract ledger를 생성                                            | 일반 구현에서 PRD를 다시 읽는 비용 제거            |
-| `/adr-new`           | Decision, Drivers, contract와 regeneration checklist 승인         | 계약을 한 행 한 의무로 작성하고 Observable evidence를 포함해 이후 리뷰 기준선으로 사용        | 재생성 코드의 준수 여부를 요구사항별로 판정        |
-| `/adr-impl` 탐색     | 관련 코드를 찾고 구현 계획을 작성한 뒤 사용자 승인                | 탐색과 구현 선택은 자동 진행하고 계약 또는 지속적인 경계가 바뀔 때만 semantic delta 제시      | routine plan approval 제거                         |
-| `/adr-impl` 구현     | ADR 계약에 따라 구현하고 테스트 작성                              | 같은 계약 ledger의 각 행을 proof obligation으로 사용해 구현과 테스트를 닫음                   | 구현 범위와 검증 범위가 같은 기준을 사용           |
-| `/adr-impl-refactor` | 검증된 국소 리팩토링만 자동 반영                                  | 현재 안전 경계를 유지                                                                         | 추가 HITL 없이 기존 자동화 활용                    |
-| `/adr-impl-review`   | 구현 후 decision ledger를 만들고 contract coverage와 finding 검토 | 요구사항별 Evidence Package와 ADR 의도 적합성이 설명된 구현 재량을 읽기 전용으로 표시         | 사람이 전체 diff 없이 달성 내용과 자율 판단을 이해 |
-| Stacked PR           | 사용자가 요청하면 review question별 전달 후보 제시                | Agent가 proof obligation별 autonomous unit으로 사용할 수 있게 하되 원격 게시 정책은 별도 유지 | 작은 자동 검증·rollback 단위 확보                  |
-| 완료                 | Review PASS 후 자동 `Accepted`                                    | 동일하게 유지                                                                                 | 완료 시 추가 승인 없음                             |
-| Merge                | 저장소 PR·CI 정책에 따름                                          | Evidence PASS를 merge eligibility로 사용하되 실제 자동 merge는 저장소 정책에 따름             | 검증과 publication 권한을 분리                     |
+| 단계                 | 현재 구조                                                         | 변경 후 구조                                                                                                | 인지부하와 HITL 효과                               |
+| -------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `/alps-init`         | Atomic이 기본이며 미완성 section과 Feature를 각각 확인하고 저장   | 입력을 `Source-backed`, `Agent-derived`, `Decision required`로 분류하고 미확정 계약만 질문                  | 반복적인 문장 승인을 줄이고 제품 판단에만 집중     |
+| Section 7            | 사용자 행동, 값, 규칙, edge case와 Acceptance Criteria 작성       | 기존 구조를 유지하되 Acceptance Criteria를 proof obligation의 입력으로 사용                                 | 문서를 늘리지 않고 검증 가능성을 높임              |
+| `/feature-to-adr`    | Feature 계약을 `1..N` ADR로 완전 이전하고 PRD를 legacy로 전환     | 승인된 ADR 계약에서 derived contract ledger를 생성                                                          | 일반 구현에서 PRD를 다시 읽는 비용 제거            |
+| `/adr-new`           | Decision, Drivers, contract와 regeneration checklist 승인         | 계약을 한 행 한 의무로 작성하고 Observable evidence를 포함해 이후 리뷰 기준선으로 사용                      | 재생성 코드의 준수 여부를 요구사항별로 판정        |
+| `/adr-impl` 탐색     | 관련 코드를 찾고 구현 계획을 작성한 뒤 사용자 승인                | 비차단 진행 상황을 공유하고 derived obligation·domain default를 채운 뒤 제품 판단만 Decision request로 제시 | routine plan approval과 단순 gap 질문 제거         |
+| `/adr-impl` 구현     | ADR 계약에 따라 구현하고 테스트 작성                              | 같은 계약 ledger의 각 행을 proof obligation으로 사용해 구현과 테스트를 닫음                                 | 구현 범위와 검증 범위가 같은 기준을 사용           |
+| `/adr-impl-refactor` | 검증된 국소 리팩토링만 자동 반영                                  | 현재 안전 경계를 유지                                                                                       | 추가 HITL 없이 기존 자동화 활용                    |
+| `/adr-impl-review`   | 구현 후 decision ledger를 만들고 contract coverage와 finding 검토 | 요구사항별 Evidence Package와 ADR 의도 적합성이 설명된 구현 재량을 읽기 전용으로 표시                       | 사람이 전체 diff 없이 달성 내용과 자율 판단을 이해 |
+| Stacked PR           | 사용자가 요청하면 review question별 전달 후보 제시                | Agent가 proof obligation별 autonomous unit으로 사용할 수 있게 하되 원격 게시 정책은 별도 유지               | 작은 자동 검증·rollback 단위 확보                  |
+| 완료                 | Review PASS 후 자동 `Accepted`                                    | 동일하게 유지                                                                                               | 완료 시 추가 승인 없음                             |
+| Merge                | 저장소 PR·CI 정책에 따름                                          | Evidence PASS를 merge eligibility로 사용하되 실제 자동 merge는 저장소 정책에 따름                           | 검증과 publication 권한을 분리                     |
 
 ### 바뀌지 않는 것
 
@@ -977,6 +987,9 @@ flowchart LR
   - 각 의무에 구현 독립적인 Observable evidence 기록
 - `skills/adr-impl/SKILL.md`
   - 완료 시 requirement-by-requirement Evidence Package를 사용자에게 제공
+  - 승인된 ADR의 구현 계획을 비차단 진행 상황으로 전환
+  - derived obligation과 project/domain default를 자동 해소
+  - 제품 정책 gap을 추천안 중심 Decision request로 통합
 - `skills/adr-impl-review/SKILL.md`
   - `contractCoverage`를 필수 non-empty artifact로 생성
   - ADR에서 파생한 `D0/R1..Rn` 전체 집합의 누락과 중복을 검증
@@ -992,6 +1005,8 @@ flowchart LR
   - routine plan approval을 요구하지 않는지 검증
   - low-risk exploration은 자율 진행하는지 검증
   - contract-changing discovery만 escalation하는지 검증
+  - 숨은 계약·안전 전제를 누락하면 실패하는지 검증
+  - domain default와 product decision gap을 구분하는지 검증
   - 기술 계층이 아닌 proof obligation으로 Stack을 나누는지 검증
 
 ### 갱신할 기존 ADR
@@ -1014,14 +1029,15 @@ flowchart LR
 
 전체 승인 모델을 한 번에 바꾸기보다 다음 순서로 도입한다.
 
-1. **Evidence Package** — 이번 변경에서 구현
+1. **Evidence Package** — 구현됨
    - 현재 review 결과를 contract coverage와 exception 중심으로 압축한다.
    - 기존 안전 경계를 바꾸지 않아 가장 낮은 위험으로 인지부하를 줄인다.
 2. **Derived contract ledger의 구현 전 재사용**
    - ADR 승인 직후 ledger를 만들고 구현과 리뷰가 함께 사용한다.
-3. **Uncertainty classification**
+3. **Uncertainty classification과 domain-aware gap resolution** — 구현됨
    - exploration 결과를 Agent 재량과 Human decision으로 분류한다.
-4. **Routine plan approval 제거**
+   - derived obligation과 domain default를 먼저 해소하고 제품 판단만 요청한다.
+4. **Routine plan approval 제거** — 구현됨
    - 계약 변경이 없는 구현은 계획 승인 없이 진행한다.
 5. **Exception-driven ALPS authoring**
    - 충분한 source가 있는 경우 section별 승인 대신 미확정 계약만 질문한다.
@@ -1029,9 +1045,8 @@ flowchart LR
    - 의미 분할이 어려운 큰 구현을 proof obligation별 실행·검증 단위로
      나눈다.
 
-1단계부터 3단계까지는 현재의 승인과 상태 전환을 유지하면서도 리뷰 인지부하를
-줄일 수 있다. 4단계와 5단계는 Human Decision Surface 자체를 줄이는 변경이므로
-행동 eval과 실제 사용 시나리오로 안전성을 확인한 뒤 적용한다.
+1, 3, 4단계는 behavior eval과 deterministic harness를 함께 추가해 적용했다.
+2단계의 영속 ledger 재사용, 5단계와 6단계는 후속 범위다.
 
 ### 최종 변화 요약
 
@@ -1045,7 +1060,7 @@ flowchart LR
 
 목표
 사람이 제품 계약을 승인
-→ Agent가 탐색·구현·검증·수정
+→ Agent가 도메인 상식으로 빈칸을 해소하고 탐색·구현·검증·수정
 → 계약 변경이나 증명 불가능성이 있을 때만 사람 호출
 → 사람은 Evidence Package로 예외만 판단
 ```

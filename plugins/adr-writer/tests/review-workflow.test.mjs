@@ -79,6 +79,12 @@ test("implementation review separates ADR decisions from code-level AI choices",
   assert.match(sufficiency, /Build Notable implementation choices once from code outward/);
   assert.match(sufficiency, /why it fits the ADR intent/);
   assert.match(sufficiency, /never invent historical rationale/i);
+  assert.match(sufficiency, /externally checkable premises/i);
+  assert.match(sufficiency, /Impact if false/i);
+  assert.match(sufficiency, /Resolve requirement gaps with domain knowledge before escalation/i);
+  assert.match(sufficiency, /Decision request/i);
+  assert.match(review, /mark the affected coverage row `UNVERIFIED`/i);
+  assert.match(review, /Do not reconstruct the implementer's private reasoning/i);
   assert.match(sufficiency, /Normalize each decision-ledger row into contract coverage/);
   assert.match(sufficiency, /replaceable tuning value or implementation means goes into/);
   assert.doesNotMatch(
@@ -245,8 +251,8 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.ok(fullTests < finalReview, "the final review must inspect tested, refactored code");
   assert.ok(finalReview < promotion, "Accepted must be gated by a passing final review");
   assert.match(impl, /Do not pass it the refactor review or result artifacts/);
-  assert.match(impl, /On `FIX_REQUIRED`, keep the ADR `Proposed`/);
-  assert.match(impl, /`BLOCK` and unresolved `INCONCLUSIVE` remain `Proposed`/);
+  assert.match(impl, /On `FIX_REQUIRED`, preserve the current lifecycle state/);
+  assert.match(impl, /`BLOCK` and unresolved `INCONCLUSIVE` preserve the current lifecycle state/);
 
   const finalReviewSkill = read("skills/adr-impl-review/SKILL.md");
   assert.match(finalReviewSkill, /Report-only/);
@@ -264,6 +270,19 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.match(impl, /implementation intent baseline/);
   assert.match(impl, /once per ADR revision/);
   assert.match(impl, /reuse that approved baseline/);
+  assert.match(impl, /non-blocking progress update/);
+  assert.match(impl, /do not ask for approval or wait for a reply/i);
+  assert.match(impl, /publish the implementation plan as a progress update/i);
+  assert.match(impl, /Do not demote an unchanged `Accepted` ADR to `Proposed`/i);
+  assert.match(impl, /unchanged behavior-preserving reinforcement.*remains `Accepted`/i);
+  assert.match(impl, /do not run the transition script/i);
+  assert.doesNotMatch(impl, /only obtain normal approval for the implementation plan/i);
+  assert.match(impl, /externally checkable assumption/i);
+  assert.match(impl, /contract\/safety-affecting implementation premise unverified/i);
+  assert.match(impl, /Resolve gaps before asking questions/i);
+  assert.match(impl, /derived obligation/i);
+  assert.match(impl, /Auto-resolve a domain default/i);
+  assert.match(impl, /Decision request/i);
   assert.doesNotMatch(
     impl,
     /If an admitted decision or requirement changed, confirm once with the user/i,

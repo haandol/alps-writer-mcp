@@ -2,6 +2,7 @@
 
 Newest first. Record only major decision changes.
 
+- **2026-08-18 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 계약·안전에 영향을 주는 외부 전제를 검증하고, ADR completeness gap을 derived obligation·domain default·product decision으로 분류해 마지막 항목만 Decision request로 escalation하도록 변경했다.
 - **2026-08-17 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — ADR의 각 계약 행을 달성 상태와 증거로 연결한 Evidence Package를 기본 화면으로 삼고, 중요한 구현 재량에는 ADR 의도 적합성을 함께 설명하도록 변경했다.
 - **2026-08-17 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 계약 대조와 테스트 증거는 유지하되 상세 repair guide와 다이어그램을 조건부로 전환하고, 구현 선택은 sufficiency 검토에서 한 번만 추출해 읽기 전용으로 표시하도록 변경했다.
 - **2026-08-17 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — full 리포트를 주니어가 읽는 설명·근거 기반 다이어그램·Implementation Choice Ledger의 세 단계로 구성하고, HTML에서 AI가 선택한 구현 기본값을 판정·내보낼 수 있게 변경했다.

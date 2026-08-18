@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Status
 
-Accepted (2026-08-17)
+Accepted (2026-08-18)
 
 ## Context
 
@@ -16,6 +16,10 @@ full 리뷰에서도 모든 PASS 결과에 긴 repair guide, 고정 개수의 �
 
 계약 대조가 자유 형식 요약에 머물면 사용자는 어떤 요구사항이 구현됐고 어떤 항목이 검증되지 않았는지 다시 ADR과 diff에서 조합해야 한다. 구현 재량도 선택한 값과 중요성만 보여주면 그 선택이 ADR 의도와 양립하는지 판단하기 어렵다. 구현 리뷰는 ADR의 각 계약 행을 사람이 읽을 수 있는 달성 상태로 연결하고, ADR이 의도적으로 열어둔 중요한 구현 선택은 의도 적합성과 함께 설명해야 한다.
 
+구현 선택 자체가 교체 가능한 재량이어도 그 동작이 provider 보장, 입력 출처, 순서, 유일성이나 trust boundary 같은 외부 전제에 의존할 수 있다. 그 전제가 틀릴 때 계약이나 안전이 깨지는데 검증 근거가 없다면 정상 구현 재량으로 숨기지 않고 완료를 막아야 한다.
+
+리뷰에서 ADR의 빈칸처럼 보이는 항목도 모두 사용자 질문으로 올리면 에이전트가 도메인 지식과 저장소 문맥으로 해결할 수 있는 판단까지 HITL이 된다. 리뷰는 명시 계약의 논리적 결과, 프로젝트 관례와 권위 있는 도메인 기본값을 먼저 분리하고, 여러 제품 선택지가 남는 gap만 사용자가 답할 수 있는 decision packet으로 만들어야 한다.
+
 독립 검토는 provider의 다중 agent orchestration 지원에 의존한다. 지원하지 않는 환경에서도 검토 계약은 중단되지 않아야 하며, 독립 컨텍스트가 없다는 사실을 숨기거나 자동 리팩토링의 안전 조건을 낮춰서는 안 된다.
 
 ## Decision Drivers
@@ -23,7 +27,7 @@ full 리뷰에서도 모든 PASS 결과에 긴 repair guide, 고정 개수의 �
 - 계약과 보호 표면 변경은 provider fallback에서도 강도를 낮추지 않는 독립적인 필요성·충분성 검토가 필요하다.
 - 사용자는 승인된 ADR의 각 계약 행별 달성 상태, finding, 테스트와 잔여 위험을 전체 diff 없이 파악할 수 있어야 한다.
 - 상세 설명과 다이어그램은 독자가 실제로 재구성해야 할 흐름이 있을 때만 생성해야 한다.
-- 구현 재량은 런타임, 운영, 비용이나 향후 변경에 중요한 항목만 한 번 추출하고 ADR 의도와의 적합성을 설명해야 한다.
+- 구현 재량은 런타임, 운영, 비용이나 향후 변경에 중요한 항목만 한 번 추출해 ADR 의도 적합성을 설명하고, 계약 핵심 경로가 의존하는 외부 전제까지 검증해 틀릴 때 계약·안전이 깨지는 미검증 전제는 완료를 막아야 한다.
 - 사람에게는 검토 결과를 항상 제공하되 충족된 행과 구현 재량마다 별도 판정을 요구하지 않아야 한다.
 
 ## Decision
@@ -45,6 +49,10 @@ ADR contract coverage는 Decision과 requirement contract의 각 독립 행을 �
 상세 repair guide는 `FIX_REQUIRED`나 `BLOCK` finding이 있거나 사용자가 요청할 때만 만든다. 이때 수정 순서, 변경 범위와 완료 기준을 finding에 연결한다.
 
 구현 리뷰는 sufficiency 검토의 code-outward pass에서 **Notable implementation choices**를 한 번만 추출한다. 런타임 동작, 실패 처리, 운영, 비용 또는 향후 변경에 중요한 구현 재량만 `선택된 값이나 동작`, `코드 근거`, `ADR 의도와 양립하는 이유`, `왜 중요한가`로 기록한다. 의도 적합성은 선택의 역사적 이유를 추측하지 않고 해당 선택이 어떤 계약과 경계를 보존하는지 설명한다. admission gate를 통과하는 항목은 `Undecided behavior` finding으로 올린다. 근거나 대안을 코드에서 알 수 없다는 이유만으로 위험으로 만들지 않으며, 안전이나 계약에 영향을 주는 미확정 사항만 `Unverified risk`로 처리한다.
+
+리뷰는 구현자의 내부 사고과정을 재구성하지 않는다. 대신 provider 보장, input provenance, ordering, uniqueness, trust boundary, platform behavior처럼 코드가 의존하는 외부 검증 가능한 전제만 확인한다. 전제가 코드, 테스트, 설정이나 권위 있는 외부 계약으로 확인되면 증거로 사용한다. 확인되지 않았고 틀릴 경우 ADR 계약 행이나 안전 속성을 위반할 수 있으면 `Unverified risk`로 기록하고 해당 coverage를 `UNVERIFIED`로 유지해 `PASS`를 금지한다. finding에는 전제, 틀릴 때 영향받는 계약·안전 속성과 부족한 검증을 명시한다.
+
+ADR completeness gap을 발견하면 먼저 명시 계약에서 도출되는 의무인지, 저장소 관례나 권위 있는 도메인 규칙으로 정할 수 있는 가역적 기본값인지 판단한다. Derived obligation은 부모 coverage 행의 검증 의무로 포함하고, domain default는 Notable implementation choice로 기록한다. 여러 domain-valid 결과가 남거나 제품 정책·금액·권한·규제·보존기간·비가역 데이터·public contract·durable fallback을 정해야 할 때만 blocking contract issue로 처리한다. 이때 단순히 질문이 필요하다고 보고하지 않고 추천안과 근거, 현실적인 대안, 영향과 정확한 ADR 계약 문구를 하나의 Decision request로 제공한다.
 
 HTML은 Evidence Package의 계약별 달성 상태와 구현 선택을 먼저 표시하고 findings의 판정과 메모를 지원할 수 있다. 계약 coverage와 Notable implementation choices는 읽기 전용이며 개별 판정을 요구하지 않는다.
 
@@ -85,6 +93,12 @@ flowchart LR
 - admission gate를 통과한 구현 선택은 `Undecided behavior` finding으로 처리한다.
 - 코드에서 선택의 역사적 근거나 대안을 알 수 없다는 이유만으로 `Unverified risk`를 만들지 않는다.
 - 안전이나 계약에 영향을 주는 미확정 구현 동작은 `Unverified risk`로 처리한다.
+- 구현 재량과 계약 핵심 경로가 의존하는 provider 보장, 입력 출처, 순서, 유일성, trust boundary와 platform behavior 같은 외부 전제를 검토한다.
+- 외부 전제가 미검증이고 틀릴 경우 계약이나 안전을 위반할 수 있으면 `Unverified risk`로 처리하고 영향받는 coverage를 `UNVERIFIED`로 유지한다.
+- `Unverified risk`는 전제, 전제가 틀릴 때 영향받는 계약·안전 속성과 부족한 검증을 명시하며 내부 사고과정을 요구하지 않는다.
+- ADR completeness gap은 derived obligation, project/domain default, product decision으로 분류한 뒤 escalation한다.
+- Derived obligation은 부모 contract coverage에 연결하고 project/domain default는 구현 재량으로 기록한다.
+- Product decision gap은 추천안과 근거, 2~3개 대안, 영향과 정확한 ADR 문구를 포함한 Decision request로 묶는다.
 - HTML은 contract coverage와 Notable implementation choices를 findings보다 먼저 읽기 전용으로 표시하고 개별 판정을 요구하지 않는다.
 - 현재 provider가 Amazon Bedrock으로 식별되면 하위 agent를 dispatch하지 않고 fallback을 사용한다.
 - 하위 agent 요청이 알려진 validation error로 거부되면 같은 세션에서 재시도하지 않는다.
@@ -103,6 +117,8 @@ flowchart LR
 - 같은 ADR 계약을 리뷰하면 각 독립 계약 행이 Evidence Package에 정확히 한 번 나타나고 상태, 구현 내용, ADR 근거, 증거와 테스트를 함께 보여준다.
 - 하나라도 `PROVEN`이 아닌 coverage 행이 있으면 artifact validator가 `PASS`를 거부한다.
 - 중요한 구현 재량이 있으면 Markdown과 HTML이 선택 내용, 코드 근거, ADR 의도와 양립하는 이유와 중요성을 읽기 전용으로 보여준다.
+- 계약·안전에 영향을 주는 숨은 외부 전제를 fixture에 두면 reviewer가 이를 `Unverified risk`로 드러내고 `PASS`하지 않는다.
+- 하나는 프로젝트·도메인 기본값으로 자동 해소되고 다른 하나는 제품 정책으로 남는 fixture에서 reviewer가 두 경로를 구분한다.
 - 사람은 Evidence Package에서 요구사항별 달성 내용을 확인할 수 있고 `PROVEN` 행이나 구현 재량마다 판정을 요구받지 않는다.
 
 ### Alternatives
@@ -147,6 +163,7 @@ flowchart LR
 - 모델이 필요한 diagram을 생략할 수 있다. 상태, 비동기, 외부 경계와 실패 복구가 판정에 중요하면 diagram을 추가하도록 기준을 명시한다.
 - 모델이 여러 계약을 한 coverage 행으로 묶어 일부 누락을 숨길 수 있다. ADR의 독립 계약 행과 coverage 행을 일대일로 검증한다.
 - 구현 선택 목록이 사소한 표현을 나열할 수 있다. 런타임, 운영, 비용과 향후 변경에 중요한 항목만 허용한다.
+- reviewer가 코드가 의존하는 외부 전제를 놓칠 수 있다. 계약·안전 결과가 달라지는 숨은 전제 시나리오를 behavior eval로 반복 검증한다.
 - 상세 guide가 필요한 finding을 짧게 끝낼 수 있다. `FIX_REQUIRED`와 `BLOCK`에는 finding별 변경 범위와 완료 기준을 요구한다.
 
 ## Related

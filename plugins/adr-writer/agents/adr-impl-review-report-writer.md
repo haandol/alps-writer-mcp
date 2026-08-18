@@ -68,6 +68,8 @@ Render the choices as a read-only table:
 
 Explain intent fit only through the contract or boundary the implementation preserves; never invent historical rationale. Do not ask the reader to accept, change, or investigate each choice. An item that passes the admission gate belongs in Findings as `Undecided behavior`, not in this table.
 
+When a choice or contract-critical path relies on an externally checkable premise that was not verified, do not hide it in this table. Report it as `Unverified risk`, naming the premise, the contract or safety consequence if it is false, and the missing verification. Do not reconstruct private chain-of-thought.
+
 Keep this four-column table even when there is only one choice. Do not collapse a material implementation choice into prose.
 
 ## Conditional diagrams

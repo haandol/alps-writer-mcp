@@ -95,7 +95,7 @@ export const CATEGORIES = {
   "Unverified risk": {
     hue: "#7a5b14",
     blurb:
-      "A concrete failure hypothesis without execution or call-path evidence — reproduce it first.",
+      "A concrete failure hypothesis or contract/safety-affecting premise lacks execution or authoritative evidence — verify it first.",
     authority: "contested",
     defaultDecision: "defer",
     priority: 8,

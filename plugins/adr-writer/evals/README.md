@@ -115,6 +115,24 @@ agent exit, or no output).
      paths, and no per-row approval. Their scorers also turn the visible reply
      into a real review artifact, then run the shipped artifact validator and
      HTML renderer so a prompt-only success cannot hide a broken report path.
+   - `impl-review-surfaces-hidden-contract-assumption` checks both sides of
+     implementation-premise handling in one fixture. An unverified
+     `x-tenant-id` provenance premise that can break tenant isolation must become
+     `Unverified risk` and block `PASS`, while a verified 250 ms retry delay
+     remains ordinary implementation discretion. The scorer requires the
+     premise, impact if false, missing evidence, affected contract status, and
+     exception-only human action.
+   - `impl-resolves-domain-gaps-before-escalation` checks planning-time gap
+     resolution in both directions. Established sibling retry timing is applied
+     automatically as reversible implementation discretion, while terminal
+     delivery fallback becomes one Decision request containing a recommendation,
+     domain basis, alternatives, impact, and exact ADR patch. It also rejects a
+     routine approval gate for the resolved default or for the implementation
+     plan surrounding it.
+   - `impl-plans-without-routine-approval` isolates the no-gap planning path for
+     an exact, already-approved ADR revision. It requires a complete non-blocking
+     progress update, immediate continuation, no ADR rewrite, and no routine
+     approval request in either the structured tail or the visible report.
    - `bedrock-subagent-fallback` checks that a known Amazon Bedrock provider
      prevents named and generic subagent dispatch, the known input validation
      error is not retried, document and implementation review continue as
