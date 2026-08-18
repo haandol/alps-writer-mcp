@@ -264,13 +264,7 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
     sections.set(section, parts.join("\n"));
 
     this.writeAtomic(this.workingDoc!, this.buildDocument(projectName, sections));
-    return `✅ Saved ${subId}. ${title}
-
----
-### ${subId}. ${title}
-
-${content}
----`;
+    return `Saved ${subId}. ${title}`;
   }
 
   readSection(section: number, subsectionId?: string): string {

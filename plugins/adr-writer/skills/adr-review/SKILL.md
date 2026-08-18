@@ -82,6 +82,14 @@ in the disposable report and chat summary. Do not write or persist this score
 in the ADR, `.mapping.json`, Status, or any other authoritative artifact. It is
 advisory and does not block the document verdict or follow-up work.
 
+Calibrate the total internally: 1 = one statement/rule; 2 = one action and one
+success condition; 3 = few flows or exceptions; 4 = recommended-range lower
+bound; 5 = best-balanced unit; 6 = recommended-range upper bound; 7 = high
+load; 8 = very high load; 9 = strongly coupled behaviors/contracts; 10 =
+maximum review load, first check for mixed Features or decisions. Treat 4-6 as
+the recommended range. A low score never requires merging and a high score
+never blocks work. Do not print the whole rubric.
+
 Only when the user asks to split, offer up to three candidates. Split ADRs only
 for independent decisions. Keep one inherently difficult decision in one ADR
 and offer implementation steps instead; never split by technical layer.

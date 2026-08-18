@@ -25,14 +25,22 @@ function scoreValue(findings, tag) {
 }
 
 function visibleScore(lines, label) {
+  const scoreLabel = "(?:인지\\s*비용|이해\\s*(?:부하|부담|비용)|Comprehension\\s+load)";
   const match = lines
-    .map((line) =>
-      line.match(
-        new RegExp(
-          `^${label}\\s*(?:[.—:-])?\\s*(?:(?:기능|Feature|ADR)\\s*(?:[.—:-])?\\s*)?(?:인지\\s*비용|이해\\s*(?:부하|부담|비용)|Comprehension\\s+load)\\s*:\\s*(10|[1-9])\\s*\\/\\s*10\\s*$`,
-          "i",
+    .map(
+      (line) =>
+        line.match(
+          new RegExp(
+            `^${label}\\s*(?:[.—:-])?\\s*(?:(?:기능|Feature|ADR)\\s*(?:[.—:-])?\\s*)?${scoreLabel}\\s*:\\s*(10|[1-9])\\s*\\/\\s*10\\s*$`,
+            "i",
+          ),
+        ) ??
+        line.match(
+          new RegExp(
+            `^${scoreLabel}\\s*\\(\\s*${label}(?:\\s*,[^)]*)?\\)\\s*:\\s*(10|[1-9])\\s*\\/\\s*10\\s*$`,
+            "i",
+          ),
         ),
-      ),
     )
     .find(Boolean);
   return match ? Number(match[1]) : null;

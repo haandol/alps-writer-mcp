@@ -93,6 +93,12 @@ agent exit, or no output).
    - `alps-batch-preserves-mandatory-nfr` checks explicit batch approval together
      with separate save units and mandatory NFR preservation beyond the top-three
      focus set.
+   - `alps-approval-digest-preserves-contract` checks that concise raw-text
+     approval omits implementation detail without dropping values, permissions,
+     state rules, or the Demo checkpoint.
+   - `alps-high-load-suggests-feature-split` checks that a Section 7 Feature at
+     `7/10` or higher receives two or three user-behavior split candidates,
+     retains the original-Feature option, and never becomes a blocking gate.
    - `impl-review-selects-risk-mode` checks both directions of the review-mode
      classifier: localized implementation uses standard, while contract and
      public-surface changes use full.
@@ -110,9 +116,12 @@ agent exit, or no output).
      prevents named and generic subagent dispatch, the known input validation
      error is not retried, document and implementation review continue as
      main-session passes, and refactoring remains `PROPOSE_ONLY`.
-   - `comprehension-load-score-only` checks the `0 → 1` display clamp directly,
-     keeps the five-axis calculation hidden, and rejects added gates or
-     explanatory output.
+   - `comprehension-load-score-only` checks the `0 → 1` display clamp on a low-load
+     Feature and a high-load ADR, keeps the five-axis calculation hidden, and
+     rejects added gates or explanatory output.
+   - `comprehension-load-calibration-bands` checks representative cases against
+     the shared `1–3`, `4–6`, `7–8`, and `9–10` calibration bands without turning
+     comprehension load into a quality or blocking verdict.
    - `impl-completes-without-reconfirmation` checks that a pre-approved ADR is
      not reconfirmed after implementation, evidence-backed defects are repaired
      and re-reviewed automatically, and only a real contract change escalates.

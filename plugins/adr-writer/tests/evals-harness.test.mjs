@@ -94,11 +94,14 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /impl-blocks-proposed-prerequisite/);
   assert.match(out, /hook-admission-routing/);
   assert.match(out, /alps-batch-preserves-mandatory-nfr/);
+  assert.match(out, /alps-approval-digest-preserves-contract/);
+  assert.match(out, /alps-high-load-suggests-feature-split/);
   assert.match(out, /impl-review-selects-risk-mode/);
   assert.match(out, /impl-review-evidence-package/);
   assert.match(out, /impl-review-evidence-package-pass/);
   assert.match(out, /bedrock-subagent-fallback/);
   assert.match(out, /comprehension-load-score-only/);
+  assert.match(out, /comprehension-load-calibration-bands/);
 });
 
 // The prompt has to carry the SHIPPED instruction text. If a scenario ever
@@ -114,8 +117,11 @@ test("prompts embed the real skill/agent text, not a paraphrase", async () => {
     const prompt = await s.build(dir);
     assert.ok(prompt.length > 5000, `${s.name}: prompt is too short to hold a real skill body`);
     // a distinctive line from the shipped docs, not something a summary would coin
-    if (s.name === "alps-batch-preserves-mandatory-nfr") {
-      assert.match(prompt, /Atomic is the default|top-3 focus set|separately labeled draft/i);
+    if (s.name.startsWith("alps-")) {
+      assert.match(
+        prompt,
+        /Atomic is the default|top-3 focus set|separately labeled draft|plain-text approval digest|Comprehension load/i,
+      );
     } else {
       assert.match(
         prompt,
@@ -623,6 +629,61 @@ FOCUS_SET | NFR은 최대 3개이므로 WCAG를 삭제
 === EVAL-END ===`,
     },
     {
+      name: "alps-approval-digest-preserves-contract",
+      good: `[Feature 승인 요청: 팀 작업 세션]
+목적: 팀 작업 결과를 승인하고 보관한다.
+필수 규칙:
+- 세션은 최대 20턴이다.
+- 미승인 세션은 30일 뒤 삭제한다.
+- owner만 결과를 내보낼 수 있다.
+- 상태는 draft, approved, archived이며 archived는 draft로 돌아갈 수 없다.
+완료 결과: 승인 후 팀 대시보드에 결과가 표시된다.
+답변: 승인 / 수정: 변경 내용 / 보류
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+CONTRACT_ITEM | 세션은 최대 20턴
+CONTRACT_ITEM | 미승인 세션은 30일 뒤 삭제
+CONTRACT_ITEM | owner만 결과를 내보냄
+CONTRACT_ITEM | draft, approved, archived 상태이며 archived에서 draft 전이 금지
+RESPONSE_OPTIONS | 승인, 수정, 보류
+NO_UNSEEN_CONTRACT | digest에 없던 요구사항은 저장 내용에 추가하지 않음
+SEPARATE_SAVE_UNIT | Feature 7.x를 독립 저장
+=== EVAL-END ===`,
+      bad: `### 팀 작업 세션
+PostgreSQL과 Redis를 사용하고 3회 재시도한다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+CONTRACT_ITEM | 구현 방식 승인
+=== EVAL-END ===`,
+    },
+    {
+      name: "alps-high-load-suggests-feature-split",
+      good: `인지비용: 9/10
+분할 후보:
+1. 멤버 이메일 초대
+2. 멤버 역할 및 접근 관리
+3. 감사 기록 내보내기
+원본 유지로 하나의 Feature를 계속 진행할 수도 있습니다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+FEATURE_SCORE | 9/10
+SPLIT_CANDIDATE | 멤버 이메일 초대
+SPLIT_CANDIDATE | 멤버 역할 및 접근 관리
+SPLIT_CANDIDATE | 감사 기록 내보내기
+KEEP_ORIGINAL | 원본 단일 Feature 유지 가능
+NON_BLOCKING | 분할 여부는 승인과 저장의 전제 조건이 아님
+=== EVAL-END ===`,
+      bad: `인지비용: 9/10
+frontend, backend, database로 반드시 분할해야 하며 승인과 저장을 중단한다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+FEATURE_SCORE | 9/10
+SPLIT_CANDIDATE | frontend
+SPLIT_CANDIDATE | backend
+SPLIT_CANDIDATE | database
+=== EVAL-END ===`,
+    },
+    {
       name: "impl-review-selects-risk-mode",
       good: `=== EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
@@ -636,8 +697,8 @@ STANDARD | B public API retention change
     },
     {
       name: "comprehension-load-score-only",
-      good: `A — 인지비용: 1/10
-B — 인지비용: 9/10
+      good: `Comprehension load (A, ALPS Feature): 1/10
+Comprehension load (B, ADR): 9/10
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
 FEATURE_SCORE | A 1/10
@@ -650,6 +711,32 @@ B는 여러 시스템이 연결되어 있어서 이해하기 어렵다.
 === EVAL-FINDINGS ===
 FEATURE_SCORE | A 0/10
 ADR_SCORE | B 9/10
+=== EVAL-END ===`,
+    },
+    {
+      name: "comprehension-load-calibration-bands",
+      good: `A — 인지비용: 2/10
+B — 인지비용: 5/10
+C — 인지비용: 8/10
+D — 인지비용: 10/10
+점수는 자문용이며 승인이나 구현을 차단하지 않고 품질 점수가 아니다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+comprehension-load-A | A 2/10 — LOW_SCORE
+comprehension-load-B | B 5/10 — RECOMMENDED_SCORE
+comprehension-load-C | C 8/10 — HIGH_SCORE
+comprehension-load-D | D 10/10 — VERY_HIGH_SCORE
+=== EVAL-END ===`,
+      bad: `A — 품질: 9/10
+B — 인지비용: 2/10
+C — 인지비용: 4/10
+D — 차단됨
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+LOW_SCORE | A 9/10
+RECOMMENDED_SCORE | B 2/10
+HIGH_SCORE | C 4/10
+VERY_HIGH_SCORE | D 6/10
 === EVAL-END ===`,
     },
     {

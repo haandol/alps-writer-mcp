@@ -71,8 +71,8 @@
       "adrs": [
         {
           "path": "docs/adr/alps-authoring/authoring-interaction/0001-support-atomic-and-batch-approval.md",
-          "status": "Accepted (2026-08-15)",
-          "summary": "ALPS 작성은 section별 승인을 기본으로 하되 명시적 요청이나 완성된 입력에는 단위 경계를 유지한 batch 승인을 지원한다"
+          "status": "Accepted (2026-08-18)",
+          "summary": "ALPS 작성은 계약 정보를 빠짐없이 담은 plain-text digest로 승인하고 일반 section의 X.n과 Section 7의 각 Feature 7.x를 개별 저장한다"
         }
       ],
       "dependsOn": []
@@ -115,8 +115,8 @@
       "adrs": [
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
-          "status": "Accepted (2026-08-17)",
-          "summary": "개발 워크플로우는 필수 안전 경계와 선택적 이해 지원을 분리하고 이전된 Feature prerequisite를 실제 계약 소유 ADR의 dependsOn으로 보존한다"
+          "status": "Accepted (2026-08-18)",
+          "summary": "인지비용은 1~10 점별 내부 보정 가이드와 4~6점 권장 범위를 사용하고 Section 7 Feature가 7점 이상이면 비차단 사용자 행동 분할 후보를 제안한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]

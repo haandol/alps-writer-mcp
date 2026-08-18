@@ -54,7 +54,9 @@ test("XML-sensitive project names and Markdown content round-trip without data l
   const content = 'literal </subsection> plus <tag attr="x"> & text';
 
   service.initDocument('A "quoted" & named project', target);
-  assert.match(service.saveSection(1, "1", "Purpose", content), /Saved 1\.1/);
+  const saveResult = service.saveSection(1, "1", "Purpose", content);
+  assert.match(saveResult, /Saved 1\.1/);
+  assert.doesNotMatch(saveResult, /literal|<tag/, "save receipt must not echo document content");
   assert.match(service.saveSection(1, "2", "Document Name", "Second value"), /Saved 1\.2/);
   assert.match(
     service.readSection(1, "1"),

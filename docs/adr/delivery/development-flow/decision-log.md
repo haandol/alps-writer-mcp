@@ -2,6 +2,8 @@
 
 Newest first. Record only major decision changes.
 
+- **2026-08-18 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — 인지비용 1~10 각 점수의 내부 보정 가이드와 4~6점 권장 범위를 정의하되 점수를 품질·승인·저장 게이트로 사용하지 않도록 명시했다.
+- **2026-08-18 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — Section 7 Feature의 인지비용이 7점 이상이면 최대 세 개의 사용자 행동 기반 분할 후보를 자동 제안하되 원래 Feature 승인과 저장은 계속 허용하도록 변경했다.
 - **2026-08-17 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — 완료된 PRD handoff가 이전된 Feature마다 실제 계약 소유 ADR을 두도록 바뀜에 따라, 구현에 필요한 Feature prerequisite를 category `dependsOn`으로 보존하고 코드 재사용 순서만 제외하도록 변경했다.
 - **2026-08-17 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — 의미상 Feature나 ADR을 더 나눌 수 없는 큰 구현은 사용자 요청 시 하나의 계약을 구현하는 dependency-ordered Stacked PR 후보로 전달할 수 있게 했다.
 - **2026-08-17 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — 인지부하 관리를 강제 checkpoint나 새 상태가 아닌 1~10 휴리스틱과 선택적 분할 제안으로 제한하고, ALPS·ADR 플러그인을 모델 개선에 따라 단순화할 수 있는 워크플로우로 명시했다.
