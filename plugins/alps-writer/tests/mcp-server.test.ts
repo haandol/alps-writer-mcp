@@ -41,8 +41,14 @@ test("stdio MCP server exposes schemas and enforces document validation", async 
     "get_alps_overview",
     "get_alps_section",
     "get_alps_section_guide",
+    "get_lite_alps_full_template",
+    "get_lite_alps_overview",
+    "get_lite_alps_section",
+    "get_lite_alps_section_guide",
     "init_alps_document",
+    "init_lite_alps_document",
     "list_alps_sections",
+    "list_lite_alps_sections",
     "load_alps_document",
     "read_alps_section",
     "save_alps_section",
@@ -85,4 +91,23 @@ test("stdio MCP server exposes schemas and enforces document validation", async 
   assert.match(textContent(saved), /Saved 1\.1/);
   assert.doesNotMatch(textContent(saved), /saved through MCP/);
   assert.match(fs.readFileSync(target, "utf8"), /saved through MCP/);
+
+  const liteTarget = path.join(dir, "integration.lite.alps.xml");
+  const liteInitialized = await client.callTool({
+    name: "init_lite_alps_document",
+    arguments: { project_name: "lite integration", output_path: liteTarget },
+  });
+  assert.match(textContent(liteInitialized), /Created Lite ALPS document/);
+
+  const liteSaved = await client.callTool({
+    name: "save_alps_section",
+    arguments: {
+      section: 1,
+      subsection_id: "1",
+      title: "Product Name",
+      content: "Lite product",
+    },
+  });
+  assert.match(textContent(liteSaved), /Saved 1\.1/);
+  assert.match(fs.readFileSync(liteTarget, "utf8"), /profile="lite"/);
 });

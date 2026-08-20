@@ -88,6 +88,17 @@
       ],
       "dependsOn": []
     },
+    "alps-authoring/lite-format": {
+      "feature": "Lite ALPS authoring format",
+      "adrs": [
+        {
+          "path": "docs/adr/alps-authoring/lite-format/0001-lite-alps-authoring-profile.md",
+          "status": "Accepted (2026-08-20)",
+          "summary": "ALPS Writer는 ideal path 중심의 목업·PoC 문서를 작성하는 8개 Section Lite ALPS 프로필을 제공하며 제외 범위와 edge case는 조건부 입력으로 취급한다"
+        }
+      ],
+      "dependsOn": ["alps-authoring/authoring-interaction"]
+    },
     "adr-cycle/implementation-review": {
       "feature": "Implementation review",
       "adrs": [

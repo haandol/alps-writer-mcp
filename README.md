@@ -4,10 +4,10 @@
 
 A Codex and Claude Code **marketplace** that ships two independent plugins for spec-driven development: **alps-writer** (PRD authoring) and **adr-writer** (ADR-driven cycle). Both install from the marketplace alone — **no npm, no npx, no build step** for end users. The alps-writer MCP server is bundled (dependencies inlined) and committed at `plugins/alps-writer/dist/`.
 
-| Plugin                  | Scope                                                                                                                            | Depends on                       |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **`alps-writer`** (PRD) | Write ALPS (PRD) documents conversationally via a bundled MCP server. Bridges Section 7 features to ADRs with `/feature-to-adr`. | adr-writer (only for the bridge) |
-| **`adr-writer`** (ADR)  | ADR-driven development: author, implement, adversarially review, and sync; an ADR-first hook runs when session context starts.   | nothing — fully standalone       |
+| Plugin                  | Scope                                                                                                                          | Depends on                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| **`alps-writer`** (PRD) | Write Full ALPS or lightweight mockup/PoC product documents conversationally. Bridges Full ALPS Section 7 features to ADRs.    | adr-writer (only for the bridge) |
+| **`adr-writer`** (ADR)  | ADR-driven development: author, implement, adversarially review, and sync; an ADR-first hook runs when session context starts. | nothing — fully standalone       |
 
 The two are split so that **adr-writer never references ALPS**. The only coupling is one-way (`alps-writer → adr-writer`): `/feature-to-adr` transfers each implementable Feature's complete contract into one or several ADRs. After handoff the PRD remains a legacy planning document; explicit re-import compares it with authoritative ADRs and applies only approved semantic changes.
 
@@ -16,6 +16,8 @@ The two are split so that **adr-writer never references ALPS**. The only couplin
 **ALPS** (Agentic Lean Product Spec) is a PRD format built for agentic development. A traditional PRD assumes a human reader who fills in gaps from intuition; ALPS assumes an AI agent that needs an unambiguous specification to write reliable code.
 
 It fixes the format (9 sections, explicit dependencies, vertical-slice features) and inverts the authoring loop: the **agent asks focused questions, the human answers**, with no section saved without confirmation. Out of Scope is a first-class section so the agent knows what _not_ to build.
+
+**Lite ALPS** applies the same approval and product-contract discipline to an 8-section format for planners and PMs creating mockups or PoCs. It prioritizes the representative ideal path and treats non-goals, interruptions, exceptions, screen states, and recovery details as optional unless they affect the PoC. It covers product intent, scenarios, user-visible behavior, screens, shared principles, validation, and open questions without asking for architecture or technology choices.
 
 See [`about-alps.md`](./plugins/alps-writer/templates/alps/about-alps.md) for the full design rationale and how ALPS feeds into the ADR-driven cycle.
 
@@ -31,22 +33,25 @@ codex plugin add alps-writer@alps-writer
 codex plugin add adr-writer@alps-writer
 ```
 
-Invoke skills with `$alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-refactor`, `$adr-impl-review`, `$adr-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust ADR Writer's single `SessionStart` hook when Codex prompts you. It restores context on startup, resume, clear, and compaction; it does not run for every user prompt.
+Invoke skills with `$alps-init`, `$lite-alps-init`, `$feature-to-adr`, `$adr-new`, `$adr-impl`, `$adr-impl-refactor`, `$adr-impl-review`, `$adr-review`, `$adr-sync`, and `$adr-rollup`, or ask for the workflow in natural language. On first use, review and trust ADR Writer's single `SessionStart` hook when Codex prompts you. It restores context on startup, resume, clear, and compaction; it does not run for every user prompt.
 
 **Claude Code**
 
 ```
 /plugin marketplace add haandol/alps-writer-plugins
-/plugin install alps-writer@alps-writer   # PRD authoring (MCP server + /alps-init, /feature-to-adr)
+/plugin install alps-writer@alps-writer   # PRD authoring (/alps-init, /lite-alps-init, /feature-to-adr)
 /plugin install adr-writer@alps-writer    # ADR cycle (/adr-new, /adr-impl, /adr-impl-refactor, /adr-impl-review, /adr-review, /adr-sync, hooks)
 ```
 
 > `/feature-to-adr` (in alps-writer) delegates ADR authoring to `/adr-new` (in adr-writer), so install **both** if you want the ALPS → ADR bridge. adr-writer on its own works without any ALPS PRD.
 
-Two entry flows, driven by `$skill-name` in Codex or `/skill-name` in Claude Code:
+Three entry flows, driven by `$skill-name` in Codex or `/skill-name` in Claude Code:
 
+- **PoC-first** — `/lite-alps-init` → mockup/PoC validation → `/alps-init` when implementation-ready
 - **PRD-first** — `/alps-init` → `/feature-to-adr` → `/adr-impl` → `/adr-impl-refactor` (automatic) → `/adr-impl-review` (completion gate) → `Accepted`
 - **ADR-only** — `/adr-new` → `/adr-impl` → `/adr-impl-refactor` (automatic) → `/adr-impl-review` (completion gate) → `Accepted`
+
+Lite ALPS does not hand off directly to ADRs. It remains a product validation document; a later Full ALPS starts its own guided approval flow and may use the Lite document as source material.
 
 Run `/adr-sync` when review finds implementation-fact drift, after broad refactors or manual ADR edits, or as a periodic audit; it is not a mandatory deep scan after every small implementation.
 
@@ -59,6 +64,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 **alps-writer (PRD)**
 
 - 9-section ALPS (PRD) template with structured XML templates, conversation guides, and per-Feature demos connected to the end-to-end demo scenario
+- 8-section Lite ALPS template for PM-led mockups and PoCs, with an ideal-path focus, optional edge-oriented details, and no technology or architecture inputs
 - Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
 - Contract-complete plain-text approval digests — concise raw-text views preserve every requirement value and rule before subsection-level persistence
 - Document management — create, save, load, and export as clean Markdown
@@ -104,7 +110,7 @@ alps-writer-plugins/                 # marketplace root (this repo)
     │   ├── .mcp.json                    # Codex MCP server command
     │   ├── src/                     # MCP server source (TypeScript)
     │   ├── dist/                    # committed bundle (index.js + assets) — runs as-is
-    │   ├── skills/                  # /alps-init, /feature-to-adr
+    │   ├── skills/                  # /alps-init, /lite-alps-init, /feature-to-adr
     │   └── templates/alps/
     └── adr-writer/                  # ADR plugin (standalone, ALPS-agnostic)
         ├── .codex-plugin/plugin.json

@@ -1,0 +1,14 @@
+<section id="6" title="Shared Product Principles">
+  <subsection id="6.1" title="Permissions and Visibility">
+    <description>State who may view, create, change, confirm, share, or remove product content.</description>
+  </subsection>
+  <subsection id="6.2" title="Confirmation and Changes">
+    <description>State which actions require confirmation, what becomes fixed, and what may still be revised or reversed.</description>
+  </subsection>
+  <subsection id="6.3" title="Failure and Recovery" required="false">
+    <description>Optional. State failure or recovery behavior only when it applies across Features and the PoC must preserve or demonstrate it.</description>
+  </subsection>
+  <subsection id="6.4" title="Accessibility and Sensitive Information">
+    <description>State applicable accessibility, privacy, and sensitive-information expectations in user-facing terms.</description>
+  </subsection>
+</section>

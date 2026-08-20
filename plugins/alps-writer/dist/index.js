@@ -30958,40 +30958,129 @@ var StdioServerTransport = class {
   }
 };
 
-// src/constants.ts
+// src/profiles.ts
 import path from "path";
 import { fileURLToPath } from "url";
 var __dirname = path.dirname(fileURLToPath(import.meta.url));
-var TEMPLATES_DIR = path.join(__dirname, "templates");
-var CHAPTERS_DIR = path.join(TEMPLATES_DIR, "chapters");
-var GUIDES_DIR = path.join(__dirname, "guides");
-var SECTION_TITLES = {
-  1: "Overview",
-  2: "MVP Goals and Key Metrics",
-  3: "Demo Scenario",
-  4: "High-Level Architecture",
-  5: "Design Specification",
-  6: "Requirements Summary",
-  7: "Feature-Level Specification",
-  8: "MVP Metrics",
-  9: "Out of Scope"
+var templatesDir = path.join(__dirname, "templates");
+var guidesDir = path.join(__dirname, "guides");
+var liteTemplatesDir = path.join(templatesDir, "lite");
+var ALPS_PROFILE = {
+  id: "alps",
+  label: "ALPS",
+  markdownTitle: "ALPS",
+  filenameSuffix: ".alps.xml",
+  rootProfile: null,
+  templatesDir,
+  chaptersDir: path.join(templatesDir, "chapters"),
+  guidesDir,
+  sectionTitles: {
+    1: "Overview",
+    2: "MVP Goals and Key Metrics",
+    3: "Demo Scenario",
+    4: "High-Level Architecture",
+    5: "Design Specification",
+    6: "Requirements Summary",
+    7: "Feature-Level Specification",
+    8: "MVP Metrics",
+    9: "Out of Scope"
+  },
+  sectionReferences: {
+    3: [2],
+    5: [6],
+    7: [3, 6],
+    8: [2, 6]
+  },
+  authoringOrder: [1, 2, 3, 4, 6, 5, 7, 8, 9],
+  dynamicSection: {
+    section: 7,
+    sourceSection: 6,
+    sourceSubsectionId: "6.1"
+  }
 };
-var SECTION_REFERENCES = {
-  3: [2],
-  5: [6],
-  7: [3, 6],
-  8: [2, 6]
+var LITE_ALPS_PROFILE = {
+  id: "lite",
+  label: "Lite ALPS",
+  markdownTitle: "Lite ALPS",
+  filenameSuffix: ".lite.alps.xml",
+  rootProfile: "lite",
+  templatesDir: liteTemplatesDir,
+  chaptersDir: path.join(liteTemplatesDir, "chapters"),
+  guidesDir: path.join(guidesDir, "lite"),
+  sectionTitles: {
+    1: "Product Overview",
+    2: "MVP Goals and Scope",
+    3: "Primary User Scenario",
+    4: "Key Features and Behavior",
+    5: "Key Screens",
+    6: "Shared Product Principles",
+    7: "PoC Validation Plan",
+    8: "Open Questions"
+  },
+  sectionReferences: {
+    3: [1, 2],
+    4: [2, 3],
+    5: [3, 4, 6],
+    6: [4],
+    7: [2, 3, 4, 5, 6]
+  },
+  authoringOrder: [1, 2, 3, 4, 6, 5, 7, 8],
+  dynamicSection: {
+    section: 4,
+    sourceSection: 2,
+    sourceSubsectionId: "2.2"
+  }
 };
-var SECTION_NUMBERS = Object.keys(SECTION_TITLES).map((key) => Number.parseInt(key, 10)).sort((a, b) => a - b);
+var DOCUMENT_PROFILES = {
+  alps: ALPS_PROFILE,
+  lite: LITE_ALPS_PROFILE
+};
+function sectionNumbers(profile) {
+  return Object.keys(profile.sectionTitles).map((key) => Number.parseInt(key, 10)).sort((a, b) => a - b);
+}
+function sectionRange(profile) {
+  const numbers = sectionNumbers(profile);
+  return `${numbers[0]}-${numbers[numbers.length - 1]}`;
+}
+
+// src/constants.ts
+var TEMPLATES_DIR = ALPS_PROFILE.templatesDir;
+var CHAPTERS_DIR = ALPS_PROFILE.chaptersDir;
+var GUIDES_DIR = ALPS_PROFILE.guidesDir;
+var LITE_TEMPLATES_DIR = LITE_ALPS_PROFILE.templatesDir;
+var LITE_CHAPTERS_DIR = LITE_ALPS_PROFILE.chaptersDir;
+var LITE_GUIDES_DIR = LITE_ALPS_PROFILE.guidesDir;
+var SECTION_TITLES = { ...ALPS_PROFILE.sectionTitles };
+var SECTION_REFERENCES = Object.fromEntries(
+  Object.entries(ALPS_PROFILE.sectionReferences).map(([section, refs]) => [section, [...refs]])
+);
+var LITE_SECTION_TITLES = {
+  ...LITE_ALPS_PROFILE.sectionTitles
+};
+var LITE_SECTION_REFERENCES = Object.fromEntries(
+  Object.entries(LITE_ALPS_PROFILE.sectionReferences).map(([section, refs]) => [
+    section,
+    [...refs]
+  ])
+);
+var SECTION_NUMBERS = sectionNumbers(ALPS_PROFILE);
 var FIRST_SECTION = SECTION_NUMBERS[0];
 var LAST_SECTION = SECTION_NUMBERS[SECTION_NUMBERS.length - 1];
-var SECTION_RANGE = `${FIRST_SECTION}-${LAST_SECTION}`;
+var SECTION_RANGE = sectionRange(ALPS_PROFILE);
+var LITE_SECTION_NUMBERS = sectionNumbers(LITE_ALPS_PROFILE);
+var LITE_FIRST_SECTION = LITE_SECTION_NUMBERS[0];
+var LITE_LAST_SECTION = LITE_SECTION_NUMBERS[LITE_SECTION_NUMBERS.length - 1];
+var LITE_SECTION_RANGE = sectionRange(LITE_ALPS_PROFILE);
 var NOT_STARTED = "<!-- Not started -->";
 
 // src/tools/templates/service.ts
 import fs from "fs";
 import path2 from "path";
 var TemplateService = class {
+  constructor(profile = ALPS_PROFILE) {
+    this.profile = profile;
+  }
+  profile;
   xmlToMarkdown(content, includeExamples) {
     const lines = [];
     this.renderXml(content, lines, 2, includeExamples);
@@ -31025,10 +31114,11 @@ ${inner.trim()}
       const idMatch = attrs?.match(/id="([^"]*)"/);
       const title = titleMatch?.[1] ?? "";
       const id = idMatch?.[1] ?? "";
+      const optional2 = attrs?.match(/\brequired="false"/) ? " (Optional)" : "";
       if (title) {
         lines.push(
-          id ? `${"#".repeat(level)} ${id} ${title}
-` : `${"#".repeat(level)} ${title}
+          id ? `${"#".repeat(level)} ${id} ${title}${optional2}
+` : `${"#".repeat(level)} ${title}${optional2}
 `
         );
       }
@@ -31036,40 +31126,43 @@ ${inner.trim()}
     }
   }
   getOverview() {
-    return fs.readFileSync(path2.join(TEMPLATES_DIR, "overview.md"), "utf-8");
+    return fs.readFileSync(path2.join(this.profile.templatesDir, "overview.md"), "utf-8");
   }
   listSections() {
-    return fs.readdirSync(CHAPTERS_DIR).filter((f) => f.endsWith(".xml")).sort().map((f) => ({
+    return fs.readdirSync(this.profile.chaptersDir).filter((f) => f.endsWith(".xml")).sort().map((f) => ({
       section: parseInt(f.split("-")[0], 10),
       filename: f
     }));
   }
   getSection(section, includeExamples = false) {
     const prefix = String(section).padStart(2, "0") + "-";
-    const file2 = fs.readdirSync(CHAPTERS_DIR).find((f) => f.startsWith(prefix) && f.endsWith(".xml"));
+    const file2 = fs.readdirSync(this.profile.chaptersDir).find((f) => f.startsWith(prefix) && f.endsWith(".xml"));
     if (!file2) return `Section ${section} not found.`;
     return this.xmlToMarkdown(
-      fs.readFileSync(path2.join(CHAPTERS_DIR, file2), "utf-8"),
+      fs.readFileSync(path2.join(this.profile.chaptersDir, file2), "utf-8"),
       includeExamples
     );
   }
   getFullTemplate(includeExamples = false) {
     const parts = [this.getOverview(), "\n---\n"];
-    for (const f of fs.readdirSync(CHAPTERS_DIR).filter((f2) => f2.endsWith(".xml")).sort()) {
+    for (const f of fs.readdirSync(this.profile.chaptersDir).filter((f2) => f2.endsWith(".xml")).sort()) {
       parts.push(
-        this.xmlToMarkdown(fs.readFileSync(path2.join(CHAPTERS_DIR, f), "utf-8"), includeExamples)
+        this.xmlToMarkdown(
+          fs.readFileSync(path2.join(this.profile.chaptersDir, f), "utf-8"),
+          includeExamples
+        )
       );
       parts.push("\n---\n");
     }
     return parts.join("\n");
   }
   getSectionGuide(section) {
-    const guidePath = path2.join(GUIDES_DIR, `${String(section).padStart(2, "0")}.md`);
+    const guidePath = path2.join(this.profile.guidesDir, `${String(section).padStart(2, "0")}.md`);
     if (!fs.existsSync(guidePath)) return `Section ${section} not found.`;
     const guide = fs.readFileSync(guidePath, "utf-8");
-    const refs = SECTION_REFERENCES[section];
+    const refs = this.profile.sectionReferences[section];
     if (refs) {
-      const refNames = refs.map((r) => `Section ${r} (${SECTION_TITLES[r]})`);
+      const refNames = refs.map((r) => `Section ${r} (${this.profile.sectionTitles[r]})`);
       const readCalls = refs.map((r) => `read_alps_section(${r})`).join(", ");
       return `\u26A0\uFE0F REQUIRED: This section depends on ${refNames.join(", ")}.
 Before proceeding, you MUST:
@@ -31085,17 +31178,19 @@ ${guide}`;
 
 // src/tools/templates/controller.ts
 var TemplateController = class {
-  constructor(service) {
+  constructor(service, sectionGuideTool = "get_alps_section_guide") {
     this.service = service;
+    this.sectionGuideTool = sectionGuideTool;
   }
   service;
+  sectionGuideTool;
   getAlpsOverview() {
     return this.service.getOverview() + `
 
 ---
 ## Next Step
 
-**REQUIRED**: Call \`get_alps_section_guide(1)\` to begin interactive writing.
+**REQUIRED**: Call \`${this.sectionGuideTool}(1)\` to begin interactive writing.
 Do NOT write any section without going through the guide's Q&A process first.`;
   }
   listAlpsSections() {
@@ -31114,8 +31209,8 @@ Do NOT write any section without going through the guide's Q&A process first.`;
 
 // src/tools/documents/service.ts
 import fs3 from "fs";
-import path4 from "path";
 import os from "os";
+import path4 from "path";
 
 // src/xml.ts
 function decodeXml(value) {
@@ -31136,8 +31231,8 @@ function attribute(attributes, name) {
 import fs2 from "fs";
 import path3 from "path";
 var TemplateRegistry = class {
-  definitions = /* @__PURE__ */ new Map();
-  constructor(chaptersDir = CHAPTERS_DIR) {
+  constructor(chaptersDir = CHAPTERS_DIR, dynamicSection = 7) {
+    this.dynamicSection = dynamicSection;
     for (const filename of fs2.readdirSync(chaptersDir).filter((name) => name.endsWith(".xml"))) {
       const section = Number.parseInt(filename.split("-")[0], 10);
       if (!Number.isInteger(section)) continue;
@@ -31148,29 +31243,32 @@ var TemplateRegistry = class {
       while ((match = subsectionRe.exec(xml)) !== null) {
         const id = attribute(match[1], "id");
         const title = attribute(match[1], "title");
-        if (id && title) subsections.set(id, { id, title });
+        const required2 = attribute(match[1], "required") !== "false";
+        if (id && title) subsections.set(id, { id, title, required: required2 });
       }
       this.definitions.set(section, subsections);
     }
   }
+  dynamicSection;
+  definitions = /* @__PURE__ */ new Map();
   expectedSubsections(section) {
-    if (section === 7) return [];
+    if (section === this.dynamicSection) return [];
     return [...this.definitions.get(section)?.values() ?? []];
   }
   validateSubsection(section, subsectionId, title) {
     const normalizedId = subsectionId.trim();
     const normalizedTitle = title.trim();
-    if (section === 7) {
+    if (section === this.dynamicSection) {
       if (!/^[1-9]\d*$/.test(normalizedId)) {
         return {
           ok: false,
-          message: 'Section 7 subsection_id must be a positive feature number such as "1" or "2".'
+          message: `Section ${section} subsection_id must be a positive feature number such as "1" or "2".`
         };
       }
       if (!normalizedTitle) {
-        return { ok: false, message: "Section 7 feature title must not be empty." };
+        return { ok: false, message: `Section ${section} feature title must not be empty.` };
       }
-      return { ok: true, fullId: `7.${normalizedId}` };
+      return { ok: true, fullId: `${section}.${normalizedId}` };
     }
     const fullId = `${section}.${normalizedId}`;
     const expected = this.definitions.get(section)?.get(fullId);
@@ -31212,56 +31310,108 @@ function architectureDiagramError(content) {
 var DocumentService = class {
   workingDoc = null;
   templates;
-  constructor(templates = new TemplateRegistry()) {
-    this.templates = templates;
+  constructor(alpsTemplates = new TemplateRegistry(), liteTemplates = new TemplateRegistry(
+    LITE_ALPS_PROFILE.chaptersDir,
+    LITE_ALPS_PROFILE.dynamicSection?.section
+  )) {
+    this.templates = {
+      alps: alpsTemplates,
+      lite: liteTemplates
+    };
   }
   attribute(attributes, name) {
     return attribute(attributes, name);
   }
-  // A section is unwritten when it holds nothing but the placeholder.
   isNotStarted(sectionContent) {
     return !sectionContent || sectionContent.includes(NOT_STARTED);
   }
   parseSections(content) {
     const sections = /* @__PURE__ */ new Map();
     const re = /<section\b([^>]*)>\s*([\s\S]*?)<\/section>/g;
-    let m;
-    while ((m = re.exec(content)) !== null) {
-      const id = this.attribute(m[1], "id");
-      if (id && /^\d+$/.test(id)) sections.set(Number.parseInt(id, 10), m[2].trim());
+    let match;
+    while ((match = re.exec(content)) !== null) {
+      const id = this.attribute(match[1], "id");
+      if (id && /^\d+$/.test(id)) {
+        sections.set(Number.parseInt(id, 10), match[2].trim());
+      }
     }
     return sections;
   }
-  parseSubsections(sectionContent, sectionId) {
-    const subs = /* @__PURE__ */ new Map();
-    const re = /<subsection\b([^>]*)>\s*([\s\S]*?)\s*<\/subsection>/g;
-    let m;
-    while ((m = re.exec(sectionContent)) !== null) {
-      const id = this.attribute(m[1], "id");
-      const title = this.attribute(m[1], "title");
-      if (!id || title == null || !id.startsWith(`${sectionId}.`)) continue;
-      subs.set(id, { title, content: decodeXml(m[2].trim()) });
+  parseSectionHeaders(content) {
+    const headers = [];
+    const re = /<section\b([^>]*)>/g;
+    let match;
+    while ((match = re.exec(content)) !== null) {
+      const id = this.attribute(match[1], "id");
+      const title = this.attribute(match[1], "title");
+      if (id && /^\d+$/.test(id)) {
+        headers.push({ id: Number.parseInt(id, 10), title });
+      }
     }
-    return subs;
+    return headers;
+  }
+  parseSubsections(sectionContent, sectionId) {
+    const subsections = /* @__PURE__ */ new Map();
+    const re = /<subsection\b([^>]*)>\s*([\s\S]*?)\s*<\/subsection>/g;
+    let match;
+    while ((match = re.exec(sectionContent)) !== null) {
+      const id = this.attribute(match[1], "id");
+      const title = this.attribute(match[1], "title");
+      if (!id || title == null || !id.startsWith(`${sectionId}.`)) continue;
+      subsections.set(id, { title, content: decodeXml(match[2].trim()) });
+    }
+    return subsections;
   }
   hasUnparsedContent(sectionContent) {
     const remainder = sectionContent.replace(/<subsection\b[^>]*>\s*[\s\S]*?\s*<\/subsection>/g, "").replace(/<!--\s*Not started\s*-->/g, "").trim();
     return remainder.length > 0;
+  }
+  featureNames(sectionContent, sectionId, subsectionId) {
+    const source = this.parseSubsections(sectionContent, sectionId).get(subsectionId);
+    const features = /* @__PURE__ */ new Map();
+    if (!source) return features;
+    for (const line of source.content.split(/\r?\n/)) {
+      const table = line.match(/^\s*\|?\s*F(\d+)\s*\|\s*([^|]+?)\s*(?:\||$)/i);
+      const list = line.match(/^\s*(?:[-*]\s*)?F(\d+)\s*:\s*(.+?)\s*$/i);
+      const match = table ?? list;
+      if (!match) continue;
+      features.set(Number.parseInt(match[1], 10), match[2].trim());
+    }
+    return features;
+  }
+  liteFeatureError(sections, subsectionId, title) {
+    const dynamic = LITE_ALPS_PROFILE.dynamicSection;
+    if (!dynamic) return null;
+    const features = this.featureNames(
+      sections.get(dynamic.sourceSection) || "",
+      dynamic.sourceSection,
+      dynamic.sourceSubsectionId
+    );
+    const featureNumber = Number.parseInt(subsectionId, 10);
+    const featureName = features.get(featureNumber);
+    if (!featureName) {
+      return `Lite ALPS Feature F${featureNumber} must be declared with a name in Section ${dynamic.sourceSubsectionId} before Section ${dynamic.section} can save it.`;
+    }
+    const expectedTitle = `F${featureNumber}: ${featureName}`;
+    return title.trim() === expectedTitle ? null : `Lite ALPS Feature ${dynamic.section}.${featureNumber} title must be "${expectedTitle}".`;
   }
   buildSubsection(subId, title, content) {
     return `<subsection id="${escapeXmlAttribute(subId)}" title="${escapeXmlAttribute(title)}">
 ${escapeXmlText(content)}
 </subsection>`;
   }
-  buildSection(sectionId, content) {
-    return `<section id="${sectionId}" title="${escapeXmlAttribute(SECTION_TITLES[sectionId])}">
+  buildSection(profile, sectionId, content) {
+    return `<section id="${sectionId}" title="${escapeXmlAttribute(profile.sectionTitles[sectionId])}">
 ${content}
 </section>`;
   }
-  buildDocument(projectName, sections) {
-    const lines = [`<alps-document project="${escapeXmlAttribute(projectName)}">`];
-    for (const i of SECTION_NUMBERS) {
-      lines.push(this.buildSection(i, sections.get(i) || NOT_STARTED));
+  buildDocument(profile, projectName, sections) {
+    const profileAttribute = profile.rootProfile ? ` profile="${escapeXmlAttribute(profile.rootProfile)}"` : "";
+    const lines = [
+      `<alps-document project="${escapeXmlAttribute(projectName)}"${profileAttribute}>`
+    ];
+    for (const section of sectionNumbers(profile)) {
+      lines.push(this.buildSection(profile, section, sections.get(section) || NOT_STARTED));
     }
     lines.push("</alps-document>");
     return lines.join("\n\n");
@@ -31272,22 +31422,65 @@ ${content}
       const project = this.attribute(root[1], "project");
       if (project) return project;
     }
-    const m = content.match(/^# (.+?) (?:ALPS|PRD)/m);
-    return m ? m[1] : "Untitled";
+    const match = content.match(/^# (.+?) (?:Lite )?(?:ALPS|PRD)/m);
+    return match ? match[1] : "Untitled";
   }
-  validateDocument(content) {
-    const root = content.match(/^\s*<(alps-document|prd-document)\b[^>]*>/);
-    if (!root) return "Missing <alps-document> root element.";
+  inspectDocument(content) {
+    const root = content.match(/^\s*<(alps-document|prd-document)\b([^>]*)>/);
+    if (!root) return { error: "Missing <alps-document> root element." };
     if (!new RegExp(`</${root[1]}>\\s*$`).test(content)) {
-      return `Missing closing </${root[1]}> element.`;
+      return { error: `Missing closing </${root[1]}> element.` };
     }
-    if (this.parseSections(content).size === 0) return "Document contains no valid sections.";
-    return null;
+    const profileValue = this.attribute(root[2], "profile");
+    const profile = profileValue == null || profileValue === "" || profileValue === "alps" ? ALPS_PROFILE : profileValue === LITE_ALPS_PROFILE.rootProfile ? LITE_ALPS_PROFILE : null;
+    if (!profile) return { error: `Unknown ALPS document profile: ${profileValue}.` };
+    const sections = this.parseSections(content);
+    if (sections.size === 0) return { error: "Document contains no valid sections." };
+    if (profile.id === "lite") {
+      const expected = sectionNumbers(profile);
+      const headers = this.parseSectionHeaders(content);
+      if (expected.length !== headers.length || expected.some((section, index) => section !== headers[index]?.id)) {
+        return {
+          error: `Lite ALPS documents must contain Sections ${sectionRange(profile)} exactly once and in order.`
+        };
+      }
+      const titleMismatch = expected.find(
+        (section, index) => headers[index]?.title !== profile.sectionTitles[section]
+      );
+      if (titleMismatch != null) {
+        return {
+          error: `Lite ALPS Section ${titleMismatch} title must be "${profile.sectionTitles[titleMismatch]}".`
+        };
+      }
+      const dynamic = profile.dynamicSection;
+      if (dynamic) {
+        const savedFeatureIds = /* @__PURE__ */ new Set();
+        const subsectionRe = /<subsection\b([^>]*)>/g;
+        let subsectionMatch;
+        while ((subsectionMatch = subsectionRe.exec(sections.get(dynamic.section) || "")) !== null) {
+          const id = this.attribute(subsectionMatch[1], "id");
+          const title = this.attribute(subsectionMatch[1], "title");
+          if (!id || !new RegExp(`^${dynamic.section}\\.[1-9]\\d*$`).test(id)) {
+            return {
+              error: `Lite ALPS Feature subsection ${id ?? "(missing id)"} must use ${dynamic.section}.x with a positive number.`
+            };
+          }
+          if (savedFeatureIds.has(id)) {
+            return { error: `Lite ALPS Feature subsection ${id} must appear exactly once.` };
+          }
+          savedFeatureIds.add(id);
+          const featureNumber = id.slice(`${dynamic.section}.`.length);
+          const featureError = this.liteFeatureError(sections, featureNumber, title ?? "");
+          if (featureError) return { error: featureError };
+        }
+      }
+    }
+    return { profile };
   }
   readWorkingDocument() {
     if (!this.workingDoc) {
       return {
-        error: "No document loaded. Call init_alps_document() or load_alps_document() first."
+        error: "No document loaded. Call init_alps_document(), init_lite_alps_document(), or load_alps_document() first."
       };
     }
     let content;
@@ -31296,8 +31489,8 @@ ${content}
     } catch (error51) {
       return { error: `Unable to read ${this.workingDoc}: ${error51.message}` };
     }
-    const validationError = this.validateDocument(content);
-    return validationError ? { error: `Invalid ALPS document at ${this.workingDoc}: ${validationError}` } : { content };
+    const inspection = this.inspectDocument(content);
+    return "error" in inspection ? { error: `Invalid ALPS document at ${this.workingDoc}: ${inspection.error}` } : { content, profile: inspection.profile };
   }
   writeAtomic(filepath, content) {
     const temporary = `${filepath}.tmp-${process.pid}-${Date.now()}`;
@@ -31308,31 +31501,41 @@ ${content}
       if (fs3.existsSync(temporary)) fs3.unlinkSync(temporary);
     }
   }
-  expandHome(p) {
-    return p.startsWith("~") ? path4.join(os.homedir(), p.slice(1)) : p;
+  expandHome(value) {
+    return value.startsWith("~") ? path4.join(os.homedir(), value.slice(1)) : value;
   }
   get outputDir() {
     const dir = process.env.ALPS_OUTPUT_DIR || process.env.PRD_OUTPUT_DIR || path4.join(process.cwd(), "prd");
     return this.expandHome(dir);
   }
-  expandPath(p) {
-    if (p.startsWith("~")) return this.expandHome(p);
-    if (path4.isAbsolute(p)) return p;
-    return path4.resolve(this.outputDir, p);
+  expandPath(value) {
+    if (value.startsWith("~")) return this.expandHome(value);
+    if (path4.isAbsolute(value)) return value;
+    return path4.resolve(this.outputDir, value);
   }
-  initDocument(projectName, outputPath) {
-    this.workingDoc = null;
-    let filepath = this.expandPath(outputPath);
-    if (!path4.extname(filepath)) filepath += ".alps.xml";
-    if (!filepath.toLowerCase().endsWith(".alps.xml")) {
-      return `Invalid document path: ${filepath}. ALPS documents must use the .alps.xml extension.`;
+  pathError(filepath, profile) {
+    const lower = filepath.toLowerCase();
+    if (profile.id === "lite") {
+      return lower.endsWith(profile.filenameSuffix) ? null : `Invalid document path: ${filepath}. Lite ALPS documents must use the ${profile.filenameSuffix} extension.`;
     }
+    if (!lower.endsWith(profile.filenameSuffix) || lower.endsWith(LITE_ALPS_PROFILE.filenameSuffix)) {
+      return `Invalid document path: ${filepath}. ALPS documents must use the ${profile.filenameSuffix} extension.`;
+    }
+    return null;
+  }
+  initDocument(projectName, outputPath, profileId = "alps") {
+    this.workingDoc = null;
+    const profile = DOCUMENT_PROFILES[profileId];
+    let filepath = this.expandPath(outputPath);
+    if (!path4.extname(filepath)) filepath += profile.filenameSuffix;
+    const pathError = this.pathError(filepath, profile);
+    if (pathError) return pathError;
     if (fs3.existsSync(filepath)) {
       return `Document already exists at ${filepath}. Use load_alps_document() to resume.`;
     }
     fs3.mkdirSync(path4.dirname(filepath), { recursive: true });
     try {
-      fs3.writeFileSync(filepath, this.buildDocument(projectName, /* @__PURE__ */ new Map()), {
+      fs3.writeFileSync(filepath, this.buildDocument(profile, projectName, /* @__PURE__ */ new Map()), {
         encoding: "utf-8",
         flag: "wx"
       });
@@ -31343,12 +31546,12 @@ ${content}
       throw error51;
     }
     this.workingDoc = filepath;
-    return `Created ALPS document at ${filepath}`;
+    return `Created ${profile.label} document at ${filepath}`;
   }
   loadDocument(docPath) {
     this.workingDoc = null;
     const filepath = this.expandPath(docPath);
-    if (!filepath.toLowerCase().endsWith(".alps.xml")) {
+    if (!filepath.toLowerCase().endsWith(ALPS_PROFILE.filenameSuffix)) {
       return `Invalid document path: ${filepath}. ALPS documents must use the .alps.xml extension.`;
     }
     if (!fs3.existsSync(filepath)) return `Document not found at ${filepath}`;
@@ -31358,128 +31561,141 @@ ${content}
     } catch (error51) {
       return `Unable to read ${filepath}: ${error51.message}`;
     }
-    const validationError = this.validateDocument(content);
-    if (validationError) return `Invalid ALPS document at ${filepath}: ${validationError}`;
+    const inspection = this.inspectDocument(content);
+    if ("error" in inspection) return `Invalid ALPS document at ${filepath}: ${inspection.error}`;
+    const pathError = this.pathError(filepath, inspection.profile);
+    if (pathError) return pathError;
     this.workingDoc = filepath;
+    const guideTool = inspection.profile.id === "lite" ? "get_lite_alps_section_guide" : "get_alps_section_guide";
     return `${this.getStatus()}
 
 ---
 \u26A0\uFE0F CONVERSATION MODE REQUIRED:
-1. Call get_alps_section_guide(N) before working on any section
+1. Call ${guideTool}(N) before working on any section
 2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
 3. Wait for user response before proceeding
 4. Get explicit "yes" confirmation before calling save_alps_section()
 NEVER auto-fill sections without user Q&A, even if content already exists.`;
   }
   saveSection(section, subsectionId, title, content) {
-    if (!(section in SECTION_TITLES)) {
-      return `Invalid section number: ${section}. Must be ${SECTION_RANGE}.`;
-    }
-    const subsection = this.templates.validateSubsection(section, subsectionId, title);
-    if (!subsection.ok) return `Invalid subsection: ${subsection.message}`;
     const document = this.readWorkingDocument();
     if ("error" in document) return document.error;
-    if (subsection.fullId === "4.1") {
+    const { profile } = document;
+    if (!(section in profile.sectionTitles)) {
+      return `Invalid section number: ${section}. Must be ${sectionRange(profile)} for ${profile.label}.`;
+    }
+    const subsection = this.templates[profile.id].validateSubsection(section, subsectionId, title);
+    if (!subsection.ok) return `Invalid subsection: ${subsection.message}`;
+    if (profile.id === "alps" && subsection.fullId === "4.1") {
       const diagramError = architectureDiagramError(content);
       if (diagramError) return `Invalid subsection content: ${diagramError}`;
     }
-    const docContent = document.content;
-    const projectName = this.extractProjectName(docContent);
-    const sections = this.parseSections(docContent);
+    const projectName = this.extractProjectName(document.content);
+    const sections = this.parseSections(document.content);
+    if (profile.id === "lite" && section === profile.dynamicSection?.section) {
+      const featureError = this.liteFeatureError(sections, subsectionId, title);
+      if (featureError) return `Invalid subsection: ${featureError}`;
+    }
     const sectionContent = sections.get(section) || "";
     if (this.hasUnparsedContent(sectionContent)) {
       return `Cannot safely update Section ${section}: it contains unrecognized content. Export or migrate it before saving a subsection.`;
     }
-    const subId = subsection.fullId;
     const existing = this.parseSubsections(sectionContent, section);
-    existing.set(subId, { title, content });
-    const parts = [...existing.entries()].sort(bySubsectionId).map(([k, v]) => this.buildSubsection(k, v.title, v.content));
+    existing.set(subsection.fullId, { title, content });
+    const parts = [...existing.entries()].sort(bySubsectionId).map(([id, value]) => this.buildSubsection(id, value.title, value.content));
     sections.set(section, parts.join("\n"));
-    this.writeAtomic(this.workingDoc, this.buildDocument(projectName, sections));
-    return `Saved ${subId}. ${title}`;
+    this.writeAtomic(this.workingDoc, this.buildDocument(profile, projectName, sections));
+    return `Saved ${subsection.fullId}. ${title}`;
   }
   readSection(section, subsectionId) {
-    if (!(section in SECTION_TITLES)) return `Section ${section} not found.`;
     const document = this.readWorkingDocument();
     if ("error" in document) return document.error;
+    if (!(section in document.profile.sectionTitles)) return `Section ${section} not found.`;
     const sections = this.parseSections(document.content);
     const content = sections.get(section) || "";
     if (subsectionId != null) {
       const subId = `${section}.${subsectionId}`;
-      const subs = this.parseSubsections(content, section);
-      const sub = subs.get(subId);
-      if (sub) return `### ${subId}. ${sub.title}
+      const subsection = this.parseSubsections(content, section).get(subId);
+      if (subsection) return `### ${subId}. ${subsection.title}
 
-${sub.content}`;
+${subsection.content}`;
       return `Subsection ${subId} not found.`;
     }
     const display = this.isNotStarted(content) ? "*Not yet written*" : this.contentToMarkdown(content, section);
-    return `## Section ${section}. ${SECTION_TITLES[section]}
+    return `## Section ${section}. ${document.profile.sectionTitles[section]}
 
 ${display}`;
   }
   getStatus() {
     const document = this.readWorkingDocument();
     if ("error" in document) return document.error;
-    const docContent = document.content;
+    const { content: docContent, profile } = document;
     const projectName = this.extractProjectName(docContent);
     const sections = this.parseSections(docContent);
-    const lines = [`ALPS Document: ${projectName}`, `Location: ${this.workingDoc}`, ""];
-    for (const [num, title] of Object.entries(SECTION_TITLES)) {
-      const section = Number.parseInt(num, 10);
+    const registry2 = this.templates[profile.id];
+    const lines = [`${profile.label} Document: ${projectName}`, `Location: ${this.workingDoc}`, ""];
+    for (const [number4, title] of Object.entries(profile.sectionTitles)) {
+      const section = Number.parseInt(number4, 10);
       const content = sections.get(section) || "";
       const subsections = this.parseSubsections(content, section);
       let status;
       if (subsections.size === 0 && this.isNotStarted(content)) {
         status = "\u2B1C Not started";
-      } else if (section === 7) {
-        const expectedFeatures = this.countFeatureIds(sections.get(6) || "");
-        if (expectedFeatures > 0 && subsections.size >= expectedFeatures) {
-          status = `\u2705 Written (${subsections.size}/${expectedFeatures} features)`;
-        } else if (expectedFeatures > 0) {
-          status = `\u{1F7E1} In progress (${subsections.size}/${expectedFeatures} features)`;
+      } else if (section === profile.dynamicSection?.section) {
+        const expectedItems = this.countFeatureIds(sections, profile);
+        if (expectedItems > 0 && subsections.size >= expectedItems) {
+          status = `\u2705 Written (${subsections.size}/${expectedItems} features)`;
+        } else if (expectedItems > 0) {
+          status = `\u{1F7E1} In progress (${subsections.size}/${expectedItems} features)`;
         } else {
           status = `\u{1F7E1} In progress (${subsections.size} dynamic feature${subsections.size === 1 ? "" : "s"} saved)`;
         }
       } else {
-        const expected = this.templates.expectedSubsections(section);
+        const expected = registry2.expectedSubsections(section).filter((definition) => definition.required);
         const written = expected.filter((definition) => subsections.has(definition.id)).length;
         status = expected.length > 0 && written === expected.length ? `\u2705 Written (${written}/${expected.length} subsections)` : `\u{1F7E1} In progress (${written}/${expected.length} subsections)`;
       }
-      lines.push(`Section ${num} (${title}): ${status}`);
+      lines.push(`Section ${number4} (${title}): ${status}`);
     }
     return lines.join("\n");
   }
-  countFeatureIds(sectionSixContent) {
-    const subsection = this.parseSubsections(sectionSixContent, 6).get("6.1");
-    if (!subsection) return 0;
-    const ids = subsection.content.match(/\bF(?:\d+|(?:-[A-Z0-9]+)+)\b/gi) ?? [];
+  countFeatureIds(sections, profile) {
+    const dynamic = profile.dynamicSection;
+    if (!dynamic) return 0;
+    const source = this.parseSubsections(
+      sections.get(dynamic.sourceSection) || "",
+      dynamic.sourceSection
+    ).get(dynamic.sourceSubsectionId);
+    if (!source) return 0;
+    const ids = source.content.match(/\bF(?:\d+|(?:-[A-Z0-9]+)+)\b/gi) ?? [];
     return new Set(ids.map((id) => id.toUpperCase())).size;
   }
   contentToMarkdown(content, section) {
-    const subs = this.parseSubsections(content, section);
-    if (subs.size === 0) return content;
-    return [...subs.entries()].sort(bySubsectionId).map(([id, data]) => `### ${id}. ${data.title}
+    const subsections = this.parseSubsections(content, section);
+    if (subsections.size === 0) return content;
+    return [...subsections.entries()].sort(bySubsectionId).map(([id, data]) => `### ${id}. ${data.title}
 
 ${data.content}`).join("\n\n");
   }
   exportMarkdown(outputPath) {
     const document = this.readWorkingDocument();
     if ("error" in document) return document.error;
-    const docContent = document.content;
+    const { content: docContent, profile } = document;
     const projectName = this.extractProjectName(docContent);
     const sections = this.parseSections(docContent);
-    const lines = [`# ${projectName} ALPS
+    const lines = [`# ${projectName} ${profile.markdownTitle}
 `];
-    for (const i of SECTION_NUMBERS) {
-      const content = sections.get(i) || "";
-      const md = this.isNotStarted(content) ? "*Not yet written*" : this.contentToMarkdown(content, i);
-      lines.push(`## Section ${i}. ${SECTION_TITLES[i]}
+    for (const section of sectionNumbers(profile)) {
+      const content = sections.get(section) || "";
+      const markdown = this.isNotStarted(content) ? "*Not yet written*" : this.contentToMarkdown(content, section);
+      lines.push(
+        `## Section ${section}. ${profile.sectionTitles[section]}
 
-${md}
+${markdown}
 
 ---
-`);
+`
+      );
     }
     const result = lines.join("\n");
     if (outputPath) {
@@ -31500,6 +31716,9 @@ var DocumentController = class {
   service;
   initAlpsDocument(projectName, outputPath) {
     return this.service.initDocument(projectName, outputPath);
+  }
+  initLiteAlpsDocument(projectName, outputPath) {
+    return this.service.initDocument(projectName, outputPath, "lite");
   }
   loadAlpsDocument(docPath) {
     return this.service.loadDocument(docPath);
@@ -31524,41 +31743,49 @@ var server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.7.4" },
+  { name: "alps-writer", version: "0.8.0" },
   {
-    instructions: `You are an intelligent product owner helping users create ALPS (PRD) documents.
+    instructions: `You are an intelligent product owner helping users create ALPS and Lite ALPS product documents.
 
 ALPS defines each feature as a vertical slice \u2014 a single feature that cuts through all layers (UI \u2192 API \u2192 Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store. End each Feature's Acceptance Criteria with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result; do not duplicate the Feature's flow, errors, or acceptance rules in a separate demo subsection.
+
+Lite ALPS targets planners and product managers creating mockups and PoCs without choosing technology. It records product intent, user scenarios, user-visible behavior, screens, shared product principles, validation, and open questions. It never asks for architecture, technology stack, APIs, databases, deployment, libraries, or code structure. Each Section 4 Feature stays at user action \u2192 product response \u2192 observable completion.
 
 <TRIGGER>
 MUST use this server's tools when the user wants to:
 - Write, create, or edit a PRD (Product Requirements Document)
 - Write a product specification or product spec
 - Create an ALPS (Agentic Lean Product Spec) document
+- Create a Lite ALPS document for a mockup or PoC
 - Draft product requirements, feature specs, or product plans
-Keywords: PRD, ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \uC81C\uD488 \uC694\uAD6C\uC0AC\uD56D, \uC81C\uD488 \uC2A4\uD399, \uD504\uB85C\uB355\uD2B8 \uC2A4\uD399, \uC694\uAD6C\uC0AC\uD56D \uBB38\uC11C
+Keywords: PRD, ALPS, Lite ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \uC81C\uD488 \uC694\uAD6C\uC0AC\uD56D, \uC81C\uD488 \uC2A4\uD399, \uD504\uB85C\uB355\uD2B8 \uC2A4\uD399, \uC694\uAD6C\uC0AC\uD56D \uBB38\uC11C, \uBAA9\uC5C5, PoC
 </TRIGGER>
 
 <WORKFLOW>
-1. init_alps_document() or load_alps_document()
-2. get_alps_overview() - MUST call first to get conversation guide
-3. Use atomic confirmation by default. Batch confirmation is allowed only when the user explicitly requests it or supplies a complete structured source covering multiple sections. Author in this dependency-respecting order: 1, 2, 3, 4, 6, 5, 7, 8, 9.
-   (Section numbering is unchanged \u2014 Section 5 is Design, Section 6 is Requirements. Only the questioning order differs: author Requirements (6) before Design (5), because Design reuses the Feature IDs defined in Section 6.1.)
+1. Full ALPS: init_alps_document() or load_alps_document()
+   Lite ALPS: init_lite_alps_document() or load_alps_document()
+2. Full ALPS: get_alps_overview()
+   Lite ALPS: get_lite_alps_overview()
+   The matching overview MUST be called first to get the conversation guide.
+3. Use atomic confirmation by default. Batch confirmation is allowed only when the user explicitly requests it or supplies a complete structured source covering multiple sections.
+   Full ALPS order: 1, 2, 3, 4, 6, 5, 7, 8, 9.
+   Lite ALPS order: 1, 2, 3, 4, 6, 5, 7, 8.
+   For Full ALPS, author Requirements (6) before Design (5), because Design reuses the Feature IDs defined in Section 6.1.
    For each section:
-   a. get_alps_section_guide(N)
-   b. get_alps_section(N)
+   a. Call the matching get_alps_section_guide(N) or get_lite_alps_section_guide(N)
+   b. Call the matching get_alps_section(N) or get_lite_alps_section(N)
    c. Follow conversation guide from overview
    d. Present a concise plain-text approval digest and get explicit user confirmation
-   e. save_alps_section(section, subsection_id, title, content) \u2014 one call per X.n subsection; Section 7 uses one call per Feature 7.x \u2014 only AFTER confirmation
+   e. save_alps_section(section, subsection_id, title, content) \u2014 one call per X.n subsection; Full ALPS Section 7 and Lite ALPS Section 4 use one call per Feature \u2014 only AFTER confirmation
    f. Move to the next section only after this one is confirmed
-4. In batch mode, keep every section and Section 7 Feature as a separately labeled
+4. In batch mode, keep every section and dynamic Feature as a separately labeled
    approval unit and persist each with its own save_alps_section call. Never merge,
    skip, or infer a Feature.
 5. export_alps_markdown() for final output
 </WORKFLOW>
 
 <RULES>
-- MUST call get_alps_overview() first to get detailed conversation guide
+- MUST call the overview tool matching the selected document profile first
 - NEVER proceed without user confirmation
 - ALWAYS confirm progress at the SECTION level \u2014 do not skip a section without the user seeing and approving it
 - Approval digests MUST remain readable as raw text and include every contract-bearing value, rule, permission, state, transition, scope boundary, and success condition. Omit repeated explanation, examples, Markdown decoration, and implementation detail. Do not name omitted implementation details or add an exclusion list for them.
@@ -31566,10 +31793,16 @@ Keywords: PRD, ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \uC81C\uD488
 - Batch approval requires explicit opt-in or a complete structured source; each section and Feature remains a separate save unit.
 - For Section 7, each Feature 7.x is one approval and save unit. Its 7.x.1-7.x.6 fields stay together.
 - If a Section 7 Feature's comprehension load is 7/10 or higher, suggest up to three independently demonstrable user-behavior splits before approval. The suggestion never blocks approval or saving, and the user may keep the original Feature.
+- For Lite ALPS Section 4, each Feature 4.x is one approval and save unit. Its internal fields stay together and never introduce technical layers.
+- Lite ALPS is mockup/PoC input, not a completed Full ALPS or automatic ADR handoff input.
 </RULES>`
   }
 );
 var tc = new TemplateController(new TemplateService());
+var liteTc = new TemplateController(
+  new TemplateService(LITE_ALPS_PROFILE),
+  "get_lite_alps_section_guide"
+);
 var dc = new DocumentController(new DocumentService());
 server.tool(
   "get_alps_overview",
@@ -31612,6 +31845,51 @@ server.tool(
   })
 );
 server.tool(
+  "get_lite_alps_overview",
+  "Get the Lite ALPS overview for mockup and PoC authoring. Call this before writing any Lite ALPS section.",
+  {},
+  () => ({
+    content: [{ type: "text", text: liteTc.getAlpsOverview() }]
+  })
+);
+server.tool(
+  "list_lite_alps_sections",
+  "List all available Lite ALPS template sections.",
+  {},
+  () => ({
+    content: [{ type: "text", text: JSON.stringify(liteTc.listAlpsSections()) }]
+  })
+);
+server.tool(
+  "get_lite_alps_section",
+  "Get a specific Lite ALPS template section by number.",
+  {
+    section: external_exports.number().min(LITE_FIRST_SECTION).max(LITE_LAST_SECTION).describe(`Section number (${LITE_SECTION_RANGE})`),
+    include_examples: external_exports.boolean().default(false).describe("Include example content")
+  },
+  ({ section, include_examples }) => ({
+    content: [{ type: "text", text: liteTc.getAlpsSection(section, include_examples) }]
+  })
+);
+server.tool(
+  "get_lite_alps_full_template",
+  "Get the complete Lite ALPS template with all sections combined.",
+  { include_examples: external_exports.boolean().default(false).describe("Include example content") },
+  ({ include_examples }) => ({
+    content: [{ type: "text", text: liteTc.getAlpsFullTemplate(include_examples) }]
+  })
+);
+server.tool(
+  "get_lite_alps_section_guide",
+  "Get the conversation guide for a specific Lite ALPS section. Use this before starting each Lite section.",
+  {
+    section: external_exports.number().min(LITE_FIRST_SECTION).max(LITE_LAST_SECTION).describe(`Section number (${LITE_SECTION_RANGE})`)
+  },
+  ({ section }) => ({
+    content: [{ type: "text", text: liteTc.getAlpsSectionGuide(section) }]
+  })
+);
+server.tool(
   "init_alps_document",
   "Initialize a new ALPS document file.",
   {
@@ -31623,14 +31901,27 @@ server.tool(
   })
 );
 server.tool(
+  "init_lite_alps_document",
+  "Initialize a new eight-section Lite ALPS document for mockup and PoC planning.",
+  {
+    project_name: external_exports.string().min(1).describe("Name of the project"),
+    output_path: external_exports.string().min(1).describe("File path for the document (e.g., ~/Documents/my-project.lite.alps.xml)")
+  },
+  ({ project_name, output_path }) => ({
+    content: [{ type: "text", text: dc.initLiteAlpsDocument(project_name, output_path) }]
+  })
+);
+server.tool(
   "load_alps_document",
-  `Load an existing ALPS document to resume editing.
+  `Load an existing ALPS or Lite ALPS document to resume editing. The document profile is detected automatically.
 \u26A0\uFE0F CRITICAL: After loading, you MUST follow the conversation guide:
-1. Call get_alps_section_guide(N) for the section you want to work on
+1. Call the matching get_alps_section_guide(N) or get_lite_alps_section_guide(N)
 2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
 3. Wait for user response before proceeding
 4. Get explicit confirmation before saving each section`,
-  { doc_path: external_exports.string().min(1).describe("Path to the .alps.xml file") },
+  {
+    doc_path: external_exports.string().min(1).describe("Path to the .alps.xml or .lite.alps.xml file")
+  },
   ({ doc_path }) => ({
     content: [{ type: "text", text: dc.loadAlpsDocument(doc_path) }]
   })
@@ -31646,10 +31937,10 @@ server.tool(
   {
     section: external_exports.number().min(FIRST_SECTION).max(LAST_SECTION).describe(`Section number (${SECTION_RANGE})`),
     subsection_id: external_exports.string().min(1).describe(
-      'Subsection ID \u2014 the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. For Sections 1-6 and 8-9 it must match the XML template. For dynamic Section 7, pass the positive feature number ("1" for 7.1).'
+      'Subsection ID \u2014 the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Fixed sections must match the active document template. For Full ALPS Section 7 or Lite ALPS Section 4, pass the positive feature number.'
     ),
     title: external_exports.string().min(1).describe(
-      "Title of the subsection. For Sections 1-6 and 8-9 it MUST equal the matching XML template title. For Section 7, use the approved feature name."
+      "Title of the subsection. Fixed sections MUST equal the active template title. For a dynamic Feature section, use the approved feature name."
     ),
     content: external_exports.string().describe("Content for the subsection (markdown)")
   },

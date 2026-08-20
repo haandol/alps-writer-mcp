@@ -1,6 +1,6 @@
 # Usage guide
 
-This guide covers the full development cycle, the two entry flows (PRD-first and ADR-only), the shared skills, the ADR-first hook, and the mapping file. Invoke a skill as `$skill-name` in Codex or `/skill-name` in Claude Code.
+This guide covers the product-document and development flows, the shared skills, the ADR-first hook, and the mapping file. Invoke a skill as `$skill-name` in Codex or `/skill-name` in Claude Code.
 
 For installation see the [README Quick Start](../README.md#quick-start). For the MCP server in other MCP clients see [MCP server](./mcp-server.md). For the same lifecycle, critical command paths, routing, and efficiency review as diagrams, see [ADR process overview](./adr-process.md).
 
@@ -111,7 +111,16 @@ flowchart TD
 
 ## Walkthroughs
 
-### A. PRD-first — start from an ALPS spec (both plugins)
+### A. PoC-first — start with Lite ALPS
+
+1. `/lite-alps-init` → write or resume an 8-section product document for a mockup or PoC.
+2. Confirm product intent, MVP scope, the primary ideal-path scenario, each Feature, shared product principles, screens, validation, and open questions. Non-goals and edge-oriented details are optional unless they affect the PoC.
+3. Build and validate the mockup or PoC from the exported Lite ALPS document.
+4. When implementation planning begins, start `/alps-init` as a separate Full ALPS workflow. The Lite document may be used as source material, but Full ALPS keeps its own section approvals.
+
+Lite ALPS deliberately contains no technology stack, architecture, API, database, deployment, library, or code-structure inputs. It does not invoke `/feature-to-adr` and is not implementation authority.
+
+### B. PRD-first — start from a Full ALPS spec (both plugins)
 
 1. `/alps-init` → use atomic confirmation by default, or explicitly opt into batch confirmation for complete structured input. Batch items remain separate save units.
 2. After Section 7, run `/feature-to-adr` → it transfers each implementable Feature's complete contract into `1..N` real ADRs, preserves required Feature prerequisites as `dependsOn`, and leaves replaceable means to code.
@@ -122,7 +131,7 @@ flowchart TD
 
 After handoff the PRD remains on disk as a legacy planning document, but implementation, review, and sync read only ADRs. Re-run `/feature-to-adr` only when you explicitly want to import a changed PRD. Equivalent semantics are a no-op; additions and changes become ADR-first proposals; removals require confirmation. Current ADRs remain authoritative until a change is approved.
 
-### B. ADR-only — no PRD (adr-writer standalone)
+### C. ADR-only — no PRD (adr-writer standalone)
 
 1. `/adr-new <category>` → apply the ADR admission gate, then describe a durable requirement or architectural decision directly. Replaceable libraries, SDKs, frameworks, and credential/auth wiring stay in code. No ALPS document required.
 2. `/adr-impl <category>` → continue from a non-blocking plan update, auto-resolve derived obligations and established reversible defaults, request only unresolved product policy, then build it in code, run the automatic verified refactor pass and tests, and invoke the report-only adversarial review as the completion gate.
@@ -131,7 +140,7 @@ After handoff the PRD remains on disk as a legacy planning document, but impleme
 
 **Apply the ADR admission gate before the cycle.** A pure refactor is exempt, as are replaceable implementation changes such as swapping a library, SDK, framework, credential provider chain, signer, or adapter while preserving the same contracts and boundaries. A bug fix is exempt when it restores already intended behavior. A change to a requirement value, allowed state, transition, permission, key design, provider/model boundary, adopted algorithm, security trust boundary, or external-dependency fallback enters the cycle and updates the relevant ADR first.
 
-### C. Inherited or hand-edited ADRs — review them as documents
+### D. Inherited or hand-edited ADRs — review them as documents
 
 Run `/adr-review [category]` when an ADR set arrives without the context of whoever wrote it: a repo you inherited, an ADR edited by hand, or one changed by another session. It reads the ADRs against the authoring rules (abstraction level, requirement preservation, alternatives) without opening the code and reports a punch list — it never edits the ADRs, the mapping, or code. It is deliberately **not** run right after `/adr-new`, which judges its own draft against the same rules.
 
@@ -141,10 +150,11 @@ In all flows the hook runs automatically once adr-writer is installed. Session s
 
 ### alps-writer
 
-| Command                | Role                                                                                                               |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `/alps-init`           | Author or resume ALPS with atomic confirmation by default and explicit batch confirmation when appropriate         |
-| `/feature-to-adr [id]` | Transfer a Feature's complete implementation contract into `1..N` ADRs; explicitly re-import semantic changes only |
+| Command                | Role                                                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `/alps-init`           | Author or resume Full ALPS with atomic confirmation by default and explicit batch confirmation when appropriate   |
+| `/lite-alps-init`      | Author or resume an 8-section, technology-free Lite ALPS for mockup and PoC validation                            |
+| `/feature-to-adr [id]` | Transfer a Full ALPS Feature's complete implementation contract into `1..N` ADRs; re-import semantic changes only |
 
 ### adr-writer
 

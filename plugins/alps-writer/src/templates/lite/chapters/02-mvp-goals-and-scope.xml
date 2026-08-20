@@ -1,0 +1,29 @@
+<section id="2" title="MVP Goals and Scope">
+  <subsection id="2.1" title="Validation Hypothesis">
+    <description>State the user-and-outcome hypothesis the mockup or PoC must test.</description>
+    <example>If product managers can shape an idea through guided questions, they can reach a reviewable PoC without first writing a full specification.</example>
+  </subsection>
+  <subsection id="2.2" title="In-Scope Features">
+    <description>
+- List every Feature included in the PoC with a unique ID: F1, F2, and so on.
+- Give each Feature a user-oriented name and one observable result.
+- Section 4 must describe exactly this Feature set.
+    </description>
+    <example>
+| ID | Feature | Observable result |
+|----|---------|-------------------|
+| F1 | Guided idea capture | The user sees a complete product overview |
+| F2 | PoC preview | The user can review the primary journey |
+    </example>
+  </subsection>
+  <subsection id="2.3" title="Out of Scope" required="false">
+    <description>Optional. List only exclusions the user explicitly wants the PoC boundary to show. Do not invent non-goals to complete this subsection.</description>
+  </subsection>
+  <subsection id="2.4" title="Success Criteria">
+    <description>
+- Define one to three observable results that distinguish a successful PoC.
+- Preserve user-provided values and units exactly.
+- Do not invent targets the user did not supply.
+    </description>
+  </subsection>
+</section>
