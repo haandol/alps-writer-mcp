@@ -88,6 +88,17 @@
       ],
       "dependsOn": []
     },
+    "alps-authoring/lite-format": {
+      "feature": "Lite ALPS authoring format",
+      "adrs": [
+        {
+          "path": "docs/adr/alps-authoring/lite-format/0001-lite-alps-authoring-profile.md",
+          "status": "Accepted (2026-08-20)",
+          "summary": "ALPS Writer는 기술 입력 없이 목업과 PoC용 제품 동작을 작성하는 8개 Section Lite ALPS 프로필을 기존 승인·재개 흐름과 함께 제공한다"
+        }
+      ],
+      "dependsOn": ["alps-authoring/authoring-interaction"]
+    },
     "adr-cycle/implementation-review": {
       "feature": "Implementation review",
       "adrs": [

@@ -13,7 +13,10 @@ export type SubsectionValidation = { ok: true; fullId: string } | { ok: false; m
 export class TemplateRegistry {
   private readonly definitions = new Map<number, Map<string, SubsectionDefinition>>();
 
-  constructor(chaptersDir = CHAPTERS_DIR) {
+  constructor(
+    chaptersDir = CHAPTERS_DIR,
+    private readonly dynamicSection = 7,
+  ) {
     for (const filename of fs.readdirSync(chaptersDir).filter((name) => name.endsWith(".xml"))) {
       const section = Number.parseInt(filename.split("-")[0], 10);
       if (!Number.isInteger(section)) continue;
@@ -32,7 +35,7 @@ export class TemplateRegistry {
   }
 
   expectedSubsections(section: number): SubsectionDefinition[] {
-    if (section === 7) return [];
+    if (section === this.dynamicSection) return [];
     return [...(this.definitions.get(section)?.values() ?? [])];
   }
 
@@ -40,19 +43,19 @@ export class TemplateRegistry {
     const normalizedId = subsectionId.trim();
     const normalizedTitle = title.trim();
 
-    // Section 7 stores one complete feature per 7.x entry. Its nested 7.x.1-7
-    // template describes the content inside that dynamic feature entry.
-    if (section === 7) {
+    // A dynamic section stores one complete feature per section.x entry. The
+    // nested template describes the content inside that feature entry.
+    if (section === this.dynamicSection) {
       if (!/^[1-9]\d*$/.test(normalizedId)) {
         return {
           ok: false,
-          message: 'Section 7 subsection_id must be a positive feature number such as "1" or "2".',
+          message: `Section ${section} subsection_id must be a positive feature number such as "1" or "2".`,
         };
       }
       if (!normalizedTitle) {
-        return { ok: false, message: "Section 7 feature title must not be empty." };
+        return { ok: false, message: `Section ${section} feature title must not be empty.` };
       }
-      return { ok: true, fullId: `7.${normalizedId}` };
+      return { ok: true, fullId: `${section}.${normalizedId}` };
     }
 
     const fullId = `${section}.${normalizedId}`;

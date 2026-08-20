@@ -25,10 +25,10 @@ The bundle inlines its dependencies, so it runs with a plain Node.js >= 24 — n
 
 ## Environment variables
 
-| Variable           | Scope           | Description                                                                                             | Default                  |
-| ------------------ | --------------- | ------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `ALPS_OUTPUT_DIR`  | alps-writer MCP | Directory for document files (`.alps.xml`, exported markdown). `PRD_OUTPUT_DIR` also accepted (legacy). | `<cwd>/prd/`             |
-| `ALPS_ADR_MAPPING` | adr-writer hook | Path (relative to project root) to the ADR mapping file read by the ADR-first hook.                     | `docs/adr/.mapping.json` |
+| Variable           | Scope           | Description                                                                                                               | Default                  |
+| ------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `ALPS_OUTPUT_DIR`  | alps-writer MCP | Directory for document files (`.alps.xml`, `.lite.alps.xml`, exported markdown). `PRD_OUTPUT_DIR` also accepted (legacy). | `<cwd>/prd/`             |
+| `ALPS_ADR_MAPPING` | adr-writer hook | Path (relative to project root) to the ADR mapping file read by the ADR-first hook.                                       | `docs/adr/.mapping.json` |
 
 Config example with `ALPS_OUTPUT_DIR`:
 
@@ -48,7 +48,7 @@ Config example with `ALPS_OUTPUT_DIR`:
 
 ## MCP tools
 
-### Template tools
+### Full ALPS template tools
 
 | Tool                     | Description                                            |
 | ------------------------ | ------------------------------------------------------ |
@@ -58,22 +58,34 @@ Config example with `ALPS_OUTPUT_DIR`:
 | `get_alps_full_template` | Get the complete template with all sections            |
 | `get_alps_section_guide` | Get the conversation guide for writing a section       |
 
+### Lite ALPS template tools
+
+| Tool                          | Description                                                |
+| ----------------------------- | ---------------------------------------------------------- |
+| `get_lite_alps_overview`      | Get the 8-section Lite ALPS overview and authoring rules   |
+| `list_lite_alps_sections`     | List the Lite ALPS template sections                       |
+| `get_lite_alps_section`       | Get a Lite ALPS template section by number (1–8)           |
+| `get_lite_alps_full_template` | Get the complete Lite ALPS template                        |
+| `get_lite_alps_section_guide` | Get the conversation guide for writing a Lite ALPS section |
+
 ### Document management tools
 
-| Tool                       | Description                                 |
-| -------------------------- | ------------------------------------------- |
-| `init_alps_document`       | Create a new ALPS document (`.alps.xml`)    |
-| `load_alps_document`       | Load an existing document to resume editing |
-| `save_alps_section`        | Save content to a specific subsection       |
-| `read_alps_section`        | Read the current content of a section       |
-| `get_alps_document_status` | Get the status of all sections              |
-| `export_alps_markdown`     | Export as clean Markdown                    |
+| Tool                       | Description                                                    |
+| -------------------------- | -------------------------------------------------------------- |
+| `init_alps_document`       | Create a new Full ALPS document (`.alps.xml`)                  |
+| `init_lite_alps_document`  | Create a new Lite ALPS document (`.lite.alps.xml`)             |
+| `load_alps_document`       | Load either document type and detect its profile automatically |
+| `save_alps_section`        | Save content using the active document's template              |
+| `read_alps_section`        | Read the current content of a section                          |
+| `get_alps_document_status` | Get the status of all sections in the active document          |
+| `export_alps_markdown`     | Export the active document as clean Markdown                   |
 
 Document writes are guarded:
 
-- Source documents must use the `.alps.xml` extension and contain a valid ALPS root. A failed `init` or `load` leaves no document selected.
-- Existing files are never selected implicitly by `init_alps_document`; resume them explicitly with `load_alps_document`.
-- After loading an existing document, `/alps-init` reads `get_alps_document_status`, summarizes completed sections once, and resumes at the first incomplete section in dependency order (`1 → 2 → 3 → 4 → 6 → 5 → 7 → 8 → 9`). Completed unchanged sections are not re-approved unless the user requests a full review.
-- Static subsection IDs and titles are validated against the XML templates. Section 7 accepts dynamic feature entries (`7.1`, `7.2`, ...) with the approved feature name.
+- Full documents use `.alps.xml`; Lite documents use `.lite.alps.xml` and declare the Lite profile in the root. A failed `init` or `load` leaves no document selected.
+- Existing files are never selected implicitly by either initialization tool; resume them explicitly with `load_alps_document`.
+- Full ALPS resumes in dependency order `1 → 2 → 3 → 4 → 6 → 5 → 7 → 8 → 9`. Lite ALPS resumes in `1 → 2 → 3 → 4 → 6 → 5 → 7 → 8`.
+- Static subsection IDs and titles are validated against the active XML templates. Full Section 7 and Lite Section 4 accept one dynamic entry per approved Feature.
 - Markdown content is XML-escaped on disk and decoded when read or exported. Saves use an atomic replacement so interrupted writes do not leave a partially written document.
-- Section status is based on required template subsection coverage, not content length. Dynamic Section 7 compares saved entries with feature IDs found in Section 6.1 when available.
+- Section status is based on required template subsection coverage, not content length. Full Section 7 compares against Section 6.1 Feature IDs; Lite Section 4 compares against Section 2.2 Feature IDs.
+- Lite templates never request architecture, technology stack, API, database, deployment, library, or code-structure decisions.

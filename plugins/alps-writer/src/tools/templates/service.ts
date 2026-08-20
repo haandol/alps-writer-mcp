@@ -1,14 +1,10 @@
 import fs from "fs";
 import path from "path";
-import {
-  TEMPLATES_DIR,
-  CHAPTERS_DIR,
-  GUIDES_DIR,
-  SECTION_TITLES,
-  SECTION_REFERENCES,
-} from "../../constants.js";
+import { ALPS_PROFILE, type DocumentProfile } from "../../profiles.js";
 
 export class TemplateService {
+  constructor(readonly profile: DocumentProfile = ALPS_PROFILE) {}
+
   private xmlToMarkdown(content: string, includeExamples: boolean): string {
     const lines: string[] = [];
     this.renderXml(content, lines, 2, includeExamples);
@@ -49,12 +45,12 @@ export class TemplateService {
   }
 
   getOverview(): string {
-    return fs.readFileSync(path.join(TEMPLATES_DIR, "overview.md"), "utf-8");
+    return fs.readFileSync(path.join(this.profile.templatesDir, "overview.md"), "utf-8");
   }
 
   listSections(): { section: number; filename: string }[] {
     return fs
-      .readdirSync(CHAPTERS_DIR)
+      .readdirSync(this.profile.chaptersDir)
       .filter((f) => f.endsWith(".xml"))
       .sort()
       .map((f) => ({
@@ -66,11 +62,11 @@ export class TemplateService {
   getSection(section: number, includeExamples = false): string {
     const prefix = String(section).padStart(2, "0") + "-";
     const file = fs
-      .readdirSync(CHAPTERS_DIR)
+      .readdirSync(this.profile.chaptersDir)
       .find((f) => f.startsWith(prefix) && f.endsWith(".xml"));
     if (!file) return `Section ${section} not found.`;
     return this.xmlToMarkdown(
-      fs.readFileSync(path.join(CHAPTERS_DIR, file), "utf-8"),
+      fs.readFileSync(path.join(this.profile.chaptersDir, file), "utf-8"),
       includeExamples,
     );
   }
@@ -78,11 +74,14 @@ export class TemplateService {
   getFullTemplate(includeExamples = false): string {
     const parts = [this.getOverview(), "\n---\n"];
     for (const f of fs
-      .readdirSync(CHAPTERS_DIR)
+      .readdirSync(this.profile.chaptersDir)
       .filter((f) => f.endsWith(".xml"))
       .sort()) {
       parts.push(
-        this.xmlToMarkdown(fs.readFileSync(path.join(CHAPTERS_DIR, f), "utf-8"), includeExamples),
+        this.xmlToMarkdown(
+          fs.readFileSync(path.join(this.profile.chaptersDir, f), "utf-8"),
+          includeExamples,
+        ),
       );
       parts.push("\n---\n");
     }
@@ -90,13 +89,13 @@ export class TemplateService {
   }
 
   getSectionGuide(section: number): string {
-    const guidePath = path.join(GUIDES_DIR, `${String(section).padStart(2, "0")}.md`);
+    const guidePath = path.join(this.profile.guidesDir, `${String(section).padStart(2, "0")}.md`);
     if (!fs.existsSync(guidePath)) return `Section ${section} not found.`;
 
     const guide = fs.readFileSync(guidePath, "utf-8");
-    const refs = SECTION_REFERENCES[section];
+    const refs = this.profile.sectionReferences[section];
     if (refs) {
-      const refNames = refs.map((r) => `Section ${r} (${SECTION_TITLES[r]})`);
+      const refNames = refs.map((r) => `Section ${r} (${this.profile.sectionTitles[r]})`);
       const readCalls = refs.map((r) => `read_alps_section(${r})`).join(", ");
       return `⚠️ REQUIRED: This section depends on ${refNames.join(", ")}.
 Before proceeding, you MUST:

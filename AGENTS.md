@@ -92,22 +92,23 @@ scripts/
 .adr-invariants-code-ignore # Self-hosting exclusions for code→ADR example scanning
 
 plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
-├── .claude-plugin/plugin.json   # mcpServers only (node dist/index.js); skills/ (alps-init, feature-to-adr) are auto-discovered
+├── .claude-plugin/plugin.json   # mcpServers only; skills/ (alps-init, lite-alps-init, feature-to-adr) are auto-discovered
 ├── .codex-plugin/plugin.json    # Codex metadata; registers skills + .mcp.json
 ├── .mcp.json                    # Codex MCP command (node ./dist/index.js)
 ├── package.json          # private; build tooling for the bundle
 ├── tsconfig.json, eslint.config.mjs
 ├── src/
 │   ├── index.ts          # MCP server entry point + tool registration
-│   ├── constants.ts      # Section titles/range, dependencies, file paths, NOT_STARTED
+│   ├── constants.ts      # Backward-compatible section/path exports + NOT_STARTED
+│   ├── profiles.ts       # Full/Lite document metadata, ordering, templates, dynamic sections
 │   ├── xml.ts            # regex XML helpers shared by both tool layers
 │   ├── tools/
 │   │   ├── templates/    # Template tools (controller + service)
 │   │   └── documents/    # Document tools (controller + service)
-│   ├── guides/           # Section conversation guides (01-09.md)
-│   └── templates/        # ALPS templates (overview.md + chapters/*.xml)
+│   ├── guides/           # Full guides (01-09.md) + Lite guides (lite/01-08.md)
+│   └── templates/        # Full templates + Lite templates under lite/
 ├── dist/                 # committed esbuild bundle (index.js + copied assets)
-├── skills/               # alps-init, feature-to-adr
+├── skills/               # alps-init, lite-alps-init, feature-to-adr
 └── templates/alps/       # about-alps.md
 
 plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
@@ -150,7 +151,7 @@ ADR folders are organized along two axes — a DDD **bounded context** (top-leve
 - `src/tools/templates/` — Read-only access to ALPS templates and conversation guides
 - `src/tools/documents/` — Document CRUD (init, load, save, read, export) with state management
 
-**Constants** (`src/constants.ts`) — Centralized section metadata: titles (1-9), dependency graph (`SECTION_REFERENCES`), `__dirname`-based filesystem paths. The section range is **derived** from `SECTION_TITLES` (`SECTION_NUMBERS`, `FIRST_SECTION`, `LAST_SECTION`, `SECTION_RANGE`) rather than written as a literal at each use — the Zod `.min`/`.max` bounds, the argument descriptions, and the build/export loops all read it, so a tenth section cannot be half-added. `NOT_STARTED` is the placeholder an unwritten section carries.
+**Document profiles** (`src/profiles.ts`) — Full and Lite ALPS metadata: section titles, dependency graph, authoring order, file suffix, template/guide paths, and dynamic Feature section. Section ranges are derived from each profile. `src/constants.ts` keeps the existing Full ALPS exports and exposes Lite aliases for tool schemas and tests. `NOT_STARTED` is the placeholder an unwritten section carries.
 
 **XML helpers** (`src/xml.ts`) — `attribute`, `decodeXml`, `escapeXmlAttribute`, `escapeXmlText`, shared by the document and template layers (this project parses XML with regex by design — see Do-Not Rules). `attribute()` always returns the **decoded** value: an attribute's value is its decoded text, and both callers compare it against plain text.
 
@@ -159,8 +160,11 @@ ADR folders are organized along two axes — a DDD **bounded context** (top-leve
 - `src/templates/chapters/01-09.xml` — XML section templates
 - `src/templates/overview.md` — ALPS overview
 - `src/guides/01-09.md` — Per-section conversation guides
+- `src/templates/lite/chapters/01-08.xml` — Lite ALPS XML templates
+- `src/templates/lite/overview.md` — Lite ALPS overview
+- `src/guides/lite/01-08.md` — Lite ALPS conversation guides
 
-**Document format** — Stored as `.alps.xml` files with `<alps-document>`, `<section>`, `<subsection>` tags. Parsed via regex (no XML parser library). Output directory controlled by `ALPS_OUTPUT_DIR` env var (`PRD_OUTPUT_DIR` also supported for backward compatibility).
+**Document format** — Full documents use `.alps.xml`; Lite documents use `.lite.alps.xml` and a `profile="lite"` root attribute. Both use `<alps-document>`, `<section>`, and `<subsection>` tags and are parsed via regex (no XML parser library). Output directory is controlled by `ALPS_OUTPUT_DIR` (`PRD_OUTPUT_DIR` is also supported for backward compatibility).
 
 **DocumentService state** — `workingDoc` holds the current document path in memory. Read/write operations require `initDocument()` or `loadDocument()` to be called first.
 

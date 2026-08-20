@@ -7,6 +7,10 @@ export class DocumentController {
     return this.service.initDocument(projectName, outputPath);
   }
 
+  initLiteAlpsDocument(projectName: string, outputPath: string): string {
+    return this.service.initDocument(projectName, outputPath, "lite");
+  }
+
   loadAlpsDocument(docPath: string): string {
     return this.service.loadDocument(docPath);
   }

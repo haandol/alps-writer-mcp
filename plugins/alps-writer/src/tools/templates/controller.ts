@@ -1,7 +1,10 @@
 import { TemplateService } from "./service.js";
 
 export class TemplateController {
-  constructor(private service: TemplateService) {}
+  constructor(
+    private service: TemplateService,
+    private sectionGuideTool = "get_alps_section_guide",
+  ) {}
 
   getAlpsOverview(): string {
     return (
@@ -11,7 +14,7 @@ export class TemplateController {
 ---
 ## Next Step
 
-**REQUIRED**: Call \`get_alps_section_guide(1)\` to begin interactive writing.
+**REQUIRED**: Call \`${this.sectionGuideTool}(1)\` to begin interactive writing.
 Do NOT write any section without going through the guide's Q&A process first.`
     );
   }
