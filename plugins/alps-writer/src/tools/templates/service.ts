@@ -35,9 +35,12 @@ export class TemplateService {
       const idMatch = attrs?.match(/id="([^"]*)"/);
       const title = titleMatch?.[1] ?? "";
       const id = idMatch?.[1] ?? "";
+      const optional = attrs?.match(/\brequired="false"/) ? " (Optional)" : "";
       if (title) {
         lines.push(
-          id ? `${"#".repeat(level)} ${id} ${title}\n` : `${"#".repeat(level)} ${title}\n`,
+          id
+            ? `${"#".repeat(level)} ${id} ${title}${optional}\n`
+            : `${"#".repeat(level)} ${title}${optional}\n`,
         );
       }
       this.renderXml(inner, lines, level + 1, includeExamples);

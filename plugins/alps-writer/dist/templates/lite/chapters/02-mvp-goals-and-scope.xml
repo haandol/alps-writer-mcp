@@ -16,8 +16,8 @@
 | F2 | PoC preview | The user can review the primary journey |
     </example>
   </subsection>
-  <subsection id="2.3" title="Out of Scope">
-    <description>List what the PoC intentionally does not validate, partially represents, or defers.</description>
+  <subsection id="2.3" title="Out of Scope" required="false">
+    <description>Optional. List only exclusions the user explicitly wants the PoC boundary to show. Do not invent non-goals to complete this subsection.</description>
   </subsection>
   <subsection id="2.4" title="Success Criteria">
     <description>

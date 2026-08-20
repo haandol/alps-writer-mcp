@@ -31114,10 +31114,11 @@ ${inner.trim()}
       const idMatch = attrs?.match(/id="([^"]*)"/);
       const title = titleMatch?.[1] ?? "";
       const id = idMatch?.[1] ?? "";
+      const optional2 = attrs?.match(/\brequired="false"/) ? " (Optional)" : "";
       if (title) {
         lines.push(
-          id ? `${"#".repeat(level)} ${id} ${title}
-` : `${"#".repeat(level)} ${title}
+          id ? `${"#".repeat(level)} ${id} ${title}${optional2}
+` : `${"#".repeat(level)} ${title}${optional2}
 `
         );
       }
@@ -31242,7 +31243,8 @@ var TemplateRegistry = class {
       while ((match = subsectionRe.exec(xml)) !== null) {
         const id = attribute(match[1], "id");
         const title = attribute(match[1], "title");
-        if (id && title) subsections.set(id, { id, title });
+        const required2 = attribute(match[1], "required") !== "false";
+        if (id && title) subsections.set(id, { id, title, required: required2 });
       }
       this.definitions.set(section, subsections);
     }
@@ -31649,7 +31651,7 @@ ${display}`;
           status = `\u{1F7E1} In progress (${subsections.size} dynamic feature${subsections.size === 1 ? "" : "s"} saved)`;
         }
       } else {
-        const expected = registry2.expectedSubsections(section);
+        const expected = registry2.expectedSubsections(section).filter((definition) => definition.required);
         const written = expected.filter((definition) => subsections.has(definition.id)).length;
         status = expected.length > 0 && written === expected.length ? `\u2705 Written (${written}/${expected.length} subsections)` : `\u{1F7E1} In progress (${written}/${expected.length} subsections)`;
       }

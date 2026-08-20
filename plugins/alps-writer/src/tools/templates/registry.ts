@@ -6,6 +6,7 @@ import { attribute } from "../../xml.js";
 export interface SubsectionDefinition {
   id: string;
   title: string;
+  required: boolean;
 }
 
 export type SubsectionValidation = { ok: true; fullId: string } | { ok: false; message: string };
@@ -28,7 +29,8 @@ export class TemplateRegistry {
       while ((match = subsectionRe.exec(xml)) !== null) {
         const id = attribute(match[1], "id");
         const title = attribute(match[1], "title");
-        if (id && title) subsections.set(id, { id, title });
+        const required = attribute(match[1], "required") !== "false";
+        if (id && title) subsections.set(id, { id, title, required });
       }
       this.definitions.set(section, subsections);
     }

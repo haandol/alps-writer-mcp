@@ -14,7 +14,7 @@
   <subsection id="5.2" title="Navigation">
     <description>Describe how the user moves between the listed screens during the Primary User Scenario.</description>
   </subsection>
-  <subsection id="5.3" title="Screen States">
-    <description>Describe only the visible initial, empty, editing, processing, completed, error, and read-only states that apply.</description>
+  <subsection id="5.3" title="Screen States" required="false">
+    <description>Optional. Describe only the visible states that the PoC actually presents. Do not add error or edge states solely to complete the template.</description>
   </subsection>
 </section>

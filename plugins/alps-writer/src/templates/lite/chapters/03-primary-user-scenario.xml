@@ -16,7 +16,7 @@
   <subsection id="3.3" title="Completion Result">
     <description>State what the user can see, use, share, or decide when the scenario is complete.</description>
   </subsection>
-  <subsection id="3.4" title="Key Interruptions">
-    <description>Describe at most two important situations that block, pause, or redirect the main flow and the user-visible result.</description>
+  <subsection id="3.4" title="Key Interruptions" required="false">
+    <description>Optional. Describe at most two interruptions only when they materially change what the PoC must demonstrate.</description>
   </subsection>
 </section>

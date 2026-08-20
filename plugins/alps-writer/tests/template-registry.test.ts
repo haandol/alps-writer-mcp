@@ -86,9 +86,10 @@ test("the shipped templates expose the titles the tools advertise", () => {
   for (const section of [1, 2, 3, 4, 5, 6, 8, 9]) {
     const definitions = registry.expectedSubsections(section);
     assert.ok(definitions.length > 0, `section ${section} declares no subsections`);
-    for (const { id, title } of definitions) {
+    for (const { id, title, required } of definitions) {
       assert.ok(id.startsWith(`${section}.`), `${id} is not a section-${section} id`);
       assert.ok(title.trim(), `${id} has an empty title`);
+      assert.equal(required, true, `${id} must remain required in Full ALPS`);
       // A title that still carries an entity means the decode did not happen.
       assert.doesNotMatch(title, /&(amp|lt|gt|quot|apos);/, `${id} title was not decoded`);
     }
@@ -99,6 +100,14 @@ test("the Lite templates keep Section 4 dynamic and validate fixed titles", () =
   const registry = new TemplateRegistry(LITE_CHAPTERS_DIR, 4);
 
   assert.deepEqual(registry.expectedSubsections(4), []);
+  assert.equal(
+    registry.expectedSubsections(2).find((definition) => definition.id === "2.3")?.required,
+    false,
+  );
+  assert.equal(
+    registry.expectedSubsections(2).find((definition) => definition.id === "2.2")?.required,
+    true,
+  );
   assert.deepEqual(registry.validateSubsection(4, "1", "F1: Guided idea capture"), {
     ok: true,
     fullId: "4.1",

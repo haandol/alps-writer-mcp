@@ -40,7 +40,9 @@ test("Lite ALPS exposes the approved eight-section product outline", () => {
   const template = new TemplateService(LITE_ALPS_PROFILE);
   assert.equal(template.listSections().length, 8);
   assert.match(template.getOverview(), /1 → 2 → 3 → 4 → 6 → 5 → 7 → 8/);
+  assert.match(template.getSection(2), /2\.3 Out of Scope \(Optional\)/);
   assert.match(template.getSection(4), /User Flow and Product Response/);
+  assert.match(template.getSection(4), /4\.x\.5 States and Exceptions \(Optional\)/);
   assert.match(template.getSectionGuide(5), /Section 3 .*Section 4 .*Section 6/s);
 });
 
@@ -56,6 +58,67 @@ test("Lite chapter templates stay at product behavior resolution", () => {
   assert.match(source, /Permissions and Visibility/);
   assert.match(source, /Failure and Recovery/);
   assert.match(source, /Completion Checkpoint/);
+});
+
+test("optional edge-oriented subsections do not block Lite completion", () => {
+  const dir = temporaryDirectory();
+  const target = path.join(dir, "ideal-path.lite.alps.xml");
+  const service = new DocumentService();
+
+  assert.match(service.initDocument("ideal-path", target, "lite"), /Created Lite ALPS/);
+
+  const requiredBySection: Record<number, [string, string][]> = {
+    2: [
+      ["1", "Validation Hypothesis"],
+      ["2", "In-Scope Features"],
+      ["4", "Success Criteria"],
+    ],
+    3: [
+      ["1", "User and Starting Context"],
+      ["2", "Main Flow"],
+      ["3", "Completion Result"],
+    ],
+    5: [
+      ["1", "Screen Inventory"],
+      ["2", "Navigation"],
+    ],
+    6: [
+      ["1", "Permissions and Visibility"],
+      ["2", "Confirmation and Changes"],
+      ["4", "Accessibility and Sensitive Information"],
+    ],
+  };
+
+  for (const [section, subsections] of Object.entries(requiredBySection)) {
+    for (const [id, title] of subsections) {
+      service.saveSection(
+        Number(section),
+        id,
+        title,
+        id === "2" && section === "2" ? "- F1: Ideal path" : "confirmed",
+      );
+    }
+  }
+
+  assert.match(
+    service.saveSection(
+      4,
+      "1",
+      "F1: Ideal path",
+      "User goal, ideal-path flow, product response, rules, and completion checkpoint.",
+    ),
+    /Saved 4\.1/,
+  );
+
+  const status = service.getStatus();
+  assert.match(status, /Section 2 .*✅ Written \(3\/3 subsections\)/);
+  assert.match(status, /Section 3 .*✅ Written \(3\/3 subsections\)/);
+  assert.match(status, /Section 4 .*✅ Written \(1\/1 features\)/);
+  assert.match(status, /Section 5 .*✅ Written \(2\/2 subsections\)/);
+  assert.match(status, /Section 6 .*✅ Written \(3\/3 subsections\)/);
+
+  assert.match(service.saveSection(2, "3", "Out of Scope", "Explicitly excluded"), /Saved 2\.3/);
+  assert.match(service.getStatus(), /Section 2 .*✅ Written \(3\/3 subsections\)/);
 });
 
 test("Lite documents initialize, validate, resume, and export without changing Full ALPS", () => {
@@ -191,7 +254,11 @@ test("Lite authoring guidance preserves the approved interaction and scope rules
   assert.match(skill, /language the user uses/);
   assert.match(skill, /must not introduce a new product capability/);
   assert.match(skill, /Do not present completion as a\s+Full ALPS or automatic ADR handoff/s);
+  assert.match(skill, /Out of Scope, Key Interruptions, States and Exceptions, Screen States/);
+  assert.match(skill, /Prioritize the representative ideal path/);
   assert.doesNotMatch(guides, /technology stack|C4Context|C4Container|\bAPI\b|\bdatabase\b/i);
   assert.match(guides, /assumptions and unresolved product choices/);
+  assert.match(guides, /Out of Scope may remain empty/);
+  assert.match(guides, /Screen States is optional/);
   assert.match(guides, /one validation row per Feature completion checkpoint/);
 });

@@ -37,24 +37,27 @@ implementation decisions.
    - Present a concise plain-text approval digest and wait for explicit approval.
    - Save each approved fixed subsection separately with
      `mcp__alps-writer__save_alps_section`.
-7. The approval digest must include every confirmed value and rule that changes the product:
-   mandatory information, scope and non-goals, limits and units, permissions and visibility,
-   allowed states and forbidden changes, ordering and uniqueness, failure guarantees, completion
-   results, and unresolved questions. Never save a requirement absent from the digest. Show the
-   full pending content when requested.
+7. The approval digest must include every applicable confirmed value and rule that changes the
+   product: mandatory information, scope, limits and units, permissions and visibility, ordering
+   and uniqueness, completion results, and unresolved questions. Include non-goals, states,
+   exceptions, forbidden changes, and failure guarantees only when the user confirmed that they
+   affect the PoC. Never save a requirement absent from the digest or omit a confirmed rule as a
+   later edge case. Show the full pending content when requested.
 8. Section 4 is dynamic:
    - Read the complete F1, F2... list from Section 2.2 and the Primary User Scenario from Section 3.
    - Create exactly one `4.x` entry for each approved Feature, in ID order.
    - Treat one complete Feature as the approval and save unit. Keep user goal, starting conditions,
-     user actions, product responses, required information, product rules, states, exceptions, and
-     completion checkpoint together.
+     ideal-path user actions, product responses, required information, product rules, and completion
+     checkpoint together.
+   - Add states and exceptions only when the PoC must show or validate them.
    - Save with `save_alps_section(4, "x", "Fx: Feature name", content)`.
    - If a Feature mixes independently demonstrable outcomes, suggest up to three user-behavior
      splits and allow keeping the original. Never split by technical layer.
 9. Section 5 screens must be derived from the approved scenario, Features, and shared principles.
    Every screen references existing Feature IDs and must not introduce a new product capability.
 10. Keep assumptions and unresolved decisions in Section 8. An AI suggestion is not confirmed
-    product content until the user approves it.
+    product content until the user approves it. Put nonessential edge cases there when they should
+    be revisited after the ideal-path PoC.
 11. When all sections are complete, call `mcp__alps-writer__export_alps_markdown`.
 
 Lite ALPS is mockup and PoC input. Do not ask for architecture, technology stack, interfaces,
@@ -62,6 +65,10 @@ storage, deployment, libraries, code structure, or internal tuning. Do not prese
 Full ALPS or automatic ADR handoff. If the user later needs implementation-ready requirements,
 start a separate Full ALPS authoring flow and use the Lite document as a reference that still
 requires normal section and Feature approval.
+
+Out of Scope, Key Interruptions, States and Exceptions, Screen States, and Failure and Recovery are
+optional. Do not ask for them merely to fill the template. Prioritize the representative ideal path.
+Preserve any limit, permission, state, or failure guarantee the user explicitly confirms.
 
 **Rule**: no section or Feature is saved without explicit approval. Atomic confirmation is the
 default, and batch mode never merges approval or save units.

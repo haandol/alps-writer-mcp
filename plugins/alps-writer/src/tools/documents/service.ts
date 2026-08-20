@@ -489,7 +489,9 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
           status = `🟡 In progress (${subsections.size} dynamic feature${subsections.size === 1 ? "" : "s"} saved)`;
         }
       } else {
-        const expected = registry.expectedSubsections(section);
+        const expected = registry
+          .expectedSubsections(section)
+          .filter((definition) => definition.required);
         const written = expected.filter((definition) => subsections.has(definition.id)).length;
         status =
           expected.length > 0 && written === expected.length

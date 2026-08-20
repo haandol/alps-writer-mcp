@@ -17,7 +17,7 @@ The two are split so that **adr-writer never references ALPS**. The only couplin
 
 It fixes the format (9 sections, explicit dependencies, vertical-slice features) and inverts the authoring loop: the **agent asks focused questions, the human answers**, with no section saved without confirmation. Out of Scope is a first-class section so the agent knows what _not_ to build.
 
-**Lite ALPS** applies the same approval and product-contract discipline to an 8-section format for planners and PMs creating mockups or PoCs. It covers product intent, scenarios, user-visible behavior, screens, shared principles, validation, and open questions without asking for architecture or technology choices.
+**Lite ALPS** applies the same approval and product-contract discipline to an 8-section format for planners and PMs creating mockups or PoCs. It prioritizes the representative ideal path and treats non-goals, interruptions, exceptions, screen states, and recovery details as optional unless they affect the PoC. It covers product intent, scenarios, user-visible behavior, screens, shared principles, validation, and open questions without asking for architecture or technology choices.
 
 See [`about-alps.md`](./plugins/alps-writer/templates/alps/about-alps.md) for the full design rationale and how ALPS feeds into the ADR-driven cycle.
 
@@ -64,7 +64,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 **alps-writer (PRD)**
 
 - 9-section ALPS (PRD) template with structured XML templates, conversation guides, and per-Feature demos connected to the end-to-end demo scenario
-- 8-section Lite ALPS template for PM-led mockups and PoCs, with user-visible behavior and validation rules but no technology or architecture inputs
+- 8-section Lite ALPS template for PM-led mockups and PoCs, with an ideal-path focus, optional edge-oriented details, and no technology or architecture inputs
 - Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
 - Contract-complete plain-text approval digests — concise raw-text views preserve every requirement value and rule before subsection-level persistence
 - Document management — create, save, load, and export as clean Markdown

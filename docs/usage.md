@@ -114,7 +114,7 @@ flowchart TD
 ### A. PoC-first — start with Lite ALPS
 
 1. `/lite-alps-init` → write or resume an 8-section product document for a mockup or PoC.
-2. Confirm product intent, MVP scope, the primary scenario, each Feature, shared product principles, screens, validation, and open questions.
+2. Confirm product intent, MVP scope, the primary ideal-path scenario, each Feature, shared product principles, screens, validation, and open questions. Non-goals and edge-oriented details are optional unless they affect the PoC.
 3. Build and validate the mockup or PoC from the exported Lite ALPS document.
 4. When implementation planning begins, start `/alps-init` as a separate Full ALPS workflow. The Lite document may be used as source material, but Full ALPS keeps its own section approvals.
 

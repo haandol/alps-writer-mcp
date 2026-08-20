@@ -22,8 +22,8 @@
 - Include exact values and units only when the user provided or approved them.
       </description>
     </subsection>
-    <subsection id="4.x.5" title="States and Exceptions">
-      <description>Describe relevant empty, in-progress, completed, unavailable, rejected, and recoverable failure states.</description>
+    <subsection id="4.x.5" title="States and Exceptions" required="false">
+      <description>Optional. Describe only states or exceptions that the PoC must show or validate. Leave nonessential edge cases for later product or implementation work.</description>
     </subsection>
     <subsection id="4.x.6" title="Completion Checkpoint">
       <description>State one observable result that shows this Feature completed its role in the Primary User Scenario.</description>

@@ -88,4 +88,5 @@ Document writes are guarded:
 - Static subsection IDs and titles are validated against the active XML templates. Full Section 7 and Lite Section 4 accept one dynamic entry per approved Feature.
 - Markdown content is XML-escaped on disk and decoded when read or exported. Saves use an atomic replacement so interrupted writes do not leave a partially written document.
 - Section status is based on required template subsection coverage, not content length. Full Section 7 compares against Section 6.1 Feature IDs; Lite Section 4 compares against Section 2.2 Feature IDs.
+- Lite `Out of Scope`, `Key Interruptions`, `States and Exceptions`, `Screen States`, and `Failure and Recovery` subsections are optional and do not block completion. Explicitly confirmed limits, permissions, states, and failure guarantees remain required product content.
 - Lite templates never request architecture, technology stack, API, database, deployment, library, or code-structure decisions.
