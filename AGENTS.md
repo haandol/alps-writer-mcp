@@ -100,13 +100,13 @@ plugins/alps-writer/      # PRD plugin (bundles + commits its own MCP server)
 ├── src/
 │   ├── index.ts          # MCP server entry point + tool registration
 │   ├── constants.ts      # Backward-compatible section/path exports + NOT_STARTED
-│   ├── profiles.ts       # Full/current Lite/legacy Lite metadata, ordering, templates, optional/dynamic sections
+│   ├── profiles.ts       # Full/Lite metadata, ordering, templates, optional/dynamic sections
 │   ├── xml.ts            # regex XML helpers shared by both tool layers
 │   ├── tools/
 │   │   ├── templates/    # Template tools (controller + service)
 │   │   └── documents/    # Document tools (controller + service)
-│   ├── guides/           # Full 01-09 + current Lite 01-04 + legacy Lite under lite/legacy/
-│   └── templates/        # Full + current Lite 01-04 + legacy Lite under lite/legacy/
+│   ├── guides/           # Full 01-09 + Lite 01-04
+│   └── templates/        # Full + Lite 01-04
 ├── dist/                 # committed esbuild bundle (index.js + copied assets)
 ├── skills/               # alps-init, lite-alps-init, feature-to-adr
 └── templates/alps/       # about-alps.md
@@ -151,7 +151,9 @@ ADR folders are organized along two axes — a DDD **bounded context** (top-leve
 - `src/tools/templates/` — Read-only access to ALPS templates and conversation guides
 - `src/tools/documents/` — Document CRUD (init, load, save, read, export) with state management
 
-**Document profiles** (`src/profiles.ts`) — Full ALPS, current four-section Lite ALPS, and legacy eight-section Lite metadata: section titles, dependency graph, authoring order, optional Sections, file suffix, template/guide paths, and dynamic Feature sections where applicable. Section ranges are derived from each profile. Current Lite and Full are unrelated authoring/management lifecycles. Existing eight-section Lite files are detected by their Section shape and retain legacy guides and validation without automatic conversion.
+**Document profiles** (`src/profiles.ts`) — Full ALPS and four-section Lite ALPS metadata: section titles, dependency graph, authoring order, optional Sections, file suffix, template/guide paths, and dynamic Feature sections where applicable. Section ranges are derived from each profile. Lite and Full are unrelated authoring/management lifecycles. Lite uses `Overview → Solution and User Flow → Out of Scope → Demo Scenario`; Section 3 is optional, and Section 4 uses one executable `Demo Scenario` subsection like Full ALPS. The earlier Sections use two integrated inputs so method-specific paperwork does not delay the first PoC.
+
+**Inference-first authoring** — Full and Lite ALPS convert recoverable business variables into concrete, implementation-independent product constants before asking questions. The harness uses user messages and references, approved prior Sections, logical consequences, domain conventions, and dominant reversible defaults in that order. It asks only when multiple valid outcomes materially change product value, scope, money, permissions, legal/regulatory/privacy/safety policy, irreversible data meaning, an external promise, acceptance, or learning. Important user-unsupplied constants appear as `AI-inferred` with their basis in the approval digest and are never saved before explicit approval.
 
 **XML helpers** (`src/xml.ts`) — `attribute`, `decodeXml`, `escapeXmlAttribute`, `escapeXmlText`, shared by the document and template layers (this project parses XML with regex by design — see Do-Not Rules). `attribute()` always returns the **decoded** value: an attribute's value is its decoded text, and both callers compare it against plain text.
 
@@ -163,9 +165,8 @@ ADR folders are organized along two axes — a DDD **bounded context** (top-leve
 - `src/templates/lite/chapters/01-04.xml` — Current Lite ALPS XML templates
 - `src/templates/lite/overview.md` — Current Lite ALPS overview
 - `src/guides/lite/01-04.md` — Current Lite ALPS conversation guides
-- `src/templates/lite/legacy/` and `src/guides/lite/legacy/` — Legacy eight-section Lite assets
 
-**Document format** — Full documents use `.alps.xml`; Lite documents use `.lite.alps.xml` and a `profile="lite"` root attribute. Current Lite has four Sections; the loader recognizes the legacy eight-section shape separately. Both use `<alps-document>`, `<section>`, and `<subsection>` tags and are parsed via regex (no XML parser library). Output directory is controlled by `ALPS_OUTPUT_DIR` (`PRD_OUTPUT_DIR` is also supported for backward compatibility).
+**Document format** — Full documents use `.alps.xml`; Lite documents use `.lite.alps.xml` and a `profile="lite"` root attribute. Lite documents must contain the current four Sections and exact titles in order. Both use `<alps-document>`, `<section>`, and `<subsection>` tags and are parsed via regex (no XML parser library). Output directory is controlled by `ALPS_OUTPUT_DIR` (`PRD_OUTPUT_DIR` is also supported for backward compatibility).
 
 **DocumentService state** — `workingDoc` holds the current document path in memory. Read/write operations require `initDocument()` or `loadDocument()` to be called first.
 

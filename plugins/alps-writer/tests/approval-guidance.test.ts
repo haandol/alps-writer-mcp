@@ -34,6 +34,39 @@ test("approval guidance uses a contract-complete plain-text digest", () => {
   assert.doesNotMatch(overview, /print FULL section/i);
 });
 
+test("Full and Lite authoring infer product constants before asking", () => {
+  const sources = [
+    read("src/index.ts"),
+    read("skills/alps-init/SKILL.md"),
+    read("skills/lite-alps-init/SKILL.md"),
+    read("src/templates/overview.md"),
+    read("src/templates/lite/overview.md"),
+    read("src/tools/documents/service.ts"),
+  ];
+
+  for (const source of sources) {
+    assert.match(source, /inference-first/i);
+    assert.match(source, /AI-inferred/i);
+    assert.match(source, /ask (?:no|zero) question/i);
+    assert.match(source, /money|permissions|legal|regulatory|privacy|safety/i);
+    assert.match(source, /explicit (?:approval|confirmation)|user approv/i);
+  }
+
+  const guidePaths = [
+    ...Array.from(
+      { length: 9 },
+      (_, index) => `src/guides/${String(index + 1).padStart(2, "0")}.md`,
+    ),
+    ...Array.from(
+      { length: 4 },
+      (_, index) => `src/guides/lite/${String(index + 1).padStart(2, "0")}.md`,
+    ),
+  ];
+  for (const guidePath of guidePaths) {
+    assert.match(read(guidePath), /<inference_first>/i, guidePath);
+  }
+});
+
 test("Section 7 keeps Feature-level save units and suggests splits at seven or higher", () => {
   const guide = new TemplateService().getSectionGuide(7);
   const skill = read("skills/alps-init/SKILL.md");

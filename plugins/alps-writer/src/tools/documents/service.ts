@@ -5,7 +5,6 @@ import { NOT_STARTED } from "../../constants.js";
 import {
   ALPS_PROFILE,
   DOCUMENT_PROFILES,
-  LEGACY_LITE_ALPS_PROFILE,
   LITE_ALPS_PROFILE,
   type DocumentProfile,
   type DocumentProfileId,
@@ -66,15 +65,10 @@ export class DocumentService {
       LITE_ALPS_PROFILE.chaptersDir,
       LITE_ALPS_PROFILE.dynamicSection?.section ?? null,
     ),
-    legacyLiteTemplates = new TemplateRegistry(
-      LEGACY_LITE_ALPS_PROFILE.chaptersDir,
-      LEGACY_LITE_ALPS_PROFILE.dynamicSection?.section ?? null,
-    ),
   ) {
     this.templates = {
       alps: alpsTemplates,
       lite: liteTemplates,
-      "lite-legacy": legacyLiteTemplates,
     };
   }
 
@@ -135,6 +129,41 @@ export class DocumentService {
       .replace(/<!--\s*Not started\s*-->/g, "")
       .trim();
     return remainder.length > 0;
+  }
+
+  private fixedSubsectionError(
+    profile: DocumentProfile,
+    section: number,
+    sectionContent: string,
+  ): string | null {
+    if (section === profile.dynamicSection?.section) return null;
+    if (this.hasUnparsedContent(sectionContent)) {
+      return `Lite ALPS Section ${section} contains unrecognized content.`;
+    }
+
+    const seen = new Set<string>();
+    const subsectionRe = /<subsection\b([^>]*)>\s*[\s\S]*?\s*<\/subsection>/g;
+    let subsectionMatch: RegExpExecArray | null;
+    while ((subsectionMatch = subsectionRe.exec(sectionContent)) !== null) {
+      const id = this.attribute(subsectionMatch[1], "id");
+      const title = this.attribute(subsectionMatch[1], "title");
+      const prefix = `${section}.`;
+      if (!id || title == null || !id.startsWith(prefix)) {
+        return `Lite ALPS Section ${section} contains a subsection with an invalid id or title.`;
+      }
+      if (seen.has(id)) {
+        return `Lite ALPS subsection ${id} must appear exactly once.`;
+      }
+      seen.add(id);
+
+      const validation = this.templates[profile.id].validateSubsection(
+        section,
+        id.slice(prefix.length),
+        title,
+      );
+      if (!validation.ok) return `Lite ALPS ${validation.message}`;
+    }
+    return null;
   }
 
   private featureNames(
@@ -233,18 +262,14 @@ export class DocumentService {
     } else if (profileValue === LITE_ALPS_PROFILE.rootProfile) {
       const headerIds = headers.map(({ id }) => id);
       const currentIds = sectionNumbers(LITE_ALPS_PROFILE);
-      const legacyIds = sectionNumbers(LEGACY_LITE_ALPS_PROFILE);
-      const matchesIds = (expected: number[]) =>
-        expected.length === headerIds.length &&
-        expected.every((section, index) => section === headerIds[index]);
-      if (matchesIds(currentIds)) {
+      if (
+        currentIds.length === headerIds.length &&
+        currentIds.every((section, index) => section === headerIds[index])
+      ) {
         profile = LITE_ALPS_PROFILE;
-      } else if (matchesIds(legacyIds)) {
-        profile = LEGACY_LITE_ALPS_PROFILE;
       } else {
         return {
-          error:
-            "Lite ALPS documents must contain current Sections 1-4 or legacy Sections 1-8 exactly once and in order.",
+          error: "Lite ALPS documents must contain Sections 1-4 exactly once and in order.",
         };
       }
     }
@@ -269,6 +294,14 @@ export class DocumentService {
         return {
           error: `Lite ALPS Section ${titleMismatch} title must be "${profile.sectionTitles[titleMismatch]}".`,
         };
+      }
+      for (const section of expected) {
+        const subsectionError = this.fixedSubsectionError(
+          profile,
+          section,
+          sections.get(section) || "",
+        );
+        if (subsectionError) return { error: subsectionError };
       }
       const dynamic = profile.dynamicSection;
       if (dynamic) {
@@ -420,10 +453,11 @@ export class DocumentService {
 ---
 ⚠️ CONVERSATION MODE REQUIRED:
 1. Call ${guideTool}(N) before working on any section
-2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
-3. Wait for user response before proceeding
-4. Get explicit "yes" confirmation before calling save_alps_section()
-NEVER auto-fill sections without user Q&A, even if content already exists.`;
+2. Use inference-first drafting from the loaded document, conversation, references, prior Sections, logical consequences, and safe domain defaults
+3. Ask no question when one safe draft is supported; otherwise ask only when material uncertainty changes value, scope, money, permissions, legal/regulatory/privacy/safety policy, data meaning, an external promise, acceptance, or learning
+4. Mark important constants as AI-inferred with their basis
+5. Get explicit "yes" confirmation before calling save_alps_section()
+NEVER save inferred or generated content without user approval.`;
   }
 
   saveSection(section: number, subsectionId: string, title: string, content: string): string {

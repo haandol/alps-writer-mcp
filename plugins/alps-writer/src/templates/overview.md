@@ -15,7 +15,7 @@ This document provides a comprehensive framework to capture and validate all ess
 9. Out of Scope - List features deferred for future iterations
 
 > **Recommended authoring order:** 1 → 2 → 3 → 4 → **6 → 5** → 7 → 8 → 9.
-> The section numbering and the final document order are unchanged (Section 5 is Design, Section 6 is Requirements). Only the order in which you _ask questions_ differs: author Section 6 (Requirements) before Section 5 (Design), because Section 5 reuses the Feature IDs (F1, F2, …) defined in Section 6.1. This is the only place the questioning order departs from the numeric order.
+> The section numbering and the final document order are unchanged (Section 5 is Design, Section 6 is Requirements). Only the authoring order differs: author Section 6 (Requirements) before Section 5 (Design), because Section 5 reuses the Feature IDs (F1, F2, …) defined in Section 6.1.
 
 ---
 
@@ -40,6 +40,34 @@ Some sections depend on other sections. Before working on a section with referen
 
 ---
 
+## Inference-First Authoring
+
+ALPS authoring converts business variables into concrete, implementation-independent product
+constants. Every guide's questions are an extraction checklist, not an interview script.
+
+Before asking the user:
+
+1. Use the user's messages and reference material.
+2. Reuse approved prior Sections and consistent document context.
+3. Derive logical consequences of confirmed contracts.
+4. Apply an established domain convention or dominant reversible MVP default when it does not
+   silently set product policy.
+
+Ask no question when this evidence supports one safe draft. Ask one focused question only when
+multiple valid outcomes remain and the choice changes product value, scope, money, permissions,
+legal/regulatory/privacy/safety policy, irreversible data meaning, an external promise, acceptance,
+or learning. Ask at most two only when they cannot be separated.
+
+Generalization means the contract survives a technology change. It never means blurring an exact
+requirement into "appropriate", "reasonable", or "sufficient". Keep exact values, allowed states,
+mandatory inputs, permissions, ordering, uniqueness, units, transitions, and success conditions
+whenever the product must honor them.
+
+Important constants the user did not directly supply appear in the approval digest as `AI-inferred`
+with a short basis. They remain proposals until the user approves them.
+
+---
+
 ## Conversation Guide
 
 <communication>
@@ -48,9 +76,11 @@ Some sections depend on other sections. Before working on a section with referen
 </section-tracking>
 
 <conversation-style>
-- Ask ONE or at most TWO focused questions at a time. For complex topics, ask exactly ONE.
-- Explain the purpose of each section before asking questions (1-2 sentences).
-- Wait for user response before proceeding.
+- Infer the complete Section draft before asking questions.
+- Ask ZERO questions when one safe draft is supported. Otherwise ask ONE focused question, or at
+  most TWO when the decisions cannot be separated.
+- Explain the purpose of each section before presenting the inferred draft or question (1-2 sentences).
+- Wait for user response only when a material question remains or approval is required.
 - Use numbered lists for decision points.
 - Avoid code examples unless explicitly requested.
 </conversation-style>
@@ -65,8 +95,8 @@ Some sections depend on other sections. Before working on a section with referen
 For EVERY section:
 1. Call `get_alps_section_guide(N)` before writing
 2. Briefly explain section purpose (1-2 sentences)
-3. Ask 1 (max 2) focused questions from the guide
-4. Integrate answers iteratively
+3. Infer a complete draft from available evidence, treating guide questions as a checklist
+4. Ask only unresolved material questions; integrate answers when needed
 5. When complete, present a concise plain-text approval digest and ask for confirmation
 6. Call `save_alps_section(section, subsection_id, title, content)` — one call per X.n subsection — only AFTER explicit "yes". `subsection_id` and `title` MUST match the `<subsection id="N.x" title="...">` in that section's XML template.
 7. Move to the next section only after confirmation. Follow the recommended authoring order above — author Section 6 (Requirements) before Section 5 (Design).
@@ -100,7 +130,7 @@ Section 7 (Feature-Level Specification) is the most common place to cut corners.
 - A Feature `7.x` is the approval and save unit. Its `7.x.1`-`7.x.6` fields stay together.
 - If a Feature's comprehension load is 7/10 or higher, propose up to three independently demonstrable user-behavior splits before approval and include the option to keep the original Feature. The proposal never blocks approval or saving.
 - If the user chooses a split, update the corresponding Section 6 and Section 7 Feature boundaries together. Never split by frontend/backend/data layers.
-- Never skip a Feature because it "looks small", "looks similar to a previous one", or "can be inferred". Each Feature is a separate vertical slice.
+- Never skip a Feature because it looks small, similar, or inferable. Infer its draft, then keep it as a separate approval unit.
 - Every Feature's Acceptance Criteria ends with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result.
 </section-7-rule>
 </conversation-flow>
@@ -109,7 +139,7 @@ Section 7 (Feature-Level Specification) is the most common place to cut corners.
 When user asks to edit/update/modify/remove/add anything:
 1. Show only the modified approval digest with a `v{n}` DISPLAY marker (e.g., `[1.1 Purpose v2]`). This marker is a conversational diff cue only — it is NEVER persisted.
 2. Include short change-log (1-3 bullets)
-3. Ask ONE follow-up question
+3. Ask ONE follow-up question only when a material ambiguity remains
 4. Do NOT repeat the entire section digest unless requested
 5. After "no more changes", call `save_alps_section` with the ORIGINAL title (e.g., `Purpose`, no `v2`) and the SAME `subsection_id` so it overwrites in place, then ask permission to proceed to the next section
 </change-requests>
@@ -117,7 +147,7 @@ When user asks to edit/update/modify/remove/add anything:
 <reference-document-handling>
 When user provides PDF, ALPS (PRD), or any reference:
 1. Say: "I'll use this as reference. We can confirm sections one at a time, or use batch confirmation if the source is complete."
-2. For each question: show what you found, ask user to confirm or modify
+2. Infer each draft from the reference first; ask only about material ambiguity
 3. Never save generated sections without confirmation; batch generation still requires separately reviewable units
 </reference-document-handling>
 
@@ -128,7 +158,7 @@ When user provides PDF, ALPS (PRD), or any reference:
 - Batch confirmation requires explicit opt-in or a complete structured source
 - For Section 7, ALWAYS preserve each Feature subsection (7.x) as a separate approval and save unit
 - For Section 7, ALWAYS review Sections 3 and 6 first and include one Demo checkpoint under every Feature's Acceptance Criteria; do not add a duplicate demo subsection
-- ALWAYS ask 1-2 questions at a time (1 for complex topics)
+- ALWAYS infer before asking. Ask zero questions when one safe draft is supported; otherwise ask one, or at most two inseparable questions
 - When saving, ALWAYS call `save_alps_section(section, subsection_id, title, content)` with all four arguments; `subsection_id` and `title` must match the section's XML template
 - Author Section 6 (Requirements) before Section 5 (Design) — see the recommended authoring order
 - In Section 4.1, ALWAYS include both Mermaid `C4Context` and `C4Container` diagrams. These are the only C4 levels allowed; never generate Component, Dynamic, Deployment, or Code-level C4 diagrams.

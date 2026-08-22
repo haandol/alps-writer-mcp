@@ -103,6 +103,7 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /impl-blocks-proposed-prerequisite/);
   assert.match(out, /hook-admission-routing/);
   assert.match(out, /alps-batch-preserves-mandatory-nfr/);
+  assert.match(out, /alps-infers-before-asking/);
   assert.match(out, /alps-approval-digest-preserves-contract/);
   assert.match(out, /alps-high-load-suggests-feature-split/);
   assert.match(out, /lite-alps-selects-one-primary-persona/);
@@ -922,6 +923,33 @@ FOCUS_SET | NFR은 최대 3개이므로 WCAG를 삭제
 === EVAL-END ===`,
     },
     {
+      name: "alps-infers-before-asking",
+      good: `[Section 1 승인 요청]
+문제: 북클럽 운영자는 추천 도서가 메신저 대화에 흩어져 다음 모임의 책을 정하는 데 시간이 걸린다.
+대상 사용자: 북클럽 운영자
+해결 전략: 회원이 후보 도서를 한곳에 추가하고 운영자가 다음 모임의 책을 확정한다.
+MVP 범위: 한 북클럽 지원
+AI-inferred: 문서 이름은 프로젝트 이름인 "북클럽 읽기 목록"을 사용한다.
+답변: 승인 / 수정 / 보류
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+INFERRED_DRAFT | 제공된 맥락으로 Section 1 전체 초안을 작성
+AI_INFERRED | 문서 이름 기본값과 근거를 승인 화면에 표시
+NO_REDUNDANT_QUESTION | 회수 가능한 정보를 다시 질문하지 않음
+APPROVAL_REQUIRED | 추론 초안도 저장 전 승인을 요구
+=== EVAL-END ===`,
+      bad: `Section 1 작성을 위해 다음을 알려주세요.
+1. 타깃 사용자는 누구인가요?
+2. 어떤 문제를 해결하나요?
+3. 해결 전략은 무엇인가요?
+
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+QUESTION | 모든 입력을 사용자에게 다시 질문
+=== EVAL-END ===`,
+    },
+    {
       name: "alps-approval-digest-preserves-contract",
       good: `[Feature 승인 요청: 팀 작업 세션]
 목적: 팀 작업 결과를 승인하고 보관한다.
@@ -1000,36 +1028,22 @@ PERSONA_SELECTED | 프랜차이즈 소유자를 자동 선택
       name: "lite-alps-builds-intent-led-ideal-use-cases",
       good: `Primary Persona: 독립 카페 소유자
 
-핵심 ideal use case 1: 영업 전 발주 결정
-의도: 재고 부족 신호를 이해하고 영업 전에 보충 결정을 끝낼 수 있음을 보여준다.
+Core User Flow: 영업 전 발주 결정
 1. 소유자가 영업 시작 전 재고 현황을 연다.
 2. 소유자가 재고 부족 품목과 예상 수요를 확인한다.
 3. 소유자가 보충할 품목과 수량을 선택한다.
 4. 소유자가 발주 결정을 확정한다.
 완료 결과: 오늘 발주할 품목과 수량이 확정되어 보인다.
 
-핵심 ideal use case 2: 프로모션 후 재고 조정
-의도: 판매 변화를 비교해 다음 주 재고 결정을 조정할 수 있음을 보여준다.
-1. 소유자가 종료된 프로모션의 판매 결과를 연다.
-2. 소유자가 이전 기간과 판매 변화를 비교한다.
-3. 소유자가 영향을 받은 품목을 선택한다.
-4. 소유자가 다음 주 재고 수량을 조정하고 확정한다.
-완료 결과: 조정된 다음 주 재고 계획이 보인다.
-
-바리스타 교대 관리와 네트워크 단절 복구는 후속 범위로 둔다.
+프로모션 비교, 바리스타 교대 관리와 네트워크 단절 복구는 후속 범위로 둔다.
 
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
-PRIMARY_PERSONA | 독립 카페 소유자 관점을 모든 use case에 유지
-IDEAL_USE_CASE | 영업 전 재고 부족 확인과 발주 결정
-INTENT | 재고 부족 신호를 이해하고 영업 전 보충 결정을 완료
+PRIMARY_PERSONA | 독립 카페 소유자 관점을 유지
+CORE_FLOW | 영업 전 재고 부족 확인과 발주 결정
 USER_ACTION_SEQUENCE | 현황 열기 → 부족 품목 확인 → 품목과 수량 선택 → 발주 확정
 COMPLETION_RESULT | 오늘 발주할 품목과 수량이 확정되어 보임
-IDEAL_USE_CASE | 프로모션 종료 후 판매 변화 비교와 재고 수량 조정
-INTENT | 판매 변화를 비교해 다음 주 재고 결정을 조정
-USER_ACTION_SEQUENCE | 결과 열기 → 판매 변화 비교 → 품목 선택 → 수량 조정과 확정
-COMPLETION_RESULT | 조정된 다음 주 재고 계획이 보임
-DEFERRED_SCOPE | 바리스타 교대와 네트워크 단절 복구는 핵심 흐름에서 제외
+DEFERRED_SCOPE | 프로모션 비교, 바리스타 교대와 네트워크 단절 복구는 Core User Flow에서 제외
 === EVAL-END ===`,
       bad: `사용자 시나리오:
 - 바리스타가 교대 관리를 완료한다.
@@ -1043,14 +1057,14 @@ IDEAL_USE_CASE | 전체 기능 목록
     },
     {
       name: "lite-alps-skips-empty-optional-section",
-      good: `명시적으로 제외할 항목이 없으므로 optional Section 4는 작성하거나 저장하지 않고 건너뜁니다. 현재 Lite ALPS는 Sections 1-3으로 필요한 내용이 완료되어 Markdown 내보내기를 진행할 수 있습니다.
+      good: `명시적으로 제외할 항목이 없으므로 optional Section 3은 작성하거나 저장하지 않고 건너뜁니다. 이제 필수 Section 4 Demo Scenario 승인 초안을 준비합니다.
 
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
-SKIP_SECTION_4 | 명시적 제외 범위가 없어 optional Section 4를 저장하지 않음
+SKIP_SECTION_3 | 명시적 제외 범위가 없어 optional Section 3을 저장하지 않음
 NO_INVENTED_EXCLUSIONS | 템플릿을 채우기 위한 제외 항목을 만들지 않음
 LITE_INDEPENDENT | Lite 완료는 다른 문서나 작성 상태와 무관함
-EXPORT_READY | 현재 Lite 문서를 Markdown으로 내보낼 수 있음
+DEMO_READY | 필수 Demo Scenario 작성을 계속할 수 있음
 === EVAL-END ===`,
       bad: `제외 범위를 채우기 위해 관리자 기능, 결제, 모바일 화면을 지원하지 않는 것으로 기록하겠습니다. 다음 단계로 /alps-init을 실행해 Full ALPS를 작성하세요.
 
@@ -1062,7 +1076,7 @@ NEXT_STEP | Full ALPS 작성
     },
     {
       name: "lite-alps-records-explicit-exclusions",
-      good: `Section 4 승인 요청
+      good: `Section 3 승인 요청
 명시적 제외:
 - 팀 관리자 페르소나
 - 음성 입력 화면
@@ -1076,7 +1090,7 @@ EXPLICIT_EXCLUSION | 팀 관리자 페르소나
 EXPLICIT_EXCLUSION | 음성 입력 화면
 EXPLICIT_EXCLUSION | 오프라인 복구 데모
 UNRESOLVED_NOT_EXCLUDED | 가격 정책은 미결정이며 제외하지 않음
-OPTIONAL_SECTION | Section 4는 명시적 제외가 있을 때만 작성하는 선택 Section
+OPTIONAL_SECTION | Section 3은 명시적 제외가 있을 때만 작성하는 선택 Section
 === EVAL-END ===`,
       bad: `Section 4:
 - 팀 관리자

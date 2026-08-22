@@ -1,0 +1,17 @@
+<section id="1" title="Overview">
+  <subsection id="1.1" title="Target User and Core Problem">
+    <description>
+- In one concise context, identify exactly one Primary Persona, the concrete problem they face, and the present consequence.
+- Mention the current workaround or evidence only when it materially clarifies the problem.
+- If several personas are possible, ask the user to choose the most important one. Do not combine them.
+    </description>
+  </subsection>
+  <subsection id="1.2" title="Value and Core Hypothesis">
+    <description>
+- State the value the Primary Persona should gain and why that matters to the team or organization.
+- State the single most important belief this PoC should test.
+- Keep it concise. Do not require a metric, customer promise, hypothesis inventory, or FAQ unless the user already has one.
+- Do not invent business claims or measures the user did not provide or approve.
+    </description>
+  </subsection>
+</section>

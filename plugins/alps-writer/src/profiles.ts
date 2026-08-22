@@ -3,7 +3,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export type DocumentProfileId = "alps" | "lite" | "lite-legacy";
+export type DocumentProfileId = "alps" | "lite";
 export type InitializableDocumentProfileId = "alps" | "lite";
 
 export interface DynamicSectionDefinition {
@@ -32,7 +32,6 @@ export interface DocumentProfile {
 const templatesDir = path.join(__dirname, "templates");
 const guidesDir = path.join(__dirname, "guides");
 const liteTemplatesDir = path.join(templatesDir, "lite");
-const legacyLiteTemplatesDir = path.join(liteTemplatesDir, "legacy");
 
 export const ALPS_PROFILE: DocumentProfile = {
   id: "alps",
@@ -80,66 +79,29 @@ export const LITE_ALPS_PROFILE: DocumentProfile = {
   chaptersDir: path.join(liteTemplatesDir, "chapters"),
   guidesDir: path.join(guidesDir, "lite"),
   sectionTitles: {
-    1: "What to Build",
-    2: "How It Works",
-    3: "What to Demo",
-    4: "What Not to Do",
+    1: "Overview",
+    2: "Solution and User Flow",
+    3: "Out of Scope",
+    4: "Demo Scenario",
   },
   sectionReferences: {
     2: [1],
     3: [1, 2],
-    4: [1, 2, 3],
+    4: [1, 2],
   },
   authoringOrder: [1, 2, 3, 4],
   dynamicSection: null,
-  optionalSections: [4],
+  optionalSections: [3],
   sectionGuideTool: "get_lite_alps_section_guide",
-};
-
-export const LEGACY_LITE_ALPS_PROFILE: DocumentProfile = {
-  id: "lite-legacy",
-  label: "Legacy Lite ALPS",
-  markdownTitle: "Lite ALPS",
-  filenameSuffix: ".lite.alps.xml",
-  rootProfile: "lite",
-  templatesDir: legacyLiteTemplatesDir,
-  chaptersDir: path.join(legacyLiteTemplatesDir, "chapters"),
-  guidesDir: path.join(guidesDir, "lite", "legacy"),
-  sectionTitles: {
-    1: "Product Overview",
-    2: "MVP Goals and Scope",
-    3: "Primary User Scenario",
-    4: "Key Features and Behavior",
-    5: "Key Screens",
-    6: "Shared Product Principles",
-    7: "PoC Validation Plan",
-    8: "Open Questions",
-  },
-  sectionReferences: {
-    3: [1, 2],
-    4: [2, 3],
-    5: [3, 4, 6],
-    6: [4],
-    7: [2, 3, 4, 5, 6],
-  },
-  authoringOrder: [1, 2, 3, 4, 6, 5, 7, 8],
-  dynamicSection: {
-    section: 4,
-    sourceSection: 2,
-    sourceSubsectionId: "2.2",
-  },
-  optionalSections: [],
-  sectionGuideTool: "get_legacy_lite_alps_section_guide",
 };
 
 export const DOCUMENT_PROFILES: Readonly<Record<DocumentProfileId, DocumentProfile>> = {
   alps: ALPS_PROFILE,
   lite: LITE_ALPS_PROFILE,
-  "lite-legacy": LEGACY_LITE_ALPS_PROFILE,
 };
 
 export function isLiteProfile(profile: DocumentProfile): boolean {
-  return profile.id === "lite" || profile.id === "lite-legacy";
+  return profile.id === "lite";
 }
 
 export function sectionNumbers(profile: DocumentProfile): number[] {

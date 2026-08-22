@@ -99,6 +99,10 @@ agent exit, or no output).
    - `alps-approval-digest-preserves-contract` checks that concise raw-text
      approval omits implementation detail without dropping values, permissions,
      state rules, or the Demo checkpoint.
+   - `alps-infers-before-asking` checks inference-first Full ALPS authoring:
+     recoverable business variables become a complete Section draft, important
+     inferred constants stay visible, redundant questions disappear, and
+     explicit approval remains required.
    - `alps-high-load-suggests-feature-split` checks that a Section 7 Feature at
      `7/10` or higher receives two or three user-behavior split candidates,
      retains the original-Feature option, and never becomes a blocking gate.
@@ -111,8 +115,8 @@ agent exit, or no output).
      result while secondary personas and edge cases remain deferred.
    - `lite-alps-skips-empty-optional-section` ↔
      `lite-alps-records-explicit-exclusions` check both directions of current
-     Lite Section 4. No explicit exclusions means skip the Section and complete
-     Lite independently without a Full ALPS transition; explicit exclusions are
+     Lite Section 3. No explicit exclusions means skip the Section and continue
+     to the required Demo Scenario; explicit exclusions are
      recorded exactly while unresolved choices remain outside non-scope.
    - `impl-review-selects-risk-mode` checks both directions of the review-mode
      classifier: localized implementation uses standard, while contract and

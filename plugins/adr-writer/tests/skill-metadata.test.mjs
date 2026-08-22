@@ -772,24 +772,22 @@ test("alps-init defaults to atomic confirmation but supports explicit batch appr
   assert.doesNotMatch(nfr, /Maximum 3 non-functional requirements/);
 });
 
-// Section 7 is where a requirement value first enters the pipeline. If the guide
-// never asks for it, /feature-to-adr has nothing to hand over and the ADR cannot
-// invent it — the contract is lost before the ADR cycle begins. Both the source
-// guide and the built copy the MCP server serves must carry the question.
-test("ALPS Section 7 elicits the values the result must honor", () => {
+// Section 7 is where a requirement value first enters the pipeline. The guide
+// must derive a grounded candidate before asking, expose inference in the digest,
+// and keep unsafe product-policy gaps as targeted questions.
+test("ALPS Section 7 derives and confirms the values the result must honor", () => {
   for (const dir of ["src", "dist"]) {
     const guide = read(path.join(PLUGINS_ROOT, "alps-writer", dir, "guides", "07.md"));
     const label = `alps-writer/${dir}/guides/07.md`;
     assert.match(guide, /limits, quotas, retention periods, size caps/, label);
-    assert.match(guide, /must NOT decide on their own/, label);
-    // the split rule, and the guard against inventing a number the user never gave
-    assert.match(guide, /would a developer picking a different value break the requirement/, label);
-    assert.match(guide, /Never invent a requirement value the user did not give/, label);
+    assert.match(guide, /dominant reversible default/, label);
+    assert.match(guide, /AI-inferred/, label);
+    assert.match(guide, /Ask only when multiple valid values materially change/, label);
+    assert.match(guide, /Never silently invent a requirement value/, label);
     // the rule cuts both ways — tuning constants stay excluded
     assert.match(guide, /tuning constants/, label);
-    // requirements are not only numbers: the guide must elicit the non-numeric ones
-    assert.match(guide, /Requirements do not arrive only as numbers/, label);
-    assert.match(guide, /which transitions are forbidden/, label);
+    // requirements are not only numbers
+    assert.match(guide, /states, transitions, mandatory inputs, permissions/, label);
   }
 });
 

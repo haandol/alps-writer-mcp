@@ -5,6 +5,16 @@ alps-authoring/authoring-interaction category. Each ADR body describes only the 
 state, while the timeline of "what changed and why" accumulates here, newest first. Git
 preserves the individual diffs.
 
+## 2026-08-22 — 질문 우선 작성에서 inference-first 작성으로 전환
+
+- **Current ADR**: [support-atomic-and-batch-approval](./0001-support-atomic-and-batch-approval.md)
+- **Change type**: requirement rule change
+- **What**: 모든 누락 입력을 사용자에게 질문하는 방식 → 사용자 입력, 기존 Section, 논리적
+  귀결과 일반적인 도메인 기본값으로 제품 상수를 먼저 추론하고 중요한 불확실성만 질문하는
+  방식.
+- **Why**: 사용자는 AI가 회수할 수 있는 정보를 반복해서 답하기보다 제품 계약과 관찰 결과를
+  실제로 바꾸는 결정에 집중해야 한다.
+
 ## 2026-08-18 — 승인 화면을 계약 중심 plain-text digest로 전환
 
 - **Current ADR**: [support-atomic-and-batch-approval](./0001-support-atomic-and-batch-approval.md)

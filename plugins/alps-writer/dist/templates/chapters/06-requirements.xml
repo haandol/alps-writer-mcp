@@ -5,6 +5,7 @@
 - Prioritize each requirement using: Must-Have, Should-Have, or Nice-to-Have.
 - Only features defined in this section are included in the MVP scope; additional features must be listed in Section 9.
 - Identify a top-3 NFR focus set for MVP prioritization. This is not a deletion cap: retain every mandatory security, privacy, regulatory, accessibility, contractual, and Must-Have constraint even when the final list exceeds three. Optional constraints outside the focus set may be merged or deferred via Section 9.
+- Infer candidate Features, priorities, measurable NFRs, and dependencies from approved Sections, logical consequences, domain norms, and dominant reversible MVP defaults before asking. Mark important user-unsupplied contracts as `AI-inferred` with their basis in the approval digest.
   </description>
   <subsection id="6.1" title="Core Features (Functional Requirements)">
     <example>
@@ -24,6 +25,7 @@
 - Every NFR MUST be REPRODUCIBLE — a measurable threshold plus how it is checked. Reject vague qualifiers ("minimum security", "fast", "scalable"): two readers must not be able to interpret it differently. If you can't state a number or a yes/no condition, it isn't an NFR yet.
 - Each NFR's threshold maps 1:1 to a Success Threshold in Section 8 (or to a release test) — that is where it is validated. Keep the two consistent.
 - Mark each NFR's Scope: `Global` (applies to the whole system) or a Feature ID (`F3`) it constrains. This scope is what carries the NFR into the ADR cycle as a Decision Driver for that feature.
+- A dominant reversible MVP threshold may be proposed as `AI-inferred` with its basis. Ask only when multiple valid thresholds materially change cost, security, privacy, compliance, permissions, external commitments, or release acceptance.
     </description>
     <example>
 | ID | Requirement (measurable) | Scope | Priority |

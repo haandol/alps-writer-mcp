@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, test } from "node:test";
-import { CHAPTERS_DIR, LEGACY_LITE_CHAPTERS_DIR, LITE_CHAPTERS_DIR } from "../src/constants.js";
+import { CHAPTERS_DIR, LITE_CHAPTERS_DIR } from "../src/constants.js";
 import { TemplateRegistry } from "../src/tools/templates/registry.js";
 
 const temporaryDirectories: string[] = [];
@@ -96,39 +96,37 @@ test("the shipped templates expose the titles the tools advertise", () => {
   }
 });
 
-test("the current Lite templates use fixed sections and keep Section 4 optional", () => {
+test("the Lite templates use fixed sections, keep Section 3 optional, and require Section 4", () => {
   const registry = new TemplateRegistry(LITE_CHAPTERS_DIR, null);
 
   assert.equal(
-    registry.expectedSubsections(4).every((definition) => definition.required === false),
+    registry.expectedSubsections(3).every((definition) => definition.required === false),
     true,
   );
   assert.equal(
-    registry.expectedSubsections(2).find((definition) => definition.id === "2.1")?.required,
+    registry.expectedSubsections(4).every((definition) => definition.required === true),
     true,
   );
-  assert.deepEqual(registry.validateSubsection(4, "1", "Excluded Users and Use Cases"), {
+  assert.deepEqual(registry.validateSubsection(3, "1", "Excluded Users and Use Cases"), {
+    ok: false,
+    message: 'Title for 3.1 must be "Explicit Exclusions".',
+  });
+  assert.deepEqual(registry.validateSubsection(3, "1", "Explicit Exclusions"), {
+    ok: true,
+    fullId: "3.1",
+  });
+  assert.deepEqual(registry.validateSubsection(1, "1", "Target User and Core Problem"), {
+    ok: true,
+    fullId: "1.1",
+  });
+  assert.deepEqual(registry.validateSubsection(4, "1", "Demo Scenario"), {
     ok: true,
     fullId: "4.1",
   });
-  assert.deepEqual(registry.validateSubsection(1, "1", "Primary Persona"), {
-    ok: true,
-    fullId: "1.1",
+  assert.deepEqual(registry.validateSubsection(4, "2", "Learning Check"), {
+    ok: false,
+    message: "Unknown subsection 4.2. Allowed subsection_id values: 1.",
   });
   const invalid = registry.validateSubsection(1, "1", "Purpose");
-  assert.match(invalid.ok ? "" : invalid.message, /must be "Primary Persona"/);
-});
-
-test("legacy Lite templates preserve dynamic Feature validation", () => {
-  const registry = new TemplateRegistry(LEGACY_LITE_CHAPTERS_DIR, 4);
-
-  assert.deepEqual(registry.expectedSubsections(4), []);
-  assert.deepEqual(registry.validateSubsection(4, "1", "F1: Guided idea capture"), {
-    ok: true,
-    fullId: "4.1",
-  });
-  assert.deepEqual(registry.validateSubsection(1, "1", "Product Name"), {
-    ok: true,
-    fullId: "1.1",
-  });
+  assert.match(invalid.ok ? "" : invalid.message, /must be "Target User and Core Problem"/);
 });

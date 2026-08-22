@@ -71,8 +71,8 @@
       "adrs": [
         {
           "path": "docs/adr/alps-authoring/authoring-interaction/0001-support-atomic-and-batch-approval.md",
-          "status": "Accepted (2026-08-18)",
-          "summary": "ALPS 작성은 계약 정보를 빠짐없이 담은 plain-text digest로 승인하고 일반 section의 X.n과 Section 7의 각 Feature 7.x를 개별 저장한다"
+          "status": "Accepted (2026-08-22)",
+          "summary": "Full/Lite ALPS 작성은 회수 가능한 비즈니스 변수를 구현 독립적인 제품 상수로 먼저 추론하고 중요한 불확실성만 질문한 뒤 계약 중심 digest로 승인한다"
         }
       ],
       "dependsOn": []
@@ -94,7 +94,7 @@
         {
           "path": "docs/adr/alps-authoring/lite-format/0001-lite-alps-authoring-profile.md",
           "status": "Accepted (2026-08-22)",
-          "summary": "ALPS Writer는 무엇을 만들고 어떻게 동작하며 무엇을 데모할지 기록하는 3개 필수 Section과 선택적 제외 범위 Section으로 Lite ALPS를 구성하고 legacy 8-Section 문서를 유지한다"
+          "summary": "Lite ALPS는 Full과 대응하는 Overview, Solution and User Flow, 선택적 Out of Scope, 단일 Demo Scenario로 최소 PoC 계약을 기록한다"
         }
       ],
       "dependsOn": ["alps-authoring/authoring-interaction"]

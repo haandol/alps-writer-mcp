@@ -59,6 +59,7 @@ Rel(api, llm, "Requests language generation from")
   - External Services: Third-party APIs or services (e.g., payment, email, AI/ML)
 - Not all categories are required — include only what is relevant to the MVP.
 - Record the expected launch scale that drove this choice as a one-line "Scale assumption". Write it down rather than leaving it in the conversation: it is the main driver behind the stack, and Section 6.2 reuses it as the starting point for the performance NFR. Distinguish total from concurrent users when both are known.
+- Infer a recommended replaceable stack and pragmatic MVP scale from the approved product context before asking. Mark user-unsupplied choices as `AI-inferred` with their basis in the approval digest. Ask only when a missing constraint materially changes the boundary, provider, security posture, deployment topology, cost, or required scale.
     </description>
     <example>
 - Scale assumption: ~1,000 total users at launch, tens concurrent at peak
