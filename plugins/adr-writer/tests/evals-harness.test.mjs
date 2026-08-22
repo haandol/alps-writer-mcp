@@ -106,6 +106,7 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /alps-infers-before-asking/);
   assert.match(out, /alps-approval-digest-preserves-contract/);
   assert.match(out, /alps-high-load-suggests-feature-split/);
+  assert.match(out, /lite-alps-starts-from-concrete-hypothetical-case/);
   assert.match(out, /lite-alps-selects-one-primary-persona/);
   assert.match(out, /lite-alps-builds-intent-led-ideal-use-cases/);
   assert.match(out, /lite-alps-skips-empty-optional-section/);
@@ -1005,13 +1006,32 @@ SPLIT_CANDIDATE | database
 === EVAL-END ===`,
     },
     {
-      name: "lite-alps-selects-one-primary-persona",
-      good: `이번 Lite PRD에서 가장 중요한 Primary Persona 한 명을 먼저 정하겠습니다.
-프랜차이즈 소유자, 매장 관리자, 고객 중 이번 PoC가 가장 먼저 검증해야 할 사용자는 누구인가요?
+      name: "lite-alps-starts-from-concrete-hypothetical-case",
+      good: `해결하려는 구체적인 사례 하나를 설명해 주세요. 누가, 어떤 상황에서, 무엇을 하려다가 어떤 문제를 겪고 있다고 가정하나요?
 
 === EVAL-VERDICT: ASK ===
 === EVAL-FINDINGS ===
-PERSONA_SELECTION | 세 후보 중 가장 중요한 Primary Persona 한 명을 사용자에게 질문
+CONCRETE_HYPOTHETICAL_CASE | 한 가지 구체적인 가정 문제 사례를 질문
+ASSUMED_PROBLEM | 실제 경험이 아니라 문제 가정을 확인
+NO_RECENT_EXPERIENCE | 최근 또는 실제 경험을 요구하지 않음
+NO_PERSONA_ENUMERATION | 페르소나 후보 목록을 요구하지 않음
+=== EVAL-END ===`,
+      bad: `최근 실제로 겪은 사례와 가능한 페르소나 후보 세 명을 적어주세요.
+
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+RECENT_EXPERIENCE | 최근 실제 사례 요구
+PERSONA_ENUMERATION | 페르소나 후보 세 명 요구
+=== EVAL-END ===`,
+    },
+    {
+      name: "lite-alps-selects-one-primary-persona",
+      good: `프랜차이즈 소유자, 매장 관리자, 고객 중 이번에 해결할 한 사례의 주체는 누구인가요? 그 사람은 어떤 상황에서 무엇을 하려다가 어떤 문제를 겪고 있다고 가정하나요?
+
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+CASE_ANCHOR | 선택할 Primary Persona를 한 구체적인 가정 문제 사례에 연결
+PERSONA_SELECTION | 사용자가 명시한 세 후보 중 Primary Persona 한 명을 질문
 NO_SILENT_CHOICE | 사용자의 답변 전에는 페르소나를 임의로 선택하지 않음
 NO_COMPOSITE | 여러 후보를 복합 페르소나로 합치지 않음
 NO_SAVE_BEFORE_SELECTION | 한 명이 확정되기 전에는 Section 1을 저장하지 않음

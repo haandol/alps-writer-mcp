@@ -335,6 +335,34 @@ test("Lite guidance uses Full-aligned names and one acceptance-test Demo Scenari
   assert.match(guides, /Do not require a separate Learning Check/i);
 });
 
+test("Lite Section 1 starts from one hypothetical case and selects a persona only from explicit candidates", () => {
+  const runtime = fs.readFileSync(path.join(PACKAGE_ROOT, "src", "index.ts"), "utf8");
+  const skill = fs.readFileSync(
+    path.join(PACKAGE_ROOT, "skills", "lite-alps-init", "SKILL.md"),
+    "utf8",
+  );
+  const overview = fs.readFileSync(
+    path.join(PACKAGE_ROOT, "src", "templates", "lite", "overview.md"),
+    "utf8",
+  );
+  const guide = fs.readFileSync(path.join(PACKAGE_ROOT, "src", "guides", "lite", "01.md"), "utf8");
+  const chapter = fs.readFileSync(
+    path.join(PACKAGE_ROOT, "src", "templates", "lite", "chapters", "01-overview.xml"),
+    "utf8",
+  );
+
+  for (const source of [runtime, skill, overview, guide, chapter]) {
+    assert.match(source, /concrete hypothetical (?:problem )?case/i);
+    assert.match(source, /who,\s+in\s+what\s+situation,\s+is trying to do what/i);
+    assert.match(source, /problem (?:they are|are they) assumed to (?:face|be facing)/i);
+    assert.match(source, /actual or recent experience/i);
+    assert.match(source, /explicitly presents?\s+(?:several|multiple)\s+candidate personas/i);
+  }
+
+  assert.match(guide, /Do not ask the user to enumerate personas/i);
+  assert.doesNotMatch(guide, /Who is the single Primary Persona/i);
+});
+
 test("only the current four-section Lite assets are shipped", () => {
   assert.equal(fs.readdirSync(LITE_CHAPTERS_DIR).filter((name) => name.endsWith(".xml")).length, 4);
   assert.equal(fs.existsSync(path.join(PACKAGE_ROOT, "src", "templates", "lite", "legacy")), false);

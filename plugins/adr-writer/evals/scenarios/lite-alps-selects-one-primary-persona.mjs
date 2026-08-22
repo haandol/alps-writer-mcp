@@ -22,9 +22,9 @@ const SOURCE = `
 export default {
   name: "lite-alps-selects-one-primary-persona",
   description:
-    "Lite ALPS must ask the user to select exactly one Primary Persona before drafting when several personas are still unresolved.",
+    "Lite ALPS must anchor one concrete hypothetical case to exactly one Primary Persona when the user explicitly presents several unresolved candidates.",
   bugReport:
-    "lite alps 는 페르소나가 여러개 있으면 가장 중요한 하나만 선택하도록 처음에 물어보고 결정해줘야함.",
+    "사용자가 여러 페르소나를 언급할 때만 한 명으로 정리하고, 해결하려는 구체적인 가정 사례를 물어봐야 한다.",
 
   build(dir) {
     seedRuleDocs(dir);
@@ -35,7 +35,7 @@ export default {
       `\n---\n\n# This run`,
       SOURCE,
       `Ask the next focused question in Korean.`,
-      `In the tail use PERSONA_SELECTION, NO_SILENT_CHOICE, NO_COMPOSITE, and NO_SAVE_BEFORE_SELECTION once each.`,
+      `In the tail use CASE_ANCHOR, PERSONA_SELECTION, NO_SILENT_CHOICE, NO_COMPOSITE, and NO_SAVE_BEFORE_SELECTION once each.`,
       TAIL_SPEC,
     ].join("\n");
   },
@@ -45,9 +45,15 @@ export default {
     return [
       expectText(
         visible,
-        /(가장 중요|핵심|우선).{0,80}(한 명|하나|1명).{0,80}(선택|정하|정해|결정|고르)|어느.{0,80}(한 명|페르소나|사용자).{0,80}(선택|정하|정해|결정|고르)/is,
-        "asks the user to choose one most important persona",
+        /(한 명|하나|1명).{0,100}(선택|정하|정해|결정|고르)|어느.{0,100}(한 명|페르소나|사용자).{0,100}(선택|정하|정해|결정|고르)|중.{0,100}(누구|어느)/is,
+        "asks the user to choose one persona from the explicit candidates",
       ),
+      expectText(
+        visible,
+        /(사례|상황).{0,160}(무엇을 하|하려).{0,160}(문제|어려움).{0,80}(가정|겪고 있)/is,
+        "anchors the persona choice to one concrete hypothetical problem case",
+      ),
+      expectText(tail.raw, /CASE_ANCHOR/i, "records the concrete case anchor"),
       expectText(tail.raw, /PERSONA_SELECTION/i, "records the persona selection gate"),
       expectText(tail.raw, /NO_SILENT_CHOICE/i, "forbids silently choosing a persona"),
       expectText(tail.raw, /NO_COMPOSITE/i, "forbids a composite persona"),

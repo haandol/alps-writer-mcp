@@ -94,7 +94,7 @@
         {
           "path": "docs/adr/alps-authoring/lite-format/0001-lite-alps-authoring-profile.md",
           "status": "Accepted (2026-08-22)",
-          "summary": "Lite ALPS는 Full과 대응하는 Overview, Solution and User Flow, 선택적 Out of Scope, 단일 Demo Scenario로 최소 PoC 계약을 기록한다"
+          "summary": "Lite ALPS는 하나의 구체적인 가정 문제 사례에서 Primary Persona를 추출하고 Full과 대응하는 네 Section으로 최소 PoC 계약을 기록한다"
         }
       ],
       "dependsOn": ["alps-authoring/authoring-interaction"]

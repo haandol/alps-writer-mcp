@@ -106,13 +106,16 @@ agent exit, or no output).
    - `alps-high-load-suggests-feature-split` checks that a Section 7 Feature at
      `7/10` or higher receives two or three user-behavior split candidates,
      retains the original-Feature option, and never becomes a blocking gate.
-   - `lite-alps-selects-one-primary-persona` ↔
-     `lite-alps-builds-intent-led-ideal-use-cases` check both sides of the Lite
-     PRD perspective rule. Unresolved multiple personas must produce one focused
-     selection question with no silent or composite choice; after selection,
-     multiple core ideal use cases stay under that persona and each carries an
-     explicit intent, sequential user actions, and an observable completion
-     result while secondary personas and edge cases remain deferred.
+   - `lite-alps-starts-from-concrete-hypothetical-case` ↔
+     `lite-alps-selects-one-primary-persona` ↔
+     `lite-alps-builds-intent-led-ideal-use-cases` check the Lite PRD
+     perspective rule. Missing problem context produces one concrete
+     hypothetical-case question without persona enumeration or recent-experience
+     evidence. Explicit unresolved persona candidates produce one case-anchored
+     selection question with no silent or composite choice. After selection,
+     the minimum Core User Flow stays under that persona with sequential user
+     actions and an observable completion while secondary personas and edge
+     cases remain deferred.
    - `lite-alps-skips-empty-optional-section` ↔
      `lite-alps-records-explicit-exclusions` check both directions of current
      Lite Section 3. No explicit exclusions means skip the Section and continue

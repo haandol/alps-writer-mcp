@@ -31,9 +31,14 @@ Never read, update, transition into, or suggest Full ALPS while authoring or man
    - After loading a document, call `mcp__alps-writer__get_alps_document_status`, summarize
      completed required Sections once, and resume at the first incomplete required Section.
 6. Establish the user perspective and reason in Section 1:
-   - If several personas are presented, ask one focused question and have the user choose exactly
-     one Primary Persona before saving.
-   - Do not select one silently or combine several personas.
+   - Start from one concrete hypothetical problem case. When it is not recoverable, ask who, in
+     what situation, is trying to do what, and what problem they are assumed to face.
+   - Do not require an actual or recent experience, and do not ask the user to enumerate persona
+     candidates.
+   - Infer one Primary Persona from the case.
+   - Only when the user explicitly presents several candidate personas, briefly name them and ask
+     the user to anchor the case to exactly one Primary Persona before saving.
+   - Do not silently select or combine explicitly presented candidates.
    - Keep the confirmed Primary Persona throughout Sections 1, 2, and 4.
    - Keep Section 1 to two integrated inputs: Target User and Core Problem and Value and Core
      Hypothesis.
@@ -54,9 +59,10 @@ Never read, update, transition into, or suggest Full ALPS while authoring or man
      `mcp__alps-writer__save_alps_section`.
 8. Section-specific rules:
    - **Section 1 — Overview**: Target User and Core Problem combines the Primary Persona, concrete
-     problem, and present consequence. Value and Core Hypothesis combines the expected customer
-     value, team or organizational meaning, and one core belief to test. Do not require a customer
-     promise, metric, hypothesis inventory, FAQ, feature list, or screen list.
+     situation, attempted action, assumed problem, and present consequence. Value and Core
+     Hypothesis combines the expected customer value, team or organizational meaning, and one core
+     belief to test. Do not require a customer promise, metric, hypothesis inventory, FAQ, feature
+     list, or screen list.
    - **Section 2 — Solution and User Flow**: Solution Strategy combines the product-level approach
      and minimum user-visible PoC scope. Core User Flow defaults to one flow with starting context,
      sequential user actions, visible product responses, and observable completion. Add another

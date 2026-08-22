@@ -27,8 +27,12 @@ prerequisite is incomplete, complete it first instead of inventing missing conte
 
 This workflow uses **inference-first authoring**.
 
-- If several personas are presented, ask one focused question and have the user choose exactly one
-  Primary Persona before completing Section 1. Do not choose silently or combine personas.
+- Start from one concrete hypothetical problem case. When it is not recoverable, ask who, in what
+  situation, is trying to do what, and what problem they are assumed to face. Do not require an
+  actual or recent experience or ask the user to enumerate persona candidates.
+- Infer one Primary Persona from that case. Only when the user explicitly presents multiple
+  candidate personas, briefly name them and ask the user to anchor the case to exactly one before
+  completing Section 1. Do not silently choose or combine explicitly presented candidates.
 - Keep that persona as the perspective for every required Section.
 - Treat Section questions as an extraction checklist. Infer a complete draft from user messages and
   references, approved prior Sections, logical consequences, domain conventions, and dominant
@@ -61,8 +65,8 @@ cannot be built or evaluated without them.
 
 Section 1 explains why the PoC deserves attention before any solution is selected.
 
-- Target User and Core Problem combines one Primary Persona, the concrete problem, and its present
-  consequence.
+- Target User and Core Problem combines one Primary Persona, the concrete situation, attempted
+  action, assumed problem, and its present consequence.
 - Value and Core Hypothesis combines the customer value, the team or organizational meaning, and
   the single most important belief the PoC should test.
 - Do not require a detailed current-alternative analysis, business metric, customer promise,

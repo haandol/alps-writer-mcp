@@ -1,9 +1,10 @@
 <section id="1" title="Overview">
   <subsection id="1.1" title="Target User and Core Problem">
     <description>
-- In one concise context, identify exactly one Primary Persona, the concrete problem they face, and the present consequence.
+- Start from one concrete hypothetical case: identify who, in what situation, is trying to do what, what problem they are assumed to face, and the present consequence.
+- Infer exactly one Primary Persona from that case. Do not require an actual or recent experience or ask the user to enumerate persona candidates.
 - Mention the current workaround or evidence only when it materially clarifies the problem.
-- If several personas are possible, ask the user to choose the most important one. Do not combine them.
+- Only if the user explicitly presents several candidate personas, ask them to anchor the case to exactly one. Do not silently select or combine the candidates.
     </description>
   </subsection>
   <subsection id="1.2" title="Value and Core Hypothesis">

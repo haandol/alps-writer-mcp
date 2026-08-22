@@ -4,6 +4,16 @@ This document is the **major decision-change history** of the alps-authoring/lit
 Each ADR body describes only the current state, while the timeline of "what changed and why"
 accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-08-22 — Start persona framing from one hypothetical problem case
+
+- **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
+- **Change type**: requirement rule change
+- **What**: Persona-first selection → one concrete hypothetical case that identifies who is trying
+  to do what in which situation and what problem they are assumed to face; persona selection occurs
+  only when the user explicitly presents multiple candidates.
+- **Why**: Lite authoring should capture the PoC's problem context without requiring persona
+  taxonomy work or pretending the user has a recent real-world incident to report.
+
 ## 2026-08-22 — Align Lite names and Demo Scenario structure with Full ALPS
 
 - **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
