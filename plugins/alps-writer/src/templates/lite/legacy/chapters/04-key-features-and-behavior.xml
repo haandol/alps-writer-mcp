@@ -7,7 +7,7 @@
   <template id="4.x" title="Feature Template">
     <header>Feature ID: Fx | Feature name: user-oriented name from Section 2.2</header>
     <subsection id="4.x.1" title="User Goal">
-      <description>State what the user wants to achieve and why it matters.</description>
+      <description>State which core ideal use case intent this Feature serves and what the confirmed Primary Persona wants to achieve.</description>
     </subsection>
     <subsection id="4.x.2" title="Starting Conditions">
       <description>State when the Feature is available and what confirmed information or state must already exist.</description>
@@ -26,7 +26,7 @@
       <description>Optional. Describe only states or exceptions that the PoC must show or validate. Leave nonessential edge cases for later product or implementation work.</description>
     </subsection>
     <subsection id="4.x.6" title="Completion Checkpoint">
-      <description>State one observable result that shows this Feature completed its role in the Primary User Scenario.</description>
+      <description>State one observable result that shows this Feature completed its role in the related core ideal use case.</description>
     </subsection>
   </template>
 </section>

@@ -5,9 +5,12 @@ import { NOT_STARTED } from "../../constants.js";
 import {
   ALPS_PROFILE,
   DOCUMENT_PROFILES,
+  LEGACY_LITE_ALPS_PROFILE,
   LITE_ALPS_PROFILE,
   type DocumentProfile,
   type DocumentProfileId,
+  type InitializableDocumentProfileId,
+  isLiteProfile,
   sectionNumbers,
   sectionRange,
 } from "../../profiles.js";
@@ -61,12 +64,17 @@ export class DocumentService {
     alpsTemplates = new TemplateRegistry(),
     liteTemplates = new TemplateRegistry(
       LITE_ALPS_PROFILE.chaptersDir,
-      LITE_ALPS_PROFILE.dynamicSection?.section,
+      LITE_ALPS_PROFILE.dynamicSection?.section ?? null,
+    ),
+    legacyLiteTemplates = new TemplateRegistry(
+      LEGACY_LITE_ALPS_PROFILE.chaptersDir,
+      LEGACY_LITE_ALPS_PROFILE.dynamicSection?.section ?? null,
     ),
   ) {
     this.templates = {
       alps: alpsTemplates,
       lite: liteTemplates,
+      "lite-legacy": legacyLiteTemplates,
     };
   }
 
@@ -149,11 +157,12 @@ export class DocumentService {
   }
 
   private liteFeatureError(
+    profile: DocumentProfile,
     sections: Map<number, string>,
     subsectionId: string,
     title: string,
   ): string | null {
-    const dynamic = LITE_ALPS_PROFILE.dynamicSection;
+    const dynamic = profile.dynamicSection;
     if (!dynamic) return null;
 
     const features = this.featureNames(
@@ -217,19 +226,34 @@ export class DocumentService {
     }
 
     const profileValue = this.attribute(root[2], "profile");
-    const profile =
-      profileValue == null || profileValue === "" || profileValue === "alps"
-        ? ALPS_PROFILE
-        : profileValue === LITE_ALPS_PROFILE.rootProfile
-          ? LITE_ALPS_PROFILE
-          : null;
+    const headers = this.parseSectionHeaders(content);
+    let profile: DocumentProfile | null = null;
+    if (profileValue == null || profileValue === "" || profileValue === "alps") {
+      profile = ALPS_PROFILE;
+    } else if (profileValue === LITE_ALPS_PROFILE.rootProfile) {
+      const headerIds = headers.map(({ id }) => id);
+      const currentIds = sectionNumbers(LITE_ALPS_PROFILE);
+      const legacyIds = sectionNumbers(LEGACY_LITE_ALPS_PROFILE);
+      const matchesIds = (expected: number[]) =>
+        expected.length === headerIds.length &&
+        expected.every((section, index) => section === headerIds[index]);
+      if (matchesIds(currentIds)) {
+        profile = LITE_ALPS_PROFILE;
+      } else if (matchesIds(legacyIds)) {
+        profile = LEGACY_LITE_ALPS_PROFILE;
+      } else {
+        return {
+          error:
+            "Lite ALPS documents must contain current Sections 1-4 or legacy Sections 1-8 exactly once and in order.",
+        };
+      }
+    }
     if (!profile) return { error: `Unknown ALPS document profile: ${profileValue}.` };
 
     const sections = this.parseSections(content);
     if (sections.size === 0) return { error: "Document contains no valid sections." };
-    if (profile.id === "lite") {
+    if (isLiteProfile(profile)) {
       const expected = sectionNumbers(profile);
-      const headers = this.parseSectionHeaders(content);
       if (
         expected.length !== headers.length ||
         expected.some((section, index) => section !== headers[index]?.id)
@@ -266,7 +290,7 @@ export class DocumentService {
           }
           savedFeatureIds.add(id);
           const featureNumber = id.slice(`${dynamic.section}.`.length);
-          const featureError = this.liteFeatureError(sections, featureNumber, title ?? "");
+          const featureError = this.liteFeatureError(profile, sections, featureNumber, title ?? "");
           if (featureError) return { error: featureError };
         }
       }
@@ -323,7 +347,7 @@ export class DocumentService {
 
   private pathError(filepath: string, profile: DocumentProfile): string | null {
     const lower = filepath.toLowerCase();
-    if (profile.id === "lite") {
+    if (isLiteProfile(profile)) {
       return lower.endsWith(profile.filenameSuffix)
         ? null
         : `Invalid document path: ${filepath}. Lite ALPS documents must use the ${profile.filenameSuffix} extension.`;
@@ -340,7 +364,7 @@ export class DocumentService {
   initDocument(
     projectName: string,
     outputPath: string,
-    profileId: DocumentProfileId = "alps",
+    profileId: InitializableDocumentProfileId = "alps",
   ): string {
     this.workingDoc = null;
     const profile = DOCUMENT_PROFILES[profileId];
@@ -390,8 +414,7 @@ export class DocumentService {
     if (pathError) return pathError;
 
     this.workingDoc = filepath;
-    const guideTool =
-      inspection.profile.id === "lite" ? "get_lite_alps_section_guide" : "get_alps_section_guide";
+    const guideTool = inspection.profile.sectionGuideTool;
     return `${this.getStatus()}
 
 ---
@@ -421,8 +444,8 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
 
     const projectName = this.extractProjectName(document.content);
     const sections = this.parseSections(document.content);
-    if (profile.id === "lite" && section === profile.dynamicSection?.section) {
-      const featureError = this.liteFeatureError(sections, subsectionId, title);
+    if (isLiteProfile(profile) && section === profile.dynamicSection?.section) {
+      const featureError = this.liteFeatureError(profile, sections, subsectionId, title);
       if (featureError) return `Invalid subsection: ${featureError}`;
     }
     const sectionContent = sections.get(section) || "";
@@ -478,7 +501,9 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
       let status: string;
 
       if (subsections.size === 0 && this.isNotStarted(content)) {
-        status = "⬜ Not started";
+        status = profile.optionalSections.includes(section)
+          ? "⬜ Optional — not written"
+          : "⬜ Not started";
       } else if (section === profile.dynamicSection?.section) {
         const expectedItems = this.countFeatureIds(sections, profile);
         if (expectedItems > 0 && subsections.size >= expectedItems) {
@@ -493,10 +518,14 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
           .expectedSubsections(section)
           .filter((definition) => definition.required);
         const written = expected.filter((definition) => subsections.has(definition.id)).length;
-        status =
-          expected.length > 0 && written === expected.length
-            ? `✅ Written (${written}/${expected.length} subsections)`
-            : `🟡 In progress (${written}/${expected.length} subsections)`;
+        if (expected.length === 0 && profile.optionalSections.includes(section)) {
+          status = `✅ Written (${subsections.size} optional subsection${subsections.size === 1 ? "" : "s"})`;
+        } else {
+          status =
+            expected.length > 0 && written === expected.length
+              ? `✅ Written (${written}/${expected.length} subsections)`
+              : `🟡 In progress (${written}/${expected.length} subsections)`;
+        }
       }
       lines.push(`Section ${number} (${title}): ${status}`);
     }

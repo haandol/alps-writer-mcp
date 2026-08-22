@@ -1,0 +1,24 @@
+<section id="7" title="PoC Validation Plan">
+  <subsection id="7.1" title="PoC Demo Flow">
+    <description>
+- Describe the shortest connected demonstration that covers every approved core ideal use case.
+- Keep the same Primary Persona and explicitly preserve each use case intent.
+- Compose the demo from the persona's sequential actions and observable completion results.
+    </description>
+  </subsection>
+  <subsection id="7.2" title="Validation Checklist">
+    <description>
+- Map each core ideal use case intent to an observable PoC result.
+- Map each success criterion and Feature completion checkpoint to an observable PoC result.
+- State what counts as pass, fail, or not yet testable.
+    </description>
+    <example>
+| Validation item | Related use case, Feature, or criterion | Evidence | Success judgment |
+|-----------------|-----------------------------------------|----------|------------------|
+| Product manager completes the ideal journey | Shape a rough product idea; F1, F2 | Completion result is visible | Pass when no facilitator intervention is required |
+    </example>
+  </subsection>
+  <subsection id="7.3" title="User Feedback Questions">
+    <description>List the few questions that test comprehension, usefulness, trust, and the most important unresolved product assumption.</description>
+  </subsection>
+</section>

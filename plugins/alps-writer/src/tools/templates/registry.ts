@@ -16,7 +16,7 @@ export class TemplateRegistry {
 
   constructor(
     chaptersDir = CHAPTERS_DIR,
-    private readonly dynamicSection = 7,
+    private readonly dynamicSection: number | null = 7,
   ) {
     for (const filename of fs.readdirSync(chaptersDir).filter((name) => name.endsWith(".xml"))) {
       const section = Number.parseInt(filename.split("-")[0], 10);

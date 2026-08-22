@@ -41,6 +41,10 @@ test("stdio MCP server exposes schemas and enforces document validation", async 
     "get_alps_overview",
     "get_alps_section",
     "get_alps_section_guide",
+    "get_legacy_lite_alps_full_template",
+    "get_legacy_lite_alps_overview",
+    "get_legacy_lite_alps_section",
+    "get_legacy_lite_alps_section_guide",
     "get_lite_alps_full_template",
     "get_lite_alps_overview",
     "get_lite_alps_section",
@@ -48,6 +52,7 @@ test("stdio MCP server exposes schemas and enforces document validation", async 
     "init_alps_document",
     "init_lite_alps_document",
     "list_alps_sections",
+    "list_legacy_lite_alps_sections",
     "list_lite_alps_sections",
     "load_alps_document",
     "read_alps_section",
@@ -104,7 +109,7 @@ test("stdio MCP server exposes schemas and enforces document validation", async 
     arguments: {
       section: 1,
       subsection_id: "1",
-      title: "Product Name",
+      title: "Primary Persona",
       content: "Lite product",
     },
   });

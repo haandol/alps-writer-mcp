@@ -1,0 +1,20 @@
+<section id="5" title="Key Screens">
+  <subsection id="5.1" title="Screen Inventory">
+    <description>
+- List only screens required by the Primary User Scenario and approved Features.
+- Reference the Feature IDs each screen supports.
+- State the core ideal use case action, screen purpose, essential information, and Primary Persona actions.
+    </description>
+    <example>
+| Screen | Related Features | Core ideal use case action | Purpose | Essential information | Primary Persona actions |
+|--------|------------------|----------------------------|---------|-----------------------|-------------------------|
+| Idea workspace | F1 | Answer a focused product question | Shape the product idea | Current draft and open question | Answer, revise, confirm |
+    </example>
+  </subsection>
+  <subsection id="5.2" title="Navigation">
+    <description>Describe how the Primary Persona moves between the listed screens while completing the core ideal use cases.</description>
+  </subsection>
+  <subsection id="5.3" title="Screen States" required="false">
+    <description>Optional. Describe only the visible states that the PoC actually presents. Do not add error or edge states solely to complete the template.</description>
+  </subsection>
+</section>

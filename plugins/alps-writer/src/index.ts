@@ -6,12 +6,15 @@ import { z } from "zod";
 import {
   FIRST_SECTION,
   LAST_SECTION,
+  LEGACY_LITE_FIRST_SECTION,
+  LEGACY_LITE_LAST_SECTION,
+  LEGACY_LITE_SECTION_RANGE,
   LITE_FIRST_SECTION,
   LITE_LAST_SECTION,
   LITE_SECTION_RANGE,
   SECTION_RANGE,
 } from "./constants.js";
-import { LITE_ALPS_PROFILE } from "./profiles.js";
+import { LEGACY_LITE_ALPS_PROFILE, LITE_ALPS_PROFILE } from "./profiles.js";
 import { TemplateService } from "./tools/templates/service.js";
 import { TemplateController } from "./tools/templates/controller.js";
 import { DocumentService } from "./tools/documents/service.js";
@@ -22,13 +25,13 @@ const server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.8.0" },
+  { name: "alps-writer", version: "0.8.1" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS and Lite ALPS product documents.
 
 ALPS defines each feature as a vertical slice — a single feature that cuts through all layers (UI → API → Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store. End each Feature's Acceptance Criteria with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result; do not duplicate the Feature's flow, errors, or acceptance rules in a separate demo subsection.
 
-Lite ALPS targets planners and product managers creating mockups and PoCs without choosing technology. It records product intent, user scenarios, user-visible behavior, screens, shared product principles, validation, and open questions. It never asks for architecture, technology stack, APIs, databases, deployment, libraries, or code structure. Each Section 4 Feature stays at user action → product response → observable completion.
+Lite ALPS is a separate PoC authoring process with a different goal and lifecycle from Full ALPS. It decides what minimum PoC to build, how its core ideal use cases work, and what to demonstrate. It never reads, updates, transitions into, or shares authoring state with a Full ALPS document. If several personas are presented, ask the user to choose exactly one Primary Persona. Each core ideal use case states its intent, sequential user actions, visible product responses, and observable completion. Section 4 records explicit exclusions only and is optional.
 
 <TRIGGER>
 MUST use this server's tools when the user wants to:
@@ -45,17 +48,19 @@ Keywords: PRD, ALPS, Lite ALPS, 기획서, 기획 문서, 제품 요구사항, �
    Lite ALPS: init_lite_alps_document() or load_alps_document()
 2. Full ALPS: get_alps_overview()
    Lite ALPS: get_lite_alps_overview()
+   Legacy 8-section Lite ALPS: get_legacy_lite_alps_overview()
    The matching overview MUST be called first to get the conversation guide.
 3. Use atomic confirmation by default. Batch confirmation is allowed only when the user explicitly requests it or supplies a complete structured source covering multiple sections.
    Full ALPS order: 1, 2, 3, 4, 6, 5, 7, 8, 9.
-   Lite ALPS order: 1, 2, 3, 4, 6, 5, 7, 8.
+   Lite ALPS order: 1, 2, 3, 4. Section 4 is optional.
+   Legacy Lite ALPS order: 1, 2, 3, 4, 6, 5, 7, 8.
    For Full ALPS, author Requirements (6) before Design (5), because Design reuses the Feature IDs defined in Section 6.1.
    For each section:
-   a. Call the matching get_alps_section_guide(N) or get_lite_alps_section_guide(N)
-   b. Call the matching get_alps_section(N) or get_lite_alps_section(N)
+   a. Call the matching get_alps_section_guide(N), get_lite_alps_section_guide(N), or get_legacy_lite_alps_section_guide(N)
+   b. Call the matching get_alps_section(N), get_lite_alps_section(N), or get_legacy_lite_alps_section(N)
    c. Follow conversation guide from overview
    d. Present a concise plain-text approval digest and get explicit user confirmation
-   e. save_alps_section(section, subsection_id, title, content) — one call per X.n subsection; Full ALPS Section 7 and Lite ALPS Section 4 use one call per Feature — only AFTER confirmation
+   e. save_alps_section(section, subsection_id, title, content) — one call per X.n subsection; Full ALPS Section 7 and legacy Lite ALPS Section 4 use one call per Feature — only AFTER confirmation
    f. Move to the next section only after this one is confirmed
 4. In batch mode, keep every section and dynamic Feature as a separately labeled
    approval unit and persist each with its own save_alps_section call. Never merge,
@@ -66,14 +71,17 @@ Keywords: PRD, ALPS, Lite ALPS, 기획서, 기획 문서, 제품 요구사항, �
 <RULES>
 - MUST call the overview tool matching the selected document profile first
 - NEVER proceed without user confirmation
-- ALWAYS confirm progress at the SECTION level — do not skip a section without the user seeing and approving it
+- ALWAYS confirm progress at the SECTION level. Current Lite Section 4 is the only optional Section and may be skipped after stating that no explicit exclusions were provided.
 - Approval digests MUST remain readable as raw text and include every contract-bearing value, rule, permission, state, transition, scope boundary, and success condition. Omit repeated explanation, examples, Markdown decoration, and implementation detail. Do not name omitted implementation details or add an exclusion list for them.
 - NEVER save a requirement contract that was absent from the approval digest. Show the full pending content when the user requests it.
 - Batch approval requires explicit opt-in or a complete structured source; each section and Feature remains a separate save unit.
 - For Section 7, each Feature 7.x is one approval and save unit. Its 7.x.1-7.x.6 fields stay together.
 - If a Section 7 Feature's comprehension load is 7/10 or higher, suggest up to three independently demonstrable user-behavior splits before approval. The suggestion never blocks approval or saving, and the user may keep the original Feature.
-- For Lite ALPS Section 4, each Feature 4.x is one approval and save unit. Its internal fields stay together and never introduce technical layers.
-- Lite ALPS is mockup/PoC input, not a completed Full ALPS or automatic ADR handoff input.
+- Current Lite ALPS has four fixed Sections: What to Build, How It Works, What to Demo, and optional What Not to Do.
+- Keep one confirmed Primary Persona throughout current Lite ALPS. Multiple core ideal use cases are allowed, but each must state its intent, sequential actions, visible product responses, and observable completion result.
+- Do not silently select or combine personas. Do not invent exclusions or require optional Section 4.
+- Lite ALPS and Full ALPS are unrelated authoring and management processes. Never treat one as the next step, source, migration target, or status owner of the other.
+- When load_alps_document reports Legacy Lite ALPS, use only the legacy Lite overview, section, and guide tools and preserve its eight-section format.
 </RULES>`,
   },
 );
@@ -82,6 +90,10 @@ const tc = new TemplateController(new TemplateService());
 const liteTc = new TemplateController(
   new TemplateService(LITE_ALPS_PROFILE),
   "get_lite_alps_section_guide",
+);
+const legacyLiteTc = new TemplateController(
+  new TemplateService(LEGACY_LITE_ALPS_PROFILE),
+  "get_legacy_lite_alps_section_guide",
 );
 const dc = new DocumentController(new DocumentService());
 
@@ -197,6 +209,64 @@ server.tool(
   }),
 );
 
+server.tool(
+  "get_legacy_lite_alps_overview",
+  "Get the legacy eight-section Lite ALPS overview. Use only after loading a document reported as Legacy Lite ALPS.",
+  {},
+  () => ({
+    content: [{ type: "text", text: legacyLiteTc.getAlpsOverview() }],
+  }),
+);
+
+server.tool(
+  "list_legacy_lite_alps_sections",
+  "List all legacy eight-section Lite ALPS template sections.",
+  {},
+  () => ({
+    content: [{ type: "text", text: JSON.stringify(legacyLiteTc.listAlpsSections()) }],
+  }),
+);
+
+server.tool(
+  "get_legacy_lite_alps_section",
+  "Get a legacy Lite ALPS template section by number. Use only for a loaded Legacy Lite ALPS document.",
+  {
+    section: z
+      .number()
+      .min(LEGACY_LITE_FIRST_SECTION)
+      .max(LEGACY_LITE_LAST_SECTION)
+      .describe(`Section number (${LEGACY_LITE_SECTION_RANGE})`),
+    include_examples: z.boolean().default(false).describe("Include example content"),
+  },
+  ({ section, include_examples }) => ({
+    content: [{ type: "text", text: legacyLiteTc.getAlpsSection(section, include_examples) }],
+  }),
+);
+
+server.tool(
+  "get_legacy_lite_alps_full_template",
+  "Get the complete legacy eight-section Lite ALPS template.",
+  { include_examples: z.boolean().default(false).describe("Include example content") },
+  ({ include_examples }) => ({
+    content: [{ type: "text", text: legacyLiteTc.getAlpsFullTemplate(include_examples) }],
+  }),
+);
+
+server.tool(
+  "get_legacy_lite_alps_section_guide",
+  "Get the conversation guide for a legacy Lite ALPS section. Use only for a loaded Legacy Lite ALPS document.",
+  {
+    section: z
+      .number()
+      .min(LEGACY_LITE_FIRST_SECTION)
+      .max(LEGACY_LITE_LAST_SECTION)
+      .describe(`Section number (${LEGACY_LITE_SECTION_RANGE})`),
+  },
+  ({ section }) => ({
+    content: [{ type: "text", text: legacyLiteTc.getAlpsSectionGuide(section) }],
+  }),
+);
+
 // Document tools
 server.tool(
   "init_alps_document",
@@ -215,7 +285,7 @@ server.tool(
 
 server.tool(
   "init_lite_alps_document",
-  "Initialize a new eight-section Lite ALPS document for mockup and PoC planning.",
+  "Initialize a new four-section Lite ALPS document for minimum PoC and demo planning.",
   {
     project_name: z.string().min(1).describe("Name of the project"),
     output_path: z
@@ -232,7 +302,7 @@ server.tool(
   "load_alps_document",
   `Load an existing ALPS or Lite ALPS document to resume editing. The document profile is detected automatically.
 ⚠️ CRITICAL: After loading, you MUST follow the conversation guide:
-1. Call the matching get_alps_section_guide(N) or get_lite_alps_section_guide(N)
+1. Call the matching get_alps_section_guide(N), get_lite_alps_section_guide(N), or get_legacy_lite_alps_section_guide(N)
 2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
 3. Wait for user response before proceeding
 4. Get explicit confirmation before saving each section`,
@@ -262,7 +332,7 @@ server.tool(
       .string()
       .min(1)
       .describe(
-        'Subsection ID — the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Fixed sections must match the active document template. For Full ALPS Section 7 or Lite ALPS Section 4, pass the positive feature number.',
+        'Subsection ID — the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Fixed sections must match the active document template. For Full ALPS Section 7 or legacy Lite ALPS Section 4, pass the positive feature number.',
       ),
     title: z
       .string()

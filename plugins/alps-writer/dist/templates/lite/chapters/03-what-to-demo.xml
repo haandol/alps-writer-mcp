@@ -1,0 +1,19 @@
+<section id="3" title="What to Demo">
+  <subsection id="3.1" title="Demo Intent">
+    <description>State the core product intent the demo must make visible.</description>
+  </subsection>
+  <subsection id="3.2" title="Demo Flow">
+    <description>
+- Describe the shortest connected demonstration of the approved core ideal use cases.
+- Use the same Primary Persona.
+- State the persona's sequential actions and what becomes visible after each action.
+- Do not replace the journey with a feature or screen tour.
+    </description>
+  </subsection>
+  <subsection id="3.3" title="Success Evidence">
+    <description>State what a reviewer or participant must observe to judge the demo successful.</description>
+  </subsection>
+  <subsection id="3.4" title="Feedback Questions" required="false">
+    <description>Optional. List only the few questions the PoC can directly answer about comprehension, usefulness, or the core intent.</description>
+  </subsection>
+</section>

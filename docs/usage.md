@@ -111,14 +111,19 @@ flowchart TD
 
 ## Walkthroughs
 
-### A. PoC-first — start with Lite ALPS
+### A. Lite ALPS — independent PoC authoring
 
-1. `/lite-alps-init` → write or resume an 8-section product document for a mockup or PoC.
-2. Confirm product intent, MVP scope, the primary ideal-path scenario, each Feature, shared product principles, screens, validation, and open questions. Non-goals and edge-oriented details are optional unless they affect the PoC.
+1. `/lite-alps-init` → write or resume a 4-section document for a minimum PoC and its demo.
+2. Confirm one Primary Persona and what to build, describe the core ideal use cases, and define the shortest demo plus success evidence.
 3. Build and validate the mockup or PoC from the exported Lite ALPS document.
-4. When implementation planning begins, start `/alps-init` as a separate Full ALPS workflow. The Lite document may be used as source material, but Full ALPS keeps its own section approvals.
 
-Lite ALPS deliberately contains no technology stack, architecture, API, database, deployment, library, or code-structure inputs. It does not invoke `/feature-to-adr` and is not implementation authority.
+Section 4 records explicit exclusions only and is optional. Do not invent exclusions or classify an
+unresolved choice as out of scope.
+
+Lite ALPS deliberately contains no technology stack, architecture, API, database, deployment,
+library, code-structure, or implementation-planning inputs. Lite ALPS and Full ALPS are unrelated
+authoring and management processes: neither reads the other document, shares approval or completion
+state, uses the other as source material, or treats the other as a next step.
 
 ### B. PRD-first — start from a Full ALPS spec (both plugins)
 
@@ -153,7 +158,7 @@ In all flows the hook runs automatically once adr-writer is installed. Session s
 | Command                | Role                                                                                                              |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `/alps-init`           | Author or resume Full ALPS with atomic confirmation by default and explicit batch confirmation when appropriate   |
-| `/lite-alps-init`      | Author or resume an 8-section, technology-free Lite ALPS for mockup and PoC validation                            |
+| `/lite-alps-init`      | Author or resume an independent 4-section Lite ALPS for minimum PoC scope, behavior, and demo                     |
 | `/feature-to-adr [id]` | Transfer a Full ALPS Feature's complete implementation contract into `1..N` ADRs; re-import semantic changes only |
 
 ### adr-writer

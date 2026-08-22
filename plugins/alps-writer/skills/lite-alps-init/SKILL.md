@@ -1,74 +1,79 @@
 ---
 name: lite-alps-init
-description: Bootstrap or resume a lightweight Lite ALPS document for mockup and PoC planning through the alps-writer MCP server. Use when the user asks for a Lite PRD, Lite ALPS, product brief for a mockup, or a non-technical PoC specification.
+description: Bootstrap or resume a minimal Lite ALPS document for deciding what PoC to build and what to demonstrate through the alps-writer MCP server.
 argument-hint: "[project-name-or-lite-alps-path]"
 ---
 
 # lite-alps-init
 
-Create a Lite ALPS document for product managers and planners who need a mockup or PoC before
-implementation decisions.
+Create or resume a Lite ALPS document for a minimum PoC and its demo.
 
 > **Language**: talk to the user and write the document in the language the user uses. The skill,
 > templates, and guides are written in English only as agent instructions.
 
-1. Confirm whether to create a new Lite ALPS document or resume an existing
-   `.lite.alps.xml` document.
+Lite ALPS and Full ALPS have separate goals, authoring processes, document state, and completion.
+Never read, update, transition into, or suggest Full ALPS while authoring or managing Lite ALPS.
+
+1. Confirm whether to create a new Lite ALPS document or resume an existing `.lite.alps.xml`
+   document.
 2. Call `mcp__alps-writer__init_lite_alps_document` or
    `mcp__alps-writer__load_alps_document`.
-3. Call `mcp__alps-writer__get_lite_alps_overview` before drafting any section.
+3. When loading:
+   - If the result says `Legacy Lite ALPS`, call
+     `mcp__alps-writer__get_legacy_lite_alps_overview` and use only the matching legacy section and
+     guide tools. Preserve its eight-section format and never convert it automatically.
+   - Otherwise call `mcp__alps-writer__get_lite_alps_overview` and follow the current four-section
+     workflow below.
 4. Select the confirmation mode:
-   - Atomic is the default: discuss, approve, and save one section at a time.
+   - Atomic is the default: discuss, approve, and save one Section at a time.
    - Batch is allowed only when the user explicitly requests it or supplies a complete structured
-     source covering several sections.
-   - Batch mode still presents every section and every Section 4 Feature as a separate approval
-     unit and saves each unit separately.
-5. Use the authoring order **1 → 2 → 3 → 4 → 6 → 5 → 7 → 8**.
-   - For a new document, start at Section 1.
-   - After loading, call `mcp__alps-writer__get_alps_document_status`, summarize completed units
-     once, and resume at the first incomplete unit in this order.
-   - Do not reopen an unchanged completed unit unless the user requests review or an edited
-     prerequisite invalidates it.
-6. For each section:
+     source covering several Sections.
+   - Batch mode still keeps every Section as a separate approval unit and saves each subsection
+     separately.
+5. Use the current authoring order **1 → 2 → 3 → 4**.
+   - Sections 1-3 are required.
+   - Section 4 is optional. Skip it when the user has no explicit exclusions.
+   - After loading a current document, call
+     `mcp__alps-writer__get_alps_document_status`, summarize completed required Sections once, and
+     resume at the first incomplete required Section.
+6. Establish the user perspective in Section 1:
+   - If several personas are presented, ask one focused question and have the user choose exactly
+     one Primary Persona before saving.
+   - Do not select one silently or combine several personas.
+   - Keep the confirmed Primary Persona throughout Sections 1-3.
+7. For each current Section:
    - Call `mcp__alps-writer__get_lite_alps_section_guide(N)`.
    - Call `mcp__alps-writer__get_lite_alps_section(N)`.
-   - Read every prerequisite named by the guide with `mcp__alps-writer__read_alps_section`.
+   - Read every prerequisite named by the guide with
+     `mcp__alps-writer__read_alps_section`.
    - Ask one focused question, or at most two closely related simple questions.
    - Present a concise plain-text approval digest and wait for explicit approval.
-   - Save each approved fixed subsection separately with
+   - Save each approved subsection separately with
      `mcp__alps-writer__save_alps_section`.
-7. The approval digest must include every applicable confirmed value and rule that changes the
-   product: mandatory information, scope, limits and units, permissions and visibility, ordering
-   and uniqueness, completion results, and unresolved questions. Include non-goals, states,
-   exceptions, forbidden changes, and failure guarantees only when the user confirmed that they
-   affect the PoC. Never save a requirement absent from the digest or omit a confirmed rule as a
-   later edge case. Show the full pending content when requested.
-8. Section 4 is dynamic:
-   - Read the complete F1, F2... list from Section 2.2 and the Primary User Scenario from Section 3.
-   - Create exactly one `4.x` entry for each approved Feature, in ID order.
-   - Treat one complete Feature as the approval and save unit. Keep user goal, starting conditions,
-     ideal-path user actions, product responses, required information, product rules, and completion
-     checkpoint together.
-   - Add states and exceptions only when the PoC must show or validate them.
-   - Save with `save_alps_section(4, "x", "Fx: Feature name", content)`.
-   - If a Feature mixes independently demonstrable outcomes, suggest up to three user-behavior
-     splits and allow keeping the original. Never split by technical layer.
-9. Section 5 screens must be derived from the approved scenario, Features, and shared principles.
-   Every screen references existing Feature IDs and must not introduce a new product capability.
-10. Keep assumptions and unresolved decisions in Section 8. An AI suggestion is not confirmed
-    product content until the user approves it. Put nonessential edge cases there when they should
-    be revisited after the ideal-path PoC.
-11. When all sections are complete, call `mcp__alps-writer__export_alps_markdown`.
+8. Section-specific rules:
+   - **Section 1 — What to Build**: capture the Primary Persona, concrete problem, PoC intent,
+     minimum user-visible build scope, and observable success condition. Include only constraints
+     the PoC itself must honor.
+   - **Section 2 — How It Works**: record one or more core ideal use cases for the same persona.
+     Every use case includes intent, starting context, sequential user actions, visible product
+     responses, and observable completion. Do not create Feature IDs, detailed state matrices, or
+     implementation layers.
+   - **Section 3 — What to Demo**: compose the shortest connected demonstration of the approved use
+     cases. Preserve the same persona and intents. Record demo intent, sequential flow, and success
+     evidence. Feedback questions are optional.
+   - **Section 4 — What Not to Do**: write only exclusions the user explicitly confirmed. Do not ask
+     for exclusions to fill the template, treat unresolved choices as excluded, or save an empty
+     placeholder.
+9. The approval digest must include every applicable confirmed product intent, scope boundary,
+   mandatory input, value, rule, and observable result. Never save a requirement, exclusion, or
+   success condition absent from the digest. Show the full pending content when requested.
+10. When the requested current or legacy document work is complete, call
+    `mcp__alps-writer__export_alps_markdown`.
 
-Lite ALPS is mockup and PoC input. Do not ask for architecture, technology stack, interfaces,
-storage, deployment, libraries, code structure, or internal tuning. Do not present completion as a
-Full ALPS or automatic ADR handoff. If the user later needs implementation-ready requirements,
-start a separate Full ALPS authoring flow and use the Lite document as a reference that still
-requires normal section and Feature approval.
+Lite ALPS does not ask for architecture, technology stack, interfaces, storage, deployment,
+libraries, code structure, internal tuning, implementation plans, or a later document. It may
+preserve a permission, privacy, safety, limit, or failure guarantee only when the PoC itself must
+honor it.
 
-Out of Scope, Key Interruptions, States and Exceptions, Screen States, and Failure and Recovery are
-optional. Do not ask for them merely to fill the template. Prioritize the representative ideal path.
-Preserve any limit, permission, state, or failure guarantee the user explicitly confirms.
-
-**Rule**: no section or Feature is saved without explicit approval. Atomic confirmation is the
-default, and batch mode never merges approval or save units.
+**Rule**: no Section is saved without explicit approval. Optional Section 4 may remain unwritten,
+and Lite completion never changes or depends on Full ALPS state.

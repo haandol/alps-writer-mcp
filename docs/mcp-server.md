@@ -62,11 +62,24 @@ Config example with `ALPS_OUTPUT_DIR`:
 
 | Tool                          | Description                                                |
 | ----------------------------- | ---------------------------------------------------------- |
-| `get_lite_alps_overview`      | Get the 8-section Lite ALPS overview and authoring rules   |
+| `get_lite_alps_overview`      | Get the current 4-section Lite ALPS overview and rules     |
 | `list_lite_alps_sections`     | List the Lite ALPS template sections                       |
-| `get_lite_alps_section`       | Get a Lite ALPS template section by number (1–8)           |
+| `get_lite_alps_section`       | Get a current Lite ALPS template section by number (1–4)   |
 | `get_lite_alps_full_template` | Get the complete Lite ALPS template                        |
 | `get_lite_alps_section_guide` | Get the conversation guide for writing a Lite ALPS section |
+
+### Legacy Lite ALPS template tools
+
+These tools are used only after `load_alps_document` detects an existing legacy eight-section Lite
+document. New documents never use them.
+
+| Tool                                 | Description                                            |
+| ------------------------------------ | ------------------------------------------------------ |
+| `get_legacy_lite_alps_overview`      | Get the legacy 8-section Lite overview                 |
+| `list_legacy_lite_alps_sections`     | List legacy Lite template sections                     |
+| `get_legacy_lite_alps_section`       | Get a legacy Lite section by number (1–8)              |
+| `get_legacy_lite_alps_full_template` | Get the complete legacy Lite template                  |
+| `get_legacy_lite_alps_section_guide` | Get the guide for writing a loaded legacy Lite section |
 
 ### Document management tools
 
@@ -84,9 +97,10 @@ Document writes are guarded:
 
 - Full documents use `.alps.xml`; Lite documents use `.lite.alps.xml` and declare the Lite profile in the root. A failed `init` or `load` leaves no document selected.
 - Existing files are never selected implicitly by either initialization tool; resume them explicitly with `load_alps_document`.
-- Full ALPS resumes in dependency order `1 → 2 → 3 → 4 → 6 → 5 → 7 → 8 → 9`. Lite ALPS resumes in `1 → 2 → 3 → 4 → 6 → 5 → 7 → 8`.
-- Static subsection IDs and titles are validated against the active XML templates. Full Section 7 and Lite Section 4 accept one dynamic entry per approved Feature.
+- Full ALPS resumes in dependency order `1 → 2 → 3 → 4 → 6 → 5 → 7 → 8 → 9`. Current Lite ALPS resumes in `1 → 2 → 3 → 4`, with Section 4 optional. Legacy Lite keeps its original authoring order.
+- Static subsection IDs and titles are validated against the active XML templates. Full Section 7 and legacy Lite Section 4 accept one dynamic entry per approved Feature.
 - Markdown content is XML-escaped on disk and decoded when read or exported. Saves use an atomic replacement so interrupted writes do not leave a partially written document.
-- Section status is based on required template subsection coverage, not content length. Full Section 7 compares against Section 6.1 Feature IDs; Lite Section 4 compares against Section 2.2 Feature IDs.
-- Lite `Out of Scope`, `Key Interruptions`, `States and Exceptions`, `Screen States`, and `Failure and Recovery` subsections are optional and do not block completion. Explicitly confirmed limits, permissions, states, and failure guarantees remain required product content.
+- Section status is based on required template subsection coverage, not content length. Current Lite Section 4 reports optional and may remain unwritten.
+- Existing eight-section Lite files are detected as legacy and keep their original guides, validation, and export; they are never converted automatically.
 - Lite templates never request architecture, technology stack, API, database, deployment, library, or code-structure decisions.
+- Lite and Full ALPS have separate authoring and management state. Loading, completing, or exporting one never reads or changes the other.

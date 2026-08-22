@@ -1,0 +1,33 @@
+<section id="3" title="Primary User Scenario">
+  <subsection id="3.1" title="User and Starting Context">
+    <description>Identify the confirmed Primary Persona and the concrete starting context for each core ideal use case.</description>
+  </subsection>
+  <subsection id="3.2" title="Main Flow">
+    <description>
+- Include one block for each approved core ideal use case.
+- Start every block with an explicit Intent statement describing the product intent the use case demonstrates.
+- Describe three to eight sequential steps led by the Primary Persona's actions.
+- For each step, state the user action first, then the product response and expected result.
+- End every block with an observable completion result.
+    </description>
+    <example>
+**Core ideal use case: Shape a rough product idea**
+
+**Intent:** Demonstrate that a product manager can turn an unstructured idea into a reviewable product direction through focused conversation.
+
+| Step | Primary Persona action | Product response | Expected result |
+|------|------------------------|------------------|-----------------|
+| 1 | Jiyun starts a new idea with a short problem statement | Asks one focused question about the target user | Jiyun understands what information is needed |
+| 2 | Jiyun answers with the user's situation and desired change | Summarizes the proposed product direction | Jiyun can correct the interpretation |
+| 3 | Jiyun approves the summary | Shows the completed product overview | Jiyun has a reviewable starting point for the PoC |
+
+**Completion result:** Jiyun can review and share the approved product overview.
+    </example>
+  </subsection>
+  <subsection id="3.3" title="Completion Result">
+    <description>Summarize what the Primary Persona can see, use, share, or decide after completing all approved core ideal use cases.</description>
+  </subsection>
+  <subsection id="3.4" title="Key Interruptions" required="false">
+    <description>Optional. Describe at most two interruptions only when they materially change what a core ideal use case must demonstrate.</description>
+  </subsection>
+</section>

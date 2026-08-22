@@ -30965,6 +30965,7 @@ var __dirname = path.dirname(fileURLToPath(import.meta.url));
 var templatesDir = path.join(__dirname, "templates");
 var guidesDir = path.join(__dirname, "guides");
 var liteTemplatesDir = path.join(templatesDir, "lite");
+var legacyLiteTemplatesDir = path.join(liteTemplatesDir, "legacy");
 var ALPS_PROFILE = {
   id: "alps",
   label: "ALPS",
@@ -30996,7 +30997,9 @@ var ALPS_PROFILE = {
     section: 7,
     sourceSection: 6,
     sourceSubsectionId: "6.1"
-  }
+  },
+  optionalSections: [],
+  sectionGuideTool: "get_alps_section_guide"
 };
 var LITE_ALPS_PROFILE = {
   id: "lite",
@@ -31007,6 +31010,31 @@ var LITE_ALPS_PROFILE = {
   templatesDir: liteTemplatesDir,
   chaptersDir: path.join(liteTemplatesDir, "chapters"),
   guidesDir: path.join(guidesDir, "lite"),
+  sectionTitles: {
+    1: "What to Build",
+    2: "How It Works",
+    3: "What to Demo",
+    4: "What Not to Do"
+  },
+  sectionReferences: {
+    2: [1],
+    3: [1, 2],
+    4: [1, 2, 3]
+  },
+  authoringOrder: [1, 2, 3, 4],
+  dynamicSection: null,
+  optionalSections: [4],
+  sectionGuideTool: "get_lite_alps_section_guide"
+};
+var LEGACY_LITE_ALPS_PROFILE = {
+  id: "lite-legacy",
+  label: "Legacy Lite ALPS",
+  markdownTitle: "Lite ALPS",
+  filenameSuffix: ".lite.alps.xml",
+  rootProfile: "lite",
+  templatesDir: legacyLiteTemplatesDir,
+  chaptersDir: path.join(legacyLiteTemplatesDir, "chapters"),
+  guidesDir: path.join(guidesDir, "lite", "legacy"),
   sectionTitles: {
     1: "Product Overview",
     2: "MVP Goals and Scope",
@@ -31029,12 +31057,18 @@ var LITE_ALPS_PROFILE = {
     section: 4,
     sourceSection: 2,
     sourceSubsectionId: "2.2"
-  }
+  },
+  optionalSections: [],
+  sectionGuideTool: "get_legacy_lite_alps_section_guide"
 };
 var DOCUMENT_PROFILES = {
   alps: ALPS_PROFILE,
-  lite: LITE_ALPS_PROFILE
+  lite: LITE_ALPS_PROFILE,
+  "lite-legacy": LEGACY_LITE_ALPS_PROFILE
 };
+function isLiteProfile(profile) {
+  return profile.id === "lite" || profile.id === "lite-legacy";
+}
 function sectionNumbers(profile) {
   return Object.keys(profile.sectionTitles).map((key) => Number.parseInt(key, 10)).sort((a, b) => a - b);
 }
@@ -31050,6 +31084,9 @@ var GUIDES_DIR = ALPS_PROFILE.guidesDir;
 var LITE_TEMPLATES_DIR = LITE_ALPS_PROFILE.templatesDir;
 var LITE_CHAPTERS_DIR = LITE_ALPS_PROFILE.chaptersDir;
 var LITE_GUIDES_DIR = LITE_ALPS_PROFILE.guidesDir;
+var LEGACY_LITE_TEMPLATES_DIR = LEGACY_LITE_ALPS_PROFILE.templatesDir;
+var LEGACY_LITE_CHAPTERS_DIR = LEGACY_LITE_ALPS_PROFILE.chaptersDir;
+var LEGACY_LITE_GUIDES_DIR = LEGACY_LITE_ALPS_PROFILE.guidesDir;
 var SECTION_TITLES = { ...ALPS_PROFILE.sectionTitles };
 var SECTION_REFERENCES = Object.fromEntries(
   Object.entries(ALPS_PROFILE.sectionReferences).map(([section, refs]) => [section, [...refs]])
@@ -31063,6 +31100,9 @@ var LITE_SECTION_REFERENCES = Object.fromEntries(
     [...refs]
   ])
 );
+var LEGACY_LITE_SECTION_TITLES = {
+  ...LEGACY_LITE_ALPS_PROFILE.sectionTitles
+};
 var SECTION_NUMBERS = sectionNumbers(ALPS_PROFILE);
 var FIRST_SECTION = SECTION_NUMBERS[0];
 var LAST_SECTION = SECTION_NUMBERS[SECTION_NUMBERS.length - 1];
@@ -31071,6 +31111,10 @@ var LITE_SECTION_NUMBERS = sectionNumbers(LITE_ALPS_PROFILE);
 var LITE_FIRST_SECTION = LITE_SECTION_NUMBERS[0];
 var LITE_LAST_SECTION = LITE_SECTION_NUMBERS[LITE_SECTION_NUMBERS.length - 1];
 var LITE_SECTION_RANGE = sectionRange(LITE_ALPS_PROFILE);
+var LEGACY_LITE_SECTION_NUMBERS = sectionNumbers(LEGACY_LITE_ALPS_PROFILE);
+var LEGACY_LITE_FIRST_SECTION = LEGACY_LITE_SECTION_NUMBERS[0];
+var LEGACY_LITE_LAST_SECTION = LEGACY_LITE_SECTION_NUMBERS[LEGACY_LITE_SECTION_NUMBERS.length - 1];
+var LEGACY_LITE_SECTION_RANGE = sectionRange(LEGACY_LITE_ALPS_PROFILE);
 var NOT_STARTED = "<!-- Not started -->";
 
 // src/tools/templates/service.ts
@@ -31312,11 +31356,15 @@ var DocumentService = class {
   templates;
   constructor(alpsTemplates = new TemplateRegistry(), liteTemplates = new TemplateRegistry(
     LITE_ALPS_PROFILE.chaptersDir,
-    LITE_ALPS_PROFILE.dynamicSection?.section
+    LITE_ALPS_PROFILE.dynamicSection?.section ?? null
+  ), legacyLiteTemplates = new TemplateRegistry(
+    LEGACY_LITE_ALPS_PROFILE.chaptersDir,
+    LEGACY_LITE_ALPS_PROFILE.dynamicSection?.section ?? null
   )) {
     this.templates = {
       alps: alpsTemplates,
-      lite: liteTemplates
+      lite: liteTemplates,
+      "lite-legacy": legacyLiteTemplates
     };
   }
   attribute(attributes, name) {
@@ -31379,8 +31427,8 @@ var DocumentService = class {
     }
     return features;
   }
-  liteFeatureError(sections, subsectionId, title) {
-    const dynamic = LITE_ALPS_PROFILE.dynamicSection;
+  liteFeatureError(profile, sections, subsectionId, title) {
+    const dynamic = profile.dynamicSection;
     if (!dynamic) return null;
     const features = this.featureNames(
       sections.get(dynamic.sourceSection) || "",
@@ -31432,13 +31480,30 @@ ${content}
       return { error: `Missing closing </${root[1]}> element.` };
     }
     const profileValue = this.attribute(root[2], "profile");
-    const profile = profileValue == null || profileValue === "" || profileValue === "alps" ? ALPS_PROFILE : profileValue === LITE_ALPS_PROFILE.rootProfile ? LITE_ALPS_PROFILE : null;
+    const headers = this.parseSectionHeaders(content);
+    let profile = null;
+    if (profileValue == null || profileValue === "" || profileValue === "alps") {
+      profile = ALPS_PROFILE;
+    } else if (profileValue === LITE_ALPS_PROFILE.rootProfile) {
+      const headerIds = headers.map(({ id }) => id);
+      const currentIds = sectionNumbers(LITE_ALPS_PROFILE);
+      const legacyIds = sectionNumbers(LEGACY_LITE_ALPS_PROFILE);
+      const matchesIds = (expected) => expected.length === headerIds.length && expected.every((section, index) => section === headerIds[index]);
+      if (matchesIds(currentIds)) {
+        profile = LITE_ALPS_PROFILE;
+      } else if (matchesIds(legacyIds)) {
+        profile = LEGACY_LITE_ALPS_PROFILE;
+      } else {
+        return {
+          error: "Lite ALPS documents must contain current Sections 1-4 or legacy Sections 1-8 exactly once and in order."
+        };
+      }
+    }
     if (!profile) return { error: `Unknown ALPS document profile: ${profileValue}.` };
     const sections = this.parseSections(content);
     if (sections.size === 0) return { error: "Document contains no valid sections." };
-    if (profile.id === "lite") {
+    if (isLiteProfile(profile)) {
       const expected = sectionNumbers(profile);
-      const headers = this.parseSectionHeaders(content);
       if (expected.length !== headers.length || expected.some((section, index) => section !== headers[index]?.id)) {
         return {
           error: `Lite ALPS documents must contain Sections ${sectionRange(profile)} exactly once and in order.`
@@ -31470,7 +31535,7 @@ ${content}
           }
           savedFeatureIds.add(id);
           const featureNumber = id.slice(`${dynamic.section}.`.length);
-          const featureError = this.liteFeatureError(sections, featureNumber, title ?? "");
+          const featureError = this.liteFeatureError(profile, sections, featureNumber, title ?? "");
           if (featureError) return { error: featureError };
         }
       }
@@ -31515,7 +31580,7 @@ ${content}
   }
   pathError(filepath, profile) {
     const lower = filepath.toLowerCase();
-    if (profile.id === "lite") {
+    if (isLiteProfile(profile)) {
       return lower.endsWith(profile.filenameSuffix) ? null : `Invalid document path: ${filepath}. Lite ALPS documents must use the ${profile.filenameSuffix} extension.`;
     }
     if (!lower.endsWith(profile.filenameSuffix) || lower.endsWith(LITE_ALPS_PROFILE.filenameSuffix)) {
@@ -31566,7 +31631,7 @@ ${content}
     const pathError = this.pathError(filepath, inspection.profile);
     if (pathError) return pathError;
     this.workingDoc = filepath;
-    const guideTool = inspection.profile.id === "lite" ? "get_lite_alps_section_guide" : "get_alps_section_guide";
+    const guideTool = inspection.profile.sectionGuideTool;
     return `${this.getStatus()}
 
 ---
@@ -31592,8 +31657,8 @@ NEVER auto-fill sections without user Q&A, even if content already exists.`;
     }
     const projectName = this.extractProjectName(document.content);
     const sections = this.parseSections(document.content);
-    if (profile.id === "lite" && section === profile.dynamicSection?.section) {
-      const featureError = this.liteFeatureError(sections, subsectionId, title);
+    if (isLiteProfile(profile) && section === profile.dynamicSection?.section) {
+      const featureError = this.liteFeatureError(profile, sections, subsectionId, title);
       if (featureError) return `Invalid subsection: ${featureError}`;
     }
     const sectionContent = sections.get(section) || "";
@@ -31640,7 +31705,7 @@ ${display}`;
       const subsections = this.parseSubsections(content, section);
       let status;
       if (subsections.size === 0 && this.isNotStarted(content)) {
-        status = "\u2B1C Not started";
+        status = profile.optionalSections.includes(section) ? "\u2B1C Optional \u2014 not written" : "\u2B1C Not started";
       } else if (section === profile.dynamicSection?.section) {
         const expectedItems = this.countFeatureIds(sections, profile);
         if (expectedItems > 0 && subsections.size >= expectedItems) {
@@ -31653,7 +31718,11 @@ ${display}`;
       } else {
         const expected = registry2.expectedSubsections(section).filter((definition) => definition.required);
         const written = expected.filter((definition) => subsections.has(definition.id)).length;
-        status = expected.length > 0 && written === expected.length ? `\u2705 Written (${written}/${expected.length} subsections)` : `\u{1F7E1} In progress (${written}/${expected.length} subsections)`;
+        if (expected.length === 0 && profile.optionalSections.includes(section)) {
+          status = `\u2705 Written (${subsections.size} optional subsection${subsections.size === 1 ? "" : "s"})`;
+        } else {
+          status = expected.length > 0 && written === expected.length ? `\u2705 Written (${written}/${expected.length} subsections)` : `\u{1F7E1} In progress (${written}/${expected.length} subsections)`;
+        }
       }
       lines.push(`Section ${number4} (${title}): ${status}`);
     }
@@ -31743,13 +31812,13 @@ var server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.8.0" },
+  { name: "alps-writer", version: "0.8.1" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS and Lite ALPS product documents.
 
 ALPS defines each feature as a vertical slice \u2014 a single feature that cuts through all layers (UI \u2192 API \u2192 Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store. End each Feature's Acceptance Criteria with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result; do not duplicate the Feature's flow, errors, or acceptance rules in a separate demo subsection.
 
-Lite ALPS targets planners and product managers creating mockups and PoCs without choosing technology. It records product intent, user scenarios, user-visible behavior, screens, shared product principles, validation, and open questions. It never asks for architecture, technology stack, APIs, databases, deployment, libraries, or code structure. Each Section 4 Feature stays at user action \u2192 product response \u2192 observable completion.
+Lite ALPS is a separate PoC authoring process with a different goal and lifecycle from Full ALPS. It decides what minimum PoC to build, how its core ideal use cases work, and what to demonstrate. It never reads, updates, transitions into, or shares authoring state with a Full ALPS document. If several personas are presented, ask the user to choose exactly one Primary Persona. Each core ideal use case states its intent, sequential user actions, visible product responses, and observable completion. Section 4 records explicit exclusions only and is optional.
 
 <TRIGGER>
 MUST use this server's tools when the user wants to:
@@ -31766,17 +31835,19 @@ Keywords: PRD, ALPS, Lite ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \
    Lite ALPS: init_lite_alps_document() or load_alps_document()
 2. Full ALPS: get_alps_overview()
    Lite ALPS: get_lite_alps_overview()
+   Legacy 8-section Lite ALPS: get_legacy_lite_alps_overview()
    The matching overview MUST be called first to get the conversation guide.
 3. Use atomic confirmation by default. Batch confirmation is allowed only when the user explicitly requests it or supplies a complete structured source covering multiple sections.
    Full ALPS order: 1, 2, 3, 4, 6, 5, 7, 8, 9.
-   Lite ALPS order: 1, 2, 3, 4, 6, 5, 7, 8.
+   Lite ALPS order: 1, 2, 3, 4. Section 4 is optional.
+   Legacy Lite ALPS order: 1, 2, 3, 4, 6, 5, 7, 8.
    For Full ALPS, author Requirements (6) before Design (5), because Design reuses the Feature IDs defined in Section 6.1.
    For each section:
-   a. Call the matching get_alps_section_guide(N) or get_lite_alps_section_guide(N)
-   b. Call the matching get_alps_section(N) or get_lite_alps_section(N)
+   a. Call the matching get_alps_section_guide(N), get_lite_alps_section_guide(N), or get_legacy_lite_alps_section_guide(N)
+   b. Call the matching get_alps_section(N), get_lite_alps_section(N), or get_legacy_lite_alps_section(N)
    c. Follow conversation guide from overview
    d. Present a concise plain-text approval digest and get explicit user confirmation
-   e. save_alps_section(section, subsection_id, title, content) \u2014 one call per X.n subsection; Full ALPS Section 7 and Lite ALPS Section 4 use one call per Feature \u2014 only AFTER confirmation
+   e. save_alps_section(section, subsection_id, title, content) \u2014 one call per X.n subsection; Full ALPS Section 7 and legacy Lite ALPS Section 4 use one call per Feature \u2014 only AFTER confirmation
    f. Move to the next section only after this one is confirmed
 4. In batch mode, keep every section and dynamic Feature as a separately labeled
    approval unit and persist each with its own save_alps_section call. Never merge,
@@ -31787,14 +31858,17 @@ Keywords: PRD, ALPS, Lite ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \
 <RULES>
 - MUST call the overview tool matching the selected document profile first
 - NEVER proceed without user confirmation
-- ALWAYS confirm progress at the SECTION level \u2014 do not skip a section without the user seeing and approving it
+- ALWAYS confirm progress at the SECTION level. Current Lite Section 4 is the only optional Section and may be skipped after stating that no explicit exclusions were provided.
 - Approval digests MUST remain readable as raw text and include every contract-bearing value, rule, permission, state, transition, scope boundary, and success condition. Omit repeated explanation, examples, Markdown decoration, and implementation detail. Do not name omitted implementation details or add an exclusion list for them.
 - NEVER save a requirement contract that was absent from the approval digest. Show the full pending content when the user requests it.
 - Batch approval requires explicit opt-in or a complete structured source; each section and Feature remains a separate save unit.
 - For Section 7, each Feature 7.x is one approval and save unit. Its 7.x.1-7.x.6 fields stay together.
 - If a Section 7 Feature's comprehension load is 7/10 or higher, suggest up to three independently demonstrable user-behavior splits before approval. The suggestion never blocks approval or saving, and the user may keep the original Feature.
-- For Lite ALPS Section 4, each Feature 4.x is one approval and save unit. Its internal fields stay together and never introduce technical layers.
-- Lite ALPS is mockup/PoC input, not a completed Full ALPS or automatic ADR handoff input.
+- Current Lite ALPS has four fixed Sections: What to Build, How It Works, What to Demo, and optional What Not to Do.
+- Keep one confirmed Primary Persona throughout current Lite ALPS. Multiple core ideal use cases are allowed, but each must state its intent, sequential actions, visible product responses, and observable completion result.
+- Do not silently select or combine personas. Do not invent exclusions or require optional Section 4.
+- Lite ALPS and Full ALPS are unrelated authoring and management processes. Never treat one as the next step, source, migration target, or status owner of the other.
+- When load_alps_document reports Legacy Lite ALPS, use only the legacy Lite overview, section, and guide tools and preserve its eight-section format.
 </RULES>`
   }
 );
@@ -31802,6 +31876,10 @@ var tc = new TemplateController(new TemplateService());
 var liteTc = new TemplateController(
   new TemplateService(LITE_ALPS_PROFILE),
   "get_lite_alps_section_guide"
+);
+var legacyLiteTc = new TemplateController(
+  new TemplateService(LEGACY_LITE_ALPS_PROFILE),
+  "get_legacy_lite_alps_section_guide"
 );
 var dc = new DocumentController(new DocumentService());
 server.tool(
@@ -31890,6 +31968,51 @@ server.tool(
   })
 );
 server.tool(
+  "get_legacy_lite_alps_overview",
+  "Get the legacy eight-section Lite ALPS overview. Use only after loading a document reported as Legacy Lite ALPS.",
+  {},
+  () => ({
+    content: [{ type: "text", text: legacyLiteTc.getAlpsOverview() }]
+  })
+);
+server.tool(
+  "list_legacy_lite_alps_sections",
+  "List all legacy eight-section Lite ALPS template sections.",
+  {},
+  () => ({
+    content: [{ type: "text", text: JSON.stringify(legacyLiteTc.listAlpsSections()) }]
+  })
+);
+server.tool(
+  "get_legacy_lite_alps_section",
+  "Get a legacy Lite ALPS template section by number. Use only for a loaded Legacy Lite ALPS document.",
+  {
+    section: external_exports.number().min(LEGACY_LITE_FIRST_SECTION).max(LEGACY_LITE_LAST_SECTION).describe(`Section number (${LEGACY_LITE_SECTION_RANGE})`),
+    include_examples: external_exports.boolean().default(false).describe("Include example content")
+  },
+  ({ section, include_examples }) => ({
+    content: [{ type: "text", text: legacyLiteTc.getAlpsSection(section, include_examples) }]
+  })
+);
+server.tool(
+  "get_legacy_lite_alps_full_template",
+  "Get the complete legacy eight-section Lite ALPS template.",
+  { include_examples: external_exports.boolean().default(false).describe("Include example content") },
+  ({ include_examples }) => ({
+    content: [{ type: "text", text: legacyLiteTc.getAlpsFullTemplate(include_examples) }]
+  })
+);
+server.tool(
+  "get_legacy_lite_alps_section_guide",
+  "Get the conversation guide for a legacy Lite ALPS section. Use only for a loaded Legacy Lite ALPS document.",
+  {
+    section: external_exports.number().min(LEGACY_LITE_FIRST_SECTION).max(LEGACY_LITE_LAST_SECTION).describe(`Section number (${LEGACY_LITE_SECTION_RANGE})`)
+  },
+  ({ section }) => ({
+    content: [{ type: "text", text: legacyLiteTc.getAlpsSectionGuide(section) }]
+  })
+);
+server.tool(
   "init_alps_document",
   "Initialize a new ALPS document file.",
   {
@@ -31902,7 +32025,7 @@ server.tool(
 );
 server.tool(
   "init_lite_alps_document",
-  "Initialize a new eight-section Lite ALPS document for mockup and PoC planning.",
+  "Initialize a new four-section Lite ALPS document for minimum PoC and demo planning.",
   {
     project_name: external_exports.string().min(1).describe("Name of the project"),
     output_path: external_exports.string().min(1).describe("File path for the document (e.g., ~/Documents/my-project.lite.alps.xml)")
@@ -31915,7 +32038,7 @@ server.tool(
   "load_alps_document",
   `Load an existing ALPS or Lite ALPS document to resume editing. The document profile is detected automatically.
 \u26A0\uFE0F CRITICAL: After loading, you MUST follow the conversation guide:
-1. Call the matching get_alps_section_guide(N) or get_lite_alps_section_guide(N)
+1. Call the matching get_alps_section_guide(N), get_lite_alps_section_guide(N), or get_legacy_lite_alps_section_guide(N)
 2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
 3. Wait for user response before proceeding
 4. Get explicit confirmation before saving each section`,
@@ -31937,7 +32060,7 @@ server.tool(
   {
     section: external_exports.number().min(FIRST_SECTION).max(LAST_SECTION).describe(`Section number (${SECTION_RANGE})`),
     subsection_id: external_exports.string().min(1).describe(
-      'Subsection ID \u2014 the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Fixed sections must match the active document template. For Full ALPS Section 7 or Lite ALPS Section 4, pass the positive feature number.'
+      'Subsection ID \u2014 the part AFTER the section number. Pass "1" to store N.1, "1.2" to store N.1.2. Fixed sections must match the active document template. For Full ALPS Section 7 or legacy Lite ALPS Section 4, pass the positive feature number.'
     ),
     title: external_exports.string().min(1).describe(
       "Title of the subsection. Fixed sections MUST equal the active template title. For a dynamic Feature section, use the approved feature name."

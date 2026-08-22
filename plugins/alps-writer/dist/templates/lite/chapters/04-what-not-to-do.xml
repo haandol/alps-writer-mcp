@@ -1,0 +1,11 @@
+<section id="4" title="What Not to Do">
+  <subsection id="4.1" title="Excluded Users and Use Cases" required="false">
+    <description>Optional. List only users and use cases the user explicitly excludes from this PoC.</description>
+  </subsection>
+  <subsection id="4.2" title="Excluded Features and Screens" required="false">
+    <description>Optional. List only capabilities, screens, or moments the user explicitly chooses not to build.</description>
+  </subsection>
+  <subsection id="4.3" title="Uncovered Edge Cases and Claims" required="false">
+    <description>Optional. State only edge cases the PoC will not handle or conclusions the demo will not prove, when the user explicitly confirms them.</description>
+  </subsection>
+</section>

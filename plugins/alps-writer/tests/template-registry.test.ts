@@ -7,7 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, test } from "node:test";
-import { CHAPTERS_DIR, LITE_CHAPTERS_DIR } from "../src/constants.js";
+import { CHAPTERS_DIR, LEGACY_LITE_CHAPTERS_DIR, LITE_CHAPTERS_DIR } from "../src/constants.js";
 import { TemplateRegistry } from "../src/tools/templates/registry.js";
 
 const temporaryDirectories: string[] = [];
@@ -96,18 +96,33 @@ test("the shipped templates expose the titles the tools advertise", () => {
   }
 });
 
-test("the Lite templates keep Section 4 dynamic and validate fixed titles", () => {
-  const registry = new TemplateRegistry(LITE_CHAPTERS_DIR, 4);
+test("the current Lite templates use fixed sections and keep Section 4 optional", () => {
+  const registry = new TemplateRegistry(LITE_CHAPTERS_DIR, null);
 
-  assert.deepEqual(registry.expectedSubsections(4), []);
   assert.equal(
-    registry.expectedSubsections(2).find((definition) => definition.id === "2.3")?.required,
-    false,
-  );
-  assert.equal(
-    registry.expectedSubsections(2).find((definition) => definition.id === "2.2")?.required,
+    registry.expectedSubsections(4).every((definition) => definition.required === false),
     true,
   );
+  assert.equal(
+    registry.expectedSubsections(2).find((definition) => definition.id === "2.1")?.required,
+    true,
+  );
+  assert.deepEqual(registry.validateSubsection(4, "1", "Excluded Users and Use Cases"), {
+    ok: true,
+    fullId: "4.1",
+  });
+  assert.deepEqual(registry.validateSubsection(1, "1", "Primary Persona"), {
+    ok: true,
+    fullId: "1.1",
+  });
+  const invalid = registry.validateSubsection(1, "1", "Purpose");
+  assert.match(invalid.ok ? "" : invalid.message, /must be "Primary Persona"/);
+});
+
+test("legacy Lite templates preserve dynamic Feature validation", () => {
+  const registry = new TemplateRegistry(LEGACY_LITE_CHAPTERS_DIR, 4);
+
+  assert.deepEqual(registry.expectedSubsections(4), []);
   assert.deepEqual(registry.validateSubsection(4, "1", "F1: Guided idea capture"), {
     ok: true,
     fullId: "4.1",
@@ -116,6 +131,4 @@ test("the Lite templates keep Section 4 dynamic and validate fixed titles", () =
     ok: true,
     fullId: "1.1",
   });
-  const invalid = registry.validateSubsection(1, "1", "Purpose");
-  assert.match(invalid.ok ? "" : invalid.message, /must be "Product Name"/);
 });

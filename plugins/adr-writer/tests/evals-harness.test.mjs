@@ -105,6 +105,10 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /alps-batch-preserves-mandatory-nfr/);
   assert.match(out, /alps-approval-digest-preserves-contract/);
   assert.match(out, /alps-high-load-suggests-feature-split/);
+  assert.match(out, /lite-alps-selects-one-primary-persona/);
+  assert.match(out, /lite-alps-builds-intent-led-ideal-use-cases/);
+  assert.match(out, /lite-alps-skips-empty-optional-section/);
+  assert.match(out, /lite-alps-records-explicit-exclusions/);
   assert.match(out, /impl-review-selects-risk-mode/);
   assert.match(out, /impl-review-evidence-package/);
   assert.match(out, /impl-review-evidence-package-pass/);
@@ -129,7 +133,7 @@ test("prompts embed the real skill/agent text, not a paraphrase", async () => {
     const prompt = await s.build(dir);
     assert.ok(prompt.length > 5000, `${s.name}: prompt is too short to hold a real skill body`);
     // a distinctive line from the shipped docs, not something a summary would coin
-    if (s.name.startsWith("alps-")) {
+    if (s.name.startsWith("alps-") || s.name.startsWith("lite-alps-")) {
       assert.match(
         prompt,
         /Atomic is the default|top-3 focus set|separately labeled draft|plain-text approval digest|Comprehension load/i,
@@ -970,6 +974,120 @@ FEATURE_SCORE | 9/10
 SPLIT_CANDIDATE | frontend
 SPLIT_CANDIDATE | backend
 SPLIT_CANDIDATE | database
+=== EVAL-END ===`,
+    },
+    {
+      name: "lite-alps-selects-one-primary-persona",
+      good: `이번 Lite PRD에서 가장 중요한 Primary Persona 한 명을 먼저 정하겠습니다.
+프랜차이즈 소유자, 매장 관리자, 고객 중 이번 PoC가 가장 먼저 검증해야 할 사용자는 누구인가요?
+
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+PERSONA_SELECTION | 세 후보 중 가장 중요한 Primary Persona 한 명을 사용자에게 질문
+NO_SILENT_CHOICE | 사용자의 답변 전에는 페르소나를 임의로 선택하지 않음
+NO_COMPOSITE | 여러 후보를 복합 페르소나로 합치지 않음
+NO_SAVE_BEFORE_SELECTION | 한 명이 확정되기 전에는 Section 1을 저장하지 않음
+=== EVAL-END ===`,
+      bad: `Primary Persona: 프랜차이즈 소유자
+매장 관리자와 고객의 요구도 합쳐서 복합 페르소나로 작성하겠습니다.
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+PERSONA_SELECTED | 프랜차이즈 소유자를 자동 선택
+=== EVAL-END ===`,
+    },
+    {
+      name: "lite-alps-builds-intent-led-ideal-use-cases",
+      good: `Primary Persona: 독립 카페 소유자
+
+핵심 ideal use case 1: 영업 전 발주 결정
+의도: 재고 부족 신호를 이해하고 영업 전에 보충 결정을 끝낼 수 있음을 보여준다.
+1. 소유자가 영업 시작 전 재고 현황을 연다.
+2. 소유자가 재고 부족 품목과 예상 수요를 확인한다.
+3. 소유자가 보충할 품목과 수량을 선택한다.
+4. 소유자가 발주 결정을 확정한다.
+완료 결과: 오늘 발주할 품목과 수량이 확정되어 보인다.
+
+핵심 ideal use case 2: 프로모션 후 재고 조정
+의도: 판매 변화를 비교해 다음 주 재고 결정을 조정할 수 있음을 보여준다.
+1. 소유자가 종료된 프로모션의 판매 결과를 연다.
+2. 소유자가 이전 기간과 판매 변화를 비교한다.
+3. 소유자가 영향을 받은 품목을 선택한다.
+4. 소유자가 다음 주 재고 수량을 조정하고 확정한다.
+완료 결과: 조정된 다음 주 재고 계획이 보인다.
+
+바리스타 교대 관리와 네트워크 단절 복구는 후속 범위로 둔다.
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+PRIMARY_PERSONA | 독립 카페 소유자 관점을 모든 use case에 유지
+IDEAL_USE_CASE | 영업 전 재고 부족 확인과 발주 결정
+INTENT | 재고 부족 신호를 이해하고 영업 전 보충 결정을 완료
+USER_ACTION_SEQUENCE | 현황 열기 → 부족 품목 확인 → 품목과 수량 선택 → 발주 확정
+COMPLETION_RESULT | 오늘 발주할 품목과 수량이 확정되어 보임
+IDEAL_USE_CASE | 프로모션 종료 후 판매 변화 비교와 재고 수량 조정
+INTENT | 판매 변화를 비교해 다음 주 재고 결정을 조정
+USER_ACTION_SEQUENCE | 결과 열기 → 판매 변화 비교 → 품목 선택 → 수량 조정과 확정
+COMPLETION_RESULT | 조정된 다음 주 재고 계획이 보임
+DEFERRED_SCOPE | 바리스타 교대와 네트워크 단절 복구는 핵심 흐름에서 제외
+=== EVAL-END ===`,
+      bad: `사용자 시나리오:
+- 바리스타가 교대 관리를 완료한다.
+- 네트워크 단절 시 재시도와 복구를 수행한다.
+- 시스템이 재고를 분석하고 자동화한다.
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+IDEAL_USE_CASE | 전체 기능 목록
+=== EVAL-END ===`,
+    },
+    {
+      name: "lite-alps-skips-empty-optional-section",
+      good: `명시적으로 제외할 항목이 없으므로 optional Section 4는 작성하거나 저장하지 않고 건너뜁니다. 현재 Lite ALPS는 Sections 1-3으로 필요한 내용이 완료되어 Markdown 내보내기를 진행할 수 있습니다.
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+SKIP_SECTION_4 | 명시적 제외 범위가 없어 optional Section 4를 저장하지 않음
+NO_INVENTED_EXCLUSIONS | 템플릿을 채우기 위한 제외 항목을 만들지 않음
+LITE_INDEPENDENT | Lite 완료는 다른 문서나 작성 상태와 무관함
+EXPORT_READY | 현재 Lite 문서를 Markdown으로 내보낼 수 있음
+=== EVAL-END ===`,
+      bad: `제외 범위를 채우기 위해 관리자 기능, 결제, 모바일 화면을 지원하지 않는 것으로 기록하겠습니다. 다음 단계로 /alps-init을 실행해 Full ALPS를 작성하세요.
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+EXCLUSIONS | 관리자, 결제, 모바일을 자동 제외
+NEXT_STEP | Full ALPS 작성
+=== EVAL-END ===`,
+    },
+    {
+      name: "lite-alps-records-explicit-exclusions",
+      good: `Section 4 승인 요청
+명시적 제외:
+- 팀 관리자 페르소나
+- 음성 입력 화면
+- 오프라인 복구 데모
+가격 정책은 미결정이며 제외 범위에 포함하지 않습니다.
+승인 / 수정 / 보류
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+EXPLICIT_EXCLUSION | 팀 관리자 페르소나
+EXPLICIT_EXCLUSION | 음성 입력 화면
+EXPLICIT_EXCLUSION | 오프라인 복구 데모
+UNRESOLVED_NOT_EXCLUDED | 가격 정책은 미결정이며 제외하지 않음
+OPTIONAL_SECTION | Section 4는 명시적 제외가 있을 때만 작성하는 선택 Section
+=== EVAL-END ===`,
+      bad: `Section 4:
+- 팀 관리자
+- 음성 입력
+- 오프라인 복구
+- 가격 정책
+완료 후 Full ALPS로 전환합니다.
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+EXPLICIT_EXCLUSION | 모든 항목과 가격 정책
 === EVAL-END ===`,
     },
     {

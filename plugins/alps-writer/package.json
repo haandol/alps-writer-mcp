@@ -9,7 +9,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "bundle": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/index.js",
-    "build": "pnpm typecheck && pnpm bundle && cp -r src/templates dist/ && cp -r src/guides dist/",
+    "build": "pnpm typecheck && pnpm bundle && rm -rf dist/templates dist/guides && cp -r src/templates dist/ && cp -r src/guides dist/",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "test": "tsx --test tests/**/*.test.ts",

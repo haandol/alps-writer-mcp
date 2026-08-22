@@ -1,97 +1,74 @@
 # Lite ALPS Template
 
-Lite ALPS is a lightweight product document for planners and product managers who want to create
-and validate a mockup or PoC before choosing an implementation approach.
-
-It keeps the ALPS principles that matter at this stage:
-
-- The agent leads the authoring conversation.
-- The user explicitly approves every saved unit.
-- The validated scope is visible; explicit non-goals are recorded when they matter.
-- Product behavior is observable and reproducible.
-- Confirmed product requirements stay separate from assumptions and open questions.
+Lite ALPS is a minimal product document for deciding what to build in a PoC and what to demonstrate
+with it. It has a separate goal, authoring process, and document lifecycle from Full ALPS.
 
 ## Sections
 
-1. Product Overview - Define the product, primary user, problem, direction, and expected change
-2. MVP Goals and Scope - State the validation hypothesis, in-scope Features, optional non-goals, and success criteria
-3. Primary User Scenario - Describe the representative journey from starting context to completion
-4. Key Features and Behavior - Define each Feature's ideal path, product response, rules, and completion
-5. Key Screens - Derive the minimum screens and navigation, plus only the states the PoC presents
-6. Shared Product Principles - Define applicable permissions, confirmation, accessibility, and sensitive-information rules
-7. PoC Validation Plan - State the demo flow, checks, success judgment, and user feedback questions
-8. Open Questions - Separate assumptions, unresolved decisions, and items that must be settled before the PoC
+1. What to Build - Select one Primary Persona and define the problem, PoC intent, minimum build, and success condition
+2. How It Works - Describe the Primary Persona's core ideal use cases as intent, actions, visible responses, and completion
+3. What to Demo - Define the shortest demo flow and the observable evidence of success
+4. What Not to Do - Optionally record only explicit exclusions and claims the PoC will not prove
 
-> **Authoring order:** 1 → 2 → 3 → 4 → 6 → 5 → 7 → 8.
-> Screens are authored after the Features and shared principles they must express.
+> **Authoring order:** 1 → 2 → 3 → 4.
+> Section 4 is optional and may remain unwritten.
 
 ## Section References
 
+- Section 2 reviews Section 1.
 - Section 3 reviews Sections 1 and 2.
-- Section 4 reviews Sections 2 and 3.
-- Section 6 reviews Section 4.
-- Section 5 reviews Sections 3, 4, and 6.
-- Section 7 reviews Sections 2 through 6.
+- Section 4 reviews Sections 1 through 3 only when the user has explicit exclusions.
 
-Call the referenced `read_alps_section(N)` tools before drafting a dependent section. If a
+Call the referenced `read_alps_section(N)` tools before drafting a dependent section. If a required
 prerequisite is incomplete, complete it first instead of inventing missing content.
 
 ## Conversation Workflow
 
-For every section:
+- If several personas are presented, ask one focused question and have the user choose exactly one
+  Primary Persona before completing Section 1. Do not choose silently or combine personas.
+- Keep that persona as the perspective for every required Section.
+- Ask one focused question, or at most two closely related simple questions, at a time.
+- Integrate only information the user provided or explicitly approved.
+- Present a concise plain-text approval digest and save only after explicit approval.
+- Use atomic confirmation by default. Batch confirmation is allowed only when the user explicitly
+  requests it or provides a complete structured source covering several Sections.
+- Skip Section 4 when the user has no explicit exclusions. Do not ask for exclusions merely to fill
+  the template.
 
-1. Call `get_lite_alps_section_guide(N)`.
-2. Call `get_lite_alps_section(N)`.
-3. Explain the section's purpose briefly.
-4. Ask one focused question, or at most two closely related simple questions.
-5. Integrate only information the user provided or explicitly approved.
-6. Present a concise plain-text approval digest.
-7. Save only after explicit approval with `save_alps_section`.
+## Core Ideal Use Case Rule
 
-Atomic confirmation is the default. Batch confirmation is allowed only when the user explicitly
-requests it or provides a complete structured source covering multiple sections. Batch mode still
-keeps every section and every Section 4 Feature as a separate approval and save unit.
+Section 2 may contain one or more core ideal use cases for the same Primary Persona.
+
+For every use case, preserve:
+
+- the product intent it demonstrates;
+- the concrete starting context;
+- sequential actions led by the Primary Persona;
+- the visible product response after each action; and
+- an observable completion result.
+
+Do not introduce Feature IDs, implementation layers, detailed state matrices, or edge-case
+inventories. Keep only the behavior needed to construct and understand the minimum PoC.
 
 ## Approval Digest
 
-The digest is a disposable reading aid, not a second document.
+The digest is a disposable reading aid, not another document.
 
-- Keep it readable as raw text.
-- Include purpose and user value, confirmed scope, mandatory information, every applicable product
-  value and rule, permissions and visibility, completion results, and unresolved questions.
-- Include non-goals, states, exceptions, and failure guarantees only when the user confirmed that
-  they affect the PoC. Never omit an explicitly confirmed rule by calling it a later edge case.
-- Omit repeated explanation, examples, and formatting decoration.
-- Never save a requirement, scope boundary, or success condition absent from the digest.
-- Show the full pending content when the user requests it.
+- Include the approval unit's intent, confirmed scope, mandatory information, applicable values and
+  rules, and observable completion.
+- Never save a requirement, scope boundary, success condition, or exclusion absent from the digest.
+- Show the full pending content when requested.
 - End with clear approve, revise, and defer choices.
-
-## Section 4 Feature Rule
-
-Section 4 is the dynamic section.
-
-- Section 2.2 defines the complete Feature list with `F1`, `F2`, and so on.
-- Each Feature `4.x` is one approval and save unit.
-- Use the same Feature ID and name as Section 2.2.
-- Keep the complete ideal-path behavior together: user goal, starting conditions, user action,
-  product response, required information, product rules, and completion checkpoint.
-- Add states and exceptions only when the PoC must show or validate them.
-- Describe what the user does and observes. Do not split a Feature into implementation layers.
-- If a Feature mixes independently demonstrable user outcomes, suggest up to three user-behavior
-  splits and allow the user to keep the original.
 
 ## Scope Boundary
 
-Lite ALPS is for mockup and PoC validation. It does not claim implementation readiness and does not
-automatically hand ownership to ADRs.
+Lite ALPS decides the minimum PoC and its demo. It does not claim implementation readiness. Its
+authoring, resume, status, completion, and export flow never reads or updates a Full ALPS document,
+and Full ALPS authoring never uses Lite state.
 
-Prioritize the representative ideal path and observable success. Preserve every confirmed input,
-limit, permission, visibility, ordering, uniqueness, state, forbidden change, or failure guarantee
-that affects that path. Do not invent exclusions or edge cases to fill optional subsections. Defer
-nonessential edge cases to Section 8 or later product and implementation work.
-
-Do not ask the user to choose architecture, technology, interfaces, storage, deployment, libraries,
+Preserve any confirmed permission, privacy, safety, limit, or failure guarantee that the PoC itself
+must honor. Do not ask for architecture, technology, interfaces, storage, deployment, libraries,
 code structure, or internal tuning.
 
-Assumptions and unresolved decisions belong in Section 8. They never become confirmed Feature
-behavior merely because the agent suggested them.
+Uncertainty is not the same as exclusion. Record an item in Section 4 only when the user explicitly
+confirms that this PoC will not cover or prove it.

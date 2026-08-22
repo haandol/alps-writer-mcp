@@ -4,8 +4,15 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, test } from "node:test";
-import { LITE_CHAPTERS_DIR, LITE_SECTION_NUMBERS, LITE_SECTION_TITLES } from "../src/constants.js";
-import { LITE_ALPS_PROFILE } from "../src/profiles.js";
+import {
+  LEGACY_LITE_CHAPTERS_DIR,
+  LEGACY_LITE_SECTION_TITLES,
+  LITE_CHAPTERS_DIR,
+  LITE_SECTION_NUMBERS,
+  LITE_SECTION_TITLES,
+  NOT_STARTED,
+} from "../src/constants.js";
+import { LEGACY_LITE_ALPS_PROFILE, LITE_ALPS_PROFILE } from "../src/profiles.js";
 import { DocumentService } from "../src/tools/documents/service.js";
 import { TemplateService } from "../src/tools/templates/service.js";
 
@@ -18,35 +25,40 @@ function temporaryDirectory(): string {
   return dir;
 }
 
+function legacyLiteDocument(project: string): string {
+  const sections = Object.entries(LEGACY_LITE_SECTION_TITLES)
+    .map(([id, title]) => `<section id="${id}" title="${title}">\n${NOT_STARTED}\n</section>`)
+    .join("\n\n");
+  return `<alps-document project="${project}" profile="lite">\n\n${sections}\n\n</alps-document>`;
+}
+
 afterEach(() => {
   for (const dir of temporaryDirectories.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test("Lite ALPS exposes the approved eight-section product outline", () => {
-  assert.deepEqual(LITE_SECTION_NUMBERS, [1, 2, 3, 4, 5, 6, 7, 8]);
+test("current Lite ALPS exposes four PoC-focused sections", () => {
+  assert.deepEqual(LITE_SECTION_NUMBERS, [1, 2, 3, 4]);
   assert.deepEqual(Object.values(LITE_SECTION_TITLES), [
-    "Product Overview",
-    "MVP Goals and Scope",
-    "Primary User Scenario",
-    "Key Features and Behavior",
-    "Key Screens",
-    "Shared Product Principles",
-    "PoC Validation Plan",
-    "Open Questions",
+    "What to Build",
+    "How It Works",
+    "What to Demo",
+    "What Not to Do",
   ]);
 
   const template = new TemplateService(LITE_ALPS_PROFILE);
-  assert.equal(template.listSections().length, 8);
-  assert.match(template.getOverview(), /1 → 2 → 3 → 4 → 6 → 5 → 7 → 8/);
-  assert.match(template.getSection(2), /2\.3 Out of Scope \(Optional\)/);
-  assert.match(template.getSection(4), /User Flow and Product Response/);
-  assert.match(template.getSection(4), /4\.x\.5 States and Exceptions \(Optional\)/);
-  assert.match(template.getSectionGuide(5), /Section 3 .*Section 4 .*Section 6/s);
+  assert.equal(template.listSections().length, 4);
+  assert.match(template.getOverview(), /1 → 2 → 3 → 4/);
+  assert.match(template.getOverview(), /Section 4 is optional/i);
+  assert.match(template.getSection(1), /1\.4 Minimum Build Scope/);
+  assert.match(template.getSection(2), /2\.1 Core Ideal Use Cases/);
+  assert.match(template.getSection(3), /3\.3 Success Evidence/);
+  assert.match(template.getSection(4), /4\.1 Excluded Users and Use Cases \(Optional\)/);
+  assert.match(template.getSectionGuide(3), /Section 1 .*Section 2/s);
 });
 
-test("Lite chapter templates stay at product behavior resolution", () => {
+test("current Lite templates stay at minimum PoC behavior resolution", () => {
   const source = fs
     .readdirSync(LITE_CHAPTERS_DIR)
     .filter((name) => name.endsWith(".xml"))
@@ -55,73 +67,58 @@ test("Lite chapter templates stay at product behavior resolution", () => {
 
   assert.doesNotMatch(source, /Technology Stack|C4Context|C4Container|Technical Description/);
   assert.doesNotMatch(source, /\bAPI\b|\bDatabase\b|UI\s*→\s*API/i);
-  assert.match(source, /Permissions and Visibility/);
-  assert.match(source, /Failure and Recovery/);
-  assert.match(source, /Completion Checkpoint/);
+  assert.doesNotMatch(source, /\bF\d+\b|State Matrix/i);
+  assert.match(source, /Do not assign Feature IDs/i);
+  assert.match(source, /Primary Persona/);
+  assert.match(source, /Core Ideal Use Cases/);
+  assert.match(source, /Demo Flow/);
+  assert.match(source, /What Not to Do/);
 });
 
-test("optional edge-oriented subsections do not block Lite completion", () => {
+test("optional What Not to Do does not block current Lite completion", () => {
   const dir = temporaryDirectory();
-  const target = path.join(dir, "ideal-path.lite.alps.xml");
+  const target = path.join(dir, "minimum-poc.lite.alps.xml");
   const service = new DocumentService();
 
-  assert.match(service.initDocument("ideal-path", target, "lite"), /Created Lite ALPS/);
+  assert.match(service.initDocument("minimum-poc", target, "lite"), /Created Lite ALPS/);
 
   const requiredBySection: Record<number, [string, string][]> = {
-    2: [
-      ["1", "Validation Hypothesis"],
-      ["2", "In-Scope Features"],
-      ["4", "Success Criteria"],
+    1: [
+      ["1", "Primary Persona"],
+      ["2", "Problem"],
+      ["3", "PoC Intent"],
+      ["4", "Minimum Build Scope"],
+      ["5", "Success Condition"],
     ],
+    2: [["1", "Core Ideal Use Cases"]],
     3: [
-      ["1", "User and Starting Context"],
-      ["2", "Main Flow"],
-      ["3", "Completion Result"],
-    ],
-    5: [
-      ["1", "Screen Inventory"],
-      ["2", "Navigation"],
-    ],
-    6: [
-      ["1", "Permissions and Visibility"],
-      ["2", "Confirmation and Changes"],
-      ["4", "Accessibility and Sensitive Information"],
+      ["1", "Demo Intent"],
+      ["2", "Demo Flow"],
+      ["3", "Success Evidence"],
     ],
   };
 
   for (const [section, subsections] of Object.entries(requiredBySection)) {
     for (const [id, title] of subsections) {
-      service.saveSection(
-        Number(section),
-        id,
-        title,
-        id === "2" && section === "2" ? "- F1: Ideal path" : "confirmed",
-      );
+      assert.match(service.saveSection(Number(section), id, title, "confirmed"), /Saved/);
     }
   }
 
+  const status = service.getStatus();
+  assert.match(status, /Section 1 .*✅ Written \(5\/5 subsections\)/);
+  assert.match(status, /Section 2 .*✅ Written \(1\/1 subsections\)/);
+  assert.match(status, /Section 3 .*✅ Written \(3\/3 subsections\)/);
+  assert.match(status, /Section 4 .*Optional — not written/);
+  assert.match(service.exportMarkdown(), /## Section 4\. What Not to Do/);
+
   assert.match(
-    service.saveSection(
-      4,
-      "1",
-      "F1: Ideal path",
-      "User goal, ideal-path flow, product response, rules, and completion checkpoint.",
-    ),
+    service.saveSection(4, "1", "Excluded Users and Use Cases", "Explicitly excluded"),
     /Saved 4\.1/,
   );
-
-  const status = service.getStatus();
-  assert.match(status, /Section 2 .*✅ Written \(3\/3 subsections\)/);
-  assert.match(status, /Section 3 .*✅ Written \(3\/3 subsections\)/);
-  assert.match(status, /Section 4 .*✅ Written \(1\/1 features\)/);
-  assert.match(status, /Section 5 .*✅ Written \(2\/2 subsections\)/);
-  assert.match(status, /Section 6 .*✅ Written \(3\/3 subsections\)/);
-
-  assert.match(service.saveSection(2, "3", "Out of Scope", "Explicitly excluded"), /Saved 2\.3/);
-  assert.match(service.getStatus(), /Section 2 .*✅ Written \(3\/3 subsections\)/);
+  assert.match(service.getStatus(), /Section 4 .*✅ Written \(1 optional subsection\)/);
 });
 
-test("Lite documents initialize, validate, resume, and export without changing Full ALPS", () => {
+test("current Lite documents initialize, validate, resume, and export independently from Full ALPS", () => {
   const dir = temporaryDirectory();
   const liteTarget = path.join(dir, "product.lite.alps.xml");
   const fullTarget = path.join(dir, "product.alps.xml");
@@ -130,54 +127,72 @@ test("Lite documents initialize, validate, resume, and export without changing F
   assert.match(service.initDocument("product", liteTarget, "lite"), /Created Lite ALPS document/);
   const rawLite = fs.readFileSync(liteTarget, "utf8");
   assert.match(rawLite, /<alps-document project="product" profile="lite">/);
-  assert.equal([...rawLite.matchAll(/<section id="/g)].length, 8);
+  assert.equal([...rawLite.matchAll(/<section id="/g)].length, 4);
   assert.match(service.getStatus(), /Lite ALPS Document: product/);
-  assert.doesNotMatch(service.getStatus(), /Section 9/);
+  assert.doesNotMatch(service.getStatus(), /Section 5/);
 
   assert.match(
-    service.saveSection(2, "2", "In-Scope Features", "- F1: Guided idea capture\n- F2: Preview"),
-    /Saved 2\.2/,
+    service.saveSection(1, "1", "Primary Persona", "Adult English learner"),
+    /Saved 1\.1/,
   );
+  const beforeInvalid = fs.readFileSync(liteTarget, "utf8");
+  assert.match(service.saveSection(5, "1", "Anything", "x"), /Must be 1-4 for Lite ALPS/);
   assert.match(
-    service.saveSection(4, "1", "F1: Guided idea capture", "Observable Feature behavior"),
-    /Saved 4\.1/,
+    service.saveSection(1, "1", "Product Name", "wrong current title"),
+    /must be "Primary Persona"/,
   );
-  const beforeInvalidFeature = fs.readFileSync(liteTarget, "utf8");
-  assert.match(
-    service.saveSection(4, "2", "F2: Wrong name", "Must not be saved"),
-    /title must be "F2: Preview"/,
-  );
-  assert.match(
-    service.saveSection(4, "3", "F3: Undeclared", "Must not be saved"),
-    /must be declared with a name in Section 2\.2/,
-  );
-  assert.equal(fs.readFileSync(liteTarget, "utf8"), beforeInvalidFeature);
-  assert.match(service.getStatus(), /Section 4 .*In progress \(1\/2 features\)/);
-  assert.match(service.saveSection(9, "1", "Anything", "x"), /Must be 1-8 for Lite ALPS/);
-  assert.match(
-    service.saveSection(1, "1", "Purpose", "wrong profile title"),
-    /must be "Product Name"/,
-  );
+  assert.equal(fs.readFileSync(liteTarget, "utf8"), beforeInvalid);
   assert.match(service.exportMarkdown(), /^# product Lite ALPS/m);
-  assert.match(service.exportMarkdown(), /## Section 8\. Open Questions/);
-  assert.doesNotMatch(service.exportMarkdown(), /## Section 9\./);
+  assert.match(service.exportMarkdown(), /## Section 4\. What Not to Do/);
+  assert.doesNotMatch(service.exportMarkdown(), /## Section 5\./);
 
   const resumed = new DocumentService();
   assert.match(resumed.loadDocument(liteTarget), /get_lite_alps_section_guide/);
-  assert.match(resumed.getStatus(), /Section 4 .*1\/2 features/);
+  assert.doesNotMatch(resumed.loadDocument(liteTarget), /get_legacy_lite_alps_section_guide/);
 
   const full = new DocumentService();
   assert.match(full.initDocument("product", fullTarget), /Created ALPS document/);
   assert.match(full.getStatus(), /Section 9 \(Out of Scope\)/);
-  assert.match(full.saveSection(1, "1", "Purpose", "Full ALPS remains unchanged"), /Saved 1\.1/);
+  assert.match(full.saveSection(1, "1", "Purpose", "Full ALPS remains independent"), /Saved 1\.1/);
+  assert.doesNotMatch(fs.readFileSync(liteTarget, "utf8"), /Full ALPS remains independent/);
 });
 
-test("profile and filename mismatches preserve the original document", () => {
+test("legacy eight-section Lite documents remain editable and are never auto-converted", () => {
+  const dir = temporaryDirectory();
+  const target = path.join(dir, "legacy.lite.alps.xml");
+  const original = legacyLiteDocument("legacy");
+  fs.writeFileSync(target, original);
+
+  const service = new DocumentService();
+  const loaded = service.loadDocument(target);
+  assert.match(loaded, /Legacy Lite ALPS Document: legacy/);
+  assert.match(loaded, /get_legacy_lite_alps_section_guide/);
+  assert.doesNotMatch(loaded, /get_lite_alps_section_guide\(N\)/);
+  assert.match(service.getStatus(), /Section 8 \(Open Questions\)/);
+
+  assert.match(service.saveSection(1, "1", "Product Name", "Legacy product"), /Saved 1\.1/);
+  assert.match(
+    service.saveSection(2, "2", "In-Scope Features", "- F1: Guided idea capture"),
+    /Saved 2\.2/,
+  );
+  assert.match(
+    service.saveSection(4, "1", "F1: Guided idea capture", "Legacy Feature behavior"),
+    /Saved 4\.1/,
+  );
+  assert.match(service.exportMarkdown(), /## Section 8\. Open Questions/);
+
+  const saved = fs.readFileSync(target, "utf8");
+  assert.equal([...saved.matchAll(/<section id="/g)].length, 8);
+  assert.match(saved, /title="Product Overview"/);
+  assert.doesNotMatch(saved, /title="What to Build"/);
+});
+
+test("current and legacy profile mismatches preserve the original document", () => {
   const dir = temporaryDirectory();
   const wrongLitePath = path.join(dir, "wrong.alps.xml");
   const wrongFullPath = path.join(dir, "wrong.lite.alps.xml");
+  const wrongShapePath = path.join(dir, "wrong-shape.lite.alps.xml");
   const wrongTitlePath = path.join(dir, "wrong-title.lite.alps.xml");
-  const wrongFeaturePath = path.join(dir, "wrong-feature.lite.alps.xml");
   const wrongOrderPath = path.join(dir, "wrong-order.lite.alps.xml");
   const service = new DocumentService();
 
@@ -190,75 +205,83 @@ test("profile and filename mismatches preserve the original document", () => {
   assert.equal(fs.existsSync(wrongFullPath), false);
 
   fs.writeFileSync(
-    wrongLitePath,
-    '<alps-document project="mismatch" profile="lite"><section id="1" title="Product Overview"><!-- Not started --></section></alps-document>',
+    wrongShapePath,
+    '<alps-document project="mismatch" profile="lite"><section id="1" title="What to Build"><!-- Not started --></section></alps-document>',
   );
-  assert.match(service.loadDocument(wrongLitePath), /must contain Sections 1-8 exactly once/);
-  assert.match(fs.readFileSync(wrongLitePath, "utf8"), /profile="lite"/);
+  const wrongShape = fs.readFileSync(wrongShapePath, "utf8");
+  assert.match(service.loadDocument(wrongShapePath), /current Sections 1-4 or legacy Sections 1-8/);
+  assert.equal(fs.readFileSync(wrongShapePath, "utf8"), wrongShape);
 
   assert.match(service.initDocument("lite", wrongTitlePath, "lite"), /Created Lite ALPS/);
   const wrongTitle = fs
     .readFileSync(wrongTitlePath, "utf8")
-    .replace('title="Product Overview"', 'title="Overview"');
+    .replace('title="What to Build"', 'title="Product Overview"');
   fs.writeFileSync(wrongTitlePath, wrongTitle);
-  assert.match(service.loadDocument(wrongTitlePath), /Section 1 title must be "Product Overview"/);
+  assert.match(service.loadDocument(wrongTitlePath), /Section 1 title must be "What to Build"/);
   assert.equal(fs.readFileSync(wrongTitlePath, "utf8"), wrongTitle);
-
-  assert.match(service.initDocument("lite", wrongFeaturePath, "lite"), /Created Lite ALPS/);
-  assert.match(
-    service.saveSection(2, "2", "In-Scope Features", "- F1: Guided idea capture"),
-    /Saved 2\.2/,
-  );
-  const wrongFeature = fs
-    .readFileSync(wrongFeaturePath, "utf8")
-    .replace(
-      '<!-- Not started -->\n</section>\n\n<section id="5"',
-      '<subsection id="4.2" title="F2: Undeclared">Invalid</subsection>\n</section>\n\n<section id="5"',
-    );
-  fs.writeFileSync(wrongFeaturePath, wrongFeature);
-  assert.match(
-    service.loadDocument(wrongFeaturePath),
-    /Feature F2 must be declared with a name in Section 2\.2/,
-  );
-  assert.equal(fs.readFileSync(wrongFeaturePath, "utf8"), wrongFeature);
 
   assert.match(service.initDocument("lite", wrongOrderPath, "lite"), /Created Lite ALPS/);
   const wrongOrder = fs
     .readFileSync(wrongOrderPath, "utf8")
     .replace('<section id="2"', '<section id="1"');
   fs.writeFileSync(wrongOrderPath, wrongOrder);
-  assert.match(
-    service.loadDocument(wrongOrderPath),
-    /must contain Sections 1-8 exactly once and in order/,
-  );
+  assert.match(service.loadDocument(wrongOrderPath), /current Sections 1-4 or legacy Sections 1-8/);
   assert.equal(fs.readFileSync(wrongOrderPath, "utf8"), wrongOrder);
 });
 
-test("Lite authoring guidance preserves the approved interaction and scope rules", () => {
+test("current Lite guidance is minimal, optional at Section 4, and independent from Full ALPS", () => {
   const skill = fs.readFileSync(
     path.join(PACKAGE_ROOT, "skills", "lite-alps-init", "SKILL.md"),
     "utf8",
   );
-  const guideDir = path.join(PACKAGE_ROOT, "src", "guides", "lite");
-  const guides = fs
-    .readdirSync(guideDir)
-    .filter((name) => name.endsWith(".md"))
-    .map((name) => fs.readFileSync(path.join(guideDir, name), "utf8"))
+  const runtime = fs.readFileSync(path.join(PACKAGE_ROOT, "src", "index.ts"), "utf8");
+  const overview = fs.readFileSync(
+    path.join(PACKAGE_ROOT, "src", "templates", "lite", "overview.md"),
+    "utf8",
+  );
+  const guides = [1, 2, 3, 4]
+    .map((section) =>
+      fs.readFileSync(
+        path.join(PACKAGE_ROOT, "src", "guides", "lite", `${String(section).padStart(2, "0")}.md`),
+        "utf8",
+      ),
+    )
     .join("\n");
 
-  assert.match(skill, /Atomic is the default/);
-  assert.match(skill, /explicitly requests it or supplies a complete structured\s+source/);
-  assert.match(skill, /one focused question, or at most two/);
-  assert.match(skill, /1 → 2 → 3 → 4 → 6 → 5 → 7 → 8/);
-  assert.match(skill, /one `4\.x` entry for each approved Feature/);
-  assert.match(skill, /language the user uses/);
-  assert.match(skill, /must not introduce a new product capability/);
-  assert.match(skill, /Do not present completion as a\s+Full ALPS or automatic ADR handoff/s);
-  assert.match(skill, /Out of Scope, Key Interruptions, States and Exceptions, Screen States/);
-  assert.match(skill, /Prioritize the representative ideal path/);
+  for (const source of [skill, runtime, overview]) {
+    assert.match(source, /What to Build/i);
+    assert.match(source, /How It Works/i);
+    assert.match(source, /What to Demo/i);
+    assert.match(source, /What Not to Do/i);
+    assert.match(source, /separate goal|separate goals|separate.*process/i);
+    assert.match(
+      source,
+      /never (?:reads? or updates?|reads?, updates?|read, update)|never uses Lite state/i,
+    );
+  }
+
+  assert.match(skill, /1 → 2 → 3 → 4/);
+  assert.match(skill, /Section 4 is optional/i);
+  assert.match(skill, /Legacy Lite ALPS/i);
+  assert.match(skill, /never convert it automatically/i);
+  assert.doesNotMatch(skill, /start a separate Full ALPS|use the Lite document as a reference/i);
   assert.doesNotMatch(guides, /technology stack|C4Context|C4Container|\bAPI\b|\bdatabase\b/i);
-  assert.match(guides, /assumptions and unresolved product choices/);
-  assert.match(guides, /Out of Scope may remain empty/);
-  assert.match(guides, /Screen States is optional/);
-  assert.match(guides, /one validation row per Feature completion checkpoint/);
+  assert.doesNotMatch(guides, /Full ALPS/i);
+  assert.match(guides, /Do not introduce Feature IDs/i);
+  assert.match(guides, /Section is optional/i);
+  assert.match(guides, /Do not invent non-goals/i);
+});
+
+test("legacy template assets remain complete and separate from the current profile", () => {
+  const legacyTemplate = new TemplateService(LEGACY_LITE_ALPS_PROFILE);
+  assert.equal(legacyTemplate.listSections().length, 8);
+  assert.match(legacyTemplate.getOverview(), /Legacy Lite ALPS Template/);
+  assert.match(legacyTemplate.getSection(4), /Feature Template/);
+  assert.match(legacyTemplate.getSectionGuide(7), /PoC Validation Plan/);
+
+  const legacyFiles = fs
+    .readdirSync(LEGACY_LITE_CHAPTERS_DIR)
+    .filter((name) => name.endsWith(".xml"));
+  assert.equal(legacyFiles.length, 8);
+  assert.equal(fs.readdirSync(LITE_CHAPTERS_DIR).filter((name) => name.endsWith(".xml")).length, 4);
 });

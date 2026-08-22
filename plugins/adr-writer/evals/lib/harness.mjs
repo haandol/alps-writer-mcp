@@ -122,6 +122,13 @@ export function alpsGuideText(section) {
   );
 }
 
+export function alpsLiteGuideText(section) {
+  return readFileSync(
+    path.join(ALPS_PLUGIN_ROOT, "src", "guides", "lite", `${String(section).padStart(2, "0")}.md`),
+    "utf8",
+  );
+}
+
 export function agentText(name, options = {}) {
   return promptText(path.join(PLUGIN_ROOT, "agents", `${name}.md`), PLUGIN_ROOT, options);
 }
