@@ -5,10 +5,10 @@ authoring flow as Full ALPS while omitting implementation-preparation Sections.
 
 ## Sections
 
-1. Overview - Capture the Target User and Core Problem, then the expected Value and Core Hypothesis
-2. Solution and User Flow - Capture one minimum Solution Strategy and one Core User Flow
+1. Overview - Capture the Target User and Core Problem, then the expected Value and Key Assumption
+2. Solution and Acceptance Tests - Capture one minimum Solution Strategy and every Required Acceptance Test
 3. Out of Scope - Optionally record explicit exclusions in one list
-4. Demo Scenario - Run one executable scenario and record one observable overall pass result
+4. Demo Scenario - Automatically generate and show one executable scenario that covers every required test
 
 > **Authoring order:** 1 → 2 → 3 → 4.
 > Section 3 is optional and may remain unwritten. Section 4 is required.
@@ -24,12 +24,14 @@ required prerequisite is incomplete, complete it first.
 
 ## Conversation Guide
 
-For every Section:
+For every Section that needs content:
 
 1. Call `get_lite_alps_section_guide(N)`.
 2. Call `get_lite_alps_section(N)`.
 3. Explain the Section's purpose briefly.
-4. Ask one focused question, or at most two closely related questions.
+4. Ask one focused question, or at most two closely related questions, when required context is
+   missing. Skip optional Section 3 without a question when no explicit exclusion exists and the
+   approved boundary is not materially ambiguous.
 5. Wait for the user's response and integrate it iteratively.
 6. When the Section is complete, present a concise plain-text approval digest.
 7. Save only after explicit approval with `save_alps_section`.
@@ -43,27 +45,34 @@ every Section as a separate approval and save unit.
 ### Section 1 — Overview
 
 - `Target User and Core Problem`: identify the main user and the problem the PoC should address.
-- `Value and Core Hypothesis`: state the expected value and the main belief the PoC should test.
+- `Value and Key Assumption`: state the expected value and the main belief guiding the PoC.
 - Ask only for the context needed by these two inputs.
 
-### Section 2 — Solution and User Flow
+### Section 2 — Solution and Acceptance Tests
 
 - `Solution Strategy`: state the minimum product-level approach and visible PoC scope.
-- `Core User Flow`: state the starting context, sequential user actions, visible product responses,
-  and observable completion.
-- Add another flow only when the user confirms it is required for the first PoC.
+- `Required Acceptance Tests`: list every product behavior the PoC must demonstrate.
+- Give each test a distinct name, starting condition, user action, and observable pass condition.
+- Preserve confirmed values and rules that decide whether the test passes.
+- Follow the complete multi-test example in the Section 2 template.
 
 ### Section 3 — Out of Scope
 
 - This Section is optional.
 - Record only exclusions the user explicitly confirms.
+- If there are no explicit exclusions and the approved boundary is not materially ambiguous, skip
+  this Section without a dedicated question.
 - Do not ask for exclusions just to fill the template or turn unresolved choices into exclusions.
 
 ### Section 4 — Demo Scenario
 
 - Use one `4.1 Demo Scenario` subsection.
-- Include the necessary starting context, sequential actions, visible expected results, and one
-  overall pass result.
+- Automatically generate the shortest scenario that covers every approved Required Acceptance Test.
+- Show the complete scenario before approval, with the required test covered by every step or
+  execution block.
+- Ask a focused question only when a required test lacks an executable starting state or input.
+- The overall pass result requires every Required Acceptance Test to pass.
+- Treat a passing demo as product-behavior acceptance, not proof of user value or market validity.
 - Keep the scenario inside the approved Sections 1-2 and any explicit Section 3 boundary.
 
 ## Approval Digest

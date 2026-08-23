@@ -119,6 +119,22 @@ test("the Lite templates use fixed sections, keep Section 3 optional, and requir
     ok: true,
     fullId: "1.1",
   });
+  assert.deepEqual(registry.validateSubsection(1, "2", "Value and Key Assumption"), {
+    ok: true,
+    fullId: "1.2",
+  });
+  assert.deepEqual(registry.validateSubsection(1, "2", "Value and Core Hypothesis"), {
+    ok: false,
+    message: 'Title for 1.2 must be "Value and Key Assumption".',
+  });
+  assert.deepEqual(registry.validateSubsection(2, "2", "Required Acceptance Tests"), {
+    ok: true,
+    fullId: "2.2",
+  });
+  assert.deepEqual(registry.validateSubsection(2, "2", "Core User Flow"), {
+    ok: false,
+    message: 'Title for 2.2 must be "Required Acceptance Tests".',
+  });
   assert.deepEqual(registry.validateSubsection(4, "1", "Demo Scenario"), {
     ok: true,
     fullId: "4.1",

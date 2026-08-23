@@ -106,6 +106,7 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /alps-approval-digest-preserves-contract/);
   assert.match(out, /alps-high-load-suggests-feature-split/);
   assert.match(out, /lite-alps-follows-full-conversation/);
+  assert.match(out, /lite-alps-generates-demo-from-required-tests/);
   assert.match(out, /lite-alps-skips-empty-optional-section/);
   assert.match(out, /lite-alps-records-explicit-exclusions/);
   assert.match(out, /impl-review-selects-risk-mode/);
@@ -990,6 +991,34 @@ WAIT_FOR_ANSWER | 답변을 받은 뒤 Section 초안과 승인을 진행
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
 AUTO_DRAFT | 사용자 답변 없이 Section 1을 완성하고 저장
+=== EVAL-END ===`,
+    },
+    {
+      name: "lite-alps-generates-demo-from-required-tests",
+      good: `자동 생성된 Demo Scenario
+
+| 단계 | 사용자 행동 | 보이는 예상 결과 | 커버하는 필수 인수 테스트 |
+| --- | --- | --- | --- |
+| 1 | "break the ice"를 입력한다 | 표현별 연습 문제가 보인다 | 표현별 연습 문제가 보인다 |
+| 2 | 문제에 답한다 | 결과가 보이고 표현이 저장된다 | 연습 결과가 저장된다 |
+| 3 | 표현 목록을 연다 | 저장한 표현을 다시 찾을 수 있다 | 저장한 표현을 다시 찾을 수 있다 |
+
+전체 통과 조건: 모든 Required Acceptance Tests의 통과 조건이 관찰된다.
+승인 / 수정 / 보류
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+AUTO_GENERATED_DEMO | 승인된 필수 인수 테스트에서 데모를 자동 생성
+COVERS_ALL_REQUIRED_TESTS | 세 필수 인수 테스트를 모두 커버
+SHOWS_FULL_SCENARIO | 전체 단계와 예상 결과 및 커버리지를 승인 전에 표시
+NO_RESTATEMENT_QUESTION | 실행 가능한 테스트가 있어 데모 흐름을 다시 질문하지 않음
+OVERALL_PASS_REQUIRES_ALL | 모든 필수 인수 테스트가 통과해야 전체 통과
+=== EVAL-END ===`,
+      bad: `데모 흐름은 어떻게 구성할까요? 어떤 시작 상태와 입력을 사용할지 알려주세요.
+
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+RESTATEMENT_QUESTION | 사용자가 데모 흐름을 다시 작성해야 함
 === EVAL-END ===`,
     },
     {

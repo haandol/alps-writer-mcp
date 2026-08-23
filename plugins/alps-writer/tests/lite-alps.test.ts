@@ -38,11 +38,11 @@ afterEach(() => {
   }
 });
 
-test("Lite ALPS exposes Full-aligned names and one Demo Scenario subsection", () => {
+test("Lite ALPS exposes acceptance-test names and one Demo Scenario subsection", () => {
   assert.deepEqual(LITE_SECTION_NUMBERS, [1, 2, 3, 4]);
   assert.deepEqual(Object.values(LITE_SECTION_TITLES), [
     "Overview",
-    "Solution and User Flow",
+    "Solution and Acceptance Tests",
     "Out of Scope",
     "Demo Scenario",
   ]);
@@ -52,8 +52,9 @@ test("Lite ALPS exposes Full-aligned names and one Demo Scenario subsection", ()
   assert.match(template.getOverview(), /1 → 2 → 3 → 4/);
   assert.match(template.getOverview(), /Section 3 is optional/i);
   assert.match(template.getOverview(), /Section 4 is required/i);
-  assert.match(template.getSection(1), /1\.2 Value and Core Hypothesis/);
+  assert.match(template.getSection(1), /1\.2 Value and Key Assumption/);
   assert.match(template.getSection(2), /2\.1 Solution Strategy/);
+  assert.match(template.getSection(2), /2\.2 Required Acceptance Tests/);
   assert.match(template.getSection(3), /3\.1 Explicit Exclusions \(Optional\)/);
   assert.match(template.getSection(4), /4\.1 Demo Scenario/);
   assert.doesNotMatch(template.getSection(4), /4\.2|Learning Check/);
@@ -68,7 +69,7 @@ test("Full and Lite ALPS use one same-named Demo Scenario subsection", () => {
   assert.doesNotMatch(fullDemo, /3\.2/);
   assert.match(liteDemo, /4\.1 Demo Scenario/);
   assert.doesNotMatch(liteDemo, /4\.2|Learning Check/);
-  assert.match(liteDemo, /visible expected product result/i);
+  assert.match(liteDemo, /visible expected result/i);
   assert.match(liteDemo, /overall pass result/i);
 });
 
@@ -83,10 +84,11 @@ test("Lite templates stay at problem, product behavior, and acceptance resolutio
   assert.doesNotMatch(source, /\bAPI\b|\bDatabase\b|UI\s*→\s*API/i);
   assert.doesNotMatch(source, /\bF\d+\b|State Matrix/i);
   assert.match(source, /Do not assign Feature IDs/i);
-  assert.match(source, /Value and Core Hypothesis/);
+  assert.match(source, /Value and Key Assumption/);
   assert.match(source, /Solution Strategy/);
-  assert.match(source, /Core User Flow/);
+  assert.match(source, /Required Acceptance Tests/);
   assert.match(source, /Demo Scenario/);
+  assert.doesNotMatch(source, /Core User Flow/);
   assert.doesNotMatch(source, /Learning Check/);
 });
 
@@ -100,11 +102,11 @@ test("optional Out of Scope does not block required Demo Scenario completion", (
   const requiredBySection: Record<number, [string, string][]> = {
     1: [
       ["1", "Target User and Core Problem"],
-      ["2", "Value and Core Hypothesis"],
+      ["2", "Value and Key Assumption"],
     ],
     2: [
       ["1", "Solution Strategy"],
-      ["2", "Core User Flow"],
+      ["2", "Required Acceptance Tests"],
     ],
     4: [["1", "Demo Scenario"]],
   };
@@ -120,13 +122,17 @@ test("optional Out of Scope does not block required Demo Scenario completion", (
   assert.match(status, /Section 2 .*✅ Written \(2\/2 subsections\)/);
   assert.match(status, /Section 3 .*Optional — not written/);
   assert.match(status, /Section 4 .*✅ Written \(1\/1 subsections\)/);
-  assert.match(service.exportMarkdown(), /## Section 4\. Demo Scenario/);
+  const exportWithoutExclusions = service.exportMarkdown();
+  assert.doesNotMatch(exportWithoutExclusions, /## Section 3\. Out of Scope/);
+  assert.doesNotMatch(exportWithoutExclusions, /Not yet written/);
+  assert.match(exportWithoutExclusions, /## Section 4\. Demo Scenario/);
 
   assert.match(
     service.saveSection(3, "1", "Explicit Exclusions", "Explicitly excluded"),
     /Saved 3\.1/,
   );
   assert.match(service.getStatus(), /Section 3 .*✅ Written \(1 optional subsection\)/);
+  assert.match(service.exportMarkdown(), /## Section 3\. Out of Scope/);
 });
 
 test("Lite documents initialize, validate, resume, and export independently from Full ALPS", () => {
@@ -156,7 +162,7 @@ test("Lite documents initialize, validate, resume, and export independently from
   );
   assert.equal(fs.readFileSync(liteTarget, "utf8"), beforeInvalid);
   assert.match(service.exportMarkdown(), /^# product Lite ALPS/m);
-  assert.match(service.exportMarkdown(), /## Section 3\. Out of Scope/);
+  assert.doesNotMatch(service.exportMarkdown(), /## Section 3\. Out of Scope/);
   assert.match(service.exportMarkdown(), /## Section 4\. Demo Scenario/);
 
   const resumed = new DocumentService();
@@ -173,6 +179,7 @@ test("former Lite formats are rejected without modifying the original document",
   const dir = temporaryDirectory();
   const formerFourPath = path.join(dir, "former-four.lite.alps.xml");
   const formerEightPath = path.join(dir, "former-eight.lite.alps.xml");
+  const formerCurrentPath = path.join(dir, "former-current.lite.alps.xml");
   const formerFour = liteDocument("former-four", ["Why", "How", "What Not to Do", "Demo Scenario"]);
   const formerEight = liteDocument("former-eight", [
     "Product Overview",
@@ -184,14 +191,26 @@ test("former Lite formats are rejected without modifying the original document",
     "PoC Validation Plan",
     "Open Questions",
   ]);
+  const formerCurrent = liteDocument("former-current", [
+    "Overview",
+    "Solution and User Flow",
+    "Out of Scope",
+    "Demo Scenario",
+  ]);
   fs.writeFileSync(formerFourPath, formerFour);
   fs.writeFileSync(formerEightPath, formerEight);
+  fs.writeFileSync(formerCurrentPath, formerCurrent);
 
   const service = new DocumentService();
   assert.match(service.loadDocument(formerFourPath), /Section 1 title must be "Overview"/);
   assert.equal(fs.readFileSync(formerFourPath, "utf8"), formerFour);
   assert.match(service.loadDocument(formerEightPath), /must contain Sections 1-4/);
   assert.equal(fs.readFileSync(formerEightPath, "utf8"), formerEight);
+  assert.match(
+    service.loadDocument(formerCurrentPath),
+    /Section 2 title must be "Solution and Acceptance Tests"/,
+  );
+  assert.equal(fs.readFileSync(formerCurrentPath, "utf8"), formerCurrent);
 });
 
 test("Lite load rejects invalid fixed subsection schemas without modifying the original", () => {
@@ -211,6 +230,30 @@ test("Lite load rejects invalid fixed subsection schemas without modifying the o
         ),
       ),
       error: /Title for 1\.1 must be "Target User and Core Problem"/,
+    },
+    {
+      name: "former-assumption-title",
+      content: base.replace(
+        section(1, "Overview", NOT_STARTED),
+        section(
+          1,
+          "Overview",
+          '<subsection id="1.2" title="Value and Core Hypothesis">old content</subsection>',
+        ),
+      ),
+      error: /Title for 1\.2 must be "Value and Key Assumption"/,
+    },
+    {
+      name: "former-core-flow-title",
+      content: base.replace(
+        section(2, "Solution and Acceptance Tests", NOT_STARTED),
+        section(
+          2,
+          "Solution and Acceptance Tests",
+          '<subsection id="2.2" title="Core User Flow">old content</subsection>',
+        ),
+      ),
+      error: /Title for 2\.2 must be "Required Acceptance Tests"/,
     },
     {
       name: "unknown-id",
@@ -290,7 +333,7 @@ test("profile mismatches preserve the original document", () => {
   assert.equal(fs.readFileSync(wrongOrderPath, "utf8"), wrongOrder);
 });
 
-test("Lite guidance uses Full-aligned names and one acceptance-test Demo Scenario", () => {
+test("Lite guidance uses Required Acceptance Tests and one generated Demo Scenario", () => {
   const skill = fs.readFileSync(
     path.join(PACKAGE_ROOT, "skills", "lite-alps-init", "SKILL.md"),
     "utf8",
@@ -311,10 +354,12 @@ test("Lite guidance uses Full-aligned names and one acceptance-test Demo Scenari
 
   for (const source of [skill, runtime, overview]) {
     assert.match(source, /Overview/);
-    assert.match(source, /Solution and User Flow/);
+    assert.match(source, /Solution and Acceptance Tests/);
     assert.match(source, /Out of Scope/);
     assert.match(source, /Demo Scenario/);
     assert.match(source, /Target User and Core Problem/);
+    assert.match(source, /Value and Key Assumption/);
+    assert.match(source, /Required Acceptance Tests/);
     assert.match(source, /4\.1 Demo Scenario/);
     assert.match(source, /same conversational|same interaction|follows Full ALPS/i);
     assert.match(source, /independent|separate document/i);
@@ -330,6 +375,43 @@ test("Lite guidance uses Full-aligned names and one acceptance-test Demo Scenari
   assert.match(guides, /Do not invent non-goals/i);
   assert.match(guides, /overall pass result/i);
   assert.match(guides, /Do not require a separate Learning Check/i);
+  assert.match(guides, /without a dedicated question/i);
+  assert.match(guides, /proof of user value or market validity/i);
+  assert.match(guides, /Automatically compose the shortest scenario/i);
+  assert.match(guides, /complete generated\s+scenario and its coverage/i);
+});
+
+test("Required Acceptance Tests include an example and drive the generated Demo Scenario", () => {
+  const acceptanceTemplate = fs.readFileSync(
+    path.join(
+      PACKAGE_ROOT,
+      "src",
+      "templates",
+      "lite",
+      "chapters",
+      "02-solution-and-acceptance-tests.xml",
+    ),
+    "utf8",
+  );
+  const demoTemplate = fs.readFileSync(
+    path.join(PACKAGE_ROOT, "src", "templates", "lite", "chapters", "04-demo-scenario.xml"),
+    "utf8",
+  );
+
+  assert.match(
+    acceptanceTemplate,
+    /Required test.*Starting condition.*User action.*Observable pass condition/s,
+  );
+  assert.match(acceptanceTemplate, /Expression-specific questions appear/);
+  assert.match(acceptanceTemplate, /The practice result is saved/);
+  assert.match(acceptanceTemplate, /The saved expression is available later/);
+  assert.doesNotMatch(acceptanceTemplate, /Core User Flow/);
+
+  assert.match(demoTemplate, /Automatically generate.*every approved Required Acceptance Test/is);
+  assert.match(demoTemplate, /Covers required test/);
+  assert.match(demoTemplate, /All three Required Acceptance Tests pass/);
+  assert.match(demoTemplate, /complete generated scenario and its test coverage/i);
+  assert.match(demoTemplate, /not as proof of user value or market validity/i);
 });
 
 test("Lite Section 1 follows Full's focused-question conversation", () => {
@@ -361,6 +443,19 @@ test("Lite Section 1 follows Full's focused-question conversation", () => {
 
 test("only the current four-section Lite assets are shipped", () => {
   assert.equal(fs.readdirSync(LITE_CHAPTERS_DIR).filter((name) => name.endsWith(".xml")).length, 4);
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        PACKAGE_ROOT,
+        "src",
+        "templates",
+        "lite",
+        "chapters",
+        "02-solution-and-user-flow.xml",
+      ),
+    ),
+    false,
+  );
   assert.equal(fs.existsSync(path.join(PACKAGE_ROOT, "src", "templates", "lite", "legacy")), false);
   assert.equal(fs.existsSync(path.join(PACKAGE_ROOT, "src", "guides", "lite", "legacy")), false);
 });

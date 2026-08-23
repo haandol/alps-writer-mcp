@@ -1,20 +1,28 @@
 <section id="4" title="Demo Scenario">
   <subsection id="4.1" title="Demo Scenario">
     <description>
-- Describe the shortest connected execution of the approved Core User Flow.
-- Include only the starting context needed to run it.
-- For every step, state the user action and visible expected product result.
-- End with one observable overall pass result.
-- Keep tested claims inside the approved Overview, Solution and User Flow, and explicit Out of Scope boundary.
-- Do not replace the journey with a feature list or screen tour.
+- Automatically generate the shortest executable scenario that covers every approved Required Acceptance Test at least once.
+- Reuse shared setup and actions when the tests form one coherent flow. Use separate execution blocks inside this subsection when connecting them would require an unapproved product behavior.
+- For every step, state the user action, visible expected result, and the required test it covers.
+- Show the complete generated scenario and its test coverage before asking for approval.
+- End with one overall pass result that requires every Required Acceptance Test to pass.
+- Keep tested claims inside the approved Overview, Solution and Acceptance Tests, and explicit Out of Scope boundary.
+- Treat a passing demo as evidence that the approved product behavior runs, not as proof of user value or market validity.
+- Do not ask the user to rewrite a demo flow when the approved tests already contain executable starting conditions, actions, and pass conditions.
+- Do not omit a required test or invent product behavior merely to connect the steps.
     </description>
     <example>
-| Step | User action | Visible expected result |
-|------|-------------|-------------------------|
-| 1 | Enters an expression | Practice questions appear for that expression |
-| 2 | Answers the questions | The result appears and the expression is saved |
+**Starting state:** The learner has no saved expressions and opens the practice workspace.
 
-**Overall pass result:** The learner completes focused practice and can find the saved expression.
+**Demo input:** `break the ice`
+
+| Step | User action | Visible expected result | Covers required test |
+|------|-------------|-------------------------|----------------------|
+| 1 | Enters `break the ice` | Practice questions appear for `break the ice` | Expression-specific questions appear |
+| 2 | Answers the questions | The result appears and `break the ice` is saved | The practice result is saved |
+| 3 | Opens the expression list | `break the ice` appears in the saved list | The saved expression is available later |
+
+**Overall pass result:** All three Required Acceptance Tests pass: questions appear for `break the ice`, the completed practice is saved, and the saved expression is visible in the list.
     </example>
   </subsection>
 </section>

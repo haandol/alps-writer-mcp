@@ -1,0 +1,26 @@
+<section id="2" title="Solution and Acceptance Tests">
+  <subsection id="2.1" title="Solution Strategy">
+    <description>
+- In one concise sketch, explain the product-level approach and the minimum user-visible capabilities, moments, and information needed to try it.
+- Include a permission, privacy, safety, limit, or failure rule only when the PoC itself must honor it.
+- Do not assign Feature IDs or add implementation detail.
+    </description>
+  </subsection>
+  <subsection id="2.2" title="Required Acceptance Tests">
+    <description>
+- List every product behavior the first PoC must demonstrate.
+- Give each required test a distinct name, starting condition, user action, and observable pass condition.
+- Preserve confirmed values, permissions, limits, and failure guarantees when they affect whether a test passes.
+- Use only user-visible or otherwise directly observable results. Do not test implementation functions, internal state, technical layers, or subjective impressions.
+    </description>
+    <example>
+**Required acceptance tests: Practice a difficult expression**
+
+| Required test | Starting condition | User action | Observable pass condition |
+|---------------|--------------------|-------------|---------------------------|
+| Expression-specific questions appear | The learner is in the practice workspace | Enters `break the ice` | Practice questions about `break the ice` are visible |
+| The practice result is saved | Questions for `break the ice` are visible | Answers the questions | The result is visible and `break the ice` is saved |
+| The saved expression is available later | `break the ice` has been saved | Opens the expression list | `break the ice` appears in the saved list |
+    </example>
+  </subsection>
+</section>
