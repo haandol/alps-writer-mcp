@@ -6,11 +6,11 @@
 - Mention the current workaround or evidence only when it materially clarifies the problem.
     </description>
   </subsection>
-  <subsection id="1.2" title="Value and Core Hypothesis">
+  <subsection id="1.2" title="Value and Key Assumption">
     <description>
 - State the value the target user should gain and why that matters.
-- State the single most important belief this PoC should test.
-- Keep it concise. Do not require a metric, customer promise, hypothesis inventory, or FAQ unless the user already has one.
+- State the single most important assumption that shapes the PoC direction.
+- Keep it concise. Do not require a metric, customer promise, assumption inventory, or FAQ unless the user already has one.
 - Do not invent business claims or measures the user did not provide or approve.
     </description>
   </subsection>

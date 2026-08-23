@@ -33,7 +33,8 @@ implementation readiness.
      separately.
 5. Use the authoring order **1 → 2 → 3 → 4**.
    - Sections 1, 2, and 4 are required.
-   - Section 3 is optional and remains unwritten when the user has no explicit exclusions.
+   - Section 3 is optional and remains unwritten when the user has no explicit exclusions and the
+     approved boundary is not materially ambiguous.
    - After loading, call `mcp__alps-writer__get_alps_document_status`, summarize completed required
      Sections once, and resume at the first incomplete required Section.
 6. For each Section:
@@ -42,22 +43,29 @@ implementation readiness.
    - Read every prerequisite named by the guide with
      `mcp__alps-writer__read_alps_section`.
    - Briefly explain the Section's purpose.
-   - Ask one focused question from the guide, or at most two closely related questions.
+   - Ask one focused question from the guide, or at most two closely related questions, when
+     required context is missing. Section 3 may skip this step under its optional rule.
    - Wait for the user's answer and integrate it into the Section.
    - When the Section is complete, present a concise plain-text approval digest.
    - Save each approved subsection separately with
      `mcp__alps-writer__save_alps_section`.
 7. Section scope:
    - **Section 1 — Overview**: ask for the target user and core problem, then the expected value and
-     core hypothesis. Keep the result in `Target User and Core Problem` and
-     `Value and Core Hypothesis`.
-   - **Section 2 — Solution and User Flow**: ask for the minimum Solution Strategy and the Core User
-     Flow's starting context, sequential actions, visible product responses, and observable
-     completion.
+     key assumption that shapes the PoC direction. Keep the result in
+     `Target User and Core Problem` and `Value and Key Assumption`.
+   - **Section 2 — Solution and Acceptance Tests**: ask for the minimum Solution Strategy and every
+     product behavior the PoC must demonstrate. Save them as `Required Acceptance Tests`; each test
+     has a distinct name, starting condition, user action, and observable pass condition. Follow the
+     complete multi-test example in the template.
    - **Section 3 — Out of Scope**: record only exclusions the user explicitly confirms. Do not ask
-     for exclusions merely to fill the optional Section.
-   - **Section 4 — Demo Scenario**: save one `4.1 Demo Scenario` that turns the approved Core User
-     Flow into one executable scenario with visible expected results and one overall pass result.
+     for exclusions merely to fill the optional Section. When there are no explicit exclusions and
+     the approved boundary is not materially ambiguous, skip it without a dedicated question.
+   - **Section 4 — Demo Scenario**: automatically generate one `4.1 Demo Scenario` that covers every
+     approved Required Acceptance Test at least once. When the tests are executable, do not ask the
+     user to restate a flow. Show the complete generated scenario and test coverage before approval.
+     Each step or execution block names the test it covers, and the overall result passes only when
+     every required test passes. Ask only for a missing concrete start or input. Do not invent
+     connecting behavior or present a passing demo as proof of user value or market validity.
 8. The approval digest includes the applicable confirmed intent, scope, mandatory information,
    values and rules, expected result, and unresolved questions. Never save a requirement,
    exclusion, or Demo result absent from the digest. Show the full pending content when requested.

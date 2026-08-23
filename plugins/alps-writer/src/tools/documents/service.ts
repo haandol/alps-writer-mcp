@@ -597,6 +597,7 @@ NEVER save generated content without user approval.`;
 
     for (const section of sectionNumbers(profile)) {
       const content = sections.get(section) || "";
+      if (profile.optionalSections.includes(section) && this.isNotStarted(content)) continue;
       const markdown = this.isNotStarted(content)
         ? "*Not yet written*"
         : this.contentToMarkdown(content, section);

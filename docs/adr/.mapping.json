@@ -94,7 +94,7 @@
         {
           "path": "docs/adr/alps-authoring/lite-format/0001-lite-alps-authoring-profile.md",
           "status": "Accepted (2026-08-23)",
-          "summary": "Lite ALPS는 기존 Full의 대화형 작성 방식을 유지한 채 네 Section의 제품·PoC 입력만 제공하는 간소화 템플릿이다"
+          "summary": "Lite ALPS는 필수 인수 테스트를 먼저 승인하고 모든 테스트를 커버하는 Demo Scenario를 자동 생성해 보여주는 4-Section 제품·PoC 템플릿이다"
         }
       ],
       "dependsOn": ["alps-authoring/authoring-interaction"]

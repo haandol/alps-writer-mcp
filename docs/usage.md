@@ -114,11 +114,13 @@ flowchart TD
 ### A. Lite ALPS — independent PoC authoring
 
 1. `/lite-alps-init` → write or resume a 4-section document for a minimum PoC and its demo.
-2. Follow the same focused-question conversation as Full ALPS to define the target user and problem, value and hypothesis, minimum solution, Core User Flow, and executable demo.
+2. Follow the same focused-question conversation as Full ALPS to define the target user and problem, value and key assumption, minimum solution, and every Required Acceptance Test. Lite then automatically generates and shows a Demo Scenario that covers all approved tests.
 3. Build and validate the mockup or PoC from the exported Lite ALPS document.
 
 Section 3 records explicit exclusions and is optional. Section 4 is the required Demo Scenario. Do
-not invent exclusions or classify an unresolved choice as out of scope.
+not invent exclusions or classify an unresolved choice as out of scope. When no exclusion was
+stated and the boundary is not materially ambiguous, skip Section 3 without a dedicated question;
+the Markdown export omits the unwritten optional Section.
 
 Lite ALPS deliberately contains no technology stack, architecture, API, database, deployment,
 library, code-structure, or implementation-planning inputs. Lite reuses Full's conversation and

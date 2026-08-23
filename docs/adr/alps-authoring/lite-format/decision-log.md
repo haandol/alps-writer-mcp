@@ -4,6 +4,26 @@ This document is the **major decision-change history** of the alps-authoring/lit
 Each ADR body describes only the current state, while the timeline of "what changed and why"
 accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-08-23 — 필수 인수 테스트에서 Demo Scenario를 자동 생성
+
+- **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
+- **Change type**: requirement rule change
+- **What**: 일반 Core User Flow와 별도 Demo Scenario → 이름·시작 조건·행동·관찰 가능한 통과
+  조건을 가진 Required Acceptance Tests를 먼저 승인하고, 모든 테스트를 커버하는 Demo
+  Scenario 전체와 커버리지를 자동 생성해 승인 전에 제시.
+- **Why**: 사용자가 비슷한 흐름을 두 번 작성하지 않으면서 PoC가 반드시 통과해야 할 조건과
+  데모의 검증 범위를 명확히 연결해야 한다.
+
+## 2026-08-23 — 일반 사용자 흐름과 구체적인 인수 데모를 분리
+
+- **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
+- **Change type**: requirement rule change
+- **What**: Core User Flow와 Demo Scenario가 같은 실행 정보를 반복하고 빈 선택 Section을
+  내보내는 구조 → 일반적인 제품 여정과 구체적인 인수 실행을 분리하고, `Key Assumption`의
+  검증 범위를 과장하지 않으며, 작성하지 않은 선택 Section을 질문과 Markdown에서 생략.
+- **Why**: Lite의 각 입력이 서로 다른 질문에 답하고 최종 문서가 최소 PoC 범위만 보여야
+  한다.
+
 ## 2026-08-23 — Lite를 기존 Full 작성 방식의 간소화 템플릿으로 재정렬
 
 - **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
