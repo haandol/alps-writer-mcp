@@ -4,6 +4,16 @@ This document is the **major decision-change history** of the alps-authoring/lit
 Each ADR body describes only the current state, while the timeline of "what changed and why"
 accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-08-23 — Lite를 기존 Full 작성 방식의 간소화 템플릿으로 재정렬
+
+- **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
+- **Change type**: architecture and requirement rule change
+- **What**: Lite 전용 inference-first, 페르소나 선택 절차와 세밀한 출력 제약 → Lite 도입
+  직전 Full의 1–2개 집중 질문, 답변 통합과 승인 흐름을 그대로 사용하고 네 Section의 제품
+  입력만 유지.
+- **Why**: Lite는 별도 작성 방법론이 아니라 기존 Full ALPS의 작성 경험을 보존한 간소화
+  템플릿이어야 한다.
+
 ## 2026-08-22 — Start persona framing from one hypothetical problem case
 
 - **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)

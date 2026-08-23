@@ -34,36 +34,29 @@ test("approval guidance uses a contract-complete plain-text digest", () => {
   assert.doesNotMatch(overview, /print FULL section/i);
 });
 
-test("Full and Lite authoring infer product constants before asking", () => {
-  const sources = [
-    read("src/index.ts"),
-    read("skills/alps-init/SKILL.md"),
-    read("skills/lite-alps-init/SKILL.md"),
-    read("src/templates/overview.md"),
-    read("src/templates/lite/overview.md"),
-    read("src/tools/documents/service.ts"),
-  ];
+test("Lite reuses Full's focused-question authoring without changing Full", () => {
+  const fullSkill = read("skills/alps-init/SKILL.md");
+  const fullOverview = read("src/templates/overview.md");
+  const liteSkill = read("skills/lite-alps-init/SKILL.md");
+  const liteOverview = read("src/templates/lite/overview.md");
+  const server = read("src/index.ts");
+  const documents = read("src/tools/documents/service.ts");
 
-  for (const source of sources) {
-    assert.match(source, /inference-first/i);
-    assert.match(source, /AI-inferred/i);
-    assert.match(source, /ask (?:no|zero) question/i);
-    assert.match(source, /money|permissions|legal|regulatory|privacy|safety/i);
-    assert.match(source, /explicit (?:approval|confirmation)|user approv/i);
-  }
+  assert.match(fullSkill, /ask the user 1-2 questions/i);
+  assert.match(fullOverview, /Ask ONE or at most TWO focused questions/i);
+  assert.doesNotMatch(`${fullSkill}\n${fullOverview}`, /inference-first|Ask ZERO/i);
 
-  const guidePaths = [
-    ...Array.from(
-      { length: 9 },
-      (_, index) => `src/guides/${String(index + 1).padStart(2, "0")}.md`,
-    ),
-    ...Array.from(
-      { length: 4 },
-      (_, index) => `src/guides/lite/${String(index + 1).padStart(2, "0")}.md`,
-    ),
-  ];
-  for (const guidePath of guidePaths) {
-    assert.match(read(guidePath), /<inference_first>/i, guidePath);
+  assert.match(liteSkill, /same conversational authoring flow as Full ALPS/i);
+  assert.match(liteOverview, /Ask one focused question, or at most two closely related questions/i);
+  assert.match(server, /same conversational authoring pattern as Full ALPS/i);
+  assert.match(documents, /Ask 1-2 focused questions at a time/i);
+
+  for (const guidePath of Array.from(
+    { length: 4 },
+    (_, index) => `src/guides/lite/${String(index + 1).padStart(2, "0")}.md`,
+  )) {
+    assert.match(read(guidePath), /<questions>/i, guidePath);
+    assert.doesNotMatch(read(guidePath), /<inference_first>/i, guidePath);
   }
 });
 

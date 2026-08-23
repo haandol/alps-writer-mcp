@@ -316,11 +316,8 @@ test("Lite guidance uses Full-aligned names and one acceptance-test Demo Scenari
     assert.match(source, /Demo Scenario/);
     assert.match(source, /Target User and Core Problem/);
     assert.match(source, /4\.1 Demo Scenario/);
-    assert.match(source, /separate goal|separate goals|separate.*process/i);
-    assert.match(
-      source,
-      /never (?:reads? or updates?|reads?, updates?|read, update)|never uses Lite state/i,
-    );
+    assert.match(source, /same conversational|same interaction|follows Full ALPS/i);
+    assert.match(source, /independent|separate document/i);
   }
 
   assert.match(skill, /1 → 2 → 3 → 4/);
@@ -335,7 +332,7 @@ test("Lite guidance uses Full-aligned names and one acceptance-test Demo Scenari
   assert.match(guides, /Do not require a separate Learning Check/i);
 });
 
-test("Lite Section 1 starts from one hypothetical case and selects a persona only from explicit candidates", () => {
+test("Lite Section 1 follows Full's focused-question conversation", () => {
   const runtime = fs.readFileSync(path.join(PACKAGE_ROOT, "src", "index.ts"), "utf8");
   const skill = fs.readFileSync(
     path.join(PACKAGE_ROOT, "skills", "lite-alps-init", "SKILL.md"),
@@ -351,16 +348,15 @@ test("Lite Section 1 starts from one hypothetical case and selects a persona onl
     "utf8",
   );
 
-  for (const source of [runtime, skill, overview, guide, chapter]) {
-    assert.match(source, /concrete hypothetical (?:problem )?case/i);
-    assert.match(source, /who,\s+in\s+what\s+situation,\s+is trying to do what/i);
-    assert.match(source, /problem (?:they are|are they) assumed to (?:face|be facing)/i);
-    assert.match(source, /actual or recent experience/i);
-    assert.match(source, /explicitly presents?\s+(?:several|multiple)\s+candidate personas/i);
-  }
+  assert.match(runtime, /same conversational authoring pattern as Full ALPS/i);
+  assert.match(skill, /ask one focused question or at most two closely related\s+questions/i);
+  assert.match(overview, /Ask one focused question, or at most two closely related questions/i);
+  assert.match(guide, /Who is the main target user, and what core problem/i);
+  assert.match(chapter, /Identify the main target user and the core problem/i);
 
-  assert.match(guide, /Do not ask the user to enumerate personas/i);
-  assert.doesNotMatch(guide, /Who is the single Primary Persona/i);
+  for (const source of [runtime, skill, overview, guide, chapter]) {
+    assert.doesNotMatch(source, /inference-first|concrete hypothetical|Primary Persona/i);
+  }
 });
 
 test("only the current four-section Lite assets are shipped", () => {

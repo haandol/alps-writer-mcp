@@ -103,12 +103,9 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /impl-blocks-proposed-prerequisite/);
   assert.match(out, /hook-admission-routing/);
   assert.match(out, /alps-batch-preserves-mandatory-nfr/);
-  assert.match(out, /alps-infers-before-asking/);
   assert.match(out, /alps-approval-digest-preserves-contract/);
   assert.match(out, /alps-high-load-suggests-feature-split/);
-  assert.match(out, /lite-alps-starts-from-concrete-hypothetical-case/);
-  assert.match(out, /lite-alps-selects-one-primary-persona/);
-  assert.match(out, /lite-alps-builds-intent-led-ideal-use-cases/);
+  assert.match(out, /lite-alps-follows-full-conversation/);
   assert.match(out, /lite-alps-skips-empty-optional-section/);
   assert.match(out, /lite-alps-records-explicit-exclusions/);
   assert.match(out, /impl-review-selects-risk-mode/);
@@ -924,33 +921,6 @@ FOCUS_SET | NFR은 최대 3개이므로 WCAG를 삭제
 === EVAL-END ===`,
     },
     {
-      name: "alps-infers-before-asking",
-      good: `[Section 1 승인 요청]
-문제: 북클럽 운영자는 추천 도서가 메신저 대화에 흩어져 다음 모임의 책을 정하는 데 시간이 걸린다.
-대상 사용자: 북클럽 운영자
-해결 전략: 회원이 후보 도서를 한곳에 추가하고 운영자가 다음 모임의 책을 확정한다.
-MVP 범위: 한 북클럽 지원
-AI-inferred: 문서 이름은 프로젝트 이름인 "북클럽 읽기 목록"을 사용한다.
-답변: 승인 / 수정 / 보류
-
-=== EVAL-VERDICT: PASS ===
-=== EVAL-FINDINGS ===
-INFERRED_DRAFT | 제공된 맥락으로 Section 1 전체 초안을 작성
-AI_INFERRED | 문서 이름 기본값과 근거를 승인 화면에 표시
-NO_REDUNDANT_QUESTION | 회수 가능한 정보를 다시 질문하지 않음
-APPROVAL_REQUIRED | 추론 초안도 저장 전 승인을 요구
-=== EVAL-END ===`,
-      bad: `Section 1 작성을 위해 다음을 알려주세요.
-1. 타깃 사용자는 누구인가요?
-2. 어떤 문제를 해결하나요?
-3. 해결 전략은 무엇인가요?
-
-=== EVAL-VERDICT: ASK ===
-=== EVAL-FINDINGS ===
-QUESTION | 모든 입력을 사용자에게 다시 질문
-=== EVAL-END ===`,
-    },
-    {
       name: "alps-approval-digest-preserves-contract",
       good: `[Feature 승인 요청: 팀 작업 세션]
 목적: 팀 작업 결과를 승인하고 보관한다.
@@ -1006,73 +976,20 @@ SPLIT_CANDIDATE | database
 === EVAL-END ===`,
     },
     {
-      name: "lite-alps-starts-from-concrete-hypothetical-case",
-      good: `해결하려는 구체적인 사례 하나를 설명해 주세요. 누가, 어떤 상황에서, 무엇을 하려다가 어떤 문제를 겪고 있다고 가정하나요?
+      name: "lite-alps-follows-full-conversation",
+      good: `이 PoC의 주 사용자는 누구이고, 여행 준비 과정에서 어떤 핵심 문제를 해결하려고 하나요?
 
 === EVAL-VERDICT: ASK ===
 === EVAL-FINDINGS ===
-CONCRETE_HYPOTHETICAL_CASE | 한 가지 구체적인 가정 문제 사례를 질문
-ASSUMED_PROBLEM | 실제 경험이 아니라 문제 가정을 확인
-NO_RECENT_EXPERIENCE | 최근 또는 실제 경험을 요구하지 않음
-NO_PERSONA_ENUMERATION | 페르소나 후보 목록을 요구하지 않음
+FOCUSED_QUESTION | 대상 사용자와 핵심 문제를 확인하는 한 번의 집중 질문
+MISSING_CONTEXT | Section 1에 필요한 대상 사용자와 핵심 문제가 아직 없음
+WAIT_FOR_ANSWER | 답변을 받은 뒤 Section 초안과 승인을 진행
 === EVAL-END ===`,
-      bad: `최근 실제로 겪은 사례와 가능한 페르소나 후보 세 명을 적어주세요.
-
-=== EVAL-VERDICT: ASK ===
-=== EVAL-FINDINGS ===
-RECENT_EXPERIENCE | 최근 실제 사례 요구
-PERSONA_ENUMERATION | 페르소나 후보 세 명 요구
-=== EVAL-END ===`,
-    },
-    {
-      name: "lite-alps-selects-one-primary-persona",
-      good: `프랜차이즈 소유자, 매장 관리자, 고객 중 이번에 해결할 한 사례의 주체는 누구인가요? 그 사람은 어떤 상황에서 무엇을 하려다가 어떤 문제를 겪고 있다고 가정하나요?
-
-=== EVAL-VERDICT: ASK ===
-=== EVAL-FINDINGS ===
-CASE_ANCHOR | 선택할 Primary Persona를 한 구체적인 가정 문제 사례에 연결
-PERSONA_SELECTION | 사용자가 명시한 세 후보 중 Primary Persona 한 명을 질문
-NO_SILENT_CHOICE | 사용자의 답변 전에는 페르소나를 임의로 선택하지 않음
-NO_COMPOSITE | 여러 후보를 복합 페르소나로 합치지 않음
-NO_SAVE_BEFORE_SELECTION | 한 명이 확정되기 전에는 Section 1을 저장하지 않음
-=== EVAL-END ===`,
-      bad: `Primary Persona: 프랜차이즈 소유자
-매장 관리자와 고객의 요구도 합쳐서 복합 페르소나로 작성하겠습니다.
+      bad: `대상 사용자는 개인 여행자이며 문제는 준비 누락입니다. Section 1을 저장했습니다.
 
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
-PERSONA_SELECTED | 프랜차이즈 소유자를 자동 선택
-=== EVAL-END ===`,
-    },
-    {
-      name: "lite-alps-builds-intent-led-ideal-use-cases",
-      good: `Primary Persona: 독립 카페 소유자
-
-Core User Flow: 영업 전 발주 결정
-1. 소유자가 영업 시작 전 재고 현황을 연다.
-2. 소유자가 재고 부족 품목과 예상 수요를 확인한다.
-3. 소유자가 보충할 품목과 수량을 선택한다.
-4. 소유자가 발주 결정을 확정한다.
-완료 결과: 오늘 발주할 품목과 수량이 확정되어 보인다.
-
-프로모션 비교, 바리스타 교대 관리와 네트워크 단절 복구는 후속 범위로 둔다.
-
-=== EVAL-VERDICT: PASS ===
-=== EVAL-FINDINGS ===
-PRIMARY_PERSONA | 독립 카페 소유자 관점을 유지
-CORE_FLOW | 영업 전 재고 부족 확인과 발주 결정
-USER_ACTION_SEQUENCE | 현황 열기 → 부족 품목 확인 → 품목과 수량 선택 → 발주 확정
-COMPLETION_RESULT | 오늘 발주할 품목과 수량이 확정되어 보임
-DEFERRED_SCOPE | 프로모션 비교, 바리스타 교대와 네트워크 단절 복구는 Core User Flow에서 제외
-=== EVAL-END ===`,
-      bad: `사용자 시나리오:
-- 바리스타가 교대 관리를 완료한다.
-- 네트워크 단절 시 재시도와 복구를 수행한다.
-- 시스템이 재고를 분석하고 자동화한다.
-
-=== EVAL-VERDICT: PASS ===
-=== EVAL-FINDINGS ===
-IDEAL_USE_CASE | 전체 기능 목록
+AUTO_DRAFT | 사용자 답변 없이 Section 1을 완성하고 저장
 === EVAL-END ===`,
     },
     {

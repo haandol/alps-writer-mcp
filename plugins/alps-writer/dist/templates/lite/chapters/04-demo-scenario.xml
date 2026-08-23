@@ -3,14 +3,14 @@
     <description>
 - Describe the shortest connected execution of the approved Core User Flow.
 - Include only the starting context needed to run it.
-- For every step, state the Primary Persona action and visible expected product result.
+- For every step, state the user action and visible expected product result.
 - End with one observable overall pass result.
 - Keep tested claims inside the approved Overview, Solution and User Flow, and explicit Out of Scope boundary.
 - Do not replace the journey with a feature list or screen tour.
     </description>
     <example>
-| Step | Primary Persona action | Visible expected result |
-|------|------------------------|-------------------------|
+| Step | User action | Visible expected result |
+|------|-------------|-------------------------|
 | 1 | Enters an expression | Practice questions appear for that expression |
 | 2 | Answers the questions | The result appears and the expression is saved |
 

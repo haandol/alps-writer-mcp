@@ -5,6 +5,25 @@ alps-authoring/authoring-interaction category. Each ADR body describes only the 
 state, while the timeline of "what changed and why" accumulates here, newest first. Git
 preserves the individual diffs.
 
+## 2026-08-23 — Full 대화형 작성을 복원하고 Lite가 이를 따르도록 변경
+
+- **Current ADR**: [support-atomic-and-batch-approval](./0001-support-atomic-and-batch-approval.md)
+- **Change type**: requirement rule change
+- **What**: Full과 Lite에 질문 없는 완성 초안을 우선하는 inference-first 규칙 적용 → Lite
+  도입 직전 Full의 1–2개 집중 질문 기반 작성은 변경하지 않고 Lite가 같은 대화 방식을
+  사용하도록 변경.
+- **Why**: Lite는 간소화된 템플릿이어야 하며, 공통화를 이유로 기존 Full 작성 경험이나 LLM
+  출력 형식을 재설계해서는 안 된다.
+
+## 2026-08-23 — 승인과 저장 문서에서 AI-inferred 레이블 제거
+
+- **Current ADR**: [support-atomic-and-batch-approval](./0001-support-atomic-and-batch-approval.md)
+- **Change type**: requirement rule change
+- **What**: AI가 제안한 제품 상수를 `AI-inferred`로 구분하는 방식 → 제안값을 일반 계약
+  내용으로 표시하는 방식.
+- **Why**: 사용자는 작성 주체가 아니라 값과 규칙 자체를 검토하며, 승인용 메타데이터가 최종
+  문서에 남지 않아야 한다.
+
 ## 2026-08-22 — 질문 우선 작성에서 inference-first 작성으로 전환
 
 - **Current ADR**: [support-atomic-and-batch-approval](./0001-support-atomic-and-batch-approval.md)

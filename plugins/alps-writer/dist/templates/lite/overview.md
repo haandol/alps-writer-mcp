@@ -1,14 +1,13 @@
 # Lite ALPS Template
 
-Lite ALPS is a minimal product document for capturing a PoC overview, its solution and user flow,
-its explicit exclusions, and one executable Demo Scenario. It uses terminology that corresponds to
-Full ALPS while keeping a separate goal, authoring process, and document lifecycle.
+Lite ALPS is a four-section product document for a minimum PoC. It uses the same conversational
+authoring flow as Full ALPS while omitting implementation-preparation Sections.
 
 ## Sections
 
 1. Overview - Capture the Target User and Core Problem, then the expected Value and Core Hypothesis
 2. Solution and User Flow - Capture one minimum Solution Strategy and one Core User Flow
-3. Out of Scope - Optionally record explicit exclusions and claims the PoC will not prove in one list
+3. Out of Scope - Optionally record explicit exclusions in one list
 4. Demo Scenario - Run one executable scenario and record one observable overall pass result
 
 > **Authoring order:** 1 → 2 → 3 → 4.
@@ -17,103 +16,74 @@ Full ALPS while keeping a separate goal, authoring process, and document lifecyc
 ## Section References
 
 - Section 2 reviews Section 1.
-- Section 3 reviews Sections 1 and 2 only when the user has explicit exclusions.
+- Section 3 reviews Sections 1 and 2 when the user has explicit exclusions.
 - Section 4 reviews Sections 1 and 2, plus Section 3 when it was written.
 
-Call the referenced `read_alps_section(N)` tools before drafting a dependent section. If a required
-prerequisite is incomplete, complete it first instead of inventing missing content.
+Call the referenced `read_alps_section(N)` tools before working on a dependent Section. If a
+required prerequisite is incomplete, complete it first.
 
-## Conversation Workflow
+## Conversation Guide
 
-This workflow uses **inference-first authoring**.
+For every Section:
 
-- Start from one concrete hypothetical problem case. When it is not recoverable, ask who, in what
-  situation, is trying to do what, and what problem they are assumed to face. Do not require an
-  actual or recent experience or ask the user to enumerate persona candidates.
-- Infer one Primary Persona from that case. Only when the user explicitly presents multiple
-  candidate personas, briefly name them and ask the user to anchor the case to exactly one before
-  completing Section 1. Do not silently choose or combine explicitly presented candidates.
-- Keep that persona as the perspective for every required Section.
-- Treat Section questions as an extraction checklist. Infer a complete draft from user messages and
-  references, approved prior Sections, logical consequences, domain conventions, and dominant
-  reversible MVP defaults.
-- Ask no question when one safe draft is supported. Ask one focused question only when multiple
-  valid outcomes materially change product value, scope, money, permissions,
-  legal/regulatory/privacy/safety policy, irreversible data meaning, an external promise,
-  acceptance, or learning; ask at most two when inseparable.
-- Present a concise plain-text approval digest and save only after explicit approval.
-- Use atomic confirmation by default. Batch confirmation is allowed only when the user explicitly
-  requests it or provides a complete structured source covering several Sections.
-- Skip Section 3 when the user has no explicit exclusions. Do not ask for exclusions merely to fill
-  the template.
+1. Call `get_lite_alps_section_guide(N)`.
+2. Call `get_lite_alps_section(N)`.
+3. Explain the Section's purpose briefly.
+4. Ask one focused question, or at most two closely related questions.
+5. Wait for the user's response and integrate it iteratively.
+6. When the Section is complete, present a concise plain-text approval digest.
+7. Save only after explicit approval with `save_alps_section`.
 
-## Minimal Input Rule
+Use atomic confirmation by default. Batch confirmation is allowed only when the user explicitly
+requests it or provides a complete structured source covering several Sections. Batch mode keeps
+every Section as a separate approval and save unit.
 
-Do not expand Golden Circle, Lean Startup, or Working Backwards into separate required documents,
-questionnaires, or method-specific fields. Preserve their useful decisions through a few integrated
-inputs:
+## Section Scope
 
-- Overview: one Target User and Core Problem and one Value and Core Hypothesis.
-- Solution and User Flow: one Solution Strategy and one Core User Flow.
-- Out of Scope: one optional Explicit Exclusions list.
-- Demo Scenario: one `4.1 Demo Scenario` subsection.
+### Section 1 — Overview
 
-Ask for extra flows, metrics, assumptions, FAQs, edge cases, or experiments only when the first PoC
-cannot be built or evaluated without them.
+- `Target User and Core Problem`: identify the main user and the problem the PoC should address.
+- `Value and Core Hypothesis`: state the expected value and the main belief the PoC should test.
+- Ask only for the context needed by these two inputs.
 
-## Overview Rule
+### Section 2 — Solution and User Flow
 
-Section 1 explains why the PoC deserves attention before any solution is selected.
+- `Solution Strategy`: state the minimum product-level approach and visible PoC scope.
+- `Core User Flow`: state the starting context, sequential user actions, visible product responses,
+  and observable completion.
+- Add another flow only when the user confirms it is required for the first PoC.
 
-- Target User and Core Problem combines one Primary Persona, the concrete situation, attempted
-  action, assumed problem, and its present consequence.
-- Value and Core Hypothesis combines the customer value, the team or organizational meaning, and
-  the single most important belief the PoC should test.
-- Do not require a detailed current-alternative analysis, business metric, customer promise,
-  hypothesis inventory, or FAQ.
+### Section 3 — Out of Scope
 
-## Solution and User Flow Rule
+- This Section is optional.
+- Record only exclusions the user explicitly confirms.
+- Do not ask for exclusions just to fill the template or turn unresolved choices into exclusions.
 
-Section 2 defaults to one solution sketch and one core flow.
+### Section 4 — Demo Scenario
 
-- Solution Strategy combines the product-level approach and minimum user-visible PoC scope.
-- Core User Flow preserves the starting context, sequential persona actions, visible product
-  responses, and observable completion result.
-- Add another flow only when the core hypothesis cannot be exercised without it.
-- Do not introduce Feature IDs, implementation layers, detailed state matrices, or edge-case
-  inventories.
-
-## Demo Scenario Rule
-
-Section 4 follows the Full ALPS shape: one Section and one same-named subsection.
-
-- Demo Scenario checks whether the minimum PoC behaves as intended. Include only necessary starting
-  context, sequential persona actions, visible expected results, and one overall pass result.
-- Keep every tested claim inside the approved Overview, Solution and User Flow, and any explicit Out
-  of Scope boundary.
-- Do not add a separate Learning Check or learning-decision field.
-- Do not replace the scenario with a capability list or screen tour.
+- Use one `4.1 Demo Scenario` subsection.
+- Include the necessary starting context, sequential actions, visible expected results, and one
+  overall pass result.
+- Keep the scenario inside the approved Sections 1-2 and any explicit Section 3 boundary.
 
 ## Approval Digest
 
 The digest is a disposable reading aid, not another document.
 
-- Include the approval unit's intent, confirmed scope, mandatory information, applicable values and
-  rules, and observable completion.
-- Mark important constants not directly supplied by the user as `AI-inferred` with a short basis.
+- Include the approval unit's purpose, confirmed scope, mandatory information, applicable values
+  and rules, observable completion, and unresolved questions.
+- Show proposed values as ordinary document content; do not add inference-origin labels.
 - Never save a requirement, scope boundary, success condition, or exclusion absent from the digest.
 - Show the full pending content when requested.
 - End with clear approve, revise, and defer choices.
 
 ## Scope Boundary
 
-Lite ALPS decides the minimum PoC and its acceptance demo. It does not claim implementation
-readiness. Its authoring, resume, status, completion, and export flow never reads or updates a Full
-ALPS document, and Full ALPS authoring never uses Lite state.
+Lite ALPS is a reduced Full ALPS template, not a separate product methodology. Its conversation,
+approval, and save behavior follows Full ALPS.
 
-Preserve any confirmed permission, privacy, safety, limit, or failure guarantee that the PoC itself
-must honor. Do not ask for architecture, technology, interfaces, storage, deployment, libraries,
-code structure, or internal tuning.
+Lite does not ask for architecture, technology stack, interfaces, storage, deployment, libraries,
+code structure, NFRs, detailed Feature specifications, implementation plans, or ADR handoff.
 
-Uncertainty is not the same as exclusion. Record an item in Section 3 only when the user explicitly
-confirms that this PoC will not cover or prove it.
+Lite and Full keep separate document state, resume, completion, and export. Completing Lite never
+changes or completes a Full document.

@@ -99,23 +99,13 @@ agent exit, or no output).
    - `alps-approval-digest-preserves-contract` checks that concise raw-text
      approval omits implementation detail without dropping values, permissions,
      state rules, or the Demo checkpoint.
-   - `alps-infers-before-asking` checks inference-first Full ALPS authoring:
-     recoverable business variables become a complete Section draft, important
-     inferred constants stay visible, redundant questions disappear, and
-     explicit approval remains required.
    - `alps-high-load-suggests-feature-split` checks that a Section 7 Feature at
      `7/10` or higher receives two or three user-behavior split candidates,
      retains the original-Feature option, and never becomes a blocking gate.
-   - `lite-alps-starts-from-concrete-hypothetical-case` ↔
-     `lite-alps-selects-one-primary-persona` ↔
-     `lite-alps-builds-intent-led-ideal-use-cases` check the Lite PRD
-     perspective rule. Missing problem context produces one concrete
-     hypothetical-case question without persona enumeration or recent-experience
-     evidence. Explicit unresolved persona candidates produce one case-anchored
-     selection question with no silent or composite choice. After selection,
-     the minimum Core User Flow stays under that persona with sequential user
-     actions and an observable completion while secondary personas and edge
-     cases remain deferred.
+   - `lite-alps-follows-full-conversation` checks that Lite uses the original
+     Full ALPS conversation pattern: when Section context is missing, ask one or
+     at most two focused questions and wait for the user's answer instead of
+     auto-completing the Section.
    - `lite-alps-skips-empty-optional-section` ↔
      `lite-alps-records-explicit-exclusions` check both directions of current
      Lite Section 3. No explicit exclusions means skip the Section and continue

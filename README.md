@@ -17,7 +17,7 @@ The two are split so that **adr-writer never references ALPS**. The only couplin
 
 It fixes the format (9 sections, explicit dependencies, vertical-slice features) and inverts the authoring loop: the **agent asks focused questions, the human answers**, with no section saved without confirmation. Out of Scope is a first-class section so the agent knows what _not_ to build.
 
-**Lite ALPS** is a separate 4-section process for planners and PMs deciding what minimum PoC to build and what to demonstrate. It selects one Primary Persona, records that persona's core ideal use cases, and defines the shortest intent-revealing demo. Its fourth section records explicit exclusions only and is optional. Lite ALPS has no authoring, state, completion, transition, or source-material relationship with Full ALPS.
+**Lite ALPS** is a 4-section simplification of Full ALPS for planners and PMs defining a minimum PoC. It keeps Full's focused-question conversation and approval flow while reducing the document to Overview, Solution and User Flow, optional Out of Scope, and one executable Demo Scenario. Lite and Full keep independent files, state, and completion.
 
 See [`about-alps.md`](./plugins/alps-writer/templates/alps/about-alps.md) for the full design rationale and how ALPS feeds into the ADR-driven cycle.
 
@@ -51,7 +51,7 @@ Three independent entry flows, driven by `$skill-name` in Codex or `/skill-name`
 - **PRD-first** — `/alps-init` → `/feature-to-adr` → `/adr-impl` → `/adr-impl-refactor` (automatic) → `/adr-impl-review` (completion gate) → `Accepted`
 - **ADR-only** — `/adr-new` → `/adr-impl` → `/adr-impl-refactor` (automatic) → `/adr-impl-review` (completion gate) → `Accepted`
 
-Lite ALPS and Full ALPS have different goals and completely separate authoring and management lifecycles. Neither reads, updates, converts into, or shares completion state with the other.
+Lite ALPS reuses Full ALPS's conversation-led authoring behavior but keeps an independent document lifecycle. Neither reads, updates, converts into, or shares completion state with the other.
 
 Run `/adr-sync` when review finds implementation-fact drift, after broad refactors or manual ADR edits, or as a periodic audit; it is not a mandatory deep scan after every small implementation.
 
@@ -64,7 +64,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 **alps-writer (PRD)**
 
 - 9-section ALPS (PRD) template with structured XML templates, conversation guides, and per-Feature demos connected to the end-to-end demo scenario
-- 4-section Lite ALPS template for deciding what minimum PoC to build, how its core ideal use cases work, and what to demonstrate; explicit exclusions are optional
+- 4-section Lite ALPS template using Full's focused-question authoring flow for Overview, Solution and User Flow, optional exclusions, and an executable demo
 - Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
 - Contract-complete plain-text approval digests — concise raw-text views preserve every requirement value and rule before subsection-level persistence
 - Document management — create, save, load, and export as clean Markdown

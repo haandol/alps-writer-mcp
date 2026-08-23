@@ -31618,11 +31618,10 @@ ${content}
 ---
 \u26A0\uFE0F CONVERSATION MODE REQUIRED:
 1. Call ${guideTool}(N) before working on any section
-2. Use inference-first drafting from the loaded document, conversation, references, prior Sections, logical consequences, and safe domain defaults
-3. Ask no question when one safe draft is supported; otherwise ask only when material uncertainty changes value, scope, money, permissions, legal/regulatory/privacy/safety policy, data meaning, an external promise, acceptance, or learning
-4. Mark important constants as AI-inferred with their basis
-5. Get explicit "yes" confirmation before calling save_alps_section()
-NEVER save inferred or generated content without user approval.`;
+2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
+3. Wait for user response before proceeding
+4. Get explicit "yes" confirmation before calling save_alps_section()
+NEVER save generated content without user approval.`;
   }
   saveSection(section, subsectionId, title, content) {
     const document = this.readWorkingDocument();
@@ -31794,15 +31793,13 @@ var server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.8.2" },
+  { name: "alps-writer", version: "0.8.3" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS and Lite ALPS product documents.
 
 ALPS defines each feature as a vertical slice \u2014 a single feature that cuts through all layers (UI \u2192 API \u2192 Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store. End each Feature's Acceptance Criteria with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result; do not duplicate the Feature's flow, errors, or acceptance rules in a separate demo subsection.
 
-Lite ALPS is a separate PoC authoring process with a different goal and lifecycle from Full ALPS. It uses Full-aligned names with minimal integrated inputs: one Target User and Core Problem and Value and Core Hypothesis, one Solution Strategy and Core User Flow, one optional Explicit Exclusions list, and one executable Demo Scenario. It never reads, updates, transitions into, or shares authoring state with a Full ALPS document. Start Section 1 from one concrete hypothetical problem case: who, in what situation, is trying to do what, and what problem they are assumed to face. Do not require an actual or recent experience. Infer one Primary Persona from that case without asking the user to enumerate personas. Only when the user explicitly presents multiple candidate personas, ask them to anchor the case to exactly one Primary Persona. Default to one core user flow. Section 3 is optional. Section 4 is required and contains one 4.1 Demo Scenario.
-
-Full and Lite ALPS use inference-first authoring. Treat every guide's questions as an extraction checklist, not an interview script. Before asking, use the user's messages and references, approved prior Sections, logical consequences of confirmed contracts, established domain conventions, and dominant reversible MVP defaults. Convert recoverable business variables into concrete implementation-independent product constants. Ask no question when one safe draft is supported. Ask one focused question only when multiple valid outcomes remain and the choice changes product value, scope, money, permissions, legal/regulatory/privacy/safety policy, irreversible data meaning, an external promise, acceptance, or learning. Ask at most two only when they cannot be separated. Mark important constants not directly supplied by the user as AI-inferred with a short basis in the approval digest. Inferred content is never saved before explicit approval.
+Lite ALPS is a four-section, product-level simplification of Full ALPS for a minimum PoC. It uses the same conversational authoring pattern as Full ALPS: explain the current section, ask one focused question or at most two closely related questions, integrate the user's answer, present an approval digest, and save only after confirmation. Lite reduces the template to Target User and Core Problem, Value and Core Hypothesis, Solution Strategy, Core User Flow, optional Explicit Exclusions, and one executable Demo Scenario. Its document state and lifecycle remain independent from Full ALPS, and Lite support does not alter Full ALPS prompts and guides.
 
 <TRIGGER>
 MUST use this server's tools when the user wants to:
@@ -31842,21 +31839,17 @@ Keywords: PRD, ALPS, Lite ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \
 - NEVER proceed without user confirmation
 - ALWAYS confirm progress at the SECTION level. Lite Section 3 is optional and may be skipped after stating that no explicit exclusions were provided.
 - Approval digests MUST remain readable as raw text and include every contract-bearing value, rule, permission, state, transition, scope boundary, and success condition. Omit repeated explanation, examples, Markdown decoration, and implementation detail. Do not name omitted implementation details or add an exclusion list for them.
-- Generalization means implementation independence, not vagueness. Preserve exact values, allowed states, mandatory inputs, permissions, ordering, uniqueness, units, transitions, and success conditions whenever the product must honor them.
-- Never re-ask for information recoverable from the conversation, references, approved Sections, logical consequences, or an established safe default. Never silently infer protected product policy.
 - NEVER save a requirement contract that was absent from the approval digest. Show the full pending content when the user requests it.
 - Batch approval requires explicit opt-in or a complete structured source; each section and Feature remains a separate save unit.
 - For Section 7, each Feature 7.x is one approval and save unit. Its 7.x.1-7.x.6 fields stay together.
 - If a Section 7 Feature's comprehension load is 7/10 or higher, suggest up to three independently demonstrable user-behavior splits before approval. The suggestion never blocks approval or saving, and the user may keep the original Feature.
 - Lite ALPS has four fixed Sections: Overview, Solution and User Flow, optional Out of Scope, and Demo Scenario.
-- Start Lite Section 1 from one concrete hypothetical problem case. Ask who, in what situation, is trying to do what, and what problem they are assumed to face only when that case is not recoverable. Do not require an actual or recent experience or ask the user to enumerate persona candidates.
-- Infer one Primary Persona from the case. Only when the user explicitly presents multiple candidate personas, ask them to anchor the case to exactly one before saving Section 1.
-- Keep one confirmed Primary Persona throughout current Lite ALPS. Default to one Core User Flow with starting context, sequential actions, visible product responses, and observable completion.
+- Lite ALPS follows Full ALPS's conversation pattern: ask one focused question at a time, or at most two closely related questions, and integrate the user's answer before approval.
 - Section 1 has only Target User and Core Problem and Value and Core Hypothesis. Section 2 has only Solution Strategy and Core User Flow. Section 3 has one optional Explicit Exclusions list. Section 4 has one 4.1 Demo Scenario.
 - Section 4 must be executable as an acceptance test with sequential actions, visible expected results, and one overall pass result. Do not add a separate Learning Check.
-- Do not expand Golden Circle, Lean Startup, or Working Backwards into separate required documents, PR/FAQs, metric frameworks, assumption inventories, experiment plans, or method-specific questionnaires. Ask for more only when the first PoC cannot be built or evaluated without it.
-- Do not silently select or combine explicitly presented persona candidates. Do not invent exclusions or require optional Section 3.
-- Lite ALPS and Full ALPS are unrelated authoring and management processes. Never treat one as the next step, source, migration target, or status owner of the other.
+- Do not add architecture, NFR, implementation-detail, or ADR-handoff questions to Lite ALPS.
+- Do not invent exclusions or require optional Section 3.
+- Lite and Full keep independent document state and completion; Lite is not a transition into Full.
 </RULES>`
   }
 );
@@ -31978,8 +31971,8 @@ server.tool(
   `Load an existing ALPS or Lite ALPS document to resume editing. The document profile is detected automatically.
 \u26A0\uFE0F CRITICAL: After loading, you MUST follow the conversation guide:
 1. Call the matching get_alps_section_guide(N) or get_lite_alps_section_guide(N)
-2. Infer the draft from the loaded document, conversation, references, prior Sections, and safe domain defaults
-3. Ask only when material uncertainty remains; otherwise present the approval digest directly
+2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
+3. Wait for user response before proceeding
 4. Get explicit confirmation before saving each section`,
   {
     doc_path: external_exports.string().min(1).describe("Path to the .alps.xml or .lite.alps.xml file")

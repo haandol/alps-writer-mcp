@@ -1,15 +1,14 @@
 <section id="1" title="Overview">
   <subsection id="1.1" title="Target User and Core Problem">
     <description>
-- Start from one concrete hypothetical case: identify who, in what situation, is trying to do what, what problem they are assumed to face, and the present consequence.
-- Infer exactly one Primary Persona from that case. Do not require an actual or recent experience or ask the user to enumerate persona candidates.
+- Identify the main target user and the core problem this PoC should address.
+- Include the user's situation or current consequence when it helps explain the problem.
 - Mention the current workaround or evidence only when it materially clarifies the problem.
-- Only if the user explicitly presents several candidate personas, ask them to anchor the case to exactly one. Do not silently select or combine the candidates.
     </description>
   </subsection>
   <subsection id="1.2" title="Value and Core Hypothesis">
     <description>
-- State the value the Primary Persona should gain and why that matters to the team or organization.
+- State the value the target user should gain and why that matters.
 - State the single most important belief this PoC should test.
 - Keep it concise. Do not require a metric, customer promise, hypothesis inventory, or FAQ unless the user already has one.
 - Do not invent business claims or measures the user did not provide or approve.

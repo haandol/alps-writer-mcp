@@ -772,22 +772,21 @@ test("alps-init defaults to atomic confirmation but supports explicit batch appr
   assert.doesNotMatch(nfr, /Maximum 3 non-functional requirements/);
 });
 
-// Section 7 is where a requirement value first enters the pipeline. The guide
-// must derive a grounded candidate before asking, expose inference in the digest,
-// and keep unsafe product-policy gaps as targeted questions.
+// Section 7 is where a requirement value first enters the pipeline. Preserve
+// the original Full ALPS conversation that asks the user for those contracts.
 test("ALPS Section 7 derives and confirms the values the result must honor", () => {
   for (const dir of ["src", "dist"]) {
     const guide = read(path.join(PLUGINS_ROOT, "alps-writer", dir, "guides", "07.md"));
     const label = `alps-writer/${dir}/guides/07.md`;
     assert.match(guide, /limits, quotas, retention periods, size caps/, label);
-    assert.match(guide, /dominant reversible default/, label);
-    assert.match(guide, /AI-inferred/, label);
-    assert.match(guide, /Ask only when multiple valid values materially change/, label);
-    assert.match(guide, /Never silently invent a requirement value/, label);
+    assert.match(guide, /Are there values and rules the result must honor/, label);
+    assert.doesNotMatch(guide, /AI-inferred/, label);
+    assert.match(guide, /Never invent a requirement value the user did not give/, label);
     // the rule cuts both ways — tuning constants stay excluded
     assert.match(guide, /tuning constants/, label);
     // requirements are not only numbers
-    assert.match(guide, /states, transitions, mandatory inputs, permissions/, label);
+    assert.match(guide, /states\/values are allowed and which transitions are forbidden/, label);
+    assert.match(guide, /what input is mandatory, who may see or do what/, label);
   }
 });
 

@@ -453,11 +453,10 @@ export class DocumentService {
 ---
 ⚠️ CONVERSATION MODE REQUIRED:
 1. Call ${guideTool}(N) before working on any section
-2. Use inference-first drafting from the loaded document, conversation, references, prior Sections, logical consequences, and safe domain defaults
-3. Ask no question when one safe draft is supported; otherwise ask only when material uncertainty changes value, scope, money, permissions, legal/regulatory/privacy/safety policy, data meaning, an external promise, acceptance, or learning
-4. Mark important constants as AI-inferred with their basis
-5. Get explicit "yes" confirmation before calling save_alps_section()
-NEVER save inferred or generated content without user approval.`;
+2. Ask 1-2 focused questions at a time - DO NOT auto-generate content
+3. Wait for user response before proceeding
+4. Get explicit "yes" confirmation before calling save_alps_section()
+NEVER save generated content without user approval.`;
   }
 
   saveSection(section: number, subsectionId: string, title: string, content: string): string {
