@@ -103,9 +103,18 @@ agent exit, or no output).
      `7/10` or higher receives two or three user-behavior split candidates,
      retains the original-Feature option, and never becomes a blocking gate.
    - `lite-alps-follows-full-conversation` checks that Lite uses the original
-     Full ALPS conversation pattern: when Section context is missing, ask one or
-     at most two focused questions and wait for the user's answer instead of
-     auto-completing the Section.
+     Full ALPS approval boundary for user-owned Section 1 context: when the
+     target user and problem are missing, ask one or at most two focused
+     questions and wait for the user's answer instead of inventing them.
+   - `lite-alps-asks-business-impact-before-solution` checks the next Section 1
+     step: once the target user and problem are known, ask for Desired Business
+     Impact and why it matters without pulling solution or demo design forward.
+   - `lite-alps-proposes-solution-from-business-impact` ↔
+     `lite-alps-generates-demo-from-essential-user-experiences` check the working-backwards
+     path. After Desired Business Impact is approved, Section 2 proposes the
+     minimum solution and Essential User Experiences without asking the user to
+     design a flow; Section 4 then proposes the concrete starting state, input,
+     user actions, and visible results from those outcome-only experiences.
    - `lite-alps-skips-empty-optional-section` ↔
      `lite-alps-records-explicit-exclusions` check both directions of current
      Lite Section 3. No explicit exclusions means skip the Section and continue

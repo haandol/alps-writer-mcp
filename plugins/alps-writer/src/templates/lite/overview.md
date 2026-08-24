@@ -5,10 +5,10 @@ authoring flow as Full ALPS while omitting implementation-preparation Sections.
 
 ## Sections
 
-1. Overview - Capture the Target User and Core Problem, then the expected Value and Key Assumption
-2. Solution and Acceptance Tests - Capture one minimum Solution Strategy and every Required Acceptance Test
+1. Overview - Capture the Target User and Core Problem, then the Desired Business Impact
+2. Solution and Essential User Experiences - Propose one minimum Solution Strategy and every Essential User Experience
 3. Out of Scope - Optionally record explicit exclusions in one list
-4. Demo Scenario - Automatically generate and show one executable scenario that covers every required test
+4. Demo Scenario - Work backward to propose one executable scenario that demonstrates every essential experience
 
 > **Authoring order:** 1 → 2 → 3 → 4.
 > Section 3 is optional and may remain unwritten. Section 4 is required.
@@ -45,16 +45,21 @@ every Section as a separate approval and save unit.
 ### Section 1 — Overview
 
 - `Target User and Core Problem`: identify the main user and the problem the PoC should address.
-- `Value and Key Assumption`: state the expected value and the main belief guiding the PoC.
-- Ask only for the context needed by these two inputs.
+- `Desired Business Impact`: state the final outcome the target user should gain and why it matters.
+- Preserve a measurement signal when the user already has one, but do not require a metric.
+- Do not ask for a solution, screen, starting state, user-action sequence, or demo procedure.
 
-### Section 2 — Solution and Acceptance Tests
+### Section 2 — Solution and Essential User Experiences
 
-- `Solution Strategy`: state the minimum product-level approach and visible PoC scope.
-- `Required Acceptance Tests`: list every product behavior the PoC must demonstrate.
-- Give each test a distinct name, starting condition, user action, and observable pass condition.
+- Work backward from the approved Desired Business Impact and propose Section 2 before asking the
+  user to design a solution or demo flow.
+- `Solution Strategy`: propose the minimum product-level approach and visible PoC scope.
+- `Essential User Experiences`: propose every user experience the PoC must not omit.
+- Give each experience a distinct name, user-observable result, and contribution to the Desired
+  Business Impact.
+- Leave starting states, demo inputs, sequential actions, and screen flow to Section 4.
 - Preserve confirmed values and rules that decide whether the test passes.
-- Follow the complete multi-test example in the Section 2 template.
+- Ask only when a protected product decision cannot be safely proposed.
 
 ### Section 3 — Out of Scope
 
@@ -67,12 +72,15 @@ every Section as a separate approval and save unit.
 ### Section 4 — Demo Scenario
 
 - Use one `4.1 Demo Scenario` subsection.
-- Automatically generate the shortest scenario that covers every approved Required Acceptance Test.
-- Show the complete scenario before approval, with the required test covered by every step or
+- Work backward from the Desired Business Impact and approved experiences to propose the shortest scenario
+  that demonstrates every Essential User Experience.
+- Propose the starting state, representative input, sequential user actions, and visible results.
+- Show the complete scenario before approval, with the essential experience demonstrated by every step or
   execution block.
-- Ask a focused question only when a required test lacks an executable starting state or input.
-- The overall pass result requires every Required Acceptance Test to pass.
-- Treat a passing demo as product-behavior acceptance, not proof of user value or market validity.
+- Ask a focused question only when the demo exposes a protected product decision.
+- The overall pass result requires every Essential User Experience to be observable.
+- Show how the scenario supports the Desired Business Impact without treating a passing demo as
+  proof of business impact or market validity.
 - Keep the scenario inside the approved Sections 1-2 and any explicit Section 3 boundary.
 
 ## Approval Digest

@@ -48,7 +48,7 @@ test("Lite reuses Full's focused-question authoring without changing Full", () =
 
   assert.match(liteSkill, /same conversational authoring flow as Full ALPS/i);
   assert.match(liteOverview, /Ask one focused question, or at most two closely related questions/i);
-  assert.match(server, /same conversational authoring pattern as Full ALPS/i);
+  assert.match(server, /same conversational approval pattern as Full ALPS/i);
   assert.match(documents, /Ask 1-2 focused questions at a time/i);
 
   for (const guidePath of Array.from(

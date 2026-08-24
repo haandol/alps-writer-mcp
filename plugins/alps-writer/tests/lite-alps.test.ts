@@ -38,11 +38,11 @@ afterEach(() => {
   }
 });
 
-test("Lite ALPS exposes acceptance-test names and one Demo Scenario subsection", () => {
+test("Lite ALPS exposes business-impact and essential-experience names", () => {
   assert.deepEqual(LITE_SECTION_NUMBERS, [1, 2, 3, 4]);
   assert.deepEqual(Object.values(LITE_SECTION_TITLES), [
     "Overview",
-    "Solution and Acceptance Tests",
+    "Solution and Essential User Experiences",
     "Out of Scope",
     "Demo Scenario",
   ]);
@@ -52,9 +52,9 @@ test("Lite ALPS exposes acceptance-test names and one Demo Scenario subsection",
   assert.match(template.getOverview(), /1 → 2 → 3 → 4/);
   assert.match(template.getOverview(), /Section 3 is optional/i);
   assert.match(template.getOverview(), /Section 4 is required/i);
-  assert.match(template.getSection(1), /1\.2 Value and Key Assumption/);
+  assert.match(template.getSection(1), /1\.2 Desired Business Impact/);
   assert.match(template.getSection(2), /2\.1 Solution Strategy/);
-  assert.match(template.getSection(2), /2\.2 Required Acceptance Tests/);
+  assert.match(template.getSection(2), /2\.2 Essential User Experiences/);
   assert.match(template.getSection(3), /3\.1 Explicit Exclusions \(Optional\)/);
   assert.match(template.getSection(4), /4\.1 Demo Scenario/);
   assert.doesNotMatch(template.getSection(4), /4\.2|Learning Check/);
@@ -73,7 +73,7 @@ test("Full and Lite ALPS use one same-named Demo Scenario subsection", () => {
   assert.match(liteDemo, /overall pass result/i);
 });
 
-test("Lite templates stay at problem, product behavior, and acceptance resolution", () => {
+test("Lite templates stay at problem, essential-experience, and demo resolution", () => {
   const source = fs
     .readdirSync(LITE_CHAPTERS_DIR)
     .filter((name) => name.endsWith(".xml"))
@@ -84,9 +84,10 @@ test("Lite templates stay at problem, product behavior, and acceptance resolutio
   assert.doesNotMatch(source, /\bAPI\b|\bDatabase\b|UI\s*→\s*API/i);
   assert.doesNotMatch(source, /\bF\d+\b|State Matrix/i);
   assert.match(source, /Do not assign Feature IDs/i);
-  assert.match(source, /Value and Key Assumption/);
+  assert.match(source, /Desired Business Impact/);
   assert.match(source, /Solution Strategy/);
-  assert.match(source, /Required Acceptance Tests/);
+  assert.match(source, /Essential User Experiences/);
+  assert.doesNotMatch(source, /Required Acceptance Tests/);
   assert.match(source, /Demo Scenario/);
   assert.doesNotMatch(source, /Core User Flow/);
   assert.doesNotMatch(source, /Learning Check/);
@@ -102,11 +103,11 @@ test("optional Out of Scope does not block required Demo Scenario completion", (
   const requiredBySection: Record<number, [string, string][]> = {
     1: [
       ["1", "Target User and Core Problem"],
-      ["2", "Value and Key Assumption"],
+      ["2", "Desired Business Impact"],
     ],
     2: [
       ["1", "Solution Strategy"],
-      ["2", "Required Acceptance Tests"],
+      ["2", "Essential User Experiences"],
     ],
     4: [["1", "Demo Scenario"]],
   };
@@ -193,7 +194,7 @@ test("former Lite formats are rejected without modifying the original document",
   ]);
   const formerCurrent = liteDocument("former-current", [
     "Overview",
-    "Solution and User Flow",
+    "Solution and Acceptance Tests",
     "Out of Scope",
     "Demo Scenario",
   ]);
@@ -208,7 +209,7 @@ test("former Lite formats are rejected without modifying the original document",
   assert.equal(fs.readFileSync(formerEightPath, "utf8"), formerEight);
   assert.match(
     service.loadDocument(formerCurrentPath),
-    /Section 2 title must be "Solution and Acceptance Tests"/,
+    /Section 2 title must be "Solution and Essential User Experiences"/,
   );
   assert.equal(fs.readFileSync(formerCurrentPath, "utf8"), formerCurrent);
 });
@@ -238,22 +239,22 @@ test("Lite load rejects invalid fixed subsection schemas without modifying the o
         section(
           1,
           "Overview",
-          '<subsection id="1.2" title="Value and Core Hypothesis">old content</subsection>',
+          '<subsection id="1.2" title="Value and Key Assumption">old content</subsection>',
         ),
       ),
-      error: /Title for 1\.2 must be "Value and Key Assumption"/,
+      error: /Title for 1\.2 must be "Desired Business Impact"/,
     },
     {
-      name: "former-core-flow-title",
+      name: "former-acceptance-title",
       content: base.replace(
-        section(2, "Solution and Acceptance Tests", NOT_STARTED),
+        section(2, "Solution and Essential User Experiences", NOT_STARTED),
         section(
           2,
-          "Solution and Acceptance Tests",
-          '<subsection id="2.2" title="Core User Flow">old content</subsection>',
+          "Solution and Essential User Experiences",
+          '<subsection id="2.2" title="Required Acceptance Tests">old content</subsection>',
         ),
       ),
-      error: /Title for 2\.2 must be "Required Acceptance Tests"/,
+      error: /Title for 2\.2 must be "Essential User Experiences"/,
     },
     {
       name: "unknown-id",
@@ -333,7 +334,7 @@ test("profile mismatches preserve the original document", () => {
   assert.equal(fs.readFileSync(wrongOrderPath, "utf8"), wrongOrder);
 });
 
-test("Lite guidance uses Required Acceptance Tests and one generated Demo Scenario", () => {
+test("Lite guidance works backward from Desired Business Impact through Essential User Experiences", () => {
   const skill = fs.readFileSync(
     path.join(PACKAGE_ROOT, "skills", "lite-alps-init", "SKILL.md"),
     "utf8",
@@ -354,13 +355,14 @@ test("Lite guidance uses Required Acceptance Tests and one generated Demo Scenar
 
   for (const source of [skill, runtime, overview]) {
     assert.match(source, /Overview/);
-    assert.match(source, /Solution and Acceptance Tests/);
+    assert.match(source, /Solution and Essential User Experiences/);
     assert.match(source, /Out of Scope/);
     assert.match(source, /Demo Scenario/);
     assert.match(source, /Target User and Core Problem/);
-    assert.match(source, /Value and Key Assumption/);
-    assert.match(source, /Required Acceptance Tests/);
+    assert.match(source, /Desired Business Impact/);
+    assert.match(source, /Essential User Experiences/);
     assert.match(source, /4\.1 Demo Scenario/);
+    assert.doesNotMatch(source, /Required Acceptance Tests/);
     assert.match(source, /same conversational|same interaction|follows Full ALPS/i);
     assert.match(source, /independent|separate document/i);
   }
@@ -372,24 +374,28 @@ test("Lite guidance uses Required Acceptance Tests and one generated Demo Scenar
   assert.doesNotMatch(skill, /start a separate Full ALPS|use the Lite document as a reference/i);
   assert.doesNotMatch(guides, /technology stack|C4Context|C4Container|\bAPI\b|\bdatabase\b/i);
   assert.doesNotMatch(guides, /Full ALPS/i);
+  assert.doesNotMatch(guides, /Required Acceptance Tests|acceptance tests/i);
   assert.match(guides, /Do not invent non-goals/i);
   assert.match(guides, /overall pass result/i);
   assert.match(guides, /Do not require a separate Learning Check/i);
   assert.match(guides, /without a dedicated question/i);
-  assert.match(guides, /proof of user value or market validity/i);
-  assert.match(guides, /Automatically compose the shortest scenario/i);
-  assert.match(guides, /complete generated\s+scenario and its coverage/i);
+  assert.match(guides, /proof of business impact or market validity/i);
+  assert.match(guides, /Work backward|Reverse-engineer/i);
+  assert.match(guides, /Draft the smallest product-level Solution Strategy/i);
+  assert.match(guides, /Do not ask the user to supply a starting condition/i);
+  assert.match(guides, /Propose a concrete starting state/i);
+  assert.match(guides, /complete generated scenario and its experience coverage/i);
 });
 
-test("Required Acceptance Tests include an example and drive the generated Demo Scenario", () => {
-  const acceptanceTemplate = fs.readFileSync(
+test("Section 2 owns essential experiences while Section 4 owns the concrete demo method", () => {
+  const experienceTemplate = fs.readFileSync(
     path.join(
       PACKAGE_ROOT,
       "src",
       "templates",
       "lite",
       "chapters",
-      "02-solution-and-acceptance-tests.xml",
+      "02-solution-and-essential-user-experiences.xml",
     ),
     "utf8",
   );
@@ -399,22 +405,25 @@ test("Required Acceptance Tests include an example and drive the generated Demo 
   );
 
   assert.match(
-    acceptanceTemplate,
-    /Required test.*Starting condition.*User action.*Observable pass condition/s,
+    experienceTemplate,
+    /Essential user experience.*User-observable result.*Business impact contribution/s,
   );
-  assert.match(acceptanceTemplate, /Expression-specific questions appear/);
-  assert.match(acceptanceTemplate, /The practice result is saved/);
-  assert.match(acceptanceTemplate, /The saved expression is available later/);
-  assert.doesNotMatch(acceptanceTemplate, /Core User Flow/);
+  assert.doesNotMatch(experienceTemplate, /Required Acceptance Tests/);
+  assert.doesNotMatch(experienceTemplate, /\| Essential user experience \| Starting condition \|/);
+  assert.match(experienceTemplate, /Topic-specific practice begins/);
+  assert.match(experienceTemplate, /The conversation adapts to the learner/);
+  assert.match(experienceTemplate, /The learner controls the session/);
+  assert.doesNotMatch(experienceTemplate, /Core User Flow/);
 
-  assert.match(demoTemplate, /Automatically generate.*every approved Required Acceptance Test/is);
-  assert.match(demoTemplate, /Covers required test/);
-  assert.match(demoTemplate, /All three Required Acceptance Tests pass/);
-  assert.match(demoTemplate, /complete generated scenario and its test coverage/i);
-  assert.match(demoTemplate, /not as proof of user value or market validity/i);
+  assert.match(demoTemplate, /Work backward.*every experience/is);
+  assert.match(demoTemplate, /concrete starting state.*representative demo input.*user actions/is);
+  assert.match(demoTemplate, /Demonstrates essential experience/);
+  assert.match(demoTemplate, /All three Essential User Experiences are observable/);
+  assert.match(demoTemplate, /Business impact connection/i);
+  assert.match(demoTemplate, /not as proof of business impact or market validity/i);
 });
 
-test("Lite Section 1 follows Full's focused-question conversation", () => {
+test("Lite Section 1 asks for business impact without pulling demo design forward", () => {
   const runtime = fs.readFileSync(path.join(PACKAGE_ROOT, "src", "index.ts"), "utf8");
   const skill = fs.readFileSync(
     path.join(PACKAGE_ROOT, "skills", "lite-alps-init", "SKILL.md"),
@@ -430,19 +439,62 @@ test("Lite Section 1 follows Full's focused-question conversation", () => {
     "utf8",
   );
 
-  assert.match(runtime, /same conversational authoring pattern as Full ALPS/i);
+  assert.match(runtime, /same conversational approval pattern as Full ALPS/i);
   assert.match(skill, /ask one focused question or at most two closely related\s+questions/i);
   assert.match(overview, /Ask one focused question, or at most two closely related questions/i);
   assert.match(guide, /Who is the main target user, and what core problem/i);
+  assert.match(guide, /What final business impact should that user gain/i);
+  assert.match(guide, /Do not ask for a solution, screen, starting state/i);
   assert.match(chapter, /Identify the main target user and the core problem/i);
+  assert.match(chapter, /final business impact/i);
 
   for (const source of [runtime, skill, overview, guide, chapter]) {
-    assert.doesNotMatch(source, /inference-first|concrete hypothetical|Primary Persona/i);
+    assert.doesNotMatch(source, /concrete hypothetical|Primary Persona/i);
   }
+});
+
+test("Lite Section 2 proposes the solution and essential experiences before asking questions", () => {
+  const guide = fs.readFileSync(path.join(PACKAGE_ROOT, "src", "guides", "lite", "02.md"), "utf8");
+  const chapter = fs.readFileSync(
+    path.join(
+      PACKAGE_ROOT,
+      "src",
+      "templates",
+      "lite",
+      "chapters",
+      "02-solution-and-essential-user-experiences.xml",
+    ),
+    "utf8",
+  );
+
+  assert.match(guide, /Draft the smallest product-level Solution Strategy/i);
+  assert.match(guide, /Essential User Experience/i);
+  assert.match(guide, /before asking the user to design either one/i);
+  assert.match(
+    guide,
+    /Ask one focused question only when multiple valid\s+choices would change money/i,
+  );
+  assert.doesNotMatch(guide, /What is the smallest product-level solution/i);
+  assert.doesNotMatch(guide, /what starts it, what does the user do/i);
+  assert.match(chapter, /Present the proposal for revision or approval/i);
+  assert.match(chapter, /Section 4 owns those execution choices/i);
 });
 
 test("only the current four-section Lite assets are shipped", () => {
   assert.equal(fs.readdirSync(LITE_CHAPTERS_DIR).filter((name) => name.endsWith(".xml")).length, 4);
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        PACKAGE_ROOT,
+        "src",
+        "templates",
+        "lite",
+        "chapters",
+        "02-solution-and-acceptance-tests.xml",
+      ),
+    ),
+    false,
+  );
   assert.equal(
     fs.existsSync(
       path.join(

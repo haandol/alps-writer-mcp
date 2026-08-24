@@ -80,7 +80,7 @@ export const LITE_ALPS_PROFILE: DocumentProfile = {
   guidesDir: path.join(guidesDir, "lite"),
   sectionTitles: {
     1: "Overview",
-    2: "Solution and Acceptance Tests",
+    2: "Solution and Essential User Experiences",
     3: "Out of Scope",
     4: "Demo Scenario",
   },

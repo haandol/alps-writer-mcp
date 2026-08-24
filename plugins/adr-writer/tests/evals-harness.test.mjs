@@ -106,7 +106,9 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /alps-approval-digest-preserves-contract/);
   assert.match(out, /alps-high-load-suggests-feature-split/);
   assert.match(out, /lite-alps-follows-full-conversation/);
-  assert.match(out, /lite-alps-generates-demo-from-required-tests/);
+  assert.match(out, /lite-alps-asks-business-impact-before-solution/);
+  assert.match(out, /lite-alps-proposes-solution-from-business-impact/);
+  assert.match(out, /lite-alps-generates-demo-from-essential-user-experiences/);
   assert.match(out, /lite-alps-skips-empty-optional-section/);
   assert.match(out, /lite-alps-records-explicit-exclusions/);
   assert.match(out, /impl-review-selects-risk-mode/);
@@ -977,6 +979,24 @@ SPLIT_CANDIDATE | database
 === EVAL-END ===`,
     },
     {
+      name: "lite-alps-asks-business-impact-before-solution",
+      good: `이 직장인이 PoC를 통해 얻어야 할 최종 비즈니스 임팩트는 무엇이며, 그것이 왜 중요한가요?
+
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+BUSINESS_IMPACT_QUESTION | Desired Business Impact와 중요성을 확인
+BEFORE_SOLUTION | 솔루션이나 데모보다 비즈니스 임팩트를 먼저 확인
+FOCUSED_QUESTION | Section 1의 누락 정보만 한 질문으로 확인
+WAIT_FOR_ANSWER | 답변 전 초안 작성이나 저장을 하지 않음
+=== EVAL-END ===`,
+      bad: `어떤 솔루션과 화면을 만들까요? 시작 상태와 사용자 행동, 데모 절차를 알려주세요.
+
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+SOLUTION_FIRST | 비즈니스 임팩트보다 솔루션과 데모 흐름을 먼저 질문
+=== EVAL-END ===`,
+    },
+    {
       name: "lite-alps-follows-full-conversation",
       good: `이 PoC의 주 사용자는 누구이고, 여행 준비 과정에서 어떤 핵심 문제를 해결하려고 하나요?
 
@@ -994,27 +1014,60 @@ AUTO_DRAFT | 사용자 답변 없이 Section 1을 완성하고 저장
 === EVAL-END ===`,
     },
     {
-      name: "lite-alps-generates-demo-from-required-tests",
-      good: `자동 생성된 Demo Scenario
+      name: "lite-alps-proposes-solution-from-business-impact",
+      good: `Section 2 승인 요청
 
-| 단계 | 사용자 행동 | 보이는 예상 결과 | 커버하는 필수 인수 테스트 |
-| --- | --- | --- | --- |
-| 1 | "break the ice"를 입력한다 | 표현별 연습 문제가 보인다 | 표현별 연습 문제가 보인다 |
-| 2 | 문제에 답한다 | 결과가 보이고 표현이 저장된다 | 연습 결과가 저장된다 |
-| 3 | 표현 목록을 연다 | 저장한 표현을 다시 찾을 수 있다 | 저장한 표현을 다시 찾을 수 있다 |
+Solution Strategy:
+해외 출장 직장인이 업무 상황을 입력하면 AI 영어 강사가 상황별 질문으로 짧은 대화 연습을 제공한다.
 
-전체 통과 조건: 모든 Required Acceptance Tests의 통과 조건이 관찰된다.
+Essential User Experiences:
+- 상황별 연습이 시작된다: 선택한 업무 상황에 맞는 첫 영어 질문이 보인다. 자기소개 대화를 바로 연습하는 데 기여한다.
+- 대화가 답변에 맞춰 이어진다: 영어 답변 뒤 관련 응답과 다음 질문이 보인다. 실제 대화에 가까운 연습에 기여한다.
+- 사용자가 연습을 종료할 수 있다: 종료 뒤 완료 상태가 보인다. 제한된 준비 시간에 맞춘 연습에 기여한다.
+
 승인 / 수정 / 보류
 
 === EVAL-VERDICT: PASS ===
 === EVAL-FINDINGS ===
-AUTO_GENERATED_DEMO | 승인된 필수 인수 테스트에서 데모를 자동 생성
-COVERS_ALL_REQUIRED_TESTS | 세 필수 인수 테스트를 모두 커버
-SHOWS_FULL_SCENARIO | 전체 단계와 예상 결과 및 커버리지를 승인 전에 표시
-NO_RESTATEMENT_QUESTION | 실행 가능한 테스트가 있어 데모 흐름을 다시 질문하지 않음
-OVERALL_PASS_REQUIRES_ALL | 모든 필수 인수 테스트가 통과해야 전체 통과
+AI_PROPOSES_SOLUTION | Desired Business Impact에서 최소 Solution Strategy를 제안
+AI_PROPOSES_ESSENTIAL_EXPERIENCES | 빠져서는 안 되는 세 핵심 사용자 경험을 제안
+BUSINESS_IMPACT_TRACE | 각 핵심 사용자 경험이 출장 준비 시간과 대화 준비감에 기여
+NO_SOLUTION_DESIGN_QUESTION | 사용자에게 솔루션이나 데모 흐름 작성을 요구하지 않음
+APPROVAL_BEFORE_SAVE | 저장 전 승인, 수정, 보류 선택을 제시
 === EVAL-END ===`,
-      bad: `데모 흐름은 어떻게 구성할까요? 어떤 시작 상태와 입력을 사용할지 알려주세요.
+      bad: `어떤 최소 솔루션을 원하시나요? 시작 상태와 사용자 행동, 화면 결과를 알려주세요.
+
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+SOLUTION_DESIGN_QUESTION | 사용자가 솔루션과 데모 흐름을 직접 작성해야 함
+=== EVAL-END ===`,
+    },
+    {
+      name: "lite-alps-generates-demo-from-essential-user-experiences",
+      good: `역설계한 Demo Scenario
+
+시작 상태: 해외 출장을 앞둔 직장인이 영어 대화 연습 서비스를 연다.
+데모 입력: 해외 출장에서 자기소개하기
+
+| 단계 | 사용자 행동 | 보이는 예상 결과 | 보여주는 핵심 사용자 경험 |
+| --- | --- | --- | --- |
+| 1 | 자기소개 주제를 입력하고 대화를 시작한다 | AI 강사의 첫 영어 질문이 보인다 | 상황별 연습이 시작된다 |
+| 2 | 영어로 답한다 | 관련 영어 응답과 다음 질문이 보인다 | 대화가 사용자 답변에 맞춰 이어진다 |
+| 3 | 대화를 종료한다 | 대화가 멈추고 완료 상태가 보인다 | 사용자가 연습을 종료할 수 있다 |
+
+전체 통과 조건: 모든 Essential User Experiences가 관찰된다.
+비즈니스 임팩트 연결: 직장인이 짧은 시간에 자기소개를 반복 연습해 출장 준비 시간을 줄이고 대화를 시작할 준비감을 얻도록 지원한다. 데모는 실제 업무 성과를 증명하지 않는다.
+승인 / 수정 / 보류
+
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+AUTO_GENERATED_DEMO | 승인된 핵심 사용자 경험에서 구체적인 데모를 역설계
+COVERS_ALL_ESSENTIAL_EXPERIENCES | 세 핵심 사용자 경험을 모두 커버
+SHOWS_FULL_SCENARIO | 전체 단계와 예상 결과 및 커버리지를 승인 전에 표시
+NO_RESTATEMENT_QUESTION | 시작 상태와 행동을 사용자에게 묻지 않고 AI가 제안
+OVERALL_PASS_SHOWS_ALL | 모든 핵심 사용자 경험이 보여야 전체 통과
+=== EVAL-END ===`,
+      bad: `데모 흐름은 어떻게 구성할까요? 어떤 시작 상태와 입력, 사용자 행동을 사용할지 알려주세요.
 
 === EVAL-VERDICT: ASK ===
 === EVAL-FINDINGS ===

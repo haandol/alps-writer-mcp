@@ -6,7 +6,8 @@ argument-hint: "[project-name-or-lite-alps-path]"
 
 # lite-alps-init
 
-Create or resume a Lite ALPS document for a minimum PoC and its executable demo.
+Create or resume a Lite ALPS document that works backward from a desired business impact to a
+minimum PoC and its executable demo.
 
 > **Language**: talk to the user and write the document in the language the user uses. The skill,
 > templates, and guides are written in English only as agent instructions.
@@ -50,22 +51,29 @@ implementation readiness.
    - Save each approved subsection separately with
      `mcp__alps-writer__save_alps_section`.
 7. Section scope:
-   - **Section 1 — Overview**: ask for the target user and core problem, then the expected value and
-     key assumption that shapes the PoC direction. Keep the result in
-     `Target User and Core Problem` and `Value and Key Assumption`.
-   - **Section 2 — Solution and Acceptance Tests**: ask for the minimum Solution Strategy and every
-     product behavior the PoC must demonstrate. Save them as `Required Acceptance Tests`; each test
-     has a distinct name, starting condition, user action, and observable pass condition. Follow the
-     complete multi-test example in the template.
+   - **Section 1 — Overview**: ask for the target user and core problem, then the final business
+     impact that user should gain and why it matters. Keep the result in
+     `Target User and Core Problem` and `Desired Business Impact`. Preserve a measurement signal when
+     supplied, but do not ask for a solution, screen, starting state, action sequence, or demo flow.
+   - **Section 2 — Solution and Essential User Experiences**: work backward from the approved Desired Business
+     Impact and propose the minimum Solution Strategy and every product behavior the PoC must
+     demonstrate. Save the latter as `Essential User Experiences`; each experience has a distinct
+     name, user-observable result, and contribution to the Desired Business Impact. Do not ask the user
+     to design the solution, starting state, sequential actions, or screen flow. Ask only when a
+     protected product decision about money, permissions, law or regulation, privacy or safety,
+     irreversible data meaning, an external promise, or the acceptance boundary cannot be safely
+     proposed.
    - **Section 3 — Out of Scope**: record only exclusions the user explicitly confirms. Do not ask
      for exclusions merely to fill the optional Section. When there are no explicit exclusions and
      the approved boundary is not materially ambiguous, skip it without a dedicated question.
-   - **Section 4 — Demo Scenario**: automatically generate one `4.1 Demo Scenario` that covers every
-     approved Required Acceptance Test at least once. When the tests are executable, do not ask the
-     user to restate a flow. Show the complete generated scenario and test coverage before approval.
-     Each step or execution block names the test it covers, and the overall result passes only when
-     every required test passes. Ask only for a missing concrete start or input. Do not invent
-     connecting behavior or present a passing demo as proof of user value or market validity.
+   - **Section 4 — Demo Scenario**: work backward from the Desired Business Impact and approved
+     Essential User Experiences to propose one `4.1 Demo Scenario` that demonstrates every experience
+     at least once. Propose the concrete starting state, representative demo input, sequential user
+     actions, and visible expected results instead of asking the user to supply them. Show the
+     complete generated scenario, experience coverage, and business-impact connection before approval.
+     Each step or execution block names the experience it demonstrates, and the overall result passes
+     only when every essential experience is observable. Ask only when the demo exposes a protected product decision. Do not
+     present a passing demo as proof of actual business impact or market validity.
 8. The approval digest includes the applicable confirmed intent, scope, mandatory information,
    values and rules, expected result, and unresolved questions. Never save a requirement,
    exclusion, or Demo result absent from the digest. Show the full pending content when requested.

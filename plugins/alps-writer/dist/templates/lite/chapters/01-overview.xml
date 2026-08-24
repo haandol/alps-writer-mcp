@@ -6,11 +6,11 @@
 - Mention the current workaround or evidence only when it materially clarifies the problem.
     </description>
   </subsection>
-  <subsection id="1.2" title="Value and Key Assumption">
+  <subsection id="1.2" title="Desired Business Impact">
     <description>
-- State the value the target user should gain and why that matters.
-- State the single most important assumption that shapes the PoC direction.
-- Keep it concise. Do not require a metric, customer promise, assumption inventory, or FAQ unless the user already has one.
+- State the final business impact the target user should gain and why that matters.
+- Preserve a measurement signal when the user already has one, but do not require a metric to complete the Section.
+- Do not ask for a solution, screen, starting state, user-action sequence, or demo procedure.
 - Do not invent business claims or measures the user did not provide or approve.
     </description>
   </subsection>

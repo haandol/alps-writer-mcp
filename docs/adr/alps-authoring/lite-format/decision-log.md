@@ -4,6 +4,27 @@ This document is the **major decision-change history** of the alps-authoring/lit
 Each ADR body describes only the current state, while the timeline of "what changed and why"
 accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-08-24 — 인수 테스트 용어를 핵심 사용자 경험으로 통일
+
+- **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
+- **Change type**: requirement rule change
+- **What**: `Solution and Acceptance Tests`와 `Required Acceptance Tests` → `Solution and Essential
+User Experiences`와 `Essential User Experiences`; 데모 단계도 테스트 통과가 아니라 각 핵심
+  사용자 경험을 보여주는 관계로 표현.
+- **Why**: 사용자와 작성자가 개발·검증 용어인 인수 테스트를 구체 행동이나 기술 테스트로
+  오해하지 않고, Section 2가 소유하는 결과 중심 경험과 Section 4가 소유하는 실행 방법을
+  같은 용어 체계로 읽어야 한다.
+
+## 2026-08-24 — 비즈니스 임팩트에서 구체적인 데모를 역설계
+
+- **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
+- **Change type**: requirement rule change
+- **What**: 사용자가 실행 가능한 인수 테스트의 시작 조건과 행동을 먼저 작성하는 흐름 → 대상
+  사용자·문제와 Desired Business Impact를 먼저 승인하고, AI가 최소 솔루션과 관찰 가능한
+  인수 결과를 제안한 뒤 구체적인 Demo Scenario를 역설계하는 흐름.
+- **Why**: 사용자는 최종 비즈니스 결과와 보호된 제품 정책을 결정하고, 첫 PoC의 구체적인
+  실행 방법은 AI 제안으로 검토할 수 있어야 한다.
+
 ## 2026-08-23 — 필수 인수 테스트에서 Demo Scenario를 자동 생성
 
 - **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)

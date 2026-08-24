@@ -114,7 +114,7 @@ flowchart TD
 ### A. Lite ALPS — independent PoC authoring
 
 1. `/lite-alps-init` → write or resume a 4-section document for a minimum PoC and its demo.
-2. Follow the same focused-question conversation as Full ALPS to define the target user and problem, value and key assumption, minimum solution, and every Required Acceptance Test. Lite then automatically generates and shows a Demo Scenario that covers all approved tests.
+2. Confirm the target user, core problem, and Desired Business Impact. Lite works backward from that input: AI proposes the minimum Solution Strategy and Essential User Experiences, then proposes a concrete Demo Scenario with starting state, input, user actions, and visible results.
 3. Build and validate the mockup or PoC from the exported Lite ALPS document.
 
 Section 3 records explicit exclusions and is optional. Section 4 is the required Demo Scenario. Do
@@ -123,9 +123,11 @@ stated and the boundary is not materially ambiguous, skip Section 3 without a de
 the Markdown export omits the unwritten optional Section.
 
 Lite ALPS deliberately contains no technology stack, architecture, API, database, deployment,
-library, code-structure, or implementation-planning inputs. Lite reuses Full's conversation and
-approval pattern, but neither reads the other document, shares approval or completion state, uses
-the other as source material, or treats the other as a next step.
+library, code-structure, or implementation-planning inputs. It does not ask the user to design the
+minimum solution or demo flow from scratch; only protected product decisions such as permissions,
+safety, external promises, or acceptance boundaries trigger an additional question. Lite reuses
+Full's approval pattern, but neither reads the other document, shares approval or completion state,
+uses the other as source material, or treats the other as a next step.
 
 ### B. PRD-first — start from a Full ALPS spec (both plugins)
 

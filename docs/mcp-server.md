@@ -89,6 +89,7 @@ Document writes are guarded:
 - Markdown content is XML-escaped on disk and decoded when read or exported. Saves use an atomic replacement so interrupted writes do not leave a partially written document.
 - Section status is based on required template subsection coverage, not content length. Lite Section 3 reports optional and may remain unwritten; Section 4 requires one `4.1 Demo Scenario`.
 - Markdown export omits an unwritten optional Lite Section 3 while preserving every written Section in document order.
-- Lite documents must use the current `Overview → Solution and Acceptance Tests → Out of Scope → Demo Scenario` format. Other four-section shapes and former eight-section documents are rejected without modification.
+- Lite documents must use the current `Overview → Solution and Essential User Experiences → Out of Scope → Demo Scenario` format. Other four-section shapes and former eight-section documents are rejected without modification.
+- Lite Section 1 records `Desired Business Impact`; Section 2 proposes the minimum solution and Essential User Experiences; Section 4 proposes the concrete starting state, input, actions, and visible results.
 - Lite templates never request architecture, technology stack, API, database, deployment, library, or code-structure decisions.
 - Lite and Full ALPS have separate authoring and management state. Loading, completing, or exporting one never reads or changes the other.

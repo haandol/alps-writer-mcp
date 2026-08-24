@@ -1,28 +1,31 @@
 <section id="4" title="Demo Scenario">
   <subsection id="4.1" title="Demo Scenario">
     <description>
-- Automatically generate the shortest executable scenario that covers every approved Required Acceptance Test at least once.
-- Reuse shared setup and actions when the tests form one coherent flow. Use separate execution blocks inside this subsection when connecting them would require an unapproved product behavior.
-- For every step, state the user action, visible expected result, and the required test it covers.
-- Show the complete generated scenario and its test coverage before asking for approval.
-- End with one overall pass result that requires every Required Acceptance Test to pass.
-- Keep tested claims inside the approved Overview, Solution and Acceptance Tests, and explicit Out of Scope boundary.
-- Treat a passing demo as evidence that the approved product behavior runs, not as proof of user value or market validity.
-- Do not ask the user to rewrite a demo flow when the approved tests already contain executable starting conditions, actions, and pass conditions.
-- Do not omit a required test or invent product behavior merely to connect the steps.
+- Work backward from the Desired Business Impact and approved Essential User Experiences to generate the shortest executable scenario that demonstrates every experience at least once.
+- Propose the concrete starting state, representative demo input, sequential user actions, and visible expected results instead of asking the user to supply them.
+- Reuse shared setup and actions when the experiences form one coherent flow. Use separate execution blocks when connecting them would require an unapproved product contract.
+- For every step, state the user action, visible expected result, and the Essential User Experience it demonstrates.
+- Show the complete generated scenario, its experience coverage, and how it supports the Desired Business Impact before asking for approval.
+- End with one overall pass result that requires every Essential User Experience to be observable.
+- Keep demonstrated claims inside the approved Overview, Solution and Essential User Experiences, and explicit Out of Scope boundary.
+- Treat a passing demo as evidence that the approved product behavior runs, not as proof of business impact or market validity.
+- Ask only when the demo exposes a protected product decision about money, permissions, law or regulation, privacy or safety, irreversible data meaning, an external promise, or the acceptance boundary.
+- Do not omit an Essential User Experience or silently fix a protected product decision.
     </description>
     <example>
-**Starting state:** The learner has no saved expressions and opens the practice workspace.
+**Starting state:** A worker has an upcoming overseas business trip and opens the English practice service.
 
-**Demo input:** `break the ice`
+**Demo input:** `Introduce myself on an overseas business trip`
 
-| Step | User action | Visible expected result | Covers required test |
-|------|-------------|-------------------------|----------------------|
-| 1 | Enters `break the ice` | Practice questions appear for `break the ice` | Expression-specific questions appear |
-| 2 | Answers the questions | The result appears and `break the ice` is saved | The practice result is saved |
-| 3 | Opens the expression list | `break the ice` appears in the saved list | The saved expression is available later |
+| Step | User action | Visible expected result | Demonstrates essential experience |
+|------|-------------|-------------------------|-----------------------------------|
+| 1 | Enters the business-trip introduction topic and starts the conversation | The AI instructor presents the first English question for that situation | Topic-specific practice begins |
+| 2 | Answers the question in English | A relevant English response and the next question are visible | The conversation adapts to the learner |
+| 3 | Ends the conversation | The conversation stops and the completed practice state is visible | The learner controls the session |
 
-**Overall pass result:** All three Required Acceptance Tests pass: questions appear for `break the ice`, the completed practice is saved, and the saved expression is visible in the list.
+**Business impact connection:** The worker can rehearse the difficult conversation in a short, controllable session before the trip. The demo shows the product behavior, not whether workplace confidence or trip outcomes improved.
+
+**Overall pass result:** All three Essential User Experiences are observable: topic-specific practice begins, the conversation adapts after the learner answers, and the learner can end the session.
     </example>
   </subsection>
 </section>

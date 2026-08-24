@@ -31011,7 +31011,7 @@ var LITE_ALPS_PROFILE = {
   guidesDir: path.join(guidesDir, "lite"),
   sectionTitles: {
     1: "Overview",
-    2: "Solution and Acceptance Tests",
+    2: "Solution and Essential User Experiences",
     3: "Out of Scope",
     4: "Demo Scenario"
   },
@@ -31794,13 +31794,13 @@ var server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.8.4" },
+  { name: "alps-writer", version: "0.8.5" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS and Lite ALPS product documents.
 
 ALPS defines each feature as a vertical slice \u2014 a single feature that cuts through all layers (UI \u2192 API \u2192 Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store. End each Feature's Acceptance Criteria with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result; do not duplicate the Feature's flow, errors, or acceptance rules in a separate demo subsection.
 
-Lite ALPS is a four-section, product-level simplification of Full ALPS for a minimum PoC. It uses the same conversational authoring pattern as Full ALPS: explain the current section, ask one focused question or at most two closely related questions when context is missing, integrate the user's answer, present an approval digest, and save only after confirmation. Lite reduces the template to Target User and Core Problem, Value and Key Assumption, Solution Strategy, Required Acceptance Tests, optional Explicit Exclusions, and one generated Demo Scenario. Required Acceptance Tests define the product behaviors the PoC must pass; Demo Scenario is automatically composed from every approved test and shown with coverage before approval. Its document state and lifecycle remain independent from Full ALPS, and Lite support does not alter Full ALPS prompts and guides.
+Lite ALPS is a four-section, product-level simplification of Full ALPS for a minimum PoC. It uses the same conversational approval pattern as Full ALPS while working backward from the user's desired business impact: explain the current section, ask one focused question when protected context is missing, integrate the user's answer, present an approval digest, and save only after confirmation. Lite reduces the template to Target User and Core Problem, Desired Business Impact, an AI-proposed Solution Strategy and Essential User Experiences, optional Explicit Exclusions, and one AI-proposed Demo Scenario. Essential User Experiences define the user-visible experiences the PoC must not omit and their business-impact contribution; Demo Scenario proposes the concrete starting state, input, actions, and visible results that demonstrate every approved experience. Its document state and lifecycle remain independent from Full ALPS, and Lite support does not alter Full ALPS prompts and guides.
 
 <TRIGGER>
 MUST use this server's tools when the user wants to:
@@ -31844,12 +31844,12 @@ Keywords: PRD, ALPS, Lite ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \
 - Batch approval requires explicit opt-in or a complete structured source; each section and Feature remains a separate save unit.
 - For Section 7, each Feature 7.x is one approval and save unit. Its 7.x.1-7.x.6 fields stay together.
 - If a Section 7 Feature's comprehension load is 7/10 or higher, suggest up to three independently demonstrable user-behavior splits before approval. The suggestion never blocks approval or saving, and the user may keep the original Feature.
-- Lite ALPS has four fixed Sections: Overview, Solution and Acceptance Tests, optional Out of Scope, and Demo Scenario.
+- Lite ALPS has four fixed Sections: Overview, Solution and Essential User Experiences, optional Out of Scope, and Demo Scenario.
 - Lite ALPS follows Full ALPS's conversation pattern: when context is missing, ask one focused question at a time, or at most two closely related questions, and integrate the user's answer before approval.
-- Section 1 has only Target User and Core Problem and Value and Key Assumption. Section 2 has only Solution Strategy and Required Acceptance Tests. Section 3 has one optional Explicit Exclusions list. Section 4 has one 4.1 Demo Scenario.
-- Every Required Acceptance Test has a distinct name, starting condition, user action, and observable pass condition. Do not use implementation functions, internal state, technical layers, or subjective impressions as pass conditions.
-- Section 4 automatically generates the shortest Demo Scenario that covers every approved Required Acceptance Test. When tests are executable, do not ask the user to restate a flow. Show the complete generated scenario and coverage before approval. Every step or execution block names the required test it covers, and the overall result passes only when every test passes.
-- If tests cannot be connected without inventing unapproved product behavior, keep separate execution blocks inside the same Demo Scenario. Ask only for a missing concrete starting state or input. Do not add a separate Learning Check or present a passing demo as proof of user value or market validity.
+- Section 1 has only Target User and Core Problem and Desired Business Impact. Do not ask for a solution, screen, starting state, user-action sequence, or demo procedure there. Section 2 has only Solution Strategy and Essential User Experiences. Section 3 has one optional Explicit Exclusions list. Section 4 has one 4.1 Demo Scenario.
+- Work backward from the approved Desired Business Impact and propose Section 2 instead of asking the user to design the minimum solution or demo flow. Every Essential User Experience has a distinct name, user-observable result, and contribution to the Desired Business Impact. Starting states and sequential user actions belong to Section 4. Do not use implementation functions, internal state, technical layers, or subjective impressions as completion results.
+- Section 4 proposes the shortest Demo Scenario that demonstrates every approved Essential User Experience. Propose the concrete starting state, representative input, sequential user actions, and visible results instead of asking the user to supply them. Show the complete scenario, experience coverage, and business-impact connection before approval. Every step or execution block names the experience it demonstrates, and the overall result passes only when every experience is observable.
+- Ask only when a choice would change money, permissions, law or regulation, privacy or safety, irreversible data meaning, an external promise, or the acceptance boundary. If experiences cannot be connected without such an unapproved product contract, keep separate execution blocks inside the same Demo Scenario. Do not add a separate Learning Check or present a passing demo as proof of actual business impact or market validity.
 - Do not add architecture, NFR, implementation-detail, or ADR-handoff questions to Lite ALPS.
 - Do not invent exclusions or require optional Section 3.
 - Lite and Full keep independent document state and completion; Lite is not a transition into Full.

@@ -1,0 +1,28 @@
+<section id="2" title="Solution and Essential User Experiences">
+  <subsection id="2.1" title="Solution Strategy">
+    <description>
+- Work backward from the approved Desired Business Impact and propose the smallest product-level approach the user can try.
+- Present the proposal for revision or approval instead of asking the user to design the solution from scratch.
+- Include a permission, privacy, safety, limit, or failure rule only when the PoC itself must honor it.
+- Do not assign Feature IDs or add implementation detail.
+    </description>
+  </subsection>
+  <subsection id="2.2" title="Essential User Experiences">
+    <description>
+- Propose every user experience the first PoC must not omit.
+- Give each essential experience a distinct name, user-observable result, and contribution to the Desired Business Impact.
+- Do not require a starting condition, user-action sequence, screen flow, or demo procedure; Section 4 owns those execution choices.
+- Preserve confirmed values, permissions, limits, and failure guarantees when they affect whether an experience is complete.
+- Use only user-visible or otherwise directly observable results. Do not use implementation functions, internal state, technical layers, or subjective impressions.
+    </description>
+    <example>
+**Essential user experiences: Rehearse a high-stakes work conversation**
+
+| Essential user experience | User-observable result | Business impact contribution |
+|---------------------------|------------------------|------------------------------|
+| Topic-specific practice begins | An AI instructor presents an opening question for the selected work situation | The learner can rehearse the conversation that currently causes difficulty |
+| The conversation adapts to the learner | After an English answer, a relevant English response and next question are visible | The learner can continue realistic practice instead of memorizing a fixed script |
+| The learner controls the session | The learner can end the conversation and see that the practice is complete | The practice fits the learner's limited preparation time |
+    </example>
+  </subsection>
+</section>
