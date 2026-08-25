@@ -22,7 +22,7 @@ const server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.8.5" },
+  { name: "alps-writer", version: "0.8.6" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS and Lite ALPS product documents.
 
@@ -71,7 +71,7 @@ Keywords: PRD, ALPS, Lite ALPS, 기획서, 기획 문서, 제품 요구사항, �
 - NEVER save a requirement contract that was absent from the approval digest. Show the full pending content when the user requests it.
 - Batch approval requires explicit opt-in or a complete structured source; each section and Feature remains a separate save unit.
 - For Section 7, each Feature 7.x is one approval and save unit. Its 7.x.1-7.x.6 fields stay together.
-- If a Section 7 Feature's comprehension load is 7/10 or higher, suggest up to three independently demonstrable user-behavior splits before approval. The suggestion never blocks approval or saving, and the user may keep the original Feature.
+- If a Section 7 Feature's comprehension load is 8/10 or higher, suggest up to three independently demonstrable user-behavior splits before approval. The suggestion never blocks approval or saving, and the user may keep the original Feature.
 - Lite ALPS has four fixed Sections: Overview, Solution and Essential User Experiences, optional Out of Scope, and Demo Scenario.
 - Lite ALPS follows Full ALPS's conversation pattern: when context is missing, ask one focused question at a time, or at most two closely related questions, and integrate the user's answer before approval.
 - Section 1 has only Target User and Core Problem and Desired Business Impact. Do not ask for a solution, screen, starting state, user-action sequence, or demo procedure there. Section 2 has only Solution Strategy and Essential User Experiences. Section 3 has one optional Explicit Exclusions list. Section 4 has one 4.1 Demo Scenario.

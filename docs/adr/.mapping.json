@@ -126,8 +126,8 @@
       "adrs": [
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
-          "status": "Accepted (2026-08-18)",
-          "summary": "승인된 ADR revision의 구현 계획은 비차단 공유하고 derived obligation·domain default를 자동 해소하며 제품 판단만 Decision request로 요청한다"
+          "status": "Accepted (2026-08-25)",
+          "summary": "개발 흐름은 위험 비례 검증을 유지하며 Section 7과 ADR 구현 계획의 8점 이상 인지부하를 각각 후보 제시와 분할 선택 질문으로 처리한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]

@@ -117,6 +117,7 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /impl-review-surfaces-hidden-contract-assumption/);
   assert.match(out, /impl-resolves-domain-gaps-before-escalation/);
   assert.match(out, /impl-plans-without-routine-approval/);
+  assert.match(out, /impl-high-load-asks-before-split/);
   assert.match(out, /bedrock-subagent-fallback/);
   assert.match(out, /comprehension-load-score-only/);
   assert.match(out, /comprehension-load-calibration-bands/);
@@ -976,6 +977,31 @@ FEATURE_SCORE | 9/10
 SPLIT_CANDIDATE | frontend
 SPLIT_CANDIDATE | backend
 SPLIT_CANDIDATE | database
+      === EVAL-END ===`,
+    },
+    {
+      name: "impl-high-load-asks-before-split",
+      good: `Comprehension load: 8/10
+구현 전에 선택해 주세요: 분할을 검토할까요, 아니면 원래 ADR대로 진행할까요?
+=== EVAL-VERDICT: ASK ===
+=== EVAL-FINDINGS ===
+PLAN_SCORE | 8/10
+NEXT_STEP | 분할 검토 또는 원래 ADR대로 진행 중 하나를 질문
+CANDIDATE_STATE | 구체적인 분할 후보는 사용자 선택 전에는 생성하지 않음
+EXECUTION_STATE | 사용자 선택을 기다린 뒤 구현 진행
+=== EVAL-END ===`,
+      bad: `Comprehension load: 8/10
+분할 후보:
+1. 결제 예약
+2. 재고 예약
+3. 보상 처리
+후보를 자동 선택하고 바로 구현한다.
+=== EVAL-VERDICT: PASS ===
+=== EVAL-FINDINGS ===
+PLAN_SCORE | 8/10
+NEXT_STEP | 자동 분할
+CANDIDATE_STATE | 후보 세 개 생성 완료
+EXECUTION_STATE | 즉시 구현 진행
 === EVAL-END ===`,
     },
     {

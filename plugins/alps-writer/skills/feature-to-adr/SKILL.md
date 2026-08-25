@@ -208,7 +208,7 @@ Show only `Comprehension load: <N>/10` for each item. Do not write or persist
 this score in the ALPS document, an ADR, or `.mapping.json`; it is advisory and
 does not block drafting, approval, or implementation.
 
-When the Feature scores 7/10 or higher, offer up to three Feature split
+When the Feature scores 8/10 or higher, offer up to three Feature split
 candidates before transfer and explicitly offer keeping the original Feature.
 The proposal is advisory and never blocks drafting, approval, or transfer. Split
 a Feature only at independently observable user-behavior boundaries. If the user

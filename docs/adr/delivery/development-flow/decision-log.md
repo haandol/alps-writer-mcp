@@ -2,6 +2,7 @@
 
 Newest first. Record only major decision changes.
 
+- **2026-08-25 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — Section 7 Feature의 자동 분할 제안 임계값을 8점 이상으로 높이고, `/adr-impl`은 8점 이상에서 분할 검토 여부만 먼저 확인한 뒤 사용자가 선택한 경우에만 구체적인 ADR 분할 후보를 생성하도록 변경했다.
 - **2026-08-18 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — 승인된 ADR revision의 구현 계획을 비차단 진행 상황으로 바꾸고, derived obligation과 project/domain default는 자동 해소하며 여러 제품 결과가 남는 gap만 추천안 중심 Decision request로 묶었다. 계약이 바뀌지 않은 기존 `Accepted` ADR은 보강 구현과 검토 동안 Status를 유지한다.
 - **2026-08-18 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — 인지비용 1~10 각 점수의 내부 보정 가이드와 4~6점 권장 범위를 정의하되 점수를 품질·승인·저장 게이트로 사용하지 않도록 명시했다.
 - **2026-08-18 — current ADR: [safe proportional development gates](./0001-safe-proportional-development-gates.md)** — Section 7 Feature의 인지비용이 7점 이상이면 최대 세 개의 사용자 행동 기반 분할 후보를 자동 제안하되 원래 Feature 승인과 저장은 계속 허용하도록 변경했다.

@@ -19,7 +19,7 @@ Section 7 Feature: 워크스페이스 멤버 관리
 export default {
   name: "alps-high-load-suggests-feature-split",
   description:
-    "A Section 7 Feature scored seven or higher must receive up to three non-blocking split candidates based on independently demonstrable user behavior, with an option to keep the original.",
+    "A Section 7 Feature scored eight or higher must receive up to three non-blocking split candidates based on independently demonstrable user behavior, with an option to keep the original.",
 
   build(dir) {
     seedRuleDocs(dir);
@@ -45,9 +45,9 @@ export default {
     const candidateText = candidates.map((finding) => finding.summary).join("\n");
     return [
       {
-        pass: Number.isInteger(score) && score >= 7 && score <= 10,
+        pass: Number.isInteger(score) && score >= 8 && score <= 10,
         detail: scoreText || "missing FEATURE_SCORE",
-        label: "scores the multi-behavior Feature at seven or higher",
+        label: "scores the multi-behavior Feature at eight or higher",
       },
       {
         pass: candidates.length >= 2 && candidates.length <= 3,

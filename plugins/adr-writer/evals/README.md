@@ -100,7 +100,7 @@ agent exit, or no output).
      approval omits implementation detail without dropping values, permissions,
      state rules, or the Demo checkpoint.
    - `alps-high-load-suggests-feature-split` checks that a Section 7 Feature at
-     `7/10` or higher receives two or three user-behavior split candidates,
+     `8/10` or higher receives two or three user-behavior split candidates,
      retains the original-Feature option, and never becomes a blocking gate.
    - `lite-alps-follows-full-conversation` checks that Lite uses the original
      Full ALPS approval boundary for user-owned Section 1 context: when the
@@ -151,6 +151,9 @@ agent exit, or no output).
      an exact, already-approved ADR revision. It requires a complete non-blocking
      progress update, immediate continuation, no ADR rewrite, and no routine
      approval request in either the structured tail or the visible report.
+   - `impl-high-load-asks-before-split` checks that an `/adr-impl` plan at
+     `8/10` or higher asks whether to review a split or proceed with the original
+     ADR, waits for that choice, and does not generate concrete candidates first.
    - `bedrock-subagent-fallback` checks that a known Amazon Bedrock provider
      prevents named and generic subagent dispatch, the known input validation
      error is not retried, document and implementation review continue as

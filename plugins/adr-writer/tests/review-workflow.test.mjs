@@ -271,7 +271,9 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.match(impl, /once per ADR revision/);
   assert.match(impl, /reuse that approved baseline/);
   assert.match(impl, /non-blocking progress update/);
-  assert.match(impl, /do not ask for approval or wait for a reply/i);
+  assert.match(impl, /score is below `8\/10`[\s\S]{0,100}without asking for approval or waiting/i);
+  assert.match(impl, /`8\/10` or higher[\s\S]{0,120}split-review-versus-original-ADR/i);
+  assert.match(impl, /Do not include concrete split candidates/i);
   assert.match(impl, /publish the implementation plan as a progress update/i);
   assert.match(impl, /Do not demote an unchanged `Accepted` ADR to `Proposed`/i);
   assert.match(impl, /unchanged behavior-preserving reinforcement.*remains `Accepted`/i);

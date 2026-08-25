@@ -60,12 +60,12 @@ test("Lite reuses Full's focused-question authoring without changing Full", () =
   }
 });
 
-test("Section 7 keeps Feature-level save units and suggests splits at seven or higher", () => {
+test("Section 7 keeps Feature-level save units and suggests splits at eight or higher", () => {
   const guide = new TemplateService().getSectionGuide(7);
   const skill = read("skills/alps-init/SKILL.md");
 
   for (const source of [guide, skill]) {
-    assert.match(source, /7\/10.*or higher|7\/10.*이상/i);
+    assert.match(source, /8\/10.*or higher|8\/10.*이상/i);
     assert.match(source, /up to three|최대 세 개/i);
     assert.match(source, /(?:keep|keeping) the original Feature|원래 Feature/i);
     assert.match(source, /never blocks approval or saving|승인.*저장.*차단하지/i);

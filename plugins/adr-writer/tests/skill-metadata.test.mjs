@@ -1033,19 +1033,19 @@ test("Feature and ADR comprehension load is scored internally but shown as one a
   }
 
   const alpsGuide = sources[0];
-  assert.match(alpsGuide, /7\/10 or higher[\s\S]{0,160}up to three/i);
+  assert.match(alpsGuide, /8\/10 or higher[\s\S]{0,160}up to three/i);
   assert.match(alpsGuide, /keep the original Feature/i);
   assert.match(alpsGuide, /never blocks approval or saving/i);
   assert.match(alpsGuide, /observable user behavior|관찰 가능한 사용자 행동/i);
 
   const featureHandoff = sources[1];
-  assert.match(featureHandoff, /Feature scores 7\/10 or higher[\s\S]{0,160}up to three/i);
+  assert.match(featureHandoff, /Feature scores 8\/10 or higher[\s\S]{0,160}up to three/i);
   assert.match(featureHandoff, /keeping the original Feature/i);
   assert.match(featureHandoff, /never blocks drafting, approval, or transfer/i);
   assert.match(featureHandoff, /Section 6 and Section 7 Feature\s+boundaries together/i);
   assert.match(featureHandoff, /Only when the user asks to split ADR work/i);
 
-  for (const source of sources.slice(2)) {
+  for (const source of [sources[2], sources[4]]) {
     assert.match(
       source,
       /only when the user asks[\s\S]{0,80}split|사용자가[\s\S]{0,80}분할[\s\S]{0,80}요청/i,
@@ -1053,6 +1053,14 @@ test("Feature and ADR comprehension load is scored internally but shown as one a
     assert.match(source, /independent decisions|독립 결정/i);
     assert.match(source, /implementation steps|구현 단계/i);
   }
+
+  const adrImpl = sources[3];
+  assert.match(adrImpl, /8\/10.*or higher/i);
+  assert.match(adrImpl, /review a split[\s\S]{0,80}proceed with the original ADR/i);
+  assert.match(adrImpl, /Do not include concrete split candidates/i);
+  assert.match(adrImpl, /wait for the user's answer/i);
+  assert.match(adrImpl, /Only after the user chooses split review[\s\S]{0,120}up to three/i);
+  assert.match(adrImpl, /independent decisions/i);
 });
 
 test("adr-impl offers Stacked PR only as a requested delivery fallback", () => {

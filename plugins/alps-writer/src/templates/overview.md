@@ -98,7 +98,7 @@ Section 7 (Feature-Level Specification) is the most common place to cut corners.
 - Atomic mode: present, confirm, and save one Feature before moving to the next.
 - Batch mode: present multiple Features only as separately labeled approval units, then save each approved Feature with a separate call.
 - A Feature `7.x` is the approval and save unit. Its `7.x.1`-`7.x.6` fields stay together.
-- If a Feature's comprehension load is 7/10 or higher, propose up to three independently demonstrable user-behavior splits before approval and include the option to keep the original Feature. The proposal never blocks approval or saving.
+- If a Feature's comprehension load is 8/10 or higher, propose up to three independently demonstrable user-behavior splits before approval and include the option to keep the original Feature. The proposal never blocks approval or saving.
 - If the user chooses a split, update the corresponding Section 6 and Section 7 Feature boundaries together. Never split by frontend/backend/data layers.
 - Never skip a Feature because it "looks small", "looks similar to a previous one", or "can be inferred". Each Feature is a separate vertical slice.
 - Every Feature's Acceptance Criteria ends with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result.
