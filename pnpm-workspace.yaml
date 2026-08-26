@@ -4,16 +4,12 @@ packages:
 allowBuilds:
   esbuild: true
 
-# Force the transitive hono (pulled in by @modelcontextprotocol/sdk) up to a
-# patched release. <4.12.25 carries 5 advisories (CORS wildcard, serve-static
-# path traversal, Lambda adapter header/cookie bugs); the SDK allows hono ^4,
-# so >=4.12.25 stays compatible without bumping the SDK itself.
-#
-# @hono/node-server <2.0.5 has a serve-static path-traversal advisory and the
-# fix only landed on 2.x, so this override crosses the SDK's declared ^1.19.9.
-# Safe here: the server speaks stdio only (src/index.ts uses
-# StdioServerTransport), so the SDK's HTTP transports — the sole importers of
-# @hono/node-server — are never pulled into the esbuild bundle.
+# Keep vulnerable transitive releases below their first patched versions.
+# Each selector applies only to the affected range, so a parent dependency can
+# adopt a newer compatible release without changing this file.
 overrides:
-  hono@<4.12.25: ">=4.12.25"
+  "brace-expansion@>=4.0.0 <5.0.9": "5.0.9"
+  "fast-uri@>=3.0.0 <3.1.5": "3.1.5"
+  "hono@<4.12.34": "4.12.34"
+  "ip-address@>=10.1.1 <10.3.1": "10.3.1"
   "@hono/node-server@<2.0.5": ">=2.0.5"
