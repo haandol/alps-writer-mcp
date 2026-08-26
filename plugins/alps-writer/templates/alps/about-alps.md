@@ -21,7 +21,7 @@ Business, design, and technical requirements are separated into distinct section
 
 ### 2. Structure — built for feedback-loop development
 
-ALPS organizes work as **vertical-slice features**. Each feature in Section 7 cuts UI → API → data store end-to-end so it can be implemented, tested, and shipped independently. This matches how agents actually iterate: small, verifiable units stacked into a working system.
+ALPS organizes work as **vertical-slice features**. Each feature in Section 7 cuts UI → API → data store end-to-end so it can be implemented, tested, and shipped independently. Feature explanations use first-reader-friendly language so a junior developer can identify the actors, conceptual data, and visible result without opening the code. When several participants or layers make the flow easier to understand visually, ALPS recommends an optional Mermaid diagram and prefers `sequenceDiagram` for request, data, and response flow. This matches how agents actually iterate: small, verifiable units stacked into a working system.
 
 ### 3. Scope — Do and Don't are both explicit
 

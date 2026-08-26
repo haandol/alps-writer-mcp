@@ -168,6 +168,46 @@ test("dynamic Section 7 status follows the feature count declared in Section 6.1
   assert.match(service.getStatus(), /Section 7 .*✅ Written \(2\/2 features\)/);
 });
 
+test("Section 7 accepts Features with or without a Mermaid diagram and preserves diagrams on export", () => {
+  const dir = temporaryDirectory();
+  const target = path.join(dir, "feature-diagrams.alps.xml");
+  const service = new DocumentService();
+  service.initDocument("demo", target);
+
+  service.saveSection(
+    6,
+    "1",
+    "Core Features (Functional Requirements)",
+    "- F1: Plain flow\n- F2: Visual flow",
+  );
+
+  assert.match(
+    service.saveSection(7, "1", "Plain flow", "A complete Feature explanation without a diagram."),
+    /Saved 7\.1/,
+  );
+
+  const visualFlow = `A complete Feature explanation with an optional overview.
+
+\`\`\`mermaid
+sequenceDiagram
+    actor User
+    participant UI
+    participant API
+    participant Data
+    User->>UI: Start action
+    UI->>API: Send request
+    API->>Data: Save conceptual data
+    Data-->>API: Confirm save
+    API-->>UI: Return result
+\`\`\``;
+  assert.match(service.saveSection(7, "2", "Visual flow", visualFlow), /Saved 7\.2/);
+
+  const exported = service.exportMarkdown();
+  assert.match(exported, /A complete Feature explanation without a diagram/);
+  assert.match(exported, /```mermaid\s+sequenceDiagram/);
+  assert.match(service.getStatus(), /Section 7 .*✅ Written \(2\/2 features\)/);
+});
+
 test("saving refuses to discard unrecognized legacy section content", () => {
   const dir = temporaryDirectory();
   const target = path.join(dir, "legacy.alps.xml");

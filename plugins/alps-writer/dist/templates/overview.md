@@ -101,6 +101,9 @@ Section 7 (Feature-Level Specification) is the most common place to cut corners.
 - If a Feature's comprehension load is 8/10 or higher, propose up to three independently demonstrable user-behavior splits before approval and include the option to keep the original Feature. The proposal never blocks approval or saving.
 - If the user chooses a split, update the corresponding Section 6 and Section 7 Feature boundaries together. Never split by frontend/backend/data layers.
 - Never skip a Feature because it "looks small", "looks similar to a previous one", or "can be inferred". Each Feature is a separate vertical slice.
+- Write each Feature so a junior developer seeing it for the first time can identify the actor, action, conceptual data, and user-visible result. Explain unfamiliar acronyms and domain or technical terms on first use.
+- When multiple participants or layers make a flow easier to understand visually, recommend a concise Mermaid diagram in `7.x.3`; prefer `sequenceDiagram` for request, data, and response flow across UI, API, data stores, and external systems.
+- Feature diagrams are optional. Their absence never blocks approval, saving, or completion. Keep them at product-requirement resolution and exclude modules, classes, functions, schemas, libraries, and algorithms.
 - Every Feature's Acceptance Criteria ends with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result.
 </section-7-rule>
 </conversation-flow>
@@ -128,6 +131,7 @@ When user provides PDF, ALPS (PRD), or any reference:
 - Batch confirmation requires explicit opt-in or a complete structured source
 - For Section 7, ALWAYS preserve each Feature subsection (7.x) as a separate approval and save unit
 - For Section 7, ALWAYS review Sections 3 and 6 first and include one Demo checkpoint under every Feature's Acceptance Criteria; do not add a duplicate demo subsection
+- For Section 7, ALWAYS use first-reader-friendly language and recommend an optional Mermaid diagram when it materially clarifies a multi-participant or multi-layer flow; prefer `sequenceDiagram` for data flow and never treat the diagram as a completion requirement
 - ALWAYS ask 1-2 questions at a time (1 for complex topics)
 - When saving, ALWAYS call `save_alps_section(section, subsection_id, title, content)` with all four arguments; `subsection_id` and `title` must match the section's XML template
 - Author Section 6 (Requirements) before Section 5 (Design) — see the recommended authoring order

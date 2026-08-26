@@ -70,6 +70,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 - Document management — create, save, load, and export as clean Markdown
 - Section dependency tracking — ensures referenced sections are reviewed first
 - **Disposable comprehension signal** — Section 7 Features use a calibrated `1–10` scale with `4–6` as the recommended range; Features at `8/10` or higher receive up to three non-blocking user-behavior split candidates
+- **First-reader-friendly Feature specs** — Section 7 explains unfamiliar terms for junior developers and recommends optional Mermaid diagrams, preferring `sequenceDiagram` when multi-participant data flow is clearer visually
 - **ALPS → ADR ownership handoff** — `/feature-to-adr` transfers every implementation-relevant Feature contract into `1..N` real ADRs, leaves replaceable means to code, and makes equivalent explicit re-imports no-ops
 - Works with Claude Desktop, Claude Code, Cursor, Kiro, and any MCP-compatible client (MCP server only)
 

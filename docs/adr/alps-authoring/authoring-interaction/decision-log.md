@@ -5,6 +5,16 @@ alps-authoring/authoring-interaction category. Each ADR body describes only the 
 state, while the timeline of "what changed and why" accumulates here, newest first. Git
 preserves the individual diffs.
 
+## 2026-08-26 — Feature 설명에 선택적 Mermaid와 신규 개발자 관점을 추가
+
+- **Current ADR**: [support-atomic-and-batch-approval](./0001-support-atomic-and-batch-approval.md)
+- **Change type**: requirement rule change
+- **What**: Section 7 Feature 설명은 신규 주니어 개발자가 이해할 수 있는 용어와 맥락을
+  제공하고, 여러 참여자·계층의 흐름은 Mermaid로 시각화하도록 권장하되 다이어그램을 승인·
+  저장·완료 조건으로 강제하지 않는다.
+- **Why**: 기능을 처음 보는 구현자가 데이터 흐름을 빠르게 이해하면서 단순한 Feature에는
+  불필요한 형식 비용과 중복을 만들지 않기 위해서다.
+
 ## 2026-08-23 — Full 대화형 작성을 복원하고 Lite가 이를 따르도록 변경
 
 - **Current ADR**: [support-atomic-and-batch-approval](./0001-support-atomic-and-batch-approval.md)

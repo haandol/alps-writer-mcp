@@ -4,6 +4,9 @@
 - Each subsection must match the feature ID, name, and priority defined in Section 6.1.
 - No additional features beyond those in Section 6.1 may be specified here.
 - Connect every Feature to the Section 3 end-to-end demo with one observable Demo checkpoint under Acceptance Criteria.
+- Write for a junior developer seeing the Feature for the first time. Use plain language, explain unfamiliar acronyms and domain or technical terms on first use, and make the actor, action, conceptual data, and user-visible result understandable without reading code.
+- When multiple participants or layers make a flow easier to understand visually, recommend a concise Mermaid diagram in 7.x.3. Prefer `sequenceDiagram` for request, data, and response flow across UI, API, data stores, and external systems.
+- Feature diagrams are optional. Their absence never blocks approval, saving, or completion. Keep them at product-requirement resolution and exclude modules, classes, functions, schemas, libraries, and algorithms.
 
 - SCOPE — this section captures REPRODUCIBLE REQUIREMENTS, not implementation decisions:
   - WRITE here (the WHAT, reproducibly): what each user action must do, which layers it crosses (UI → API → data), what must be true for it to be correct (acceptance criteria, edge cases, error responses the user sees), and the VALUES AND RULES the result must honor — limits, quotas, retention periods, size caps, permission rules, allowed value sets and forbidden transitions, mandatory inputs, uniqueness, units — each with its number (where it has one) and basis (pricing policy, security rule, regulation).
@@ -27,6 +30,7 @@
       <description>
 - Describe the user flow for this feature.
 - Keep the flow simple and concise.
+- Use terms a first-time junior developer can follow. Explain unfamiliar terms when they first appear instead of assuming product knowledge.
       </description>
       <example>
 1. Display a sign-up form with:
@@ -43,6 +47,10 @@
       <description>
 - Describe the implementation as a vertical slice: trace each user action end-to-end from UI through API to data store, so this feature can be developed and tested independently.
 - For each key action in the user flow, describe WHAT happens at each layer it touches (UI / API / data) — at the level of behavior and responsibility, not implementation.
+- Make the explanation independently understandable to a junior developer seeing the Feature for the first time: identify the actor, action, conceptual data, and user-visible result, and explain unfamiliar acronyms or domain and technical terms on first use.
+- When multiple participants or layers make the flow easier to understand visually, recommend and normally include a concise Mermaid diagram. Prefer `sequenceDiagram` for request, data, and response flow across the user, UI, API, data store, and external systems. Use another Mermaid type only when state, branching, or conceptual relationships are clearer that way.
+- The diagram is optional and its absence never blocks approval, saving, or completion. It supplements rather than replaces the prose and must not repeat the entire flow.
+- Keep diagram participants and messages at product-requirement resolution. Do not include modules, classes, functions, fields, schemas, libraries, algorithms, or other implementation detail.
 - Stay reproducible, stay decision-free:
   - DO state: the action, the layers it crosses, the data it reads/writes (conceptually), what is returned to the user, any shared interface this feature relies on (e.g., "uses the shared auth session", "writes to the user record"), and any value or rule the result must honor (a limit, quota, retention period, size cap, permission rule, allowed value set, forbidden transition, mandatory input, uniqueness, or unit) with its number — where it has one — and basis.
   - DO NOT state: chosen libraries/algorithms (e.g., bcrypt, JWT), exact column lists, tuning constants (pool sizes, backoff delays, cache lifetimes), or why one approach was picked over another — those are architectural decisions (→ ADR) or implementation details (→ code), and pinning them here makes the PRD churn whenever the code does.
@@ -53,14 +61,32 @@
       </description>
       <example>
 1. Submit Sign-up Form
-   - UI: Sign-up form sends the email and password to the sign-up endpoint (POST /api/auth/signup)
-   - API: validates the input, rejects duplicates, and creates the user with the password stored in non-recoverable (hashed) form
-   - Data: a new user record is persisted
+   - UI (User Interface — the screen the user interacts with): the sign-up form sends the email and password to the sign-up endpoint (POST /api/auth/signup)
+   - API (Application Programming Interface — the system boundary that processes the request): validates the input, rejects duplicate emails, and creates the user with the password stored in non-recoverable (hashed) form
+   - Data store (where persistent account information is kept): a new user record is saved
    - Response: the user is authenticated and lands on the main screen
 2. Validate Email (real-time)
    - UI: as the user leaves the email field, checks availability (GET /api/auth/check-email)
    - API: looks up whether the email is already taken
    - Response: an inline message tells the user if the email is available
+
+Because account creation crosses several participants, this optional diagram
+makes the request, data, and response path easier to scan:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as Sign-up screen
+    participant API as Sign-up API
+    participant Data as User data store
+
+    User->>UI: Enter email and password
+    UI->>API: Request account creation
+    API->>Data: Check email and save new user
+    Data-->>API: Account saved
+    API-->>UI: Return authenticated session
+    UI-->>User: Open the main screen
+```
 
 Values the result must honor:
 

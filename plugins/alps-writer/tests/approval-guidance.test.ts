@@ -76,3 +76,23 @@ test("Section 7 keeps Feature-level save units and suggests splits at eight or h
   assert.match(guide, /Feature `7\.x` is one approval and save unit/i);
   assert.match(guide, /`7\.x\.1`-`7\.x\.6`/i);
 });
+
+test("Section 7 recommends optional Mermaid diagrams and explains Features for first-time junior developers", () => {
+  const sources = [
+    read("src/index.ts"),
+    read("skills/alps-init/SKILL.md"),
+    read("src/templates/overview.md"),
+    new TemplateService().getSectionGuide(7),
+    new TemplateService().getSection(7, true),
+  ];
+
+  for (const source of sources) {
+    assert.match(source, /junior developer.*(?:first time|first)/is);
+    assert.match(source, /unfamiliar.*(?:acronym|term).*first use/is);
+    assert.match(source, /recommend.*Mermaid/is);
+    assert.match(source, /sequenceDiagram/);
+    assert.match(source, /optional|absence never blocks/is);
+    assert.match(source, /modules?.*classes?.*functions?/is);
+    assert.doesNotMatch(source, /every Feature must include (?:a )?Mermaid/i);
+  }
+});
