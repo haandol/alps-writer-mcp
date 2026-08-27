@@ -6,7 +6,7 @@ authoring flow as Full ALPS while omitting implementation-preparation Sections.
 ## Sections
 
 1. Overview - Capture the Target User and Core Problem, then the Desired Business Impact
-2. Solution and Essential User Experiences - Propose one minimum Solution Strategy and every Essential User Experience
+2. Solution and Essential User Experiences - Propose one minimum Solution Strategy with a product-level C4 Context and every Essential User Experience
 3. Out of Scope - Optionally record explicit exclusions in one list
 4. Demo Scenario - Work backward to propose one executable scenario that demonstrates every essential experience
 
@@ -54,6 +54,11 @@ every Section as a separate approval and save unit.
 - Work backward from the approved Desired Business Impact and propose Section 2 before asking the
   user to design a solution or demo flow.
 - `Solution Strategy`: propose the minimum product-level approach and visible PoC scope.
+- Add exactly one Mermaid `C4Context` Product Context Diagram after the text Solution Strategy.
+- Generate the diagram from the approved Overview and complete Section 2 draft. Show the target
+  user, PoC system, relevant external systems, and their relationships at product-role level.
+- Keep the text strategy independently reviewable and exclude `C4Container`, lower C4 levels,
+  APIs, databases, deployment units, technology stacks, libraries, and code structure.
 - `Essential User Experiences`: propose every user experience the PoC must not omit.
 - Give each experience a distinct name, user-observable result, and contribution to the Desired
   Business Impact.
@@ -99,8 +104,9 @@ The digest is a disposable reading aid, not another document.
 Lite ALPS is a reduced Full ALPS template, not a separate product methodology. Its conversation,
 approval, and save behavior follows Full ALPS.
 
-Lite does not ask for architecture, technology stack, interfaces, storage, deployment, libraries,
-code structure, NFRs, detailed Feature specifications, implementation plans, or ADR handoff.
+Lite includes only the required product-level `C4Context`. It does not ask for architecture wizards,
+`C4Container`, technology stacks, interfaces, storage, deployment, libraries, code structure, NFRs,
+detailed Feature specifications, implementation plans, or ADR handoff.
 
 Lite and Full keep separate document state, resume, completion, and export. Completing Lite never
 changes or completes a Full document.

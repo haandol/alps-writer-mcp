@@ -32,6 +32,19 @@ function liteDocument(project: string, titles: string[]): string {
   return `<alps-document project="${project}" profile="lite">\n\n${sections}\n\n</alps-document>`;
 }
 
+function liteSolutionStrategy(): string {
+  return `Minimum product-level approach.
+
+#### Product Context Diagram
+
+\`\`\`mermaid
+C4Context
+Person(user, "Target User")
+System(product, "PoC System")
+Rel(user, product, "Uses")
+\`\`\``;
+}
+
 afterEach(() => {
   for (const dir of temporaryDirectories.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -73,14 +86,17 @@ test("Full and Lite ALPS use one same-named Demo Scenario subsection", () => {
   assert.match(liteDemo, /overall pass result/i);
 });
 
-test("Lite templates stay at problem, essential-experience, and demo resolution", () => {
+test("Lite templates add product context without crossing into implementation architecture", () => {
   const source = fs
     .readdirSync(LITE_CHAPTERS_DIR)
     .filter((name) => name.endsWith(".xml"))
     .map((name) => fs.readFileSync(path.join(LITE_CHAPTERS_DIR, name), "utf8"))
     .join("\n");
 
-  assert.doesNotMatch(source, /Technology Stack|C4Context|C4Container|Technical Description/);
+  assert.match(source, /Product Context Diagram/);
+  assert.match(source, /C4Context/);
+  assert.doesNotMatch(source, /Technology Stack|Technical Description/);
+  assert.doesNotMatch(source, /^C4Container$/m);
   assert.doesNotMatch(source, /\bAPI\b|\bDatabase\b|UI\s*→\s*API/i);
   assert.doesNotMatch(source, /\bF\d+\b|State Matrix/i);
   assert.match(source, /Do not assign Feature IDs/i);
@@ -114,7 +130,8 @@ test("optional Out of Scope does not block required Demo Scenario completion", (
 
   for (const [section, subsections] of Object.entries(requiredBySection)) {
     for (const [id, title] of subsections) {
-      assert.match(service.saveSection(Number(section), id, title, "confirmed"), /Saved/);
+      const content = Number(section) === 2 && id === "1" ? liteSolutionStrategy() : "confirmed";
+      assert.match(service.saveSection(Number(section), id, title, content), /Saved/);
     }
   }
 
@@ -134,6 +151,45 @@ test("optional Out of Scope does not block required Demo Scenario completion", (
   );
   assert.match(service.getStatus(), /Section 3 .*✅ Written \(1 optional subsection\)/);
   assert.match(service.exportMarkdown(), /## Section 3\. Out of Scope/);
+});
+
+test("Lite Solution Strategy requires exactly one Context and rejects lower C4 levels", () => {
+  const dir = temporaryDirectory();
+  const target = path.join(dir, "context.lite.alps.xml");
+  const service = new DocumentService();
+  service.initDocument("context", target, "lite");
+
+  assert.match(
+    service.saveSection(2, "1", "Solution Strategy", "Text only"),
+    /requires exactly one Mermaid C4Context diagram/,
+  );
+
+  const duplicate = `${liteSolutionStrategy()}
+
+\`\`\`mermaid
+C4Context
+System(other, "Other System")
+\`\`\``;
+  assert.match(
+    service.saveSection(2, "1", "Solution Strategy", duplicate),
+    /requires exactly one Mermaid C4Context diagram/,
+  );
+
+  const containerAdded = `${liteSolutionStrategy()}
+
+\`\`\`mermaid
+C4Container
+Container(app, "Application")
+\`\`\``;
+  assert.match(
+    service.saveSection(2, "1", "Solution Strategy", containerAdded),
+    /allows only Mermaid C4Context diagrams; found C4Container/,
+  );
+
+  assert.match(
+    service.saveSection(2, "1", "Solution Strategy", liteSolutionStrategy()),
+    /Saved 2\.1/,
+  );
 });
 
 test("Lite documents initialize, validate, resume, and export independently from Full ALPS", () => {
@@ -372,7 +428,10 @@ test("Lite guidance works backward from Desired Business Impact through Essentia
   assert.match(skill, /Sections 1, 2, and 4 are required/i);
   assert.doesNotMatch(skill, /Legacy Lite ALPS|convert it automatically/i);
   assert.doesNotMatch(skill, /start a separate Full ALPS|use the Lite document as a reference/i);
-  assert.doesNotMatch(guides, /technology stack|C4Context|C4Container|\bAPI\b|\bdatabase\b/i);
+  assert.match(guides, /exactly one Mermaid `C4Context`/i);
+  assert.match(guides, /target user, the PoC system, relevant external systems/i);
+  assert.match(guides, /Do not generate `C4Container`/i);
+  assert.doesNotMatch(guides, /technology stack wizard/i);
   assert.doesNotMatch(guides, /Full ALPS/i);
   assert.doesNotMatch(guides, /Required Acceptance Tests|acceptance tests/i);
   assert.match(guides, /Do not invent non-goals/i);
@@ -470,6 +529,9 @@ test("Lite Section 2 proposes the solution and essential experiences before aski
   assert.match(guide, /Draft the smallest product-level Solution Strategy/i);
   assert.match(guide, /Essential User Experience/i);
   assert.match(guide, /before asking the user to design either one/i);
+  assert.match(guide, /exactly one Mermaid `C4Context`/i);
+  assert.match(guide, /text Solution Strategy must remain independently reviewable/i);
+  assert.match(guide, /Do not generate `C4Container`/i);
   assert.match(
     guide,
     /Ask one focused question only when multiple valid\s+choices would change money/i,
@@ -477,6 +539,9 @@ test("Lite Section 2 proposes the solution and essential experiences before aski
   assert.doesNotMatch(guide, /What is the smallest product-level solution/i);
   assert.doesNotMatch(guide, /what starts it, what does the user do/i);
   assert.match(chapter, /Present the proposal for revision or approval/i);
+  assert.match(chapter, /Product Context Diagram/i);
+  assert.match(chapter, /C4Context/);
+  assert.doesNotMatch(chapter, /^C4Container$/m);
   assert.match(chapter, /Section 4 owns those execution choices/i);
 });
 

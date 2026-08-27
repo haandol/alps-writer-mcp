@@ -93,8 +93,8 @@
       "adrs": [
         {
           "path": "docs/adr/alps-authoring/lite-format/0001-lite-alps-authoring-profile.md",
-          "status": "Accepted (2026-08-24)",
-          "summary": "Lite ALPS는 Desired Business Impact에서 AI가 최소 솔루션·Essential User Experiences·구체 데모를 역설계해 승인받는 4-Section 템플릿이다"
+          "status": "Accepted (2026-08-27)",
+          "summary": "Lite ALPS는 비즈니스 임팩트에서 최소 솔루션·제품 수준 C4 Context·핵심 사용자 경험·구체 데모를 역설계해 승인받는 4-Section 템플릿이다"
         }
       ],
       "dependsOn": ["alps-authoring/authoring-interaction"]

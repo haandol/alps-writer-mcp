@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { LITE_ALPS_PROFILE } from "../src/profiles.js";
 import { TemplateService } from "../src/tools/templates/service.js";
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -50,5 +51,24 @@ test("the overview and alps-init keep Context and Container as the only C4 level
     assert.match(source, /C4Container/);
     assert.match(source, /only C4 levels/);
     assert.match(source, /Component, Dynamic, Deployment, or Code-level/);
+  }
+});
+
+test("Lite Solution Strategy ships one product-level Context without Container", () => {
+  const template = read(
+    "src/templates/lite/chapters/02-solution-and-essential-user-experiences.xml",
+  );
+  const guide = read("src/guides/lite/02.md");
+  const runtimeSection = new TemplateService(LITE_ALPS_PROFILE).getSection(2, true);
+
+  assert.deepEqual(c4Declarations(template), ["C4Context"]);
+  assert.deepEqual(c4Declarations(runtimeSection), ["C4Context"]);
+  for (const source of [template, guide]) {
+    assert.match(source, /Product Context Diagram/);
+    assert.match(source, /exactly one Mermaid `C4Context`/i);
+    assert.match(source, /target user.*PoC system.*external systems/is);
+    assert.match(source, /C4Container/);
+    assert.match(source, /API|APIs/);
+    assert.match(source, /database/i);
   }
 });

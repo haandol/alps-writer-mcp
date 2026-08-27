@@ -57,12 +57,17 @@ implementation readiness.
      supplied, but do not ask for a solution, screen, starting state, action sequence, or demo flow.
    - **Section 2 — Solution and Essential User Experiences**: work backward from the approved Desired Business
      Impact and propose the minimum Solution Strategy and every product behavior the PoC must
-     demonstrate. Save the latter as `Essential User Experiences`; each experience has a distinct
-     name, user-observable result, and contribution to the Desired Business Impact. Do not ask the user
-     to design the solution, starting state, sequential actions, or screen flow. Ask only when a
-     protected product decision about money, permissions, law or regulation, privacy or safety,
-     irreversible data meaning, an external promise, or the acceptance boundary cannot be safely
-     proposed.
+     demonstrate. End the text Solution Strategy with a `Product Context Diagram` containing exactly
+     one Mermaid `C4Context`, generated from the approved Overview and complete Section 2 draft.
+     Show the target user, PoC system, relevant external systems, and their relationships at
+     product-role level. Keep the text independently reviewable. Never generate `C4Container`, lower
+     C4 levels, APIs, databases, deployment units, technology stacks, libraries, code structure, or
+     implementation layers. Save the product behaviors as `Essential User Experiences`; each
+     experience has a distinct name, user-observable result, and contribution to the Desired
+     Business Impact. Do not ask the user to design the solution, starting state, sequential actions,
+     screen flow, or system architecture. Ask only when a protected product decision about money,
+     permissions, law or regulation, privacy or safety, irreversible data meaning, an external
+     promise, or the acceptance boundary cannot be safely proposed.
    - **Section 3 — Out of Scope**: record only exclusions the user explicitly confirms. Do not ask
      for exclusions merely to fill the optional Section. When there are no explicit exclusions and
      the approved boundary is not materially ambiguous, skip it without a dedicated question.
@@ -77,7 +82,8 @@ implementation readiness.
 8. The approval digest includes the applicable confirmed intent, scope, mandatory information,
    values and rules, expected result, and unresolved questions. Never save a requirement,
    exclusion, or Demo result absent from the digest. Show the full pending content when requested.
-9. Do not add architecture, technology stack, interfaces, storage, deployment, libraries, code
+9. Do not add architecture questions or content beyond the required product-level `C4Context`.
+   Never add `C4Container`, technology stacks, interfaces, storage, deployment, libraries, code
    structure, NFR wizards, Feature IDs, implementation plans, or ADR handoff steps to Lite.
 10. When the requested document work is complete, call
     `mcp__alps-writer__export_alps_markdown`.

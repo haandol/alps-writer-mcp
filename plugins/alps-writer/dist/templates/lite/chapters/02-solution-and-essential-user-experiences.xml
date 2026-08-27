@@ -3,9 +3,28 @@
     <description>
 - Work backward from the approved Desired Business Impact and propose the smallest product-level approach the user can try.
 - Present the proposal for revision or approval instead of asking the user to design the solution from scratch.
+- After the text strategy, include a `Product Context Diagram` with exactly one Mermaid `C4Context` diagram.
+- Generate the diagram from the approved Overview and the complete Section 2 draft. Show the target user, the PoC system, relevant external systems, and their relationships at product-role level.
+- Keep the text strategy independently reviewable. The diagram supplements the product intent, scope, values, and rules rather than replacing them.
+- Do not use `C4Container`, lower C4 levels, APIs, databases, deployment units, libraries, code structure, or implementation layers.
 - Include a permission, privacy, safety, limit, or failure rule only when the PoC itself must honor it.
 - Do not assign Feature IDs or add implementation detail.
     </description>
+    <example>
+The product provides a short, controllable English conversation rehearsal for workers preparing for a high-stakes overseas business situation.
+
+#### Product Context Diagram
+
+```mermaid
+C4Context
+title Product Context for English Conversation Practice
+
+Person(worker, "Worker", "Rehearses an upcoming overseas business conversation")
+System(practiceService, "English Practice Service", "Provides adaptive conversation practice and a visible completion state")
+
+Rel(worker, practiceService, "Practices a selected work conversation with")
+```
+    </example>
   </subsection>
   <subsection id="2.2" title="Essential User Experiences">
     <description>

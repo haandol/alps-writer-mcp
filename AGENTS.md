@@ -16,10 +16,11 @@ Everything in this repo serves one idea, so weigh changes against it.
 | **Middle**   | ADR (`docs/adr/`)         | HOW (architecture) — the decision, its rationale, the requirement contract | **adr-writer**  |
 | **Zoom in**  | Code / AGENTS.md / README | HOW (detail) — structure, names, signatures, tuning values                 | the user's repo |
 
-ALPS applies the C4 analogy literally in Section 4: every PRD includes both a
-Mermaid `C4Context` and `C4Container` diagram. Those are the only C4 levels the
-PRD uses. Component, Dynamic, Deployment, and Code-level C4 diagrams belong
-below the PRD resolution and must not be generated there.
+Full ALPS applies the C4 analogy literally in Section 4 with both a Mermaid
+`C4Context` and `C4Container` diagram. Lite ALPS keeps only one product-level
+`C4Context` inside Solution Strategy. Component, Dynamic, Deployment, and
+Code-level C4 diagrams belong below the PRD resolution and must not be generated
+there.
 
 **The goal is selective reading: a reader loads one level, gets its question answered, and stops.** "Why is the refresh window 7 days?" is answered by the ADR without opening a source file; "how is rotation implemented?" is answered by the code without reading the PRD. That only holds while each level carries **its own resolution and no other** — which is why the plugins constrain what may be written at each level as strictly as they do.
 
@@ -151,7 +152,7 @@ ADR folders are organized along two axes — a DDD **bounded context** (top-leve
 - `src/tools/templates/` — Read-only access to ALPS templates and conversation guides
 - `src/tools/documents/` — Document CRUD (init, load, save, read, export) with state management
 
-**Document profiles** (`src/profiles.ts`) — Full ALPS and four-section Lite ALPS metadata: section titles, dependency graph, authoring order, optional Sections, file suffix, template/guide paths, and dynamic Feature sections where applicable. Section ranges are derived from each profile. Lite reuses Full's approval and persistence behavior while keeping independent document state and completion. Lite uses `Overview → Solution and Essential User Experiences → Out of Scope → Demo Scenario`; Section 3 is optional and omitted from Markdown when unwritten. Section 1 captures `Desired Business Impact`, Section 2 has AI propose the minimum Solution Strategy and Essential User Experiences, and Section 4 has AI propose the concrete starting state, input, user actions, and visible results that demonstrate every experience.
+**Document profiles** (`src/profiles.ts`) — Full ALPS and four-section Lite ALPS metadata: section titles, dependency graph, authoring order, optional Sections, file suffix, template/guide paths, and dynamic Feature sections where applicable. Section ranges are derived from each profile. Lite reuses Full's approval and persistence behavior while keeping independent document state and completion. Lite uses `Overview → Solution and Essential User Experiences → Out of Scope → Demo Scenario`; Section 3 is optional and omitted from Markdown when unwritten. Section 1 captures `Desired Business Impact`, Section 2 has AI propose the minimum Solution Strategy with one product-level `C4Context` and the Essential User Experiences, and Section 4 has AI propose the concrete starting state, input, user actions, and visible results that demonstrate every experience.
 
 **Conversation-led authoring** — Full ALPS retains its pre-Lite section-by-section conversation: explain the section, ask one focused question or at most two closely related questions when context is missing, integrate the answer, present a contract-complete approval digest, and save only after confirmation. Lite ALPS keeps the same approval boundary but uses a working-backwards interaction: the user supplies the target problem and Desired Business Impact, while AI proposes Section 2 and the executable Section 4 flow. Lite asks only when a protected product decision cannot be safely proposed. Optional Section 3 skips the question when no explicit exclusion exists and the approved boundary is not materially ambiguous. Shared Lite support must not rewrite Full skills, guides, examples, or wizards.
 

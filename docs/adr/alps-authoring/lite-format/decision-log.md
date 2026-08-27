@@ -4,6 +4,15 @@ This document is the **major decision-change history** of the alps-authoring/lit
 Each ADR body describes only the current state, while the timeline of "what changed and why"
 accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-08-27 — Lite Solution Strategy에 Product Context를 포함
+
+- **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)
+- **Change type**: architecture and requirement rule change
+- **What**: 기술·아키텍처 시각화 없음 → Solution Strategy에 제품 역할 수준의 Mermaid
+  `C4Context`를 정확히 하나 포함하고 Container 이하 C4 수준은 제외.
+- **Why**: Lite의 구현 준비 범위를 늘리지 않으면서 대상 사용자, PoC 시스템과 외부 시스템의
+  경계를 한눈에 검토할 수 있어야 한다.
+
 ## 2026-08-24 — 인수 테스트 용어를 핵심 사용자 경험으로 통일
 
 - **Current ADR**: [lite-alps-authoring-profile](./0001-lite-alps-authoring-profile.md)

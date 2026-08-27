@@ -31331,10 +31331,13 @@ var TemplateRegistry = class {
 // src/tools/documents/service.ts
 var bySubsectionId = ([a], [b]) => a.localeCompare(b, void 0, { numeric: true });
 var ALLOWED_ARCHITECTURE_DIAGRAMS = /* @__PURE__ */ new Set(["C4Context", "C4Container"]);
-function architectureDiagramError(content) {
-  const diagramTypes = [...content.matchAll(/```mermaid\s*\r?\n([\s\S]*?)```/g)].map(
+function mermaidDiagramTypes(content) {
+  return [...content.matchAll(/```mermaid\s*\r?\n([\s\S]*?)```/g)].map(
     (match) => match[1].split(/\r?\n/).map((line) => line.trim()).find((line) => line && !line.startsWith("%%"))?.split(/\s+/)[0]
   ).filter((type) => Boolean(type));
+}
+function architectureDiagramError(content) {
+  const diagramTypes = mermaidDiagramTypes(content);
   for (const required2 of ALLOWED_ARCHITECTURE_DIAGRAMS) {
     if (!diagramTypes.includes(required2)) {
       return `Section 4.1 requires a Mermaid ${required2} diagram.`;
@@ -31343,6 +31346,18 @@ function architectureDiagramError(content) {
   const disallowed = diagramTypes.find((type) => !ALLOWED_ARCHITECTURE_DIAGRAMS.has(type));
   if (disallowed) {
     return `Section 4.1 allows only Mermaid C4Context and C4Container diagrams; found ${disallowed}.`;
+  }
+  return null;
+}
+function liteProductContextDiagramError(content) {
+  const diagramTypes = mermaidDiagramTypes(content);
+  const contextCount = diagramTypes.filter((type) => type === "C4Context").length;
+  if (contextCount !== 1) {
+    return "Lite ALPS Section 2.1 requires exactly one Mermaid C4Context diagram.";
+  }
+  const disallowed = diagramTypes.find((type) => type.startsWith("C4") && type !== "C4Context");
+  if (disallowed) {
+    return `Lite ALPS Section 2.1 allows only Mermaid C4Context diagrams; found ${disallowed}.`;
   }
   return null;
 }
@@ -31678,6 +31693,10 @@ NEVER save generated content without user approval.`;
       const diagramError = architectureDiagramError(content);
       if (diagramError) return `Invalid subsection content: ${diagramError}`;
     }
+    if (profile.id === "lite" && subsection.fullId === "2.1") {
+      const diagramError = liteProductContextDiagramError(content);
+      if (diagramError) return `Invalid subsection content: ${diagramError}`;
+    }
     const projectName = this.extractProjectName(document.content);
     const sections = this.parseSections(document.content);
     if (isLiteProfile(profile) && section === profile.dynamicSection?.section) {
@@ -31836,13 +31855,13 @@ var server = new McpServer(
   // plugin.json files, marketplace.json). tests/version-consistency.test.ts
   // fails the build when they drift — this literal silently reported 0.4.20
   // to MCP clients for two releases after a manifest-only version bump.
-  { name: "alps-writer", version: "0.8.7" },
+  { name: "alps-writer", version: "0.8.8" },
   {
     instructions: `You are an intelligent product owner helping users create ALPS and Lite ALPS product documents.
 
 ALPS defines each feature as a vertical slice \u2014 a single feature that cuts through all layers (UI \u2192 API \u2192 Data) end-to-end, so it can be developed, tested, and delivered independently. When writing feature specs (Section 7), always describe each user action as a vertical slice tracing from UI to API to data store. Write for a junior developer seeing the Feature for the first time: use plain language, explain unfamiliar acronyms and domain or technical terms on first use, and make the actor, action, conceptual data, and user-visible result clear without requiring code knowledge. When multiple participants or layers make a flow easier to understand visually, recommend a concise Mermaid diagram; prefer \`sequenceDiagram\` for request, data, and response flow across UI, API, data stores, and external systems. The diagram is optional and its absence never blocks approval, saving, or completion. Keep diagrams at product-requirement resolution and out of modules, classes, functions, schemas, libraries, and algorithms. End each Feature's Acceptance Criteria with one Demo checkpoint that states its role in the Section 3 end-to-end demo and its observable completion result; do not duplicate the Feature's flow, errors, or acceptance rules in a separate demo subsection.
 
-Lite ALPS is a four-section, product-level simplification of Full ALPS for a minimum PoC. It uses the same conversational approval pattern as Full ALPS while working backward from the user's desired business impact: explain the current section, ask one focused question when protected context is missing, integrate the user's answer, present an approval digest, and save only after confirmation. Lite reduces the template to Target User and Core Problem, Desired Business Impact, an AI-proposed Solution Strategy and Essential User Experiences, optional Explicit Exclusions, and one AI-proposed Demo Scenario. Essential User Experiences define the user-visible experiences the PoC must not omit and their business-impact contribution; Demo Scenario proposes the concrete starting state, input, actions, and visible results that demonstrate every approved experience. Its document state and lifecycle remain independent from Full ALPS, and Lite support does not alter Full ALPS prompts and guides.
+Lite ALPS is a four-section, product-level simplification of Full ALPS for a minimum PoC. It uses the same conversational approval pattern as Full ALPS while working backward from the user's desired business impact: explain the current section, ask one focused question when protected context is missing, integrate the user's answer, present an approval digest, and save only after confirmation. Lite reduces the template to Target User and Core Problem, Desired Business Impact, an AI-proposed Solution Strategy with exactly one product-level Mermaid \`C4Context\`, Essential User Experiences, optional Explicit Exclusions, and one AI-proposed Demo Scenario. Essential User Experiences define the user-visible experiences the PoC must not omit and their business-impact contribution; Demo Scenario proposes the concrete starting state, input, actions, and visible results that demonstrate every approved experience. Its document state and lifecycle remain independent from Full ALPS, and Lite support does not alter Full ALPS prompts and guides.
 
 <TRIGGER>
 MUST use this server's tools when the user wants to:
@@ -31890,10 +31909,10 @@ Keywords: PRD, ALPS, Lite ALPS, \uAE30\uD68D\uC11C, \uAE30\uD68D \uBB38\uC11C, \
 - Lite ALPS has four fixed Sections: Overview, Solution and Essential User Experiences, optional Out of Scope, and Demo Scenario.
 - Lite ALPS follows Full ALPS's conversation pattern: when context is missing, ask one focused question at a time, or at most two closely related questions, and integrate the user's answer before approval.
 - Section 1 has only Target User and Core Problem and Desired Business Impact. Do not ask for a solution, screen, starting state, user-action sequence, or demo procedure there. Section 2 has only Solution Strategy and Essential User Experiences. Section 3 has one optional Explicit Exclusions list. Section 4 has one 4.1 Demo Scenario.
-- Work backward from the approved Desired Business Impact and propose Section 2 instead of asking the user to design the minimum solution or demo flow. Every Essential User Experience has a distinct name, user-observable result, and contribution to the Desired Business Impact. Starting states and sequential user actions belong to Section 4. Do not use implementation functions, internal state, technical layers, or subjective impressions as completion results.
+- Work backward from the approved Desired Business Impact and propose Section 2 instead of asking the user to design the minimum solution or demo flow. End the text Solution Strategy with exactly one Mermaid \`C4Context\` Product Context Diagram generated from the approved Overview and complete Section 2 draft. Show the target user, PoC system, relevant external systems, and their relationships at product-role level. The text remains independently reviewable. Never generate \`C4Container\`, lower C4 levels, APIs, databases, deployment units, technology stacks, libraries, code structure, or implementation layers. Every Essential User Experience has a distinct name, user-observable result, and contribution to the Desired Business Impact. Starting states and sequential user actions belong to Section 4. Do not use implementation functions, internal state, technical layers, or subjective impressions as completion results.
 - Section 4 proposes the shortest Demo Scenario that demonstrates every approved Essential User Experience. Propose the concrete starting state, representative input, sequential user actions, and visible results instead of asking the user to supply them. Show the complete scenario, experience coverage, and business-impact connection before approval. Every step or execution block names the experience it demonstrates, and the overall result passes only when every experience is observable.
 - Ask only when a choice would change money, permissions, law or regulation, privacy or safety, irreversible data meaning, an external promise, or the acceptance boundary. If experiences cannot be connected without such an unapproved product contract, keep separate execution blocks inside the same Demo Scenario. Do not add a separate Learning Check or present a passing demo as proof of actual business impact or market validity.
-- Do not add architecture, NFR, implementation-detail, or ADR-handoff questions to Lite ALPS.
+- Do not add architecture questions or content beyond the required product-level \`C4Context\`. Do not add NFR, implementation-detail, or ADR-handoff questions to Lite ALPS.
 - Do not invent exclusions or require optional Section 3.
 - Lite and Full keep independent document state and completion; Lite is not a transition into Full.
 </RULES>`

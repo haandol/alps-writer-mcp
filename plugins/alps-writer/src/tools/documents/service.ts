@@ -23,8 +23,8 @@ const bySubsectionId = ([a]: [string, unknown], [b]: [string, unknown]) =>
 
 const ALLOWED_ARCHITECTURE_DIAGRAMS = new Set(["C4Context", "C4Container"]);
 
-function architectureDiagramError(content: string): string | null {
-  const diagramTypes = [...content.matchAll(/```mermaid\s*\r?\n([\s\S]*?)```/g)]
+function mermaidDiagramTypes(content: string): string[] {
+  return [...content.matchAll(/```mermaid\s*\r?\n([\s\S]*?)```/g)]
     .map(
       (match) =>
         match[1]
@@ -34,6 +34,10 @@ function architectureDiagramError(content: string): string | null {
           ?.split(/\s+/)[0],
     )
     .filter((type): type is string => Boolean(type));
+}
+
+function architectureDiagramError(content: string): string | null {
+  const diagramTypes = mermaidDiagramTypes(content);
 
   for (const required of ALLOWED_ARCHITECTURE_DIAGRAMS) {
     if (!diagramTypes.includes(required)) {
@@ -44,6 +48,21 @@ function architectureDiagramError(content: string): string | null {
   const disallowed = diagramTypes.find((type) => !ALLOWED_ARCHITECTURE_DIAGRAMS.has(type));
   if (disallowed) {
     return `Section 4.1 allows only Mermaid C4Context and C4Container diagrams; found ${disallowed}.`;
+  }
+
+  return null;
+}
+
+function liteProductContextDiagramError(content: string): string | null {
+  const diagramTypes = mermaidDiagramTypes(content);
+  const contextCount = diagramTypes.filter((type) => type === "C4Context").length;
+  if (contextCount !== 1) {
+    return "Lite ALPS Section 2.1 requires exactly one Mermaid C4Context diagram.";
+  }
+
+  const disallowed = diagramTypes.find((type) => type.startsWith("C4") && type !== "C4Context");
+  if (disallowed) {
+    return `Lite ALPS Section 2.1 allows only Mermaid C4Context diagrams; found ${disallowed}.`;
   }
 
   return null;
@@ -472,6 +491,10 @@ NEVER save generated content without user approval.`;
     if (!subsection.ok) return `Invalid subsection: ${subsection.message}`;
     if (profile.id === "alps" && subsection.fullId === "4.1") {
       const diagramError = architectureDiagramError(content);
+      if (diagramError) return `Invalid subsection content: ${diagramError}`;
+    }
+    if (profile.id === "lite" && subsection.fullId === "2.1") {
+      const diagramError = liteProductContextDiagramError(content);
       if (diagramError) return `Invalid subsection content: ${diagramError}`;
     }
 
