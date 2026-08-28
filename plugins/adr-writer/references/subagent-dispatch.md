@@ -1,17 +1,42 @@
-# Subagent dispatch contract
+# Review orchestration contract
 
-Read this file completely before any named or generic subagent dispatch. Role-specific inputs, isolation, concurrency, and main-session fallback limits remain in the calling skill.
+Read this file completely before planning a review role. Also apply
+`non-invasive-harness.md`. The calling skill owns the required perspectives,
+inputs, evidence, and output contract. The current model owns the action-level
+orchestration.
 
 ## Provider capability gate
 
-If the active model provider is identified as Amazon Bedrock, treat subagents as unavailable and do not invoke either the named or generic path. Codex's current Bedrock transport can reject multi-agent input before an agent starts.
+If the active environment is known not to support subagents, do not attempt a
+named or generic dispatch. Use an available main-session or tool-supported path
+that preserves the calling skill's required perspectives and evidence.
 
-If provider identity was not visible in advance and an attempted dispatch returns `validation_error` with `Invalid 'input': value did not match any expected variant`, do not retry with the named agent, a generic agent, or a different role. Mark subagents unavailable for the rest of the command and use the calling skill's main-session fallback, recording the isolation limitation.
+If an attempted dispatch returns `validation_error` with
+`Invalid 'input': value did not match any expected variant`, do not retry the
+same unsupported orchestration through another role. Mark that capability
+unavailable for the rest of the command and choose another execution strategy.
+Record the limitation only when it affects review confidence.
 
-## Dispatch chain
+## Orchestration discretion
 
-1. Invoke the named agent when the client can discover it.
-2. Otherwise resolve the calling skill's `${CLAUDE_PLUGIN_ROOT}/agents/*.md` file to an **absolute path** and instruct a generic read-only subagent to read that file completely and follow it.
-3. Do not load the agent file into the main session or paste its full text into the initial dispatch prompt. Pass task inputs separately and require only the agent file's existing output contract, never an instruction echo, raw input dump, or exploratory transcript.
-4. If the generic subagent cannot read the absolute path, fall back once to passing the file's full text so capability is preserved, and record that path-based context isolation was unavailable.
-5. If neither dispatch path is available, follow the calling skill's role-specific main-session fallback.
+The model may use any of these paths, alone or in combination:
+
+- invoke a discoverable named agent;
+- invoke one or more generic read-only subagents and have each read the relevant
+  `${CLAUDE_PLUGIN_ROOT}/agents/*.md` file from an absolute path;
+- perform the role as a distinct main-session pass over the original material;
+- reuse one execution context for multiple mechanical roles when doing so cannot
+  anchor or contaminate a required independent judgment.
+
+Choose based on risk, context size, available capabilities, latency, and cost.
+Do not create subagents merely to match a prescribed topology.
+
+When a subagent is used, pass task inputs separately and require only the role
+file's output contract. Do not request an instruction echo, raw input dump,
+private reasoning, or exploratory transcript. If the child cannot read the
+absolute role path, passing the role text is an allowed compatibility fallback.
+
+Where the calling skill requires conclusions to remain independent until
+synthesis, do not pass one perspective's result into the other perspective.
+That separation may be achieved with subagents or with separately grounded
+passes; the number and type of agents are not part of the persisted contract.

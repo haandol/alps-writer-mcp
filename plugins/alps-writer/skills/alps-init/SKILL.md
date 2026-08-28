@@ -10,6 +10,12 @@ Start authoring an ALPS (PRD).
 
 > **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the document content in the language the user writes in. Any user-facing phrasing below is a guide, not a literal string.
 
+> **Non-invasive harness**: the saved ALPS document owns durable product
+> context. Interview sequencing, tool-call planning, approval views, and model
+> orchestration are disposable execution details. Do not request private
+> chain-of-thought or persist hidden state that would make the document unusable
+> after this plugin is removed.
+
 1. Confirm with the user whether to create a new document or continue an existing `.alps.xml`.
 2. Call `mcp__alps-writer__init_alps_document` or `mcp__alps-writer__load_alps_document`.
 3. Call `mcp__alps-writer__get_alps_overview` to fetch the authoring guide for all nine sections.

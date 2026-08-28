@@ -46,6 +46,11 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   const result = render({
     adr: "docs/adr/streaming/0001-cancel.md",
     verdict: "FIX_REQUIRED",
+    atAGlance: {
+      impact: "A cancelled request may continue consuming upstream resources.",
+      action: "Remove the unnecessary event bus and verify restart recovery.",
+      risk: "Restart recovery was not exercised locally.",
+    },
     explanation: "/tmp/review/explanation.md",
     report: "/tmp/review/implementation-review.md",
     metrics: {
@@ -109,6 +114,10 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   assert.equal(result.stderr, "");
   assert.match(result.stdout, /Unnecessary change/);
   assert.match(result.stdout, /Unverified risk/);
+  assert.match(result.stdout, /At a glance/);
+  assert.match(result.stdout, /A cancelled request may continue consuming upstream resources/);
+  assert.match(result.stdout, /Remove the unnecessary event bus/);
+  assert.match(result.stdout, /Restart recovery was not exercised locally/);
   assert.match(result.stdout, /the existing abort signal reaches the upstream client/);
   assert.match(result.stdout, /pnpm test -- cancel/);
   assert.match(result.stdout, /implementation-review\.md/);
@@ -173,6 +182,27 @@ test("notable implementation choice content is escaped and read-only", () => {
   assert.match(result.stdout, /different local convention/);
   assert.doesNotMatch(result.stdout, /name="choice-dec-/);
   assert.doesNotMatch(result.stdout, /data-choice-index=/);
+});
+
+test("At a glance content is escaped in HTML and embedded feedback data", () => {
+  const payload = "</script><script>globalThis.__overviewInjected = true</script>";
+  const result = render({
+    adr: "docs/adr/test.md",
+    verdict: "PASS",
+    atAGlance: {
+      impact: payload,
+      action: "None.",
+      risk: "None.",
+    },
+    findings: [],
+    contractCoverage: [],
+    implementationChoices: [],
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /<\/script><script>globalThis\.__overviewInjected/);
+  assert.match(result.stdout, /\\u003c\/script\\u003e\\u003cscript\\u003e/);
+  assert.equal((result.stdout.match(/<script>/g) ?? []).length, 1);
 });
 
 test("INCONCLUSIVE with no findings does not render a false conforming claim", () => {

@@ -88,6 +88,18 @@ test("every scenario exports the shape the runner requires", async () => {
   }
 });
 
+test("behaviour scenarios cover destructive rollup and optional review roles", () => {
+  const sources = scenarioFiles()
+    .map((file) => readFileSync(path.join(EVALS, "scenarios", file), "utf8"))
+    .join("\n");
+
+  assert.match(sources, /skillText\("adr-rollup"\)/);
+  assert.match(sources, /agentText\("adr-impl-explainer"\)/);
+  assert.match(sources, /agentText\("adr-impl-necessity-reviewer"\)/);
+  assert.match(sources, /review-document-only-boundary/);
+  assert.match(sources, /impl-review-pre-promotion-lifecycle/);
+});
+
 test("--list names every scenario without invoking an agent", () => {
   const { code, out } = runEvals(["--list"]);
   assert.equal(code, 0);
@@ -96,7 +108,11 @@ test("--list names every scenario without invoking an agent", () => {
   assert.match(out, /author-rejects-implementation-detail/);
   assert.match(out, /refactor-safe-local-duplicate/);
   assert.match(out, /refactor-protected-state-transition/);
-  assert.match(out, /refactor-no-subagent-proposal-only/);
+  assert.match(out, /refactor-orchestration-discretion/);
+  assert.match(out, /review-document-only-boundary/);
+  assert.match(out, /impl-review-pre-promotion-lifecycle/);
+  assert.match(out, /rollup-preserves-decision-boundaries/);
+  assert.match(out, /impl-review-role-boundaries/);
   assert.match(out, /feature-handoff-ownership-transfer/);
   assert.match(out, /feature-handoff-enriches-underspecified-prd/);
   assert.match(out, /feature-handoff-idempotent-reimport/);
@@ -135,6 +151,10 @@ test("prompts embed the real skill/agent text, not a paraphrase", async () => {
     const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-shape-"));
     const prompt = await s.build(dir);
     assert.ok(prompt.length > 5000, `${s.name}: prompt is too short to hold a real skill body`);
+    assert.ok(
+      prompt.length <= 100_000,
+      `${s.name}: prompt exceeds the non-invasive 100k-character budget (${prompt.length})`,
+    );
     // a distinctive line from the shipped docs, not something a summary would coin
     if (s.name.startsWith("alps-") || s.name.startsWith("lite-alps-")) {
       assert.match(
@@ -161,10 +181,12 @@ test("prompt loaders include only explicitly selected direct references", async 
   assert.doesNotMatch(reviewBase, /Invalid 'input': value did not match any expected variant/);
 
   const review = skillText("adr-review", {
-    references: ["references/subagent-dispatch.md"],
+    references: ["references/subagent-dispatch.md", "references/non-invasive-harness.md"],
   });
   assert.match(review, /# Loaded reference: references\/subagent-dispatch\.md/);
+  assert.match(review, /# Loaded reference: references\/non-invasive-harness\.md/);
   assert.match(review, /Invalid 'input': value did not match any expected variant/);
+  assert.match(review, /Durable context survives the plugin/);
 
   const sync = skillText("adr-sync", {
     references: ["skills/adr-sync/references/repository-hygiene.md"],
@@ -178,6 +200,15 @@ test("prompt loaders include only explicitly selected direct references", async 
         references: ["references/not-directly-referenced.md"],
       }),
     /not directly referenced/,
+  );
+});
+
+test("prompt reference resolution uses the selected plugin root", () => {
+  const source = readFileSync(path.join(EVALS, "lib", "harness.mjs"), "utf8");
+  assert.match(source, /directMarkdownReferences\(source, entryDir, pluginRoot\)/);
+  assert.match(
+    source,
+    /path\.join\(pluginRoot, reference\.slice\("\$\{CLAUDE_PLUGIN_ROOT\}\/"\.length\)\)/,
   );
 });
 
@@ -352,6 +383,11 @@ test("the implementation-review Evidence Package scorer distinguishes verified a
       ],
     },
     output: `# ADR implementation review
+## At a glance
+- Verdict: INCONCLUSIVE
+- Impact: Provider failure behavior remains unverified.
+- Action: Verify provider failure injection or accept the documented risk.
+- Risk: A provider failure could record completion without executed evidence.
 ## Review mode
 full
 ## Scope
@@ -460,6 +496,11 @@ test("the PASS Evidence Package scorer rejects a new human gate", async () => {
       ],
     },
     output: `# ADR implementation review
+## At a glance
+- Verdict: PASS
+- Impact: Settlement behavior matches the recorded contract.
+- Action: Approve each row.
+- Risk: None.
 ## Review mode
 full
 ## Scope
@@ -703,7 +744,7 @@ test("the planning scorer rejects a routine approval gate for an unchanged ADR",
   );
 });
 
-test("refactor safety scorers distinguish safe, protected, and no-subagent outcomes", () => {
+test("refactor safety scorers distinguish safe, protected, and orchestration-discretion outcomes", () => {
   const cases = [
     [
       "refactor-safe-local-duplicate",
@@ -714,8 +755,8 @@ test("refactor safety scorers distinguish safe, protected, and no-subagent outco
       "PROPOSE_ONLY | state-transition change touches the ADR contract",
     ],
     [
-      "refactor-no-subagent-proposal-only",
-      "PROPOSE_ONLY | independent reviewer unavailable, so do not auto-apply",
+      "refactor-orchestration-discretion",
+      "ORCHESTRATION_DISCRETION | main-session or subagent review may verify the same safety gates\nAPPLY_NOW | exact local duplicate with passing before/after tests",
     ],
   ];
 
@@ -730,7 +771,7 @@ ${finding}
   }
 });
 
-test("Bedrock fallback scorer requires no dispatch, no retry, main-session review, and proposal-only refactoring", async () => {
+test("unsupported orchestration scorer requires no retry and preserves review safety", async () => {
   const scenario = await loadScenario("bedrock-subagent-fallback.mjs");
   const compliant = scenario.score({
     tail: {
@@ -738,7 +779,10 @@ test("Bedrock fallback scorer requires no dispatch, no retry, main-session revie
         { tag: "NO_DISPATCH", summary: "Amazon Bedrock is known before dispatch" },
         { tag: "NO_RETRY", summary: "the validation error is terminal for this command" },
         { tag: "MAIN_SESSION_FALLBACK", summary: "review passes continue without isolation" },
-        { tag: "PROPOSE_ONLY", summary: "refactor candidates are not auto-applied" },
+        {
+          tag: "SAFETY_GATE",
+          summary: "refactor classification still requires exact evidence and before/after tests",
+        },
       ],
     },
   });
@@ -751,7 +795,7 @@ test("Bedrock fallback scorer requires no dispatch, no retry, main-session revie
     tail: {
       findings: [
         { tag: "SPAWN_SUBAGENT", summary: "try a generic reviewer after the named agent fails" },
-        { tag: "APPLY_NOW", summary: "apply a local refactor from the main session" },
+        { tag: "WEAKEN_GATE", summary: "skip the before/after tests in the fallback" },
       ],
     },
   });
@@ -1519,15 +1563,16 @@ test("an author run that writes no ADR fails rather than passing vacuously", () 
   assert.match(out, /✗.*records the token-quota alternative/);
 });
 
-// A reply with no tail block is a result, not a crash: the agent ignored a
-// format instruction, and the run should say so rather than throw.
-test("a reply with no tail block is reported, not fatal", () => {
+// A reply with no tail block cannot be scored against domain checks. Report it
+// separately so negative checks do not pass vacuously.
+test("a reply with no tail block is unscored", () => {
   const { code, out } = runEvals(
     ["--only", "review-requirement-value"],
     stubAgent("리뷰를 완료했습니다. 문제 없습니다."),
   );
-  assert.equal(code, 0);
-  assert.match(out, /NO TAIL BLOCK/);
+  assert.equal(code, 2);
+  assert.match(out, /UNSCORED.*required machine-readable tail/);
+  assert.match(out, /never produced scorable output/);
 });
 
 // Rates are the whole output of this tool, so an all-or-nothing summary would
@@ -1549,6 +1594,45 @@ test("runs are aggregated as a rate, not collapsed to pass/fail", () => {
   assert.equal(code, 0);
   // 2 of 4 replies commit the defect, so the check must read 2/4 — not ✔ and not 0/4
   assert.match(out, /✗\s+2\/4\s+no rule fires against a recorded requirement value/);
+  assert.match(out, /scored 4\/4; errors 0; unscored 0/);
+});
+
+test("shareable reports omit transcripts and absolute fixture paths by default", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-report-safe-"));
+  const report = path.join(dir, "report.md");
+  const { code } = runEvals(
+    ["--only", "review-requirement-value", "--out", report],
+    stubAgent(GOOD_REVIEW),
+  );
+  assert.equal(code, 0);
+  const body = readFileSync(report, "utf8");
+  assert.match(body, /transcripts: omitted/);
+  assert.match(body, /prompt: \d+ chars · sha256/);
+  assert.match(body, /Representative transcript omitted/);
+  assert.doesNotMatch(body, /One full agent reply|GOOD_REVIEW/);
+  assert.doesNotMatch(body, new RegExp(tmpdir().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+});
+
+test("full transcripts are included only by explicit opt-in", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-report-transcript-"));
+  const report = path.join(dir, "report.md");
+  const { code } = runEvals(
+    [
+      "--only",
+      "review-requirement-value",
+      "--out",
+      report,
+      "--include-transcript",
+      "--include-fixture-paths",
+    ],
+    stubAgent(GOOD_REVIEW),
+  );
+  assert.equal(code, 0);
+  const body = readFileSync(report, "utf8");
+  assert.match(body, /transcripts: included by explicit request/);
+  assert.match(body, /Representative agent reply/);
+  assert.match(body, /Regeneration check/);
+  assert.match(body, new RegExp(tmpdir().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 });
 
 // The runner must fail loudly when the agent command is wrong, or a
@@ -1556,7 +1640,7 @@ test("runs are aggregated as a rate, not collapsed to pass/fail", () => {
 test("an agent that produces nothing is an error, not a silent pass", () => {
   const { code, out } = runEvals(["--only", "review-requirement-value"], "true");
   assert.equal(code, 2);
-  assert.match(out, /agent never produced output|did not run/);
+  assert.match(out, /agent never produced scorable output|did not run/);
 });
 
 test("a nonzero agent exit is an error even when it prints partial output", () => {

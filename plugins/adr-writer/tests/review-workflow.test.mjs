@@ -11,7 +11,7 @@ function read(relativePath) {
   return readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
-test("adr-impl-review isolates explanation, necessity, sufficiency, and report writing without a post-implementation gate", () => {
+test("adr-impl-review preserves role boundaries without fixing the agent topology", () => {
   const skill = read("skills/adr-impl-review/SKILL.md");
   const agents = [
     ["agents/adr-impl-explainer.md", "name: adr-impl-explainer"],
@@ -35,19 +35,11 @@ test("adr-impl-review isolates explanation, necessity, sufficiency, and report w
     skill,
     /Never pass a reviewer the explanation document or the other reviewer's result/,
   );
-  // Reviewer model diversification — run them on different families to break the
-  // false consensus a single family reaches. Do not assert a specific model ID: models
-  // are replaced faster than this skill, so pinning one makes the test hold a stale ID
-  // in the prompt. Assert only the invariant properties (family separation, the top
-  // reasoning tier, and the duty to record when diversification fails).
-  assert.match(skill, /different model families/);
-  assert.match(skill, /strongest reasoning models from different provider families/);
-  assert.match(skill, /highest reasoning tier/);
-  assert.match(skill, /Do not pin specific model IDs here/);
-  assert.match(
-    skill,
-    /record in the report that models could not be diversified, along with the model each reviewer actually used/,
-  );
+  assert.match(skill, /may run them in parallel or sequentially/i);
+  assert.match(skill, /zero, one, or several subagents/i);
+  assert.match(skill, /Do not require a provider family, reasoning tier, fixed agent count/i);
+  assert.doesNotMatch(skill, /strongest reasoning models from different provider families/);
+  assert.doesNotMatch(skill, /highest reasoning tier/);
   assert.match(skill, /Notable implementation choices/);
   assert.match(
     skill,
@@ -102,7 +94,7 @@ test("implementation review separates ADR decisions from code-level AI choices",
   assert.match(reportWriter, /read-only/);
 });
 
-test("generic subagent fallbacks load agent instructions inside the child context", () => {
+test("review orchestration allows named, generic, or main-session execution", () => {
   const dispatch = read("references/subagent-dispatch.md");
   const skills = [
     read("skills/adr-review/SKILL.md"),
@@ -116,32 +108,61 @@ test("generic subagent fallbacks load agent instructions inside the child contex
   }
 
   assert.match(dispatch, /absolute path/i);
-  assert.match(dispatch, /read that file completely/i);
-  assert.match(dispatch, /Do not load the agent file into the main session/);
-  assert.match(dispatch, /fall back once to passing the file's full text/);
-  assert.match(dispatch, /path-based context isolation was unavailable/);
-  assert.match(dispatch, /never an instruction echo/);
+  assert.match(dispatch, /named agent/i);
+  assert.match(dispatch, /generic read-only subagents/i);
+  assert.match(dispatch, /main-session pass/i);
+  assert.match(dispatch, /Do not create subagents merely to match a prescribed topology/);
+  assert.match(dispatch, /private reasoning/i);
 });
 
-test("Bedrock review paths avoid unsupported subagent dispatch and never retry the validation error", () => {
+test("unsupported review orchestration falls back without prescribing an agent topology", () => {
   const dispatch = read("references/subagent-dispatch.md");
   const review = read("skills/adr-review/SKILL.md");
   const implReview = read("skills/adr-impl-review/SKILL.md");
   const refactor = read("skills/adr-impl-refactor/SKILL.md");
 
   assert.match(dispatch, /Provider capability gate/);
-  assert.match(dispatch, /active model provider is identified as Amazon Bedrock/);
-  assert.match(dispatch, /treat subagents as unavailable/);
-  assert.match(dispatch, /do not invoke either the named or generic path/);
+  assert.match(dispatch, /known not to support subagents/);
+  assert.match(dispatch, /do not attempt a\s+named or generic dispatch/);
   assert.match(dispatch, /validation_error/);
   assert.match(dispatch, /Invalid 'input': value did not match any expected variant/);
   assert.match(dispatch, /do not retry/);
 
-  assert.match(review, /separate sequential pass per ADR/);
-  assert.match(review, /passes were not isolated subagent contexts/);
-  assert.match(implReview, /separate passes that do not read each other's results/);
-  assert.match(refactor, /`PROPOSE_ONLY` main-session fallback/);
-  assert.match(refactor, /must not classify or apply any candidate as `APPLY_NOW`/);
+  assert.match(review, /named reviewers, generic read-only subagents, main-session passes/);
+  assert.match(implReview, /named agents, generic read-only subagents, or main-session passes/);
+  assert.match(refactor, /main-session candidate may still become `APPLY_NOW`/);
+  assert.match(refactor, /Agent topology is not a classification input/);
+});
+
+test("the harness is removable and action-level orchestration stays model-selected", () => {
+  const contract = read("references/non-invasive-harness.md");
+  const concepts = read("templates/adr/concepts.md");
+  const rootReadme = read("../../README.md");
+  const pluginReadme = read("README.md");
+
+  for (const source of [contract, concepts, rootReadme, pluginReadme]) {
+    assert.match(source, /remov|Removing|Uninstall/i);
+    assert.match(source, /private\s+(?:chain-of-thought|reasoning)/i);
+    assert.match(source, /subagent/i);
+  }
+
+  for (const skill of [
+    read("skills/adr-review/SKILL.md"),
+    read("skills/adr-impl-review/SKILL.md"),
+    read("skills/adr-impl-refactor/SKILL.md"),
+  ]) {
+    assert.match(skill, /non-invasive-harness\.md/);
+  }
+
+  assert.match(contract, /comprehension-load behavior/);
+  assert.match(contract, /risk-selected review mode/);
+  assert.match(contract, /Choose the smallest execution strategy/);
+});
+
+test("sufficiency review is a pre-promotion completion gate", () => {
+  const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
+  assert.match(sufficiency, /before a `Proposed` ADR is promoted/);
+  assert.doesNotMatch(sufficiency, /finishes implementation and Status promotion/);
 });
 
 test("large skill details are loaded through explicit progressive-disclosure references", () => {
@@ -261,7 +282,10 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.match(finalReviewSkill, /Select the review mode/);
   assert.match(finalReviewSkill, /Use `standard` only for localized implementation/);
   assert.match(finalReviewSkill, /Use `full` when any of these surfaces changes/);
-  assert.match(finalReviewSkill, /In full mode, the necessity and sufficiency reviews run/);
+  assert.match(
+    finalReviewSkill,
+    /In full mode, the necessity and sufficiency perspectives are grounded separately/,
+  );
   assert.match(finalReviewSkill, /Auto-remediate in the caller/);
   assert.match(finalReviewSkill, /must not ask the user to rule `apply \/ skip \/ defer`/);
   assert.match(finalReviewSkill, /no routine post-implementation approval remains/);
@@ -314,7 +338,7 @@ test("adr-impl-refactor auto-applies only locally verified behavior-preserving c
   const skill = read("skills/adr-impl-refactor/SKILL.md");
   const reviewer = read("agents/adr-impl-refactor-reviewer.md");
 
-  assert.match(skill, /dedicated read-only reviewer/);
+  assert.match(skill, /model-selected review passes/);
   assert.match(skill, /With no target, show the `Accepted` ADR list/);
   assert.match(skill, /mixes several implementations/);
   assert.match(skill, /Auto-apply a candidate only when every condition holds/);
@@ -325,8 +349,8 @@ test("adr-impl-refactor auto-applies only locally verified behavior-preserving c
   assert.match(skill, /undo only that candidate's edits/);
   assert.match(skill, /move the candidate to `PROPOSE_ONLY`/);
   assert.match(skill, /Do not use destructive worktree commands/);
-  assert.match(skill, /must not classify or apply any candidate as `APPLY_NOW`/);
-  assert.match(skill, /Main-session fallback findings are proposal-only/);
+  assert.match(skill, /main-session candidate may still become `APPLY_NOW`/);
+  assert.match(skill, /candidate was rechecked against the original ADR/);
 
   for (const protectedSurface of [
     /APIs or wire forms/,
@@ -471,4 +495,47 @@ test("repair guidance and Mermaid are conditional on the review evidence", () =>
   assert.match(writer, /Scope not to touch/);
   assert.match(writer, /Completion criteria/);
   assert.match(writer, /Residual risks/);
+});
+
+test("human-facing review reports use one junior-readable visual writing guide", () => {
+  const guide = read("references/review-report-writing.md");
+  const reportProducers = [
+    read("skills/adr-review/SKILL.md"),
+    read("skills/adr-sync/SKILL.md"),
+    read("skills/adr-impl-review/SKILL.md"),
+    read("skills/adr-impl-refactor/SKILL.md"),
+    read("agents/adr-impl-review-report-writer.md"),
+  ];
+
+  for (const source of reportProducers) {
+    assert.match(source, /references\/review-report-writing\.md/);
+    assert.match(source, /read[\s\S]{0,120}completely/i);
+    assert.match(source, /At a glance/);
+  }
+
+  for (const trigger of [
+    /three or more participants/,
+    /system boundary, dependency, or contradiction/,
+    /state transition, failure, retry, rollback, or fallback/,
+    /refactor spanning multiple call sites/,
+  ]) {
+    assert.match(guide, trigger);
+  }
+
+  for (const diagram of [/sequenceDiagram/, /stateDiagram-v2/, /flowchart/, /erDiagram/]) {
+    assert.match(guide, diagram);
+  }
+
+  assert.match(guide, /junior developer seeing the subject for the first time/i);
+  assert.match(
+    guide,
+    /Every sentence must contribute a verdict, contract, evidence, impact, action, or\s+risk/i,
+  );
+  assert.match(guide, /praise, reassurance, and conversational applause/i);
+  assert.match(guide, /generic best-practice advice/i);
+  assert.match(
+    guide,
+    /The prose must remain independently reviewable when Mermaid does not render/i,
+  );
+  assert.match(guide, /local one-file PASS or a single-document PASS may omit a diagram/i);
 });

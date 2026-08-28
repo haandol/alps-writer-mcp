@@ -1,6 +1,6 @@
 ---
 name: adr-impl-review
-description: Review code implemented from an ADR using a risk-selected standard or full path. Standard reviews use a decision ledger, one isolated sufficiency pass, and targeted tests; full reviews add independent necessity and sufficiency passes plus detailed repair artifacts. The approved ADR baseline is established before implementation, so completion review does not repeat routine human confirmation. Report-only; never edits code or ADRs.
+description: Review code implemented from an ADR using a risk-selected standard or full path. Standard reviews use a decision ledger, a sufficiency perspective, and targeted tests; full reviews add separately grounded necessity and sufficiency perspectives plus detailed repair artifacts. The model chooses the available agent or main-session orchestration. Report-only; never edits code or ADRs.
 argument-hint: "[adr-path-or-category] [--base <ref>] [--mode standard|full]"
 ---
 
@@ -17,11 +17,16 @@ flowchart TD
     FULL --> RULING
 ```
 
-In full mode, the necessity and sufficiency reviews run **in parallel**, without seeing each other's results (section 3). Standard mode runs only the isolated sufficiency pass defined below. The user's intent and the ADR's regeneration checklist are settled before implementation; this command consumes that baseline and does not reopen it as a routine post-implementation gate.
+In full mode, the necessity and sufficiency perspectives are grounded separately and do not see each other's conclusions before synthesis (section 3). They may run in parallel or sequentially. Standard mode runs only the sufficiency perspective defined below. The user's intent and the ADR's regeneration checklist are settled before implementation; this command consumes that baseline and does not reopen it as a routine post-implementation gate.
 
 This procedure is not a proof of mathematical necessity and sufficiency. It is **a disproof-based review that hunts for unnecessary changes and missing behavior from two different perspectives.** A passing test is only evidence that no counterexample was found among the cases actually executed — not a proof of completeness.
 
 > **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the review artifacts in the language the user writes in (`authoring-rules.md` "Conventions"). Any user-facing phrasing below is a guide, not a literal string.
+
+Apply `${CLAUDE_PLUGIN_ROOT}/references/non-invasive-harness.md`: review mode,
+required perspectives, evidence, and verdicts are contractual. Subagent count,
+named/generic/main-session execution, parallelism, and model selection are chosen
+by the current model.
 
 ## The abstraction ladder — which level owns each disagreement
 
@@ -48,12 +53,12 @@ A note on scope: `/adr-impl-review` judges the **code** level against the ADR le
 ## Invariant principles
 
 - **Report-only**: never auto-modify code, ADRs, or the mapping. Write only the Markdown/JSON/HTML review artifacts.
-- **Independent contexts**: in full mode, run the explainer, necessity reviewer, and sufficiency reviewer in fresh isolated contexts. In standard mode, run the sufficiency reviewer in one fresh isolated context. Never pass a reviewer another agent's result.
+- **Independently grounded conclusions**: in full mode, necessity and sufficiency derive conclusions from the original ADR, diff, code, tests, and approved baseline without reading each other's results before synthesis. In standard mode, preserve the same grounding for sufficiency. A fixed number or type of agent is not required.
 - **The approved ADR is the behavioral spec**: right after implementation, the ADR's admitted decision and requirement contract are authoritative because the implementation cycle confirmed their intent and regeneration checklist before code began. Implementation facts such as API names and actual field names should not be in that spec; when they appear, separate them as `Impl-fact mismatch` and route them for removal. If review finds concrete evidence that the ADR baseline itself is incomplete or contradictory, return it as a blocking contract issue; do not perform a routine confirmation or silently fix the ADR inside impl-review.
 - **Evidence over assertion**: every finding includes the applicable basis among an ADR quote, the actual diff or code location, and a reproduction procedure or execution result. Report a conjecture you could not reproduce only as `Unverified risk`. For an assumption risk, state the externally checkable premise, the contract or safety consequence if it is false, and the missing verification; never request or fabricate private chain-of-thought.
 - **Escalation is exceptional**: ask for human judgment only when the approved contract must change, premises contradict, a material risk cannot be verified, or the repair would exceed the approved scope. Evidence-backed implementation and test defects are remediation work, not approval questions.
 
-Before any dispatch, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely and apply its provider capability gate and dispatch chain. Each review step below names the agent and `${CLAUDE_PLUGIN_ROOT}/agents/*.md` fallback file to use. If subagents are unavailable, use the selected mode's role-specific main-session fallback and record the isolation limitation.
+Before planning the review execution, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely. The role files under `${CLAUDE_PLUGIN_ROOT}/agents/` define reusable role contracts, not a mandatory topology. Choose the smallest available combination of named agents, generic read-only subagents, or main-session passes that preserves the selected mode's perspectives and evidence. Record an isolation limitation only when it materially affects confidence.
 
 ## 1. Fix the target and the change scope
 
@@ -94,10 +99,10 @@ Record `reviewMode` and the classification evidence in the artifacts.
 For `standard`, execute this section and then continue at section 7. Sections 2-6 are the full-mode path.
 
 1. Build a decision ledger containing every ADR decision and each independently reviewable requirement-contract row relevant to the diff, including its implementation-independent observable evidence. The sufficiency pass also extracts Notable implementation choices once from code outward.
-2. Run `adr-impl-sufficiency-reviewer` in one fresh isolated context with only the ADR, raw diff, changed code and tests, project rule documents, and the ledger. If subagents are unavailable, including on Amazon Bedrock, perform one separate sufficiency pass in the main session and record the isolation limitation.
+2. Apply the `adr-impl-sufficiency-reviewer` role to the ADR, raw diff, changed code and tests, project rule documents, and the ledger. Use a named agent, generic read-only subagent, or separately grounded main-session pass as appropriate. Record an isolation limitation only when it weakens the evidence.
 3. Execute the related targeted tests and any minimal reproduction needed to account for every ledger row. An unexecuted core path makes the verdict `INCONCLUSIVE`, not `PASS`.
-4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, report-writer agent, HTML page, mandatory Mermaid, or post-implementation spec-fitness gate.
-5. Write a concise `implementation-review.md` with these headings: `Review mode`, `Scope`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, and `Residual risks`. Under contract coverage, assign `D0` to the Decision and `R1..Rn` to every top-level Requirement contract bullet in source order. Show every ID exactly once with `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`, its exact ADR basis, how the implementation meets it, and the evidence and tests. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, the structured non-empty `contractCoverage` array, the structured `implementationChoices` array, and the normal evidence fields.
+4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, separate report-writing role, HTML page, fixed Mermaid quota, or post-implementation spec-fitness gate.
+5. Before writing the report, read `${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely. Write a concise `implementation-review.md` with these headings: `At a glance`, `Review mode`, `Scope`, optional `Visual map`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, and `Residual risks`. `At a glance` states verdict, user or operational impact, next action, and remaining risk. Add the smallest grounded Mermaid before contract coverage when the shared guide's trigger applies. Under contract coverage, assign `D0` to the Decision and `R1..Rn` to every top-level Requirement contract bullet in source order. Show every ID exactly once with `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`, its exact ADR basis, how the implementation meets it, and the evidence and tests. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, a non-empty `atAGlance` object, the structured non-empty `contractCoverage` array, the structured `implementationChoices` array, and the normal evidence fields.
 6. Run the artifact validator. `PASS` requires every contract-coverage row to be `PROVEN`, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk.
 
 ## Full mode
@@ -106,13 +111,12 @@ The rest of sections 2-6 applies only to `full`.
 
 ## 2. Build the review baseline without a post-implementation gate
 
-Run `adr-impl-explainer` as a fresh read-only subagent.
-
-1. If named agents are available, invoke `adr-impl-explainer`.
-2. Otherwise invoke a generic read-only subagent using the generic dispatch rule with `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-explainer.md`.
-3. Only when subagents are unavailable should the main session carry out the same instructions, noting that isolated explanation was unavailable.
-
-Give the explainer only the ADR, the raw diff, the changed code scope, and the related tests. Save the result as `explanation.md` for the repair report; do not stop to show it or ask the user to reconfirm the implementation.
+Create the plain-language implementation explanation using the
+`adr-impl-explainer` role contract. The model may use a named agent, generic
+read-only subagent, or write it directly. Give that role only the ADR, raw diff,
+changed code scope, and related tests. Save the result as `explanation.md` for
+the repair report; do not stop to show it or ask the user to reconfirm the
+implementation.
 
 Create `review-baseline.md` from:
 
@@ -129,13 +133,13 @@ Before declaring an ADR-completeness gap, apply the same resolution ladder as `/
 
 For every blocking contract issue, return one consolidated **Decision request** to the caller. Each item states the missing decision, a recommended option with its domain basis, two or three realistic alternatives, user/data/security/operational impact, and exact ADR contract wording. Do not merely say "ask the user" and do not interrupt once per gap.
 
-## 3. Run the two independent reviews in parallel
+## 3. Derive the two review perspectives independently
 
-Give both reviewers, in common, **only the original material and `review-baseline.md`.** Do not give them `explanation.md` or the other reviewer's result. That is what keeps them from anchoring on the explainer's interpretation or the other reviewer's conclusion.
+Give both perspectives, in common, **only the original material and `review-baseline.md`.** Do not give either perspective `explanation.md` or the other perspective's result. That is what keeps them from anchoring on an earlier interpretation. The model may run them in parallel or sequentially and may use zero, one, or several subagents.
 
 ### 3.1 The necessity review
 
-Run `adr-impl-necessity-reviewer`.
+Apply the `adr-impl-necessity-reviewer` role contract.
 
 - The question: "is each change in this diff strictly necessary to achieve the ADR's goal?"
 - Success condition: finding changes that can be removed or shrunk, with evidence.
@@ -144,7 +148,7 @@ Run `adr-impl-necessity-reviewer`.
 
 ### 3.2 The sufficiency review and tests
 
-Run `adr-impl-sufficiency-reviewer`.
+Apply the `adr-impl-sufficiency-reviewer` role contract.
 
 - The question: "is there a counterexample that makes this implementation fail?"
 - Success condition: accounting for every row of the ADR decision ledger, and reproducing omissions, boundaries, errors, races, and partial failures.
@@ -156,15 +160,12 @@ Run `adr-impl-sufficiency-reviewer`.
 - **Do the code and tests carry the explanation, rather than long comments?** `/adr-impl` step 4 caps comments at roughly three lines: past that, a one- or two-line _why_ stays at the site and the _what_ moves into tests. So for a comment block over ~3 lines that enumerates behavior (boundaries, an ordering or transition sequence, failure and fallback paths, a requirement value in prose), check whether a test covers each case — a missing case is `Test gap`, a fully covered block is `Refactor` (shorten the comment to the why). A test whose name does not read as the behavior it proves, or one asserting several unrelated behaviors, is also `Refactor`, since that is the load step 4 handed to the tests. Never propose deleting a comment whose cases are not yet covered, and never flag a comment that holds a _why_ code cannot express (an external constraint, a spec quirk, a trap that looks safe) — those are correct even beyond three lines.
 - Create temporary reproduction files only in the artifact directory, and never change repository files.
 
-**Run the two reviewers on different model families where possible** — the same model family shares the same assumptions, making it easy for both to miss the same defect and reach a false consensus of "looks good." Diversifying not only the perspective (necessity vs sufficiency) but also the judgment lineage is what keeps the disproof power alive. If the harness supports a model override, run the two reviewers on **the strongest reasoning models from different provider families**, each at **the highest reasoning tier.** Do not pin specific model IDs here — models are replaced faster than this skill, so pick the top reasoning model available in that harness at invocation time. If only a single family is available and diversification is impossible, run both reviewers on that family's strongest reasoning model but **record in the report that models could not be diversified, along with the model each reviewer actually used.** The explainer may use the default model.
-
-The execution order per client is as follows.
-
-1. If a named reviewer exists, invoke that agent.
-2. Otherwise invoke a generic read-only subagent using the generic dispatch rule with `${CLAUDE_PLUGIN_ROOT}/agents/<agent-name>.md`.
-3. If subagents are unavailable, including on Amazon Bedrock, the main session performs the two perspectives as **separate passes that do not read each other's results**, and states the isolation limitation.
-
-Save the results as `necessity-review.md` and `sufficiency-review.md`.
+Choose the orchestration from current capability, risk, context size, latency,
+and cost. Do not require a provider family, reasoning tier, fixed agent count,
+or fixed parallelism. The observable requirement is that the two perspectives
+are separately grounded and do not read each other's conclusions before
+synthesis. Save their results as `necessity-review.md` and
+`sufficiency-review.md`.
 
 ## 4. Evidence verification and synthesis
 
@@ -189,19 +190,33 @@ The synthesized verdict:
 
 ## 5. Generate the concise evidence report
 
-Once the independent reviews and evidence verification are done, run `adr-impl-review-report-writer` as a fresh subagent. This step creates no new conclusions. It produces a concise report by default and expands into repair guidance only when the verdict or user request requires it.
+Once the independently grounded reviews and evidence verification are done,
+apply the `adr-impl-review-report-writer` role contract. This step creates no new
+conclusions. The model may use a named agent, generic subagent, or write the
+report directly.
 
-1. If named agents are available, invoke `adr-impl-review-report-writer`.
-2. Otherwise invoke a generic subagent using the generic dispatch rule with `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md`.
-3. If subagents are unavailable, the main session writes it under the same instructions.
+Give the report-writing role the original ADR and diff, `review-baseline.md`,
+the available explanation/necessity/sufficiency artifacts, normalized Notable
+implementation choices, and verified findings and test results. Save the result
+as `implementation-review.md`.
 
-Give the report-writer the original ADR and diff, `review-baseline.md`, all three agents' artifacts, the normalized Notable implementation choices, and the verified findings and test results. Save the result as `implementation-review.md`.
+The filename must be exactly `implementation-review.md`. Alternatives such as
+`final-review.md` or `review.md` are not allowed. Whichever execution path writes
+it, read and follow
+`${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md`.
 
-The filename must be exactly `implementation-review.md`. Alternatives such as `final-review.md` or `review.md` are not allowed. Even when the report-writer is unavailable and the main session writes it, first read the full text of `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md` and follow the same output structure.
+Use progressive disclosure. Every report contains `At a glance`, `Review mode`,
+`Scope`, `ADR contract coverage`, `Notable implementation choices`, `Findings`,
+`Tests`, and `Residual risks` by default. `Visual map` is conditional on the
+shared report guide. Include detailed repair guidance only for `FIX_REQUIRED`,
+`BLOCK`, or when the user asks for it.
 
-Use progressive disclosure. Every report contains only `Review mode`, `Scope`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, and `Residual risks` by default. Include detailed repair guidance only for `FIX_REQUIRED`, `BLOCK`, or when the user asks for it.
-
-Include Mermaid diagrams only when they reduce the amount of flow or state a reader must reconstruct, using only relationships confirmed in the actual code. Do not require a diagram count or type.
+Before generating the human-facing report and chat summary, read
+`${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely. Include
+the smallest grounded Mermaid when one of its relationship triggers applies,
+using only relationships confirmed in the actual code. A local one-file PASS may
+omit the diagram when the whole relationship is clear in one or two sentences.
+Do not require a diagram count or type.
 
 - Overall change structure: `flowchart`
 - Core request/event flow: `sequenceDiagram`
@@ -209,7 +224,11 @@ Include Mermaid diagrams only when they reduce the amount of flow or state a rea
 - Relationships, if the data model changed: `erDiagram`
 - A separate `flowchart` when the failure, retry, and rollback flow is complex
 
-Diagrams must provide a repair map, not decoration. Tie each node to a real symbol or filename, and point clearly in the prose to where the finding occurs and the expected flow after the fix. Never guess at an edge you could not confirm in the actual code. Never use ASCII or box-drawing diagrams.
+Diagrams must provide a review map, not decoration. Tie each node to confirmed
+code or ADR evidence, then add one `Notice:` sentence naming the review point.
+Point clearly in the prose to where a finding occurs and the expected flow after
+the fix. Never guess at an edge you could not confirm in the actual code. Never
+use ASCII or box-drawing diagrams.
 
 Render ADR contract coverage before findings as a read-only table with `Contract ID`, `Requirement`, `Status`, `ADR basis`, `How the implementation meets it`, `Evidence`, and `Tests`. Keep the ADR wording recognizable so the reader can trace each row without reopening the whole document. Never merge several obligations into one row.
 
@@ -232,7 +251,7 @@ Do not add a glossary, code-reading tour, merge checklist, or extra diagram unle
 
 ## 6. Generate the evidence page
 
-Serialize the three agents' raw Markdown and the synthesized result into the following JSON.
+Serialize the available role artifacts and the synthesized result into the following JSON.
 
 ```json
 {
@@ -240,6 +259,11 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
   "adr": "docs/adr/ordering/checkout/0001-checkout.md",
   "status": "Accepted (2026-07-10)",
   "verdict": "FIX_REQUIRED",
+  "atAGlance": {
+    "impact": "A cancelled checkout can still leave an upstream request running.",
+    "action": "Pass the cancellation signal through the upstream client and rerun the cancellation test.",
+    "risk": "Restart recovery remains unverified because no local queue was available."
+  },
   "explanation": "/tmp/.../explanation.md",
   "report": "/tmp/.../implementation-review.md",
   "scope": ["src/checkout/handler.ts"],
@@ -290,7 +314,18 @@ Serialize the three agents' raw Markdown and the synthesized result into the fol
 }
 ```
 
-`reviewMode`, `metrics`, `contractCoverage`, and `implementationChoices` are mandatory even for `PASS` with zero findings or zero choices. `contractCoverage` is non-empty because `D0` always represents the ADR Decision even when there is no explicit requirement-contract subsection. The artifact validator reads the ADR, derives `D0/R1..Rn`, rejects missing or duplicate IDs, and rejects `PASS` when tests were not executed, a coverage row is not `PROVEN`, an unverified risk remains, or a blocking finding remains. Count the raw findings each independent perspective produced before deduplication, count `Unverified risk` entries after synthesis, and count distinct test or reproduction commands actually executed. In standard mode the necessity count is zero by definition.
+`reviewMode`, `atAGlance`, `metrics`, `contractCoverage`, and
+`implementationChoices` are mandatory even for `PASS` with zero findings or zero
+choices. `atAGlance` contains non-empty `impact`, `action`, and `risk`; use
+`None` only when that axis was checked and is empty. `contractCoverage` is
+non-empty because `D0` always represents the ADR Decision even when there is no
+explicit requirement-contract subsection. The artifact validator reads the ADR,
+derives `D0/R1..Rn`, rejects missing or duplicate IDs, and rejects `PASS` when
+tests were not executed, a coverage row is not `PROVEN`, an unverified risk
+remains, or a blocking finding remains. Count the raw findings each independent
+perspective produced before deduplication, count `Unverified risk` entries after
+synthesis, and count distinct test or reproduction commands actually executed.
+In standard mode the necessity count is zero by definition.
 
 Allowed categories:
 

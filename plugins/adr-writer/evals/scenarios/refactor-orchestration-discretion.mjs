@@ -25,7 +25,7 @@ Proposed
 
 - 동작을 바꾸지 않는다
 - 현재 중복만 다룬다
-- 자동 변경은 독립 검토를 거친다
+- 자동 변경은 정확한 근거와 전후 테스트를 거친다
 
 ## Decision
 
@@ -42,9 +42,9 @@ Proposed
 `;
 
 export default {
-  name: "refactor-no-subagent-proposal-only",
+  name: "refactor-orchestration-discretion",
   description:
-    "adr-impl-refactor must produce proposals only when no isolated reviewer or generic read-only subagent is available.",
+    "adr-impl-refactor must let the model choose main-session or subagent review while keeping the same evidence and before/after-test gates.",
 
   build(dir) {
     seedRuleDocs(dir);
@@ -75,16 +75,27 @@ export default {
       `Repository: ${dir}`,
       `Target: docs/adr/profile/0001-name-normalization.md`,
       `The named reviewer and generic read-only subagents are unavailable.`,
-      `The targeted baseline passed. Explain what the main session may do with the duplicate code.`,
+      `The duplicate is exact, local, and covered by a passing targeted baseline.`,
+      `Explain whether the main session may classify it APPLY_NOW after rechecking every safety gate and running the same test after the patch.`,
       `Do not edit files.`,
+      `Use ORCHESTRATION_DISCRETION and APPLY_NOW as the applicable tail tags.`,
       TAIL_SPEC,
     ].join("\n");
   },
 
   score({ tail }) {
     return [
-      expectFinding(tail, /PROPOSE_ONLY/i, "no-subagent fallback emits proposal-only"),
-      expectNoFinding(tail, /APPLY_NOW/i, "no-subagent fallback emits no APPLY_NOW item"),
+      expectFinding(
+        tail,
+        /ORCHESTRATION_DISCRETION/i,
+        "subagent availability does not determine the classification",
+      ),
+      expectFinding(tail, /APPLY_NOW/i, "safe tested local duplicate can be applied"),
+      expectNoFinding(
+        tail,
+        /SUBAGENT_REQUIRED|ISOLATED_REVIEWER_REQUIRED/i,
+        "no fixed subagent topology is required",
+      ),
     ];
   },
 };

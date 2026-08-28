@@ -63,12 +63,18 @@ export function validateReviewArtifact(dir, report, findings) {
   const artifactDir = path.join(dir, "review-artifact");
   const reportPath = write(artifactDir, "implementation-review.md", report);
   const explanationPath = write(artifactDir, "explanation.md", "# Review explanation\n");
+  const atAGlance = {};
+  for (const field of ["impact", "action", "risk"]) {
+    const match = report.match(new RegExp(`^[-*]\\s+${field}:\\s*(.+)$`, "im"));
+    atAGlance[field] = match?.[1]?.trim() || "";
+  }
   const findingsPath = write(
     artifactDir,
     "findings.json",
     JSON.stringify(
       {
         ...findings,
+        atAGlance: findings.atAGlance ?? atAGlance,
         report: reportPath,
         explanation: findings.reviewMode === "full" ? explanationPath : undefined,
       },
@@ -150,7 +156,7 @@ function promptText(entryPath, pluginRoot, { references = [] } = {}) {
   const source = readFileSync(entryPath, "utf8");
   const entryDir = path.dirname(entryPath);
   const available = new Map(
-    directMarkdownReferences(source, entryDir).map((reference) => [
+    directMarkdownReferences(source, entryDir, pluginRoot).map((reference) => [
       path.relative(pluginRoot, reference).split(path.sep).join("/"),
       reference,
     ]),
@@ -172,12 +178,12 @@ function promptText(entryPath, pluginRoot, { references = [] } = {}) {
   return parts.join("\n");
 }
 
-function directMarkdownReferences(source, skillDir) {
+function directMarkdownReferences(source, skillDir, pluginRoot) {
   const files = new Set();
   for (const match of source.matchAll(/`([^`\n]*references\/[^`\n]+\.md)`/g)) {
     const reference = match[1];
     const full = reference.startsWith("${CLAUDE_PLUGIN_ROOT}/")
-      ? path.join(PLUGIN_ROOT, reference.slice("${CLAUDE_PLUGIN_ROOT}/".length))
+      ? path.join(pluginRoot, reference.slice("${CLAUDE_PLUGIN_ROOT}/".length))
       : path.join(skillDir, reference);
     files.add(full);
   }
@@ -212,7 +218,8 @@ above — do not soften or re-label them here.
 // so this never throws.
 export function parseTail(output) {
   const verdict = output.match(/===\s*EVAL-VERDICT:\s*(.+?)\s*===/)?.[1]?.trim() ?? null;
-  const body = output.match(/===\s*EVAL-FINDINGS\s*===([\s\S]*?)===\s*EVAL-END\s*===/)?.[1] ?? "";
+  const bodyMatch = output.match(/===\s*EVAL-FINDINGS\s*===([\s\S]*?)===\s*EVAL-END\s*===/);
+  const body = bodyMatch?.[1] ?? "";
   const findings = body
     .split("\n")
     .map((l) => l.trim())
@@ -223,7 +230,7 @@ export function parseTail(output) {
         ? { tag: line, summary: "" }
         : { tag: line.slice(0, i).trim(), summary: line.slice(i + 1).trim() };
     });
-  return { verdict, findings, raw: output };
+  return { complete: Boolean(verdict && bodyMatch), verdict, findings, raw: output };
 }
 
 // ── scoring helpers ───────────────────────────────────────────────────────

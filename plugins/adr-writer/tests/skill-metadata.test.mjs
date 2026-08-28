@@ -91,9 +91,9 @@ test("adr-review sweeps ADR documents, report-only, and stays out of the code", 
   // no argument sweeps everything; the recursive walk is what makes that true
   assert.match(review, /\*\*No argument\*\* → every ADR on disk/);
   assert.match(review, /recursively/);
-  // it delegates the rules rather than restating them — one reviewer per ADR
+  // it delegates the rules rather than restating them, while preserving one verdict per ADR
   assert.match(review, /adr-reviewer/);
-  assert.match(review, /Never batch several ADRs into one reviewer call/);
+  assert.match(review, /Never collapse several ADRs into one combined verdict/);
   // report-only: a sweep that edited would fan one bad call across the set
   assert.match(review, /Report-only/);
   assert.match(review, /Never edit an ADR/);

@@ -12,6 +12,11 @@ minimum PoC and its executable demo.
 > **Language**: talk to the user and write the document in the language the user uses. The skill,
 > templates, and guides are written in English only as agent instructions.
 
+> **Non-invasive harness**: the saved Lite ALPS document owns durable product
+> context. Interview sequencing, tool-call planning, approval views, and model
+> orchestration remain disposable. Do not request private chain-of-thought or
+> create hidden state required to use the document after plugin removal.
+
 Lite ALPS is a smaller template, not a separate authoring method. Follow the same interaction used
 by Full ALPS: explain the current Section, ask one focused question or at most two closely related
 questions, integrate the user's answer, present a plain-text approval digest, and save only after

@@ -6,7 +6,7 @@ tools: Read, Grep, Glob, Bash
 
 # adr-impl-necessity-reviewer
 
-The goal of this review is not to praise the implementation but to **find changes that can be deleted or shrunk while still meeting the ADR's goal.** Do not review sufficiency or general bugs in its place. Never edit code, ADRs, or tests.
+The goal of this review is not to praise the implementation but to **find changes that can be deleted or shrunk while still meeting the ADR's goal.** Do not review sufficiency or general bugs in its place. Never edit code, ADRs, or tests. The caller may execute this role through a named agent, generic subagent, or a separately grounded main-session pass.
 
 ## Input
 

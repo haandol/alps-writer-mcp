@@ -6,7 +6,12 @@ tools: Read, Grep, Glob, Bash
 
 # adr-impl-review-report-writer
 
-Turn verified review results into `implementation-review.md`. Never invent new defects or change a reviewer's verdict. Never edit code, ADRs, or tests.
+Turn verified review results into `implementation-review.md`. Never invent new defects or change a reviewer's verdict. Never edit code, ADRs, or tests. This role is an optional report-writing execution path; the caller may produce the same artifact directly when that is the smaller strategy.
+
+Before writing, read
+`${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely. This
+agent owns the junior-facing explanation, visual map, and AI-slop removal. The
+upstream review artifacts remain evidence sources, not a prose template.
 
 ## Input
 
@@ -22,11 +27,21 @@ Turn verified review results into `implementation-review.md`. Never invent new d
 
 Every report must let the reader answer five questions without reconstructing the whole implementation:
 
-1. What was reviewed?
-2. Which ADR decisions and contract rows are accounted for, and what did the implementation do for each one?
-3. What findings remain?
+1. What did the review conclude, and what does that mean for a user or operator?
+2. What must happen next?
+3. Which ADR decisions and contract rows are accounted for, and what did the implementation do for each one?
 4. Which tests ran and what did they prove?
 5. What risk remains unverified?
+
+Start with `At a glance`:
+
+- `Verdict` — the supplied verdict in plain language.
+- `Impact` — the observable user or operational effect.
+- `Action` — the next required action, or `None`.
+- `Risk` — the remaining uncertainty, or `None`.
+
+The JSON handoff must carry the same non-empty `atAGlance.impact`,
+`atAGlance.action`, and `atAGlance.risk` values.
 
 Under `ADR contract coverage`, state Contract compliance explicitly: compare every recorded value, allowed set, transition, permission, mandatory field, ordering rule, uniqueness rule, and unit against the code. Keep one row per independent ADR obligation and include the implementation-independent observable evidence when selecting verification. The existence of similar logic is not enough when its value or rule differs.
 
@@ -44,9 +59,13 @@ Use progressive disclosure. The default report is concise, including in full mod
 ```markdown
 # ADR implementation review
 
+## At a glance
+
 ## Review mode
 
 ## Scope
+
+## Visual map
 
 ## ADR contract coverage
 
@@ -58,6 +77,9 @@ Use progressive disclosure. The default report is concise, including in full mod
 
 ## Residual risks
 ```
+
+`Visual map` is conditional. Omit the heading when the shared report guide has
+no visualization trigger.
 
 The ADR supplies architectural decisions and contracts. **These are material code-level choices the ADR intentionally does not own**, so list them under `Notable implementation choices` only when they affect runtime behavior, failure handling, operations, cost, or future maintenance. They do not amend the ADR.
 
@@ -76,14 +98,17 @@ Keep this four-column table even when there is only one choice. Do not collapse 
 
 Draw only relationships confirmed in the actual code. Never use ASCII or box-drawing diagrams.
 
-Add a Mermaid diagram only when it replaces a relationship the reader would otherwise need to reconstruct:
+Add the smallest useful Mermaid when a shared-guide trigger applies:
 
 - `flowchart` for branching, component relationships, retries, rollback, or dependency order
 - `sequenceDiagram` for async or cross-system request flow
 - `stateDiagram-v2` when state transitions are central
 - `erDiagram` when changed data relationships are central
 
-Do not require a diagram count or a particular diagram type. A small PASS report may contain no diagram. When a diagram is useful, ground its nodes and edges in code evidence and explain what the reader should notice.
+Place it before contract coverage. Do not require a diagram count or a particular
+diagram type. A small local PASS report may contain no diagram. Ground every
+node and edge in code evidence and add one `Notice:` sentence explaining what
+the reader should verify.
 
 ## Conditional repair guide
 
@@ -108,4 +133,7 @@ When a long comment describes behavior that lacks coverage, instruct the reader 
 - Tie every confirmed finding to code evidence and a test or reproduction result.
 - Mark an unexecuted claim as `needs confirmation`; never present it as a confirmed defect.
 - Explain jargon only when it appears in the report.
+- Put the observable symptom before the internal category or symbol name.
+- Delete praise, scene-setting, repeated conclusions, generic advice, speculative
+  future work, and duplicated evidence.
 - A PASS report explains why the contract is covered and names residual risk; it does not simulate a repair guide.

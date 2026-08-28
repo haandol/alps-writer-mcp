@@ -4,6 +4,13 @@ This document is the **major decision-change history** of the adr-authoring/deci
 category. Each ADR body describes only the current state, while the timeline of "what
 changed and why" accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-08-28 — 문서 리뷰와 동기화 리포트를 주니어 중심으로 시각화
+
+- **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)
+- **Change type**: requirement rule change
+- **What**: 사람용 리포트가 결론·영향·조치·위험을 먼저 보여주고, 복수 참여자·상태·의존·충돌·실패 흐름에는 근거 있는 Mermaid를 포함하도록 변경했다.
+- **Why**: 해당 ADR을 처음 보는 주니어 개발자가 상세 규칙과 경로를 재구성하기 전에 검토 결과를 이해하면서도 계약값과 증거를 그대로 추적할 수 있어야 한다.
+
 ## 2026-08-17 — ADR 계약을 요구사항별 구현 리뷰 기준선으로 사용
 
 - **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)

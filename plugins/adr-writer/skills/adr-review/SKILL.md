@@ -27,6 +27,11 @@ Review ADRs that already exist **as documents** and return a punch list. With no
 
 > **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the report in the language the user writes in (`authoring-rules.md` "Conventions"). Any user-facing phrasing below is a guide, not a literal string.
 
+Apply `${CLAUDE_PLUGIN_ROOT}/references/non-invasive-harness.md`: the document
+verdict and evidence are contractual, while the number and type of subagents,
+parallelism, and model selection are execution details chosen by the current
+model.
+
 ## Procedure
 
 ### 1. Fix the scope
@@ -44,7 +49,7 @@ Then load `docs/adr/.mapping.json`, plus **only the rule-document sections this 
 
 **Do not load the rule documents whole here.** `adr-reviewer` owns R1-R20 and reads its own sections per ADR (see its step 1), so a full copy in this session buys nothing but pays for every token again — and the same division of labor is why step 3 tells you not to restate the reviewer's criteria. Read a further section on demand if an aggregation finding turns on it.
 
-**Announce the scope before starting a full sweep.** For more than a handful of ADRs, print the count and the per-category breakdown and confirm once ("Reviewing 23 ADRs across 6 categories. Proceed?"). A sweep normally spends one subagent per ADR, so the user should see the size first.
+**Announce the scope before starting a full sweep.** For more than a handful of ADRs, print the count and the per-category breakdown and confirm once ("Reviewing 23 ADRs across 6 categories. Proceed?"). The model may use one or more review contexts depending on scope and capability, so the user should see the size before that cost is incurred.
 
 ### 2. Run the deterministic harness once, for the whole scope
 
@@ -58,20 +63,20 @@ Keep the result and pass each ADR's slice of it to that ADR's reviewer, so the L
 
 **The harness never flags a bare number** — whether a value is a requirement (keep) or a tuning value (drop) is judgment, so it stays with the reviewer in step 3. This is deliberate: pushing an author to delete a requirement value is the failure mode this plugin guards against hardest.
 
-### 3. Review each ADR with `adr-reviewer`, in parallel
+### 3. Review each ADR against the `adr-reviewer` contract
 
-For each ADR in scope, run the `adr-reviewer` subagent in a fresh isolated context — that agent owns rules R1-R20 and is the source of truth for them; do not restate its criteria here.
+For each ADR in scope, apply the `adr-reviewer` role contract. The role owns rules R1-R20 and is the source of truth for them; do not restate its criteria here.
 
-Before dispatch, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely and apply its provider capability gate and dispatch chain with named agent `adr-reviewer` and fallback file `${CLAUDE_PLUGIN_ROOT}/agents/adr-reviewer.md`.
+Before choosing the execution strategy, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely. The model may use named reviewers, generic read-only subagents, main-session passes, or a mixture. It chooses the smallest strategy that keeps each ADR's contract and findings independently reviewable.
 
-Where subagents are unavailable, the main session carries out the same instructions as a separate sequential pass per ADR. Give each pass only that ADR's path, mapping entry, and harness slice; do not reuse another ADR's findings as review input. Note in the report that the passes were not isolated subagent contexts.
+Whichever strategy is chosen, ground each ADR's judgment only in that ADR, its mapping entry, its harness slice, and the rule docs. Do not use another ADR's findings as evidence for this ADR. Cross-ADR patterns and contradictions are synthesized only in step 4. Record a context-isolation limitation only when it materially weakens confidence.
 
 Pass each reviewer: the ADR path, that category's `.mapping.json` entry, and **that ADR's slice of the harness result**.
 
-- **One subagent per ADR, and run independent ADRs in parallel when the provider supports it.** Isolation is the point — a reviewer that saw the previous ADR's findings starts pattern-matching instead of judging, and one long context degrades the later ADRs. The Amazon Bedrock fallback is sequential and must report that this isolation was unavailable.
-- **Never batch several ADRs into one reviewer call** to save tokens. R19 (the regeneration test) requires holding one ADR's whole contract in view; batching is how a missing requirement slips through.
+- Agent count and parallelism are not part of the report contract. The model may group mechanical loading work or reuse a context when it can still produce a complete per-ADR R19 regeneration check without anchoring on prior conclusions.
+- Never collapse several ADRs into one combined verdict. Every ADR receives its own verdict, regeneration check, evidence, and comprehension-load line even when the execution strategy batches work.
 - Require only the agent file's existing review-result format in the response.
-- If the scope is large enough that a full parallel fan-out is impractical, process in **category-sized batches** and tell the user the batching, rather than silently reviewing a subset. Never truncate the scope without saying so.
+- If the scope is large, tell the user the execution grouping, rather than silently reviewing a subset. Never truncate the scope without saying so.
 
 For each ADR, evaluate five internal axes from 0 to 2 and sum them:
 conceptual breadth, contract density, state and flow complexity, boundary
@@ -101,7 +106,7 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 - **Recurring rule violations** — the same rule failing across many ADRs is a signal about the team's authoring habit, not about one document. Report it as one grouped finding with the ADR list ("R18a: requirement values blurred in 7 of 23 ADRs"), because the fix is a shared habit, not 7 unrelated edits.
 - **Contradictions between ADRs** — two ADRs stating different values or rules for the same behavior (thresholds, allowed value sets, state transitions, error handling). Neither ADR's own review can see this, so only the sweep catches it. Record which ADRs conflict and on what, and route it to the user for a ruling — never pick a winner yourself.
 - **Cross-category duplication** — the same decision recorded in two categories, which usually means the category boundary is wrong (`structure.md` "Anti-pattern categories") rather than that one ADR is bad.
-- **Weak spots in the set** — categories where every ADR fails R12 (gray-zone substance), or a category with no ADR at all despite the code having decisions worth recording.
+- **Weak spots in the set** — categories where every ADR fails R12 (gray-zone substance), or an expected decision boundary implied by the ADR set has no owner. Do not infer missing decisions from code in this document-only command.
 - **Prose style across the set (R20, advisory)** — report it as **one grouped finding for the whole sweep**, not per ADR: a house habit like passive-voice decisions or padded openers shows up everywhere at once, and N separate style nags would bury the findings that actually matter. Name the habit, give two or three representative rewrites, and list the affected ADRs. Never let style suggestions outweigh a `FIX_REQUIRED`, and never propose a cut that removes content.
 
 ### 5. Companion checks (cheap, and only where they need no code)
@@ -118,8 +123,19 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 
 ### 6. Report
 
+Before writing the human-facing report or chat summary, read
+`${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely and apply
+it. Keep the reviewer agents' raw punch lists unchanged; the aggregation layer
+owns the junior-facing explanation and any Mermaid visualization.
+
 ```
 ## ADR Review Sweep
+
+### At a glance
+- Verdict: <what the sweep concluded>
+- Impact: <what this means for a developer or reviewer>
+- Action: <the next required action, or "None">
+- Risk: <what remains uncertain or unjudged, or "None">
 
 ### Scope
 - ADRs reviewed: <n> (categories: <list>)
@@ -131,6 +147,10 @@ A per-ADR punch list is just N separate reviews. What a sweep adds is what only 
 
 ### Verdict
 <n> PASS · <n> FIX_REQUIRED · <n> BLOCK
+
+### Visual map
+<the smallest grounded Mermaid required by the shared report guide, or omit this section>
+Notice: <the one relationship the reader should verify>
 
 ### Cross-ADR findings
 - [Recurring] R18a — requirement values blurred: <adr list>
@@ -155,7 +175,9 @@ Order the per-ADR section **worst first** (BLOCK, then FIX_REQUIRED, then PASS) 
 
 **A `PASS` count is not a clean bill of health while an axis went unjudged.** The per-ADR verdict stays the reviewer's three values (`PASS` / `FIX_REQUIRED` / `BLOCK`) — do not invent a fourth — but an ADR can only be judged against the rules its reviewer could actually reach, so a rule nobody evaluated silently rides along inside `PASS`. That is why `Unjudged axes` sits in Scope, above the verdict: when it is non-empty, **say in the chat summary that the PASS count excludes those rules** rather than reporting "N passed" flat. This is the same discipline `/adr-impl-review` applies with `INCONCLUSIVE` — unverified must never read as verified — expressed without disturbing the reviewer's verdict vocabulary.
 
-**Summarize in chat rather than dumping the whole report**: the verdict counts, the cross-ADR findings, and the two or three ADRs that need attention most. For a large sweep, write the full report to a file and give the path.
+**Summarize in chat rather than dumping the whole report**: the At a glance
+verdict, impact, action and risk, then the two or three ADRs that need attention
+most. For a large sweep, write the full report to a file and give the path.
 
 Lead the chat summary with the four questions a reader must answer: **Decision** (what was chosen), **Contract** (what the result must honor), **Rationale** (why this option won), and **Risk** (what remains costly, uncertain, or unjudged). Keep rule IDs, quotations, paths, confidence, and detailed evidence in the full report unless they are needed to understand an actionable finding. Progressive disclosure must never hide a requirement value, a `BLOCK`, or an unjudged axis.
 
@@ -173,7 +195,7 @@ This command stays report-only. Route what the user approves:
 ## Prohibited
 
 - Never edit an ADR, `.mapping.json`, `decision-log.md`, or code — this command reports only.
-- Never batch several ADRs into one reviewer call, and never let one reviewer see another's findings.
+- Never collapse several ADRs into one verdict or use one ADR's findings as evidence for another.
 - Never silently narrow the scope. If you review a subset, say which ADRs were skipped and why.
 - Never report a clean sweep as "the ADRs are correct" — it means the ADRs are well _written_. Consistency with code is `/adr-sync`'s verdict.
 - Never propose deleting a requirement value because it looks like a constant, or a number because the code also holds it (`authoring-rules.md` "Requirements live in the code and in the ADR").

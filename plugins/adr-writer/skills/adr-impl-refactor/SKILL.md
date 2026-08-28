@@ -6,7 +6,11 @@ argument-hint: "[adr-path-or-category] [--base <ref>]"
 
 # adr-impl-refactor
 
-Refactor an ADR implementation conservatively before it is declared complete. A dedicated read-only reviewer finds opportunities; the main session applies only candidates that pass every safety gate. The final `/adr-impl-review` remains report-only and reviews the resulting code.
+Refactor an ADR implementation conservatively before it is declared complete. One or more model-selected review passes find opportunities; the main session applies only candidates that pass every safety gate. The final `/adr-impl-review` remains report-only and reviews the resulting code.
+
+Apply `${CLAUDE_PLUGIN_ROOT}/references/non-invasive-harness.md`: the refactor
+evidence and safety gates are contractual, while subagent use, agent count,
+parallelism, and model selection are execution details.
 
 This skill may also be invoked directly for an existing ADR implementation. It never changes an ADR decision or requirement contract. If an opportunity needs either to change, route it to `/adr-impl` or `/adr-sync` instead of treating it as a refactor.
 
@@ -34,15 +38,15 @@ Run the narrowest existing tests that cover the changed path before applying any
 - If no related tests exist, produce proposals only. Do not auto-apply a candidate whose behavior cannot be checked before and after.
 - Do not install new tools or create product tests solely to qualify an automatic refactor. A missing test is a proposal and belongs in the result.
 
-## 3. Run the independent refactor reviewer
+## 3. Choose and run the refactor review strategy
 
-Run `adr-impl-refactor-reviewer` in a fresh read-only context.
+Apply the `adr-impl-refactor-reviewer` role to the original ADR, mapping entry,
+raw diff, confirmed code scope, related tests, seeded rule docs, and project
+conventions.
 
-Before dispatch, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely and apply its provider capability gate and dispatch chain with named agent `adr-impl-refactor-reviewer` and fallback file `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-refactor-reviewer.md`.
+Before choosing the execution strategy, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely. The model may use a named reviewer, generic read-only subagent, separately grounded main-session pass, or another available read-only path. Choose the smallest strategy that can produce exact code evidence and preserve the safety gates.
 
-If subagents are unavailable, use step 4's `PROPOSE_ONLY` main-session fallback: perform the same analysis only to produce `PROPOSE_ONLY` items and record that the independent context was unavailable. **It must not classify or apply any candidate as `APPLY_NOW` without an isolated read-only reviewer.**
-
-Give the reviewer only the original ADR, mapping entry, raw diff, confirmed code scope, related tests, seeded rule docs, and project conventions. Do not give it necessity/sufficiency results, an implementation explanation, or earlier refactor conclusions.
+Do not give the review pass necessity/sufficiency results, an implementation explanation, or earlier refactor conclusions. Agent topology is not a classification input: a main-session candidate may still become `APPLY_NOW` when the main session rechecks the original evidence, every step-4 gate holds, and before/after tests are available. Record a capability limitation only when it weakens the evidence.
 
 Require only the reviewer file's existing `Refactor Review` output in the response.
 
@@ -54,7 +58,7 @@ The reviewer proposes; the main session verifies. An `APPLY_NOW` label is not su
 
 Auto-apply a candidate only when every condition holds:
 
-- The candidate came from an isolated read-only reviewer context. Main-session fallback findings are proposal-only.
+- The candidate was rechecked against the original ADR, diff, call path, and tests without relying on an earlier conclusion as evidence.
 - It preserves the ADR decision, requirement contract, observable behavior, and public contract.
 - It is local to the confirmed implementation scope and has a small, mechanically explainable patch.
 - Confidence is `high`, with exact code and call-path evidence.
@@ -83,10 +87,27 @@ After all candidates, rerun the combined targeted test set **only when at least 
 
 Save `refactor-results.md` in the artifact directory:
 
+Before writing `refactor-results.md` or the chat summary, read
+`${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely and apply
+it. Keep the candidate evidence exact. Add a Mermaid before the candidate lists
+when the shared guide's multi-call-site or multi-stage trigger applies.
+
 Every proposal must state its priority, expected benefit, risk, estimated scope and verification method.
 
 ```markdown
 # ADR implementation refactor result
+
+## At a glance
+
+- Verdict: <what was safely applied or left as a proposal>
+- Impact: <what changed for maintainers or runtime work>
+- Action: <the next required action, or "None">
+- Risk: <what could not be verified, or "None">
+
+## Visual map
+
+<the smallest grounded Mermaid required by the shared report guide; omit this section when no trigger applies>
+Notice: <the before/after relationship the reader should verify>
 
 ## Applied
 
@@ -106,21 +127,22 @@ Every proposal must state its priority, expected benefit, risk, estimated scope 
 
 ## Limits
 
-- <missing tests, unavailable call path, or lack of independent reviewer context>
+- <missing tests, unavailable call path, or orchestration limitation that affects confidence>
 ```
 
-Summarize the applied count, proposal count, and tests in chat. Do not present a proposal as though it was already implemented.
+Summarize At a glance, the applied count, proposal count, and tests in chat. Do
+not present a proposal as though it was already implemented.
 
 ## 7. Continue the cycle
 
 - When called from `/adr-impl`, return control to its test step. The required project tests and final implementation review must pass on the refactored code before `Proposed -> Accepted`.
-- Then `/adr-impl-review` reviews the final diff without reading `refactor-review.md` or `refactor-results.md`. Its necessity and sufficiency reviewers must derive their conclusions independently from the ADR, final code, diff, tests, and human baseline.
+- Then `/adr-impl-review` reviews the final diff without reading `refactor-review.md` or `refactor-results.md`. Its necessity and sufficiency perspectives derive their conclusions independently from the ADR, final code, diff, tests, and human baseline.
 
 ## Prohibited
 
 - Do not change the ADR, mapping, requirement contract, or decision log.
 - Do not auto-apply when tests are missing or the baseline is failing.
-- Do not auto-apply when an isolated read-only reviewer is unavailable.
+- Do not auto-apply when the candidate cannot be independently rechecked from original evidence or before/after tests are unavailable.
 - Do not let priority or severity bypass the auto-apply gate.
 - Do not introduce speculative reuse or a framework for one caller.
 - Do not optimize tuning values without concrete evidence of repeated unnecessary work.

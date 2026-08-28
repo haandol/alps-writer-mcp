@@ -12,6 +12,7 @@ const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
 const ALLOWED_COVERAGE_STATUSES = new Set(["PROVEN", "VIOLATED", "UNVERIFIED", "CONTRADICTED"]);
 const REQUIRED_REPORT_TEXT = [
   "# ADR implementation review",
+  "## At a glance",
   "## Review mode",
   "## Scope",
   "## ADR contract coverage",
@@ -157,6 +158,19 @@ function validateFinding(finding, index, errors) {
   }
   if (finding.confidence && !ALLOWED_CONFIDENCE.has(finding.confidence)) {
     errors.push(`${label}.confidence must be high, medium, or low`);
+  }
+}
+
+function validateAtAGlance(atAGlance, errors) {
+  if (!atAGlance || typeof atAGlance !== "object" || Array.isArray(atAGlance)) {
+    errors.push("findings.json atAGlance must be an object");
+    return;
+  }
+
+  for (const field of ["impact", "action", "risk"]) {
+    if (typeof atAGlance[field] !== "string" || !atAGlance[field].trim()) {
+      errors.push(`findings.json atAGlance.${field} must be a non-empty string`);
+    }
   }
 }
 
@@ -328,6 +342,16 @@ function validateReport(report, data, errors) {
     if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
   }
 
+  const atAGlanceBody = sectionBody(report, /^## At a glance\s*$/i, /^##\s+/);
+  if (data.verdict && !atAGlanceBody.includes(data.verdict)) {
+    errors.push("implementation-review.md At a glance is missing the verdict");
+  }
+  for (const [field, value] of Object.entries(data.atAGlance ?? {})) {
+    if (typeof value === "string" && value.trim() && !atAGlanceBody.includes(value)) {
+      errors.push(`implementation-review.md missing atAGlance.${field}`);
+    }
+  }
+
   const coverageRows = tableRows(report, "ADR contract coverage", "Notable implementation choices");
   const coverageById = new Map(coverageRows.map((cells) => [cells[0], cells]));
   for (const [index, row] of (data.contractCoverage ?? []).entries()) {
@@ -391,6 +415,7 @@ function main() {
     if (!ALLOWED_MODES.has(data.reviewMode)) {
       errors.push("findings.json reviewMode must be standard or full");
     }
+    validateAtAGlance(data.atAGlance, errors);
     if (typeof data.adr !== "string" || !data.adr.trim()) errors.push("findings.json missing adr");
     if (!ALLOWED_VERDICTS.has(data.verdict)) {
       errors.push(`findings.json verdict is invalid: ${data.verdict ?? "(missing)"}`);

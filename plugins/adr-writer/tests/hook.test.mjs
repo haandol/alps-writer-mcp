@@ -91,7 +91,18 @@ test("directive preserves requirement ownership and completion review", () => {
     assert.match(ctx, /Keep replaceable libraries, SDKs, adapters, tuning values/);
     assert.match(ctx, /Confirm a new or changed ADR contract once before implementation/);
     assert.match(ctx, /risk-proportional review/);
-    assert.match(ctx, /automatically repair evidence-backed code\/test findings/);
+    assert.match(ctx, /auto-repair evidence-backed code\/test findings/);
+  });
+});
+
+test("directive constrains artifacts without prescribing private reasoning or orchestration", () => {
+  withTmp((dir) => {
+    write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
+    const ctx = runHook(dir);
+
+    assert.match(ctx, /not private reasoning/);
+    assert.match(ctx, /Choose orchestration from current capability/);
+    assert.match(ctx, /persist none/);
   });
 });
 
@@ -100,9 +111,9 @@ test("directive keeps deep adr-sync finding-driven", () => {
     write(dir, "docs/adr/.mapping.json", JSON.stringify({ categories: {} }));
     const ctx = runHook(dir);
 
-    assert.match(ctx, /implementation-fact drift/);
-    assert.match(ctx, /broad refactor or manual ADR edit/);
-    assert.match(ctx, /targeted structure checks and the selected implementation-review mode/);
+    assert.match(ctx, /proven drift/);
+    assert.match(ctx, /broad refactors, manual ADR edits/);
+    assert.match(ctx, /targeted checks and risk-selected review/);
     assert.doesNotMatch(ctx, /When finished, run \/adr-sync/);
   });
 });

@@ -24,6 +24,8 @@ node evals/run.mjs --dry-run --only review-      # build fixtures, print prompts
 node evals/run.mjs --only review-catches         # one scenario, one run
 node evals/run.mjs --only review-catches --runs 10   # rates
 node evals/run.mjs --runs 5 --out /tmp/report.md     # everything, shareable report
+node evals/run.mjs --only review-catches --out /tmp/report.md \
+  --include-transcript --include-fixture-paths        # explicit sensitive detail
 ```
 
 The agent command is configurable, since this plugin ships for two clients and
@@ -44,10 +46,29 @@ ADR_EVAL_CMD="claude -p --add-dir . --allowedTools 'Read Write Edit Bash'" \
   node evals/run.mjs --only author-
 ```
 
-Exit code is 0 whenever the agent command completed successfully, **including
-when checks fail** — a failing check is the finding, not an error. Exit 2 means
-the harness could not run or the agent command failed (bad `--only`, nonzero
-agent exit, or no output).
+Exit code is 0 whenever at least one run was scored, **including when checks
+fail** — a failing check is the finding, not an error. Exit 2 means no requested
+run produced a scorable response (bad `--only`, command failure, empty output,
+or a missing machine-readable tail). Error and unscored runs are reported
+separately and never enter a behavior-rate denominator.
+
+Reports omit raw transcripts and absolute fixture paths by default. They include
+the repository commit, runtime, scored/error/unscored counts, prompt length, and
+a path-normalized prompt SHA-256. Add `--include-transcript` or
+`--include-fixture-paths` only when the report destination is trusted; a
+real-repository run may expose proprietary context through a model reply.
+
+## Non-invasive evaluation
+
+The eval harness measures observable behavior. It does not grade private
+reasoning, require a model family, or prescribe how many subagents a skill must
+use. Scenarios may require distinct review perspectives or evidence, but the
+model may realize them with named agents, generic subagents, main-session passes,
+or another available strategy.
+
+The shipping PRD, ADR, code, tests, and repository documents remain the durable
+authority. Fixtures, prompts, transcripts, agent topology, and eval results are
+disposable reproduction artifacts.
 
 ## Reproducing a reported bug
 
@@ -154,10 +175,20 @@ agent exit, or no output).
    - `impl-high-load-asks-before-split` checks that an `/adr-impl` plan at
      `8/10` or higher asks whether to review a split or proceed with the original
      ADR, waits for that choice, and does not generate concrete candidates first.
-   - `bedrock-subagent-fallback` checks that a known Amazon Bedrock provider
-     prevents named and generic subagent dispatch, the known input validation
-     error is not retried, document and implementation review continue as
-     main-session passes, and refactoring remains `PROPOSE_ONLY`.
+   - `bedrock-subagent-fallback` checks that an unsupported subagent path is not
+     retried, document and implementation review continue through an available
+     strategy, and refactoring preserves the same evidence and before/after-test
+     safety gates.
+   - `refactor-orchestration-discretion` checks that lack of a subagent does not
+     by itself force a safe tested local refactor into proposal-only.
+   - `review-document-only-boundary` checks that `/adr-review` remains
+     document-only and routes implementation reality to `/adr-sync`.
+   - `impl-review-pre-promotion-lifecycle` checks that completion review runs
+     while a changed target is still `Proposed` and promotion follows `PASS`.
+   - `rollup-preserves-decision-boundaries` checks that rollup leaves distinct
+     decisions alone and requires approval before destructive changes.
+   - `impl-review-role-boundaries` checks explainer and necessity responsibilities
+     without fixing their agent topology.
    - `comprehension-load-score-only` checks the `0 → 1` display clamp on a low-load
      Feature and a high-load ADR, keeps the five-axis calculation hidden, and
      rejects added gates or explanatory output.

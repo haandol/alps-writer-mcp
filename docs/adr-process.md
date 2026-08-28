@@ -309,7 +309,7 @@ flowchart TD
     Mat --> Mode{"보호 표면 또는<br/>넓은 범위 변경?"}
     Mode -->|"아니오"| Ledger["standard<br/>ADR decision ledger +<br/>요구사항별 coverage + 중요 구현 선택"]
     Ledger --> StdSuf["독립 sufficiency reviewer<br/>+ targeted test"]
-    StdSuf --> StdRep["간결한 implementation-review.md<br/>+ findings.json<br/>HTML·필수 Mermaid 없음"]
+    StdSuf --> StdRep["주니어용 한눈에 보기 + 간결한 implementation-review.md<br/>+ findings.json<br/>복잡한 관계만 grounded Mermaid"]
     StdRep --> Validate["artifact validator"]
 
     Mode -->|"예 또는 불명확"| Art[("full 산출물 디렉터리<br/>${TMPDIR:-/tmp}/adr-impl-review-&lt;slug&gt;-&lt;ts&gt;/<br/>레포를 더럽히지 않는다")]
@@ -334,7 +334,7 @@ flowchart TD
     V --> P3["INCONCLUSIVE"]
     V --> P4["BLOCK — 사람의 아키텍처 결정이 필요"]
 
-    P1 & P2 & P3 & P4 --> Rep["5. adr-impl-review-report-writer (새 컨텍스트)<br/>→ implementation-review.md (파일명 고정)<br/>요구사항별 달성 내용 · 중요 구현 선택 · finding · 테스트 · 잔여 위험<br/>다이어그램과 수리 가이드는 증거상 필요할 때만 추가"]
+    P1 & P2 & P3 & P4 --> Rep["5. adr-impl-review-report-writer (새 컨텍스트)<br/>→ implementation-review.md (파일명 고정)<br/>결론 · 영향 · 조치 · 위험 → 요구사항별 증거<br/>복수 참여자·상태·경계·실패 흐름은 grounded Mermaid"]
     Exp -.->|"리뷰어 판단에는 전달하지 않고<br/>리포트 작성에만 사용"| Rep
     Rep --> Json["6. findings.json → 검증 → HTML 리포트<br/>coverage와 구현 선택은 읽기 전용 · finding만 판정 가능<br/>PASS는 모든 coverage 행이 PROVEN일 때만 허용"]
     Json --> Validate
@@ -360,7 +360,7 @@ flowchart TD
 - **ADR이 동작 스펙이고, 리뷰어들은 구조적으로 그것을 옳다고 전제한다.** spec fitness와 regeneration checklist는 구현 전에 한 번 승인하며, 완료 검토는 그 기준선을 다시 묻지 않고 반증한다. `standard`는 보호 표면이 바뀌지 않은 국소 구현에만 허용되며, 분류가 불명확하면 `full`로 올린다.
 - **요구사항별 달성 내용이 첫 화면이다.** 각 ADR 계약 행은 상태, 구현 내용, ADR 근거, 코드·실행 증거와 테스트를 가진다. `PASS`는 모든 행이 `PROVEN`일 때만 가능하며, `PROVEN`은 수학적 증명이 아니라 현재 증거에서 반례를 찾지 못했다는 뜻이다.
 - **AI가 정한 값을 숨기지 않되 ADR로 끌어올리지 않는다.** admission gate를 통과한 미결정은 `Undecided behavior`, 코드에서 복구 가능한 중요한 구현 재량은 선택값 또는 동작·코드 근거·ADR 의도와 양립하는 이유·중요성을 가진 일시적 읽기 전용 요약, 확인하지 못한 값은 `Unverified risk`다.
-- **리포트는 점진적으로 읽힌다.** 기본 Markdown과 HTML은 coverage와 중요한 구현 선택을 findings보다 먼저 읽기 전용으로 보여준다. Mermaid 설명과 상세 수리 가이드는 흐름이 복잡하거나 실제 수정이 필요할 때만 추가한다.
+- **리포트는 처음 보는 주니어가 점진적으로 읽는다.** Markdown과 HTML은 결론, 사용자·운영 영향, 필요한 조치와 남은 위험을 먼저 보여주고 coverage와 중요한 구현 선택을 읽기 전용 증거로 이어 붙인다. 복수 참여자, 상태, 경계, 데이터 또는 실패·재시도 흐름은 가장 작은 grounded Mermaid로 외부화한다. 단일 파일의 국소 PASS에는 다이어그램을 강제하지 않는다.
 - **독립 호출과 완료 게이트의 후속 동작이 다르다.** 독립 `/adr-impl-review`는 결과만 보고한다. `/adr-impl`이 호출한 완료 게이트에서는 계약을 바꾸지 않는 증거 기반 코드·테스트 결함을 호출자가 자동 수정하고 같은 모드로 다시 검토한다. 사용자 판단은 계약 변경, 모순, 중대한 미검증 위험, 파괴적인 범위 확장에만 남긴다.
 - **source-of-truth 구분이 카테고리를 결정한다.** enum 식별자 이름이 다른 것은 `Impl-fact mismatch`(ADR을 고친다)이고, 허용 집합이나 전이 규칙이 다른 것은 `Spec violation`(코드를 고친다)이다.
 
@@ -468,29 +468,29 @@ flowchart LR
 
 이 워크플로우는 한 프롬프트가 전부 수행하는 구조가 아니다. 실행 비용과 실패 격리를 위해 다음 계층으로 나뉜다.
 
-| 계층              | 실행 시점                                     | 역할                                                                 | 비용 특성                                              |
-| ----------------- | --------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| `SessionStart` 훅 | startup · resume · clear · compact            | 짧은 admission directive만 주입                                      | 매 사용자 메시지에 실행하지 않으며 mapping도 싣지 않음 |
-| skill             | 사용자가 커맨드를 호출하거나 의도가 매칭될 때 | 단계 오케스트레이션, 사용자 승인, 파일 수정                          | 선택된 `SKILL.md` 전체를 읽으므로 긴 skill은 비쌈      |
-| alps-writer MCP   | PRD 작성·조회·저장 시                         | 템플릿/가이드 제공, `.alps.xml` 상태 관리, Markdown export           | 정형 I/O; LLM 판단을 서비스 코드로 옮기지 않음         |
-| 결정론적 script   | 작성·구현·리뷰·동기화 게이트                  | 구조, mapping, Status, back-reference, review artifact 검증          | 저비용이며 LLM 검토 전에 실행                          |
-| 격리 reviewer     | 문서 리뷰, 리팩터링, 구현 리뷰                | 주관적 판단과 반례 탐색                                              | 가장 비싼 계층; 위험과 provider capability에 따라 축소 |
-| repo artifact     | ADR 작성·변경·검토 결과                       | 현재 결정, transition log, mapping, 임시 review evidence를 분리 보존 | 영속 문서와 임시 증거를 구분                           |
+| 계층              | 실행 시점                                     | 역할                                                                 | 비용 특성                                                       |
+| ----------------- | --------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `SessionStart` 훅 | startup · resume · clear · compact            | 짧은 admission directive만 주입                                      | 매 사용자 메시지에 실행하지 않으며 mapping도 싣지 않음          |
+| skill             | 사용자가 커맨드를 호출하거나 의도가 매칭될 때 | 단계 오케스트레이션, 사용자 승인, 파일 수정                          | 선택된 `SKILL.md` 전체를 읽으므로 긴 skill은 비쌈               |
+| alps-writer MCP   | PRD 작성·조회·저장 시                         | 템플릿/가이드 제공, `.alps.xml` 상태 관리, Markdown export           | 정형 I/O; LLM 판단을 서비스 코드로 옮기지 않음                  |
+| 결정론적 script   | 작성·구현·리뷰·동기화 게이트                  | 구조, mapping, Status, back-reference, review artifact 검증          | 저비용이며 LLM 검토 전에 실행                                   |
+| 모델 선택 review  | 문서 리뷰, 리팩터링, 구현 리뷰                | 필요한 관점, 주관적 판단과 반례 탐색                                 | named/generic/main-session 경로를 위험과 capability에 맞게 선택 |
+| repo artifact     | ADR 작성·변경·검토 결과                       | 현재 결정, transition log, mapping, 임시 review evidence를 분리 보존 | 영속 문서와 임시 증거를 구분                                    |
 
 ### 현재 효율적으로 구성된 부분
 
-| 장치                             | 효과                                                                                                     |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| admission 이후 mapping on-demand | ADR과 무관한 요청이 전체 인덱스와 본문을 읽지 않는다.                                                    |
-| atomic 기본 + 명시적 batch       | 승인 단위를 보존하면서 완성된 입력에서는 왕복을 줄인다.                                                  |
-| Feature당 `1..N` contract owner  | 이전된 Feature의 계약을 ADR-only 흐름에서 보존하면서 독립 결정만 추가 ADR로 분리한다.                    |
-| harness-first                    | 형식·경로·Status·mapping 오류를 모델 토큰으로 다시 판단하지 않는다.                                      |
-| 작성 직후 중복 reviewer 제거     | `/adr-new`가 방금 사용한 R1-R20을 즉시 별도 agent가 반복하지 않는다.                                     |
-| `standard` / `full` 리뷰 분리    | 보호 표면이 없는 국소 변경은 necessity/report-writer/HTML 비용을 생략한다.                               |
-| 테스트 기준선 재사용             | 리팩터링이 실제로 적용되지 않으면 같은 targeted test를 반복하지 않는다.                                  |
-| `--quick` sync                   | 작은 변경에서 전체 ADR 본문과 코드의 deep comparison을 피한다.                                           |
-| caller 자동 remediation          | 명확한 코드·테스트 결함마다 사용자 응답을 기다리지 않고 수정·재검증한다.                                 |
-| subagent capability fallback     | 지원하지 않는 provider에서 실패한 dispatch를 반복하지 않고, 격리 한계를 기록한 main-session pass로 간다. |
+| 장치                             | 효과                                                                                               |
+| -------------------------------- | -------------------------------------------------------------------------------------------------- |
+| admission 이후 mapping on-demand | ADR과 무관한 요청이 전체 인덱스와 본문을 읽지 않는다.                                              |
+| atomic 기본 + 명시적 batch       | 승인 단위를 보존하면서 완성된 입력에서는 왕복을 줄인다.                                            |
+| Feature당 `1..N` contract owner  | 이전된 Feature의 계약을 ADR-only 흐름에서 보존하면서 독립 결정만 추가 ADR로 분리한다.              |
+| harness-first                    | 형식·경로·Status·mapping 오류를 모델 토큰으로 다시 판단하지 않는다.                                |
+| 작성 직후 중복 reviewer 제거     | `/adr-new`가 방금 사용한 R1-R20을 즉시 별도 agent가 반복하지 않는다.                               |
+| `standard` / `full` 리뷰 분리    | 보호 표면이 없는 국소 변경은 necessity/report-writer/HTML 비용을 생략한다.                         |
+| 테스트 기준선 재사용             | 리팩터링이 실제로 적용되지 않으면 같은 targeted test를 반복하지 않는다.                            |
+| `--quick` sync                   | 작은 변경에서 전체 ADR 본문과 코드의 deep comparison을 피한다.                                     |
+| caller 자동 remediation          | 명확한 코드·테스트 결함마다 사용자 응답을 기다리지 않고 수정·재검증한다.                           |
+| model-selected orchestration     | 필수 관점과 증거는 유지하면서 subagent 수·종류·병렬 여부는 현재 capability와 위험에 맞게 선택한다. |
 
 ### 확인된 개선 기회
 
@@ -499,7 +499,7 @@ flowchart LR
 | P0       | 사용자 문서의 다이어그램이 skill 변경 뒤에도 오래된 `human-baseline` 흐름을 보존할 수 있었다.                               | 문구 일부가 아니라 폐기된 상태명(`human-baseline.md`, 구현 후 사람 게이트) 자체를 금지하는 회귀 테스트를 둔다. 이번 갱신에서 반영한다.                                                                              |
 | 제외     | 승인 근거는 active context가 사라지면 휘발한다.                                                                             | 명시적인 승인 근거가 현재 컨텍스트에 있을 때만 재사용하고, 없으면 짧게 다시 확인한다. 승인 digest·cache·registry는 만들지 않는다.                                                                                   |
 | 반영     | skill과 reviewer 프롬프트가 약 4.5만 단어이고, provider fallback과 `/adr-sync` 저장소 위생 절차가 상시 로드되거나 반복됐다. | 공통 dispatch 계약을 plugin-local reference로 단일화하고, `/adr-sync` 저장소 위생 절차를 deep mode 또는 stale naming 후보가 있을 때만 읽도록 분리했다. 추가 모듈화는 행동 eval이 있는 경로부터 단계적으로 진행한다. |
-| P2       | subagent 지원 판단이 현재 provider 이름과 알려진 validation error에 결합되어 있다.                                          | 클라이언트가 제공하는 capability 신호를 우선 사용하고, provider별 오류 문자열은 fallback으로만 유지한다.                                                                                                            |
+| 반영     | subagent 지원 판단과 agent topology가 provider 이름 및 고정 dispatch 순서에 결합되어 있었다.                                | 필수 관점과 증거만 계약으로 유지하고 named/generic/main-session, agent 수와 병렬 여부는 현재 모델이 capability와 위험에 맞게 선택한다. 알려진 오류 문자열은 재시도 방지용 fallback으로만 유지한다.                  |
 | P2       | `alps-init` 흐름은 MCP server instructions와 skill에 의도적으로 중복되어 독립 MCP 클라이언트를 지원한다.                    | 순서·승인·C4 레벨 같은 공유 불변식을 양쪽에서 추출해 비교하는 테스트를 유지하고, 설명 문구까지 억지로 단일화하지 않는다.                                                                                            |
 
 필수 P1 작업은 남아 있지 않다. 프롬프트 모듈화는 정적 계약 테스트와 eval harness가 reference까지 포함한 유효 프롬프트를 검증하도록 유지하며 계속 확장한다. P2 항목은 실제 provider capability 신호나 중복 드리프트 문제가 확인될 때 진행한다.

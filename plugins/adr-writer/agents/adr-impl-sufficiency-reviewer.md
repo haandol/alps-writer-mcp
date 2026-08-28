@@ -6,7 +6,7 @@ tools: Read, Grep, Glob, Bash
 
 # adr-impl-sufficiency-reviewer
 
-**Attack the implemented code with counterexamples** to see whether it sufficiently satisfies the ADR and the approved review baseline. Build the decision ledger independently and actually run the related tests. Never edit anything.
+**Attack the implemented code with counterexamples** to see whether it sufficiently satisfies the ADR and the approved review baseline. Build the decision ledger independently and actually run the related tests. Never edit anything. The caller may execute this role through a named agent, generic subagent, or a separately grounded main-session pass; the evidence and output contract do not depend on that choice.
 
 Do not read the caller's plain-language explanation or the necessity reviewer's result. Judge from the original ADR, the raw diff, the code, the tests, and `review-baseline.md` alone, so you do not inherit another agent's assumptions.
 
@@ -35,7 +35,7 @@ For case 3, return one consolidated **Decision request** in Notes for the caller
 
 ## When this is invoked
 
-- Right after `/adr-impl` finishes implementation and Status promotion, to check for omissions and counterexamples (the canonical path, called by `/adr-impl-review`)
+- After `/adr-impl` finishes implementation, refactoring, and tests but before a `Proposed` ADR is promoted, as the completion review path called by `/adr-impl-review`
 - When someone hand-assembled an implementation and wants a second opinion on whether it matches the ADR
 
 The caller passes:

@@ -26,6 +26,23 @@ So the two are one test, asked in both directions:
 
 Note that the ADR row's "7-day" stays intact rather than blurring into "a short window" — that value is the ADR's own resolution, so it stays verbatim, while the tuning values realizing the same decision (pool sizes, backoff) sit one level down and stay out.
 
+### Harnesses are removable; artifacts are authoritative
+
+Skills, hooks, reviewers, reports, and evals are a management harness over the
+abstraction ladder. They are not another rung and do not own durable product or
+implementation context. Removing the plugin leaves each level readable:
+product intent in the PRD, admitted decisions and contracts in ADRs,
+implementation truth in code and tests, and repository conventions in project
+documentation.
+
+Harness instructions constrain observable artifacts, allowed actions, evidence,
+approval boundaries, and lifecycle transitions. They do not require private
+chain-of-thought or a particular internal reasoning sequence. The current model
+may choose no subagent, one, or several; named or generic roles; parallel or
+sequential execution; and whichever available model fits the role. These choices
+remain ephemeral as long as the required perspectives, evidence, and
+user-visible workflow are preserved.
+
 **Never maintain the same information as two current authorities.** Before handoff, the PRD owns the planning intent. `/feature-to-adr` transfers every implementation-relevant obligation into ADRs and proves that nothing required was left behind. After that commit, the ADR set is the only implementation authority and the PRD remains a legacy planning document; implementation, review, and sync do not read it. A user may explicitly re-import a changed PRD, but the importer compares it with the current ADR target state and proposes only semantic contract changes. Repeating equivalent input is a no-op. The remaining deliberate overlap is a requirement contract in the ADR and its enforcement in code; those are [different things, not a duplicate](#requirements-live-in-both-the-adr-and-the-code--and-the-adr-comes-first).
 
 Rule: never copy ALPS's user stories or acceptance-criteria prose into an ADR. Transfer only admitted motivation, decision pressures, and requirement contracts, without a PRD reference; adr-writer remains standalone. Design token values go to the design docs; function signatures and file paths go to the code and its docstrings.

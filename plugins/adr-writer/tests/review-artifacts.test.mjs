@@ -8,6 +8,16 @@ import { spawnSync } from "node:child_process";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const VALIDATOR = path.join(HERE, "../scripts/adr-impl-review-validate.mjs");
+const FULL_AT_A_GLANCE = {
+  impact: "Settlement can create two records for one request.",
+  action: "Fix the completion boundary before merge.",
+  risk: "No residual risk beyond the confirmed duplicate-settlement finding.",
+};
+const STANDARD_AT_A_GLANCE = {
+  impact: "Existing parser inputs and outputs remain unchanged.",
+  action: "None.",
+  risk: "The review used the standard sufficiency perspective because no protected surface changed.",
+};
 
 function withArtifacts(run) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "adr-review-artifacts-"));
@@ -53,6 +63,12 @@ Current state.
 
 function validReport() {
   return `# ADR implementation review
+
+## At a glance
+- Verdict: FIX_REQUIRED
+- Impact: ${FULL_AT_A_GLANCE.impact}
+- Action: ${FULL_AT_A_GLANCE.action}
+- Risk: ${FULL_AT_A_GLANCE.risk}
 
 ## Review mode
 full
@@ -107,6 +123,7 @@ function validFindings(dir) {
     reviewMode: "full",
     adr,
     verdict: "FIX_REQUIRED",
+    atAGlance: { ...FULL_AT_A_GLANCE },
     explanation: path.join(dir, "explanation.md"),
     report: path.join(dir, "implementation-review.md"),
     metrics: {
@@ -164,6 +181,12 @@ function validFindings(dir) {
 function validStandardReport() {
   return `# ADR implementation review
 
+## At a glance
+- Verdict: PASS
+- Impact: ${STANDARD_AT_A_GLANCE.impact}
+- Action: ${STANDARD_AT_A_GLANCE.action}
+- Risk: ${STANDARD_AT_A_GLANCE.risk}
+
 ## Review mode
 standard — localized implementation reinforcement
 
@@ -186,7 +209,7 @@ None
 node --test test/parser.test.mjs — PASS
 
 ## Residual risks
-One isolated sufficiency pass; no protected surface changed.
+Standard sufficiency perspective only; no protected surface changed.
 `;
 }
 
@@ -256,12 +279,30 @@ test("review artifact validator rejects incomplete notable implementation choice
   });
 });
 
+test("review artifact validator requires a complete At a glance handoff", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(
+      path.join(dir, "implementation-review.md"),
+      validReport().replace(`- Risk: ${FULL_AT_A_GLANCE.risk}\n`, ""),
+    );
+    const findings = validFindings(dir);
+    delete findings.atAGlance.risk;
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /atAGlance\.risk must be a non-empty string/);
+  });
+});
+
 test("review artifact validator rejects missing coverage fields and non-proven PASS rows", () => {
   withArtifacts((dir) => {
     writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
     const findings = validFindings(dir);
     findings.reviewMode = "standard";
     findings.verdict = "PASS";
+    findings.atAGlance = { ...STANDARD_AT_A_GLANCE };
     findings.findings = [];
     findings.implementationChoices = [];
     findings.metrics.sufficiencyFindingCount = 0;
@@ -285,6 +326,7 @@ test("review artifact validator accepts concise standard-mode artifacts without 
     writeAdr(dir, "Existing parsing behavior remains unchanged");
     findings.reviewMode = "standard";
     findings.verdict = "PASS";
+    findings.atAGlance = { ...STANDARD_AT_A_GLANCE };
     findings.findings = [];
     findings.implementationChoices = [];
     findings.contractCoverage = [
@@ -321,6 +363,7 @@ test("standard-mode artifacts reject necessity findings and missing contract cov
     writeFileSync(path.join(dir, "implementation-review.md"), "# ADR implementation review\n");
     const findings = validFindings(dir);
     findings.reviewMode = "standard";
+    findings.atAGlance = { ...STANDARD_AT_A_GLANCE };
     findings.metrics.necessityFindingCount = 1;
     delete findings.explanation;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
@@ -339,6 +382,7 @@ test("PASS rejects omitted ADR rows, duplicate IDs, unexecuted tests, and blocki
     writeAdr(dir, "Existing parsing behavior remains unchanged");
     findings.reviewMode = "standard";
     findings.verdict = "PASS";
+    findings.atAGlance = { ...STANDARD_AT_A_GLANCE };
     findings.contractCoverage = [
       {
         contractId: "D0",

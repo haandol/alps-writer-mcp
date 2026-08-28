@@ -1,6 +1,5 @@
 import {
   skillText,
-  ruleText,
   seedRuleDocs,
   seedMapping,
   write,
@@ -25,7 +24,7 @@ Proposed
 
 - 검토 가능한 경로는 계속 수행한다
 - 지원하지 않는 provider 요청은 반복하지 않는다
-- 독립 reviewer 없는 자동 리팩토링은 금지한다
+- 실행 경로가 달라도 증거와 안전 gate를 유지한다
 
 ## Decision
 
@@ -44,7 +43,7 @@ provider capability에 따라 독립 검토와 메인 세션 fallback을 선택�
 export default {
   name: "bedrock-subagent-fallback",
   description:
-    "Review skills must avoid subagent dispatch on Amazon Bedrock, never retry the known validation error, and preserve conservative main-session fallbacks.",
+    "Review skills must avoid unsupported subagent dispatch and retries while preserving review perspectives and refactor safety gates through a model-selected fallback.",
   bugReport:
     "Amazon Bedrock sessions frequently fail immediately after a review skill starts a subagent with Invalid 'input': value did not match any expected variant.",
 
@@ -68,14 +67,13 @@ export default {
     });
 
     const dispatchReference = {
-      references: ["references/subagent-dispatch.md"],
+      references: ["references/subagent-dispatch.md", "references/non-invasive-harness.md"],
     };
 
     return [
       skillText("adr-review", dispatchReference),
       skillText("adr-impl-review", dispatchReference),
       skillText("adr-impl-refactor", dispatchReference),
-      ruleText("concepts.md"),
       `\n---\n# This run`,
       `Repository: ${dir}`,
       `Client: Codex`,
@@ -86,7 +84,7 @@ export default {
       `Explain how all three review skills proceed and whether any named or generic subagent retry is allowed.`,
       `Do not edit files.`,
       `In the machine-readable tail, use these tags for the applicable conclusions:`,
-      `NO_DISPATCH, NO_RETRY, MAIN_SESSION_FALLBACK, PROPOSE_ONLY.`,
+      `NO_DISPATCH, NO_RETRY, MAIN_SESSION_FALLBACK, SAFETY_GATE.`,
       TAIL_SPEC,
     ].join("\n");
   },
@@ -102,11 +100,15 @@ export default {
       ),
       expectFinding(
         tail,
-        /PROPOSE_ONLY/i,
-        "refactor fallback never auto-applies without an isolated reviewer",
+        /SAFETY_GATE/i,
+        "refactor fallback preserves evidence and before/after-test gates",
       ),
       expectNoFinding(tail, /RETRY_SUBAGENT|SPAWN_SUBAGENT/i, "no subagent retry is proposed"),
-      expectNoFinding(tail, /APPLY_NOW/i, "Bedrock refactor fallback emits no APPLY_NOW item"),
+      expectNoFinding(
+        tail,
+        /WEAKEN_GATE|SKIP_TESTS|AUTO_APPLY_WITHOUT_EVIDENCE/i,
+        "fallback does not weaken refactor safety",
+      ),
     ];
   },
 };

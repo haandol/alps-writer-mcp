@@ -2,6 +2,8 @@
 
 Newest first. Record only major decision changes.
 
+- **2026-08-28 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 구현 리뷰의 필요성·충분성 관점과 증거 계약은 유지하되 서브에이전트 수, 모델 계열, 병렬·순차 실행과 보고서 역할 분리는 현재 모델의 orchestration 판단으로 내리고, 저위험 리팩토링은 agent 출처가 아니라 국소 범위·동작 보존·전후 테스트로 판정하도록 변경했다.
+- **2026-08-28 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 사람용 구현·refactor 리포트를 결론·영향·조치·위험의 한눈에 보기로 시작하고, 복수 참여자·상태·외부 경계·실패 흐름에는 근거 있는 Mermaid를 포함하되 단순한 국소 PASS에는 강제하지 않도록 변경했다.
 - **2026-08-18 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 계약·안전에 영향을 주는 외부 전제를 검증하고, ADR completeness gap을 derived obligation·domain default·product decision으로 분류해 마지막 항목만 Decision request로 escalation하도록 변경했다.
 - **2026-08-17 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — ADR의 각 계약 행을 달성 상태와 증거로 연결한 Evidence Package를 기본 화면으로 삼고, 중요한 구현 재량에는 ADR 의도 적합성을 함께 설명하도록 변경했다.
 - **2026-08-17 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 계약 대조와 테스트 증거는 유지하되 상세 repair guide와 다이어그램을 조건부로 전환하고, 구현 선택은 sufficiency 검토에서 한 번만 추출해 읽기 전용으로 표시하도록 변경했다.

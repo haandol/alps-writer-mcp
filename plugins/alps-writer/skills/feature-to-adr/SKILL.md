@@ -25,6 +25,11 @@ placeholder ADR.
 > **Language**: talk to the user and write ADR content in the language the user
 > writes in. User-facing wording below is guidance, not a literal string.
 
+> **Non-invasive harness**: durable context must finish in the owning PRD or ADR
+> level. Transfer inventories, comparison notes, tool ordering, and model
+> orchestration are disposable and must not become a hidden handoff registry or
+> a prerequisite for using the artifacts after plugin removal.
+
 ## 1. Load and validate the ALPS input
 
 Confirm that `/adr-new` is available. If adr-writer is not installed, stop and

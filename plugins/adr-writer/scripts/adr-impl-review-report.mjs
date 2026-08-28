@@ -41,6 +41,11 @@
 //     "adr":        "docs/adr/ordering/checkout/0001-checkout.md",  // required
 //     "status":     "Accepted (2026-07-10)",
 //     "verdict":    "PASS" | "FIX_REQUIRED" | "INCONCLUSIVE" | "BLOCK", // required
+//     "atAGlance": {                                      // required by validator
+//       "impact": "observable user or operational effect",
+//       "action": "next required action, or None",
+//       "risk": "remaining uncertainty, or None"
+//     },
 //     "explanation":"/tmp/.../explanation.md",
 //     "report":     "/tmp/.../implementation-review.md",
 //     "scope":      ["src/checkout/handler.ts", "..."],   // code the reviewer read
@@ -202,6 +207,18 @@ function normalizeImplementationChoices(data) {
     intentFit: choice.intentFit || "",
     whyItMatters: choice.whyItMatters || "",
   }));
+}
+
+function normalizeAtAGlance(data) {
+  const value =
+    data.atAGlance && typeof data.atAGlance === "object" && !Array.isArray(data.atAGlance)
+      ? data.atAGlance
+      : {};
+  return {
+    impact: value.impact || "",
+    action: value.action || "",
+    risk: value.risk || "",
+  };
 }
 
 function normalizeContractCoverage(data) {
@@ -402,6 +419,7 @@ function buildHtml(data) {
   const scope = Array.isArray(data.scope) ? data.scope : [];
   const metrics = data.metrics && typeof data.metrics === "object" ? data.metrics : null;
   const findings = normalizeFindings(data);
+  const atAGlance = normalizeAtAGlance(data);
   const contractCoverage = normalizeContractCoverage(data);
   const implementationChoices = normalizeImplementationChoices(data);
   const cards = findings.map((f, i) => findingCard(f, i, findings.length)).join("\n");
@@ -436,6 +454,7 @@ function buildHtml(data) {
   const embedded = inlineScriptJson({
     adr: data.adr || "",
     verdict: verdictKey,
+    atAGlance,
     findings,
     contractCoverage,
     implementationChoices,
@@ -518,6 +537,27 @@ function buildHtml(data) {
   .stamp__k { font: 600 9px/1 var(--mono); letter-spacing: 0.24em; color: var(--ink-2); }
   .stamp__v { font: 700 20px/1.1 var(--mono); letter-spacing: 0.06em; color: var(--verdict); margin-top: 6px; }
   .vnote { flex: 1 1 100%; font-size: 13px; color: var(--ink-2); margin: 2px 0 0; }
+
+  .overview {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; margin: 18px 0 8px;
+  }
+  .overview__title {
+    font: 700 11px/1 var(--mono); letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--ink-2); margin: 0 0 12px;
+  }
+  .overview__grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+  }
+  .overview__item {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 8px; padding: 11px 12px;
+  }
+  .overview__key {
+    display: block; font: 700 10px/1 var(--mono); letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-2); margin-bottom: 7px;
+  }
+  .overview__value { margin: 0; font-size: 13.5px; }
 
   .count { font: 600 11px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
            color: var(--ink-2); margin: 22px 0 12px; }
@@ -675,6 +715,7 @@ function buildHtml(data) {
   button.export.done { background: #2e7d4f; border-color: #2e7d4f; }
 
   @media (max-width: 620px) {
+    .overview__grid { grid-template-columns: 1fr; }
     .confront, .confront--single { grid-template-columns: 1fr; }
     .rel { flex-direction: row; gap: 8px; border-left: none; border-right: none;
            border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -717,6 +758,19 @@ function buildHtml(data) {
     </div>
     ${vmeta.note ? `<p class="vnote">${esc(vmeta.note)}</p>` : ""}
   </header>
+
+  ${
+    atAGlance.impact || atAGlance.action || atAGlance.risk
+      ? `<section class="overview">
+           <h2 class="overview__title">At a glance</h2>
+           <div class="overview__grid">
+             <div class="overview__item"><span class="overview__key">Impact</span><p class="overview__value">${esc(atAGlance.impact || "Not provided")}</p></div>
+             <div class="overview__item"><span class="overview__key">Action</span><p class="overview__value">${esc(atAGlance.action || "Not provided")}</p></div>
+             <div class="overview__item"><span class="overview__key">Risk</span><p class="overview__value">${esc(atAGlance.risk || "Not provided")}</p></div>
+           </div>
+         </section>`
+      : ""
+  }
 
   ${
     coverageCount

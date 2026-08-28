@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Status
 
-Accepted (2026-08-25)
+Accepted (2026-08-28)
 
 ## Context
 
@@ -20,6 +20,8 @@ ADR의 의도와 재생성 가능성을 구현 후에 다시 확인하면 작성
 
 ALPS와 ADR 플러그인은 요구사항을 AI를 통해 코드로 전환하고 그 과정의 인지부하를 관리하도록 돕는 워크플로우다. 모델이 스스로 처리할 수 있는 판단까지 고정 절차, 상태와 승인 단계로 만들면 모델이 개선된 뒤에도 사용자가 같은 절차 비용을 계속 부담한다. 인지부하 관리는 안전 경계를 늘리는 프레임워크가 아니라, 작업의 이해 비용을 짧게 평가하고 필요할 때 더 작은 의미 단위로 나눌 수 있게 하는 안내여야 한다.
 
+하네스는 이 워크플로우의 권위가 아니라 제거 가능한 관리 계층이어야 한다. 플러그인을 제거하거나 새 모델로 교체해도 PRD, ADR, 코드, 테스트와 프로젝트 문서가 각 추상화 수준의 의도와 계약을 충분히 보존해야 한다. 하네스가 서브에이전트 수, 모델 계열, 병렬 실행과 내부 사고 순서를 영속 규칙으로 고정하면 모델의 자체 판단을 대체하고 제거 후 남는 문서의 자립성을 약화시킨다.
+
 ADR 구현 계획의 인지비용이 매우 높아도 사용자가 먼저 요청할 때까지 분할 여부를 묻지 않으면 큰 작업이 그대로 구현에 들어갈 수 있다. 반대로 점수만으로 구체적인 분할 후보를 즉시 생성하면 하나의 어려운 결정을 억지로 나누거나 불필요한 선택지를 늘릴 수 있다. `8/10` 이상에서는 분할 검토 여부만 먼저 확인하고, 사용자가 분할을 선택한 뒤에만 의미 있는 후보를 만들어야 한다.
 
 Feature나 ADR을 의미상 더 나누면 vertical slice 또는 one-ADR-one-decision 경계가 깨질 수 있다. 이 경우 하나의 결정이 만드는 큰 구현 diff를 단일 PR로 전달하면 리뷰 순간의 인지부하는 여전히 높다. 구현 전달 단계를 dependency 순서의 Stacked PR로 나누면 상위 문서 경계를 바꾸지 않고 각 리뷰가 하나의 구현 질문에 집중할 수 있다.
@@ -28,9 +30,9 @@ Feature나 ADR을 의미상 더 나누면 vertical slice 또는 one-ADR-one-deci
 
 - 선행 결정과 승인된 ADR 계약이 유효하지 않은 상태에서 downstream 구현이 완료 상태가 되면 안 된다.
 - 완료 상태는 변경 위험에 비례한 테스트와 구현 리뷰를 반영하고 해결 가능한 발견을 자동 수정해야 한다.
-- 저장소 상태가 바뀌지 않으면 검증을 반복하지 않고, 일반 대화가 ADR 인덱스 전체를 소비하지 않으며, drift 근거 없는 작은 변경에 깊은 동기화를 강제하지 않아야 한다.
+- 저장소 상태가 바뀌지 않으면 검증을 반복하지 않고, 일반 대화가 ADR 인덱스 전체를 소비하지 않으며, drift 근거 없는 작은 변경에 깊은 동기화를 강제하지 않아야 한다. 모델이 개선되면 prompt를 축소할 수 있도록 평가 결과를 영속 권위로 만들지 않는다.
 - 인지부하 평가는 피처와 ADR을 비교하고 분할 후보를 찾을 만큼 일관되어야 한다. ADR 구현 계획이 8점 이상이면 사용자가 분할 검토와 원안 진행 중 하나를 선택해야 한다. 의미상 분할할 수 없는 큰 구현은 ALPS나 ADR을 인위적으로 쪼개지 않고 코드 전달 단계에서 리뷰 가능한 단위로 나눌 수 있어야 하며, 이 선택이 새 상태나 완료 게이트를 만들면 안 된다.
-- 모델이 더 잘 판단하게 되면 prompt에서 축소하거나 제거할 수 있도록 평가 결과를 영속 권위나 구조적 프레임워크로 만들지 않아야 한다.
+- 하네스를 제거해도 PRD, ADR, 코드, 테스트와 프로젝트 문서가 단독으로 자신의 질문에 답하고 다음 모델이 필요한 문맥을 복구할 수 있어야 한다. 사용자-visible 계약과 안전 경계는 유지하되 서브에이전트 수, agent 종류, 병렬·순차 실행, 모델 선택과 내부 분석 순서는 현재 모델이 판단한다.
 
 ## Decision
 
@@ -64,6 +66,12 @@ flowchart LR
 ```
 
 필수 안전 경계는 ADR-first 계약, 선행 결정 유효성, 테스트와 위험 비례 완료 검토처럼 잘못된 결과를 완료 상태로 만들지 않기 위해 필요한 규칙만 유지한다. 인지부하 평가는 이 경계와 별개인 읽기 보조 정보이며 저장, 승인, 구현이나 상태 전환을 막지 않는다.
+
+플러그인의 skill, hook, reviewer와 eval은 **비침습적 하네스**다. 하네스는 observable artifact, 외부 action, 승인·상태 전이와 증거 기준을 정의한다. 모델의 private chain-of-thought, 내부 탐색 순서, 사용할 agent 수, named agent 대 generic agent 선택, 병렬·순차 실행과 모델 계열은 정의하지 않는다. 현재 모델은 capability, 위험, 컨텍스트 크기와 비용을 보고 이 실행 전략을 선택한다.
+
+지속되어야 하는 문맥은 소유 추상화 수준에 남긴다. 제품 의도는 PRD, 승인된 아키텍처 결정과 requirement contract는 ADR, 구현 사실과 테스트는 코드, 저장소 공통 규약은 README·AGENTS·CONTRIBUTING이 소유한다. 하네스가 만드는 계획, mapping snapshot, reviewer transcript, agent topology와 평가 결과는 폐기 가능한 파생 정보다. 플러그인을 제거해도 남은 artifact를 순서대로 읽으면 같은 결정과 계약을 복구할 수 있어야 한다.
+
+이 원칙은 현재 사용자-visible 동작을 축소하지 않는다. 인지비용 평가, 8점 이상 분할 선택, dependency gate, 승인된 ADR 기준선, standard/full review, Evidence Package와 자동 Status 전이는 유지한다. 하네스 구현은 이 결과를 만드는 action-level orchestration만 모델 재량으로 둔다.
 
 ALPS Feature와 ADR을 제시하거나 구현 계획을 세울 때 현재 내용을 기준으로 **예상 인지비용을 1~10점**으로 표시한다. 모델은 다음 다섯 축을 각각 `0~2`로 내부 평가해 합산하고, 합계가 0이면 1점으로 표시한다.
 
@@ -172,6 +180,12 @@ Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계
 - 훅은 mapping의 category, path, status, summary를 렌더하지 않는다.
 - admission gate를 통과한 요청은 코드 변경 전에 전체 `.mapping.json`과 plausible ADR 본문을 읽어 기존 소유자와 `dependsOn` 상태를 확인한다.
 - `.mapping.json`이 없으면 훅은 추가 context를 주입하지 않으며, 파일이 손상되어 파싱할 수 없으면 ADR 작업 전에 복구 경고를 표시한다.
+- 플러그인과 하네스는 PRD, ADR, 코드, 테스트와 프로젝트 문서 외에 구현 권위를 갖는 상태를 만들지 않는다.
+- 승인 상태, 실행 계획, reviewer transcript, agent 수·종류·실행 순서와 평가 중간 결과는 영속 registry에 저장하지 않는다.
+- 하네스 지시는 observable output, action boundary, 증거와 escalation 조건을 규정하고 private chain-of-thought나 내부 분석 절차를 요구하지 않는다.
+- 서브에이전트 사용 여부와 개수, named/generic/main-session 경로, 병렬·순차 실행과 모델 선택은 현재 모델이 capability와 위험에 따라 정한다.
+- orchestration 선택이 달라도 dependency gate, 승인 경계, 인지비용 동작, review mode, Evidence Package와 Status 전이 계약은 동일해야 한다.
+- 플러그인을 제거한 뒤에도 각 artifact는 자신의 추상화 수준에서 독립적으로 읽을 수 있고, 다음 모델은 저장된 권위 문서와 결정적 도구만으로 필요한 문맥을 재구성할 수 있어야 한다.
 
 ### Alternatives
 
@@ -203,6 +217,14 @@ Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계
    - 장점: Feature와 ADR 경계를 유지하면서 큰 구현 diff의 리뷰 부담을 시간과 질문별로 나눌 수 있다.
    - 단점: 의존 PR의 순서와 base 관계를 관리해야 하며 GitHub 환경에 따라 사용할 수 없다.
 
+8. **고정된 agent topology와 모델 계열을 workflow contract로 지정**
+   - 장점: 실행 모양이 일정하다.
+   - 단점: 모델과 provider가 개선되어도 오래된 orchestration 비용이 남고 플러그인 제거 후에는 그 절차를 복구할 권위가 없다.
+
+9. **artifact 계약을 유지하고 action-level orchestration은 모델에 위임**
+   - 장점: 사용자-visible 안전과 증거는 유지하면서 현재 모델의 capability를 활용하고 플러그인을 제거해도 권위 문서가 남는다.
+   - 단점: 같은 작업의 agent 수와 실행 순서가 모델과 환경에 따라 달라질 수 있다.
+
 ## Consequences
 
 ### Positive
@@ -220,6 +242,8 @@ Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계
 - 사용자는 8점 이상 ADR 구현 계획에서 분할 후보를 읽기 전에 분할 검토와 원안 진행 중 하나를 선택할 수 있다.
 - 하나의 Feature와 ADR로 유지해야 하는 구현도 요청 시 review question별 Stacked PR 후보로 전달할 수 있다.
 - 인지부하 관리가 문서 상태나 강제 절차로 굳지 않아 모델 개선에 따라 prompt를 단순화할 수 있다.
+- 서브에이전트와 모델 orchestration이 권위 문서에서 분리되어 새 모델이 현재 capability에 맞는 최소 실행 전략을 선택할 수 있다.
+- 플러그인을 제거해도 PRD, ADR, 코드, 테스트와 프로젝트 규약이 의도와 구현 계약을 보존한다.
 
 ### Negative
 
@@ -232,6 +256,7 @@ Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계
 - 8점 경계에서 불필요한 Feature 분할 제안이 나타날 수 있다.
 - 8점 이상 ADR 구현 계획은 사용자의 선택을 기다리므로 즉시 구현하는 흐름보다 한 번 더 중단된다.
 - Stacked PR은 아래 PR의 변경과 리뷰 지연이 위 PR에 전파되어 전달 순서를 관리해야 한다.
+- orchestration 형태가 고정되지 않아 실행별 비용과 agent 수가 달라질 수 있다.
 
 ### Risks
 
@@ -245,6 +270,8 @@ Stacked PR은 점수 임계값만으로 자동 생성하지 않는다. Stack 계
 - 자동 제안이 강제 분할로 오해될 수 있다. 제안과 함께 원래 Feature 유지 선택을 항상 제공하고 승인이나 저장을 차단하지 않는다.
 - Stack을 기술 계층이나 파일 수로 나누면 작은 PR이 여러 개여도 인지부하가 줄지 않는다. 각 layer는 하나의 review question과 dependency 순서를 가져야 한다.
 - GitHub Stack 지원 여부와 인터페이스는 변할 수 있다. 워크플로우는 provider 명령을 계약으로 고정하지 않고 실행 시 capability를 확인한다.
+- 모델이 orchestration 자유를 관점 생략으로 오해할 수 있다. behavior eval과 artifact validator는 agent 호출 수가 아니라 필수 관점, 계약 coverage, 증거와 사용자-visible 결과를 검사한다.
+- 하네스 설명이 권위 문서에만 있고 artifact 자체가 불완전하면 플러그인 제거 후 문맥이 사라진다. single-level read test와 regeneration test는 필요한 의도와 계약을 각 소유 artifact에 남긴다.
 
 ## Related
 

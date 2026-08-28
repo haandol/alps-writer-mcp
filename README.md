@@ -11,6 +11,24 @@ A Codex and Claude Code **marketplace** that ships two independent plugins for s
 
 The two are split so that **adr-writer never references ALPS**. The only coupling is one-way (`alps-writer → adr-writer`): `/feature-to-adr` transfers each implementable Feature's complete contract into one or several ADRs. After handoff the PRD remains a legacy planning document; explicit re-import compares it with authoritative ADRs and applies only approved semantic changes.
 
+## A removable, non-invasive harness
+
+The plugins are management harnesses, not an additional authority layer. Product
+intent remains in PRDs, admitted architecture decisions and requirement
+contracts remain in ADRs, implementation truth remains in code and tests, and
+repository conventions remain in README/AGENTS/CONTRIBUTING. Removing either
+plugin leaves those artifacts readable and useful to a future model without
+hidden plugin state.
+
+Skills and hooks constrain observable artifacts, external actions, evidence,
+approval boundaries, and Status transitions. They do not require private
+chain-of-thought or prescribe how a model must internally reason. The active
+model chooses action-level orchestration—whether to use no subagent, one, or
+several; named or generic agents; parallel or sequential execution; and the
+available model for each role—while preserving the same user-visible workflow.
+Comprehension-load behavior, dependency gates, risk-selected reviews, Evidence
+Packages, and completion rules remain stable regardless of that orchestration.
+
 ## What is ALPS?
 
 **ALPS** (Agentic Lean Product Spec) is a PRD format built for agentic development. A traditional PRD assumes a human reader who fills in gaps from intuition; ALPS assumes an AI agent that needs an unambiguous specification to write reliable code.
@@ -78,13 +96,14 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
 - **Domain-aware gap resolution** — `/adr-impl` derives obligations already implied by the contract, reuses established project/domain defaults for reversible implementation choices, and packages only real product-policy gaps as one recommendation-led Decision request
-- **Decision-first presentation** — authoring leads with a Decision Digest and exposes decision-changing premises; edits and sync lead with semantic changes; document review leads with Decision, Contract, Rationale, and Risk before detailed evidence
+- **Junior-readable review reports** — document, sync, implementation, and refactor reviews lead with verdict, impact, action, and risk, explain unfamiliar terms once, preserve exact evidence below, and use grounded Mermaid for multi-participant, state, dependency, data, and failure flows
 - **Disposable comprehension signal** — ADR digests, implementation plans, and document reviews show only an ephemeral `1–10` score from an internal five-axis assessment; the score never becomes an ADR field or workflow gate
 - **Requested Stacked PR fallback** — when one Feature and ADR must stay intact, `/adr-impl` can offer dependency-ordered PR layers with one review question each; it never creates a Stack from the score alone
 - **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
-- **Risk-based implementation review** — every review returns a human-readable Evidence Package with one status/evidence row per ADR obligation plus read-only material implementation choices and their ADR-intent fit. Localized changes use an isolated sufficiency pass and targeted tests; protected-surface changes add independent necessity/sufficiency reviews. Intent is approved before implementation, so unchanged ADRs proceed from a non-blocking plan update and completion review does not repeat a routine human gate; review escalates only contract changes, unresolved product decisions, contradictions, or material unverified risks
-- **Provider-aware review fallback** — Codex sessions on Amazon Bedrock avoid unsupported subagent dispatch and retries; document/implementation reviews continue in the main session, while refactoring remains proposal-only without an isolated reviewer
+- **Risk-based implementation review** — every review returns a junior-readable Evidence Package with one status/evidence row per ADR obligation plus read-only material implementation choices and their ADR-intent fit. Localized changes use a sufficiency perspective and targeted tests; protected-surface changes add separately grounded necessity/sufficiency perspectives. The model chooses the available orchestration. Complex flows receive grounded Mermaid while simple local PASS reports stay short, and completion review does not repeat a routine human gate
+- **Provider-aware review fallback** — Codex sessions on Amazon Bedrock avoid unsupported subagent dispatch and retries; reviews continue through available model-selected paths while preserving the same evidence and refactor safety gates
+- **Model-selected review orchestration** — review perspectives and evidence are contractual, while subagent count, named/generic/main-session execution, parallelism, and model selection remain disposable choices made from current capability and risk
 - **ADR-first hook** — one `SessionStart` hook runs only on startup, resume, clear, and compaction recovery, injecting the admission-aware directive without mapping contents; admitted work reads `docs/adr/.mapping.json` before coding
 - Fully standalone — no ALPS PRD required
 

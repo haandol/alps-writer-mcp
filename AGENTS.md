@@ -41,6 +41,16 @@ Everything a capable coding agent can recover by reading those artifacts, runnin
 
 Apply the single-level read test at runtime through **selective reading and progressive disclosure**: keep hooks and core skill instructions compact; load mappings, ADR bodies, detailed references, and reviewer instructions only when the active path needs them; and do not carry intermediate context into later stages when authoritative artifacts are sufficient.
 
+The plugins are a **non-invasive, removable harness** over that ladder. Durable
+context remains in the artifact that owns its resolution, so uninstalling a
+plugin or upgrading the model leaves PRDs, ADRs, code, tests, and repository
+conventions independently readable. Harnesses constrain observable artifacts,
+actions, evidence, approval boundaries, and lifecycle transitions; they do not
+prescribe private chain-of-thought, a fixed subagent count, a model family, or a
+parallel/sequential execution topology. Those action-level choices are
+ephemeral model discretion as long as the same user-visible contracts and
+verification results are preserved.
+
 Named applications of the same test, all defined in `templates/adr/`: the **ADR admission gate** (whether the decision belongs in an ADR at all), the **regeneration test** (delete all code, can requirement-honoring code be rebuilt?), the **requirement gate + code-readthrough + litmus** filters (routing one fact to its level), the **stability gradient** `Code >> ADR >> PRD` (detecting a violation after the fact — a code change dragging an ADR edit means the ADR held a resolution that was never its own), and the **`Spec violation` vs `Impl-fact mismatch`** split in impl-review (which level owns a disagreement). When editing any skill or agent prompt, keep these names — they are how the levels stay aligned across separately-running subagents.
 
 The source of truth for the principle is `plugins/adr-writer/templates/adr/concepts.md` "The abstraction ladder"; `docs/dependency-model.md` covers the reference rules that follow from it.

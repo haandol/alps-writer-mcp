@@ -16,15 +16,21 @@
 //   node evals/run.mjs --list                   # names, no agent calls
 //   node evals/run.mjs --dry-run                # build fixtures + print prompts
 //   node evals/run.mjs --out report.md          # write a shareable report
+//   node evals/run.mjs --out report.md --include-transcript
+//                                                # opt in to raw replies
 //
 // Env:
 //   ADR_EVAL_CMD   agent command; prompt arrives on stdin
 //                  (default: claude -p --allowedTools '')
 //
-// Exit: 0 = ran (even with failing checks — a failure is the finding, not an
-//       error), 2 = usage / no scenario matched / agent never ran.
+// Exit: 0 = at least one run was scored (even with failing checks — a failure
+//       is the finding, not an error), 2 = usage / no scenario matched / no
+//       scorable output.
 
 import { readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_CMD, runAgent } from "./lib/harness.mjs";
@@ -32,7 +38,16 @@ import { DEFAULT_CMD, runAgent } from "./lib/harness.mjs";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 function parseArgs(argv) {
-  const o = { runs: 1, only: null, list: false, dryRun: false, out: null, cmd: DEFAULT_CMD };
+  const o = {
+    runs: 1,
+    only: null,
+    list: false,
+    dryRun: false,
+    out: null,
+    cmd: DEFAULT_CMD,
+    includeTranscript: false,
+    includeFixturePaths: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--runs") o.runs = Number(argv[++i]);
@@ -41,6 +56,8 @@ function parseArgs(argv) {
     else if (a === "--dry-run") o.dryRun = true;
     else if (a === "--out") o.out = argv[++i];
     else if (a === "--cmd") o.cmd = argv[++i];
+    else if (a === "--include-transcript") o.includeTranscript = true;
+    else if (a === "--include-fixture-paths") o.includeFixturePaths = true;
     else if (a === "-h" || a === "--help") {
       process.stdout.write(readHelp());
       process.exit(0);
@@ -55,6 +72,7 @@ function readHelp() {
 
   node evals/run.mjs [--runs N] [--only <substring>] [--list] [--dry-run]
                      [--out report.md] [--cmd '<agent command>']
+                     [--include-transcript] [--include-fixture-paths]
 
 Scenarios live in evals/scenarios/*.mjs. Each exports { name, description,
 bugReport?, build(dir) -> prompt, score({tail, output, dir}) -> checks[] }.
@@ -89,8 +107,12 @@ async function runOnce(scenario, opts) {
   } catch (e) {
     return { fixture: dir, error: `build failed: ${e.message}`, checks: [] };
   }
+  const promptMeta = {
+    promptChars: prompt.length,
+    promptHash: createHash("sha256").update(prompt.split(dir).join("<FIXTURE>")).digest("hex"),
+  };
 
-  if (opts.dryRun) return { fixture: dir, prompt, dry: true, checks: [] };
+  if (opts.dryRun) return { fixture: dir, prompt, dry: true, checks: [], ...promptMeta };
 
   const res = runAgent(prompt, { cmd: opts.cmd, cwd: dir });
   if (!res.ok) {
@@ -101,6 +123,7 @@ async function runOnce(scenario, opts) {
         `${res.stderr.slice(0, 300) || res.stdout.slice(0, 300)}`,
       checks: [],
       ms: res.ms,
+      ...promptMeta,
     };
   }
   // Empty output is an error whatever the exit code. A command that exits 0
@@ -117,18 +140,44 @@ async function runOnce(scenario, opts) {
         `${res.stderr.slice(0, 300)}`,
       checks: [],
       ms: res.ms,
+      ...promptMeta,
     };
   }
 
   const { parseTail } = await import("./lib/harness.mjs");
   const tail = parseTail(res.stdout);
+  if (!tail.complete) {
+    return {
+      fixture: dir,
+      unscored: "agent omitted the required machine-readable tail",
+      checks: [],
+      ms: res.ms,
+      output: res.stdout,
+      tail,
+      ...promptMeta,
+    };
+  }
   let checks;
   try {
     checks = (await scenario.score({ tail, output: res.stdout, dir })) ?? [];
   } catch (e) {
-    return { fixture: dir, error: `scoring threw: ${e.message}`, checks: [], ms: res.ms };
+    return {
+      fixture: dir,
+      error: `scoring threw: ${e.message}`,
+      checks: [],
+      ms: res.ms,
+      ...promptMeta,
+    };
   }
-  return { fixture: dir, tail, checks, ms: res.ms, output: res.stdout };
+  return {
+    fixture: dir,
+    tail,
+    checks,
+    ms: res.ms,
+    output: res.stdout,
+    scored: true,
+    ...promptMeta,
+  };
 }
 
 // ── aggregate ─────────────────────────────────────────────────────────────
@@ -169,7 +218,7 @@ function main() {
     );
 
     const results = [];
-    let agentRan = false;
+    let agentScored = false;
 
     for (const s of scenarios) {
       process.stdout.write(`## ${s.name}\n${s.description}\n`);
@@ -189,16 +238,26 @@ function main() {
           process.stdout.write(`ERROR — ${r.error}\n`);
           continue;
         }
-        agentRan = true;
+        if (r.unscored) {
+          process.stdout.write(`UNSCORED — ${r.unscored} (${(r.ms / 1000).toFixed(0)}s)\n`);
+          continue;
+        }
+        agentScored = true;
         const failed = r.checks.filter((c) => !c.pass).length;
         process.stdout.write(
           `${r.checks.length - failed}/${r.checks.length} checks` +
-            `${r.tail?.verdict ? `, verdict ${r.tail.verdict}` : ", NO TAIL BLOCK"}` +
+            `, verdict ${r.tail.verdict}` +
             ` (${(r.ms / 1000).toFixed(0)}s)\n`,
         );
       }
 
       if (!opts.dryRun) {
+        const scored = runs.filter((r) => r.scored).length;
+        const errored = runs.filter((r) => r.error).length;
+        const unscored = runs.filter((r) => r.unscored).length;
+        process.stdout.write(
+          `  scored ${scored}/${runs.length}; errors ${errored}; unscored ${unscored}\n`,
+        );
         const agg = aggregate(runs);
         for (const c of agg) {
           const ok = c.passed === c.total;
@@ -218,32 +277,67 @@ function main() {
       process.stdout.write(`report written: ${opts.out}\n`);
     }
 
-    if (!opts.dryRun && !agentRan) {
+    if (!opts.dryRun && !agentScored) {
       die(
-        `the agent never produced output. Check ADR_EVAL_CMD (currently: ${opts.cmd}) — ` +
-          `it must accept a prompt on stdin and print the reply to stdout.`,
+        `the agent never produced scorable output. Check ADR_EVAL_CMD (currently: ${opts.cmd}) — ` +
+          `it must accept a prompt on stdin, print the reply to stdout, and include the required tail.`,
       );
     }
   });
 }
 
-// A report you can paste into a bug thread: what was asked, what came back, and
-// how often. Deliberately includes the fixture paths and one full transcript —
-// the first thing anyone asks about an LLM defect is "what exactly did it see?"
+function gitCommit() {
+  const result = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: path.resolve(HERE, "..", "..", ".."),
+    encoding: "utf8",
+  });
+  return result.status === 0 ? result.stdout.trim() : "unknown";
+}
+
+function displayCommand(cmd, includePaths) {
+  const sanitized = cmd
+    .replace(/\b([A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD))=([^\s]+)/gi, "$1=<redacted>")
+    .replace(/(--(?:api-key|token|secret|password)\s+)([^\s]+)/gi, "$1<redacted>");
+  return includePaths ? sanitized : sanitized.split(tmpdir()).join("<tmp>");
+}
+
+function fixtureLabel(run, opts) {
+  return opts.includeFixturePaths ? run.fixture : path.basename(run.fixture);
+}
+
+// A report suitable for comparison and sharing by default. Raw transcripts and
+// absolute fixture paths are opt-in because real-repository runs may contain
+// proprietary context.
 function renderReport(results, opts) {
   const lines = [
     `# ADR eval report`,
     ``,
-    `- agent: \`${opts.cmd}\``,
+    `- generated: ${new Date().toISOString()}`,
+    `- repository commit: \`${gitCommit()}\``,
+    `- runtime: Node ${process.version} (${process.platform}/${process.arch})`,
+    `- agent: \`${displayCommand(opts.cmd, opts.includeFixturePaths)}\``,
     `- runs per scenario: ${opts.runs}`,
+    `- transcripts: ${opts.includeTranscript ? "included by explicit request" : "omitted"}`,
     ``,
     `> Rates, not pass/fail. A check failing 3/10 is a real but intermittent`,
-    `> defect; one failing 10/10 is deterministic. They need different fixes.`,
+    `> defect; one failing 10/10 is deterministic. Error and unscored runs are`,
+    `> reported separately and never enter the behaviour-rate denominator.`,
     ``,
   ];
   for (const { scenario, runs } of results) {
     lines.push(`## ${scenario.name}`, ``, scenario.description, ``);
     if (scenario.bugReport) lines.push(`**Reported as**: ${scenario.bugReport}`, ``);
+    const scored = runs.filter((r) => r.scored);
+    const unscored = runs.filter((r) => r.unscored);
+    const errored = runs.filter((r) => r.error);
+    const prompt = runs.find((r) => r.promptHash);
+    lines.push(
+      `- scored: ${scored.length}/${runs.length}`,
+      `- errors: ${errored.length}`,
+      `- unscored: ${unscored.length}`,
+      `- prompt: ${prompt ? `${prompt.promptChars} chars · sha256 \`${prompt.promptHash}\`` : "unavailable"}`,
+      ``,
+    );
     const agg = aggregate(runs);
     if (agg.length) {
       lines.push(`| rate | check |`, `| --- | --- |`);
@@ -259,23 +353,33 @@ function renderReport(results, opts) {
         lines.push(``);
       }
     }
-    const errored = runs.filter((r) => r.error);
     if (errored.length) {
       lines.push(`### Runs that could not be scored`, ``);
       for (const r of errored) lines.push(`- ${r.error}`);
       lines.push(``);
     }
-    lines.push(`Fixtures: ${runs.map((r) => `\`${r.fixture}\``).join(", ")}`, ``);
-    const sample = runs.find((r) => r.output);
-    if (sample) {
+    if (unscored.length) {
+      lines.push(`### Runs with unparseable output`, ``);
+      for (const r of unscored) lines.push(`- ${r.unscored}`);
+      lines.push(``);
+    }
+    lines.push(`Fixtures: ${runs.map((r) => `\`${fixtureLabel(r, opts)}\``).join(", ")}`, ``);
+    const sample =
+      scored.find((r) => r.checks.some((check) => !check.pass)) ?? scored.find((r) => r.output);
+    if (sample && opts.includeTranscript) {
       lines.push(
-        `<details><summary>One full agent reply</summary>`,
+        `<details><summary>Representative ${sample.checks.some((c) => !c.pass) ? "failing " : ""}agent reply</summary>`,
         ``,
         "```",
         sample.output.trim(),
         "```",
         ``,
         `</details>`,
+        ``,
+      );
+    } else if (sample) {
+      lines.push(
+        `Representative transcript omitted. Re-run with \`--include-transcript\` to include it.`,
         ``,
       );
     }

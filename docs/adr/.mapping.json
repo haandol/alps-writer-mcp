@@ -28,7 +28,7 @@
         {
           "path": "docs/adr/adr-authoring/decision-presentation/0001-present-decision-digest-and-semantic-diff.md",
           "status": "Accepted (2026-08-17)",
-          "summary": "ADR 상호작용은 Decision Digest와 semantic diff를 우선하며 각 계약 행과 구현 독립적인 관찰 기준을 구현 리뷰의 요구사항별 기준선으로 사용한다"
+          "summary": "ADR 상호작용과 문서 리뷰는 Decision Digest·semantic diff·주니어용 한눈에 보기를 우선하고 복잡한 관계를 근거 있는 Mermaid로 설명한다"
         }
       ],
       "dependsOn": ["adr-authoring/current-state"]
@@ -104,8 +104,8 @@
       "adrs": [
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
-          "status": "Accepted (2026-08-18)",
-          "summary": "구현 리뷰는 계약 증거와 외부 전제를 검증하고 completeness gap을 derived obligation·domain default·product decision으로 분류한다"
+          "status": "Accepted (2026-08-28)",
+          "summary": "구현 리뷰는 주니어용 Evidence Package와 계약 증거, 필요성·충분성 관점을 유지하되 agent 수와 실행 방식은 모델이 선택하고 저위험 리팩토링은 근거와 전후 테스트로 판정한다"
         }
       ],
       "dependsOn": []
@@ -126,8 +126,8 @@
       "adrs": [
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
-          "status": "Accepted (2026-08-25)",
-          "summary": "개발 흐름은 위험 비례 검증을 유지하며 Section 7과 ADR 구현 계획의 8점 이상 인지부하를 각각 후보 제시와 분할 선택 질문으로 처리한다"
+          "status": "Accepted (2026-08-28)",
+          "summary": "개발 흐름은 기존 복잡도 평가와 안전 게이트를 유지하며 하네스를 제거 가능한 계층으로 두고 action-level orchestration은 모델이 선택한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]
