@@ -14,6 +14,10 @@ agent owns the junior-facing explanation, visual map, and AI-slop removal. The
 upstream review artifacts remain evidence sources, not a prose template.
 Also read `${CLAUDE_PLUGIN_ROOT}/references/reader-first-writing.md` completely.
 
+Use the user's requested or current language for the human-facing report. If it
+is not established, use the target ADR's dominant language. Keep stable artifact
+anchors and established technical terms when translation would reduce precision.
+
 ## Input
 
 - The target ADR, its mapping entry, and complete implementation scope

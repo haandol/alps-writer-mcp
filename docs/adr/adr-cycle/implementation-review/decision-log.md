@@ -3,7 +3,7 @@
 Newest first. Record only major decision changes.
 
 - **2026-09-03 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — comprehension question은 HTML Evidence Package에만 기본 노출하고, 메인 세션은 일반 완료 응답에서 질문을 자동 출제하지 않으며 사용자가 명시적으로 요청한 경우에만 대화형 채점을 시작하도록 변경했다.
-- **2026-09-03 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 구현 리뷰가 한눈에 보기 뒤 ADR 의도를 먼저 설명하고, 고정된 배경·직관·코드 순서 대신 독자에게 중요한 사용자·운영 story나 causal flow를 따라가며 AI-slop 신호를 제거하도록 변경했다.
+- **2026-09-03 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 구현 리뷰가 한눈에 보기 뒤 ADR 의도를 먼저 설명하고, 고정된 배경·직관·코드 순서 대신 독자에게 중요한 사용자·운영 story나 causal flow를 따라가며 AI-slop 신호를 제거하고 사용자 언어 또는 ADR 주 언어로 작성하도록 변경했다.
 - **2026-09-03 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 구현 리뷰가 diff를 상한으로 삼지 않고 ADR의 전체 구현 범위와 간접 호출 경로를 계약별로 다시 찾으며, standard와 full 모두 검증된 독립 실행형 HTML Evidence Package를 생성한 직후 자동 열기를 시도하도록 변경했다.
 - **2026-09-03 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 완료 리뷰가 언어 표준 함수 문서 주석의 존재 이유·동작 설명·계약 용어와 ADR 직접 참조 부재를 확인하고, 각 구현 동작의 ideal case와 관련 edge case가 모두 검증되지 않으면 `PASS`하지 않도록 강화했다.
 - **2026-09-02 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 구현 리뷰에 `Background → Intuition → Code walkthrough → Comprehension check`의 예측 가능한 section 순서와 최대 5개의 자유응답 퀴즈를 추가하고, 코드 `PASS`와 사람의 PR comprehension readiness를 분리했다.

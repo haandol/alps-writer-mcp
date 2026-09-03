@@ -28,7 +28,7 @@
         {
           "path": "docs/adr/adr-authoring/decision-presentation/0001-present-decision-digest-and-semantic-diff.md",
           "status": "Accepted (2026-09-03)",
-          "summary": "ADR 작성과 사람용 보고서는 결정 의도를 먼저 설명하고 중요도·인과 흐름으로 구성하며 AI-slop 신호를 제거한다"
+          "summary": "ADR과 사람용 리뷰는 결정 의도와 중요도·인과 흐름을 우선하고 리포트 언어와 AI-slop 신호를 일관되게 다룬다"
         }
       ],
       "dependsOn": ["adr-authoring/current-state"]
@@ -105,7 +105,7 @@
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
           "status": "Accepted (2026-09-03)",
-          "summary": "구현 리뷰는 ADR 전체 구현 범위와 독자 중심 HTML Evidence Package를 검증하며 이해도 질문은 보고서에만 두고 명시적 요청에만 대화형으로 진행한다"
+          "summary": "구현 리뷰는 ADR 의도를 먼저 설명하고 독자에게 중요한 흐름을 선택한 리포트 언어로 보여주며 계약별 증거를 검증한다"
         }
       ],
       "dependsOn": []

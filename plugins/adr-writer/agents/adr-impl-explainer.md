@@ -16,6 +16,10 @@ explanation directly.
 Before writing, read
 `${CLAUDE_PLUGIN_ROOT}/references/reader-first-writing.md` completely.
 
+Use the user's requested or current language. If no user language is available,
+use the target ADR's dominant language. Apply it to the subject-specific
+headings and prose while preserving precise technical terms.
+
 The explanation starts with `ADR intent`. After that, choose one to three
 subject-specific headings from the verified behavior. Order them by importance
 to the reader, not by file or implementation sequence.

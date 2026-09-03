@@ -116,6 +116,9 @@ test("implementation review leads with ADR intent and a reader-priority narrativ
   assert.match(readerFirst, /repeated contrast templates/i);
   assert.match(readerFirst, /ornamental title-cased English labels/i);
   assert.match(readerFirst, /Never invent an anecdote/i);
+  assert.match(guide, /language the user explicitly requests or currently uses/i);
+  assert.match(guide, /target ADR's dominant\s+language/i);
+  assert.match(guide, /multi-ADR report/i);
   assert.doesNotMatch(skill, /exactly these top-level sections/i);
   assert.match(skill, /one\s+to five medium-difficulty free-response questions/i);
   assert.match(skill, /Do not expose[\s\S]{0,120}`answerCriteria` or `evidence`/i);

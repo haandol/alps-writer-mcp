@@ -68,6 +68,8 @@ ADR contract coverage는 Decision과 requirement contract의 각 독립 행을 �
 
 사람용 구현 리뷰는 한눈에 보기 다음에 `ADR intent`를 고정하고, 계약 coverage 앞에는 하나 이상의 주제별 설명 section을 둔다. 주제별 heading은 실제 사용자·운영 상황, 중요한 동작, 실패나 경계의 이름을 사용한다. 설명은 중요도가 높은 내용부터 배치하며, 사용자에게 이해 가능한 story나 causal flow가 근거로 확인되면 시작 상황·행동·시스템 반응·관찰 결과를 따라간다. 시간순·파일순·구현순은 이해에 가장 적합할 때만 사용한다. `Comprehension check`는 마지막에 둔다.
 
+사람용 설명과 주제별 heading은 사용자가 현재 사용하는 언어가 명확하면 그 언어로 쓴다. 사용자 언어 신호가 없으면 대상 ADR 본문의 주 언어를 따른다. 고정 artifact anchor와 정밀한 기술 용어는 번역이 정확도를 낮출 때 원문을 유지한다.
+
 `Comprehension check`는 리뷰에서 가장 중요한 개념만 골라 1개 이상 5개 이하의 중간 난이도 자유응답 질문을 제공한다. 질문은 symbol 이름이나 줄 번호 암기보다 변경 전후 동작, 인과관계, ADR 계약, 실패·경계 조건과 중요한 trade-off를 확인한다. 질문별 판정 기준과 코드·ADR·테스트 근거는 review artifact에 유지하지만 사용자가 답하기 전에는 정답을 노출하지 않는다.
 
 구현 verdict와 사람의 comprehension readiness는 서로 다른 판정이다. `PASS`는 코드와 ADR 계약의 검토 결과일 뿐 사용자가 구현을 이해했다는 증거가 아니다. 질문은 HTML Evidence Package에 남지만 일반 완료 응답은 질문, 채점 기준과 답변 요청을 출력하거나 대화형 퀴즈를 자동 시작하지 않는다. 완료 응답은 verdict, 핵심 결과, 테스트와 HTML 경로·열기 결과만 전달한다.
@@ -141,6 +143,7 @@ flowchart LR
 - `ADR intent` 뒤와 ADR contract coverage 앞에는 실제 내용을 이름으로 삼은 설명 section을 하나 이상 포함한다.
 - 설명 section은 독자에게 중요한 순서로 배치하고, 근거 있는 사용자·운영 story나 causal flow가 있으면 그 흐름을 따라 설명한다.
 - 구현 순서, 파일 순서와 일반 배경은 독자가 중요한 동작과 결과를 이해하는 데 필요한 경우에만 사용한다.
+- 사람용 prose와 주제별 heading은 명시된 사용자 언어를 우선하고, 없으면 대상 ADR의 주 언어를 사용한다.
 - `Comprehension check`는 중요한 이해를 확인하는 중간 난이도 자유응답 질문을 1개 이상 5개 이하로 제공한다.
 - 퀴즈는 변경 전후 동작, 인과관계, ADR 계약, 실패·경계 조건과 중요한 trade-off 중 해당 구현에 중요한 항목을 다루며 사소한 symbol·줄 번호 암기를 요구하지 않는다.
 - 질문별 판정 기준과 ADR·코드·테스트 근거는 artifact에 포함하되 사용자가 답하기 전에 정답을 노출하지 않는다.
@@ -209,6 +212,7 @@ flowchart LR
 - 서로 다른 구현 주제의 report fixture가 모두 `ADR intent`로 시작하고 contract coverage 전에 주제별 중요도순 설명을 하나 이상 제공하되 고정된 `Background`, `Intuition`, `Code walkthrough` 형식을 요구하지 않는다.
 - 사용자·운영 흐름이 있는 fixture는 그 흐름을 따라 설명하고, 흐름이 없는 국소 변경 fixture는 가장 중요한 동작과 결과부터 설명한다.
 - AI-slop 신호를 넣은 fixture는 반복 대조문, 장식용 영어 명칭, 강제 번호 구조, filler bridge와 중복 시각 요소를 제거한 결과를 만든다.
+- 사용자 언어가 주어진 fixture는 그 언어로 설명하고, 언어 지시가 없는 fixture는 ADR 본문의 주 언어를 따른다.
 - artifact validator는 comprehension question이 1개 미만이거나 5개를 초과하고, 판정 기준·근거가 없거나 사용자 보고서가 정답을 미리 노출하면 실패한다.
 - 일반 완료 응답 fixture는 HTML에 질문이 있어도 메인 세션에 Q1, question text, answer criteria 또는 답변 요청을 출력하지 않는다.
 - 사용자가 명시적으로 이해도 확인을 요청한 fixture만 첫 질문을 출력하고 채점을 시작한다.
@@ -315,6 +319,7 @@ flowchart LR
 - 자유로운 주제별 heading이 보고서마다 일관성을 잃을 수 있다. `ADR intent`, contract coverage와 comprehension check의 위치는 고정하고 중간 설명만 주제에 맡긴다.
 - story 형식이 근거 없는 일화로 변할 수 있다. ADR, 코드, 테스트와 사용자 제공 사실로 확인된 상황과 결과만 사용한다.
 - AI-slop 점검이 자연스러운 문구까지 기계적으로 지울 수 있다. 신호는 문맥에서 판단하고 계약과 근거를 보존한다.
+- 고정 label과 기술 용어 때문에 언어가 불필요하게 섞일 수 있다. 사람용 prose는 선택한 언어를 유지하고 번역이 의미를 흐리는 용어만 원문으로 둔다.
 - 퀴즈가 사소한 암기 문제나 보고서 문장 복사로 퇴화할 수 있다. 중요한 동작, 인과관계, 계약과 실패 경로를 자유응답으로 묻고 판정 근거를 artifact에 유지한다.
 - 모델이 보고서 생성 뒤 기존 습관대로 Q1을 자동 출력할 수 있다. 일반 완료 응답에서 질문과 답변 요청을 금지하는 정적 테스트와 behavior eval을 유지한다.
 - 사용자가 `PASS`를 comprehension 통과로 오해할 수 있다. 코드 verdict와 PR comprehension readiness를 항상 별도 문장으로 표시한다.

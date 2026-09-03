@@ -10,6 +10,18 @@ The reader is a junior developer seeing the subject for the first time. Explain 
 like a new teammate, not like a child: preserve exact contracts and evidence, but
 remove the reconstruction work.
 
+## Choose the report language
+
+Use the language the user explicitly requests or currently uses. If the
+conversation does not establish a language, use the target ADR's dominant
+language. For a multi-ADR report, use the dominant language across the reviewed
+scope.
+
+Apply the selected language to human-facing prose and subject-specific headings.
+Keep stable artifact anchors and established technical terms in their original
+form when translation would reduce precision. Do not switch languages merely
+because the harness prompt is written in English.
+
 ## Start with the answer
 
 Lead with `At a glance` before detailed findings or evidence:

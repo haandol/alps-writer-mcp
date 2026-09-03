@@ -25,7 +25,7 @@ Review ADRs that already exist **as documents** and return a punch list. With no
 
 > **Report-only**: never edit an ADR, `.mapping.json`, or code. Return findings and let the user decide. That is what makes a full sweep safe — a sweep that also edited would fan one misjudgment across every ADR at once.
 
-> **Language**: this skill and every other harness prompt are written in English, but talk to the user and write the report in the language the user writes in (`authoring-rules.md` "Conventions"). Any user-facing phrasing below is a guide, not a literal string.
+> **Language**: this skill and every other harness prompt are written in English. Write the human-facing report in the language the user explicitly requests or currently uses. If the conversation does not establish a language, use the target ADR's dominant language; for a sweep, use the dominant language across the reviewed ADRs. Keep technical terms when translation would reduce precision. Any user-facing phrasing below is a guide, not a literal string.
 
 Apply `${CLAUDE_PLUGIN_ROOT}/references/non-invasive-harness.md`: the document
 verdict and evidence are contractual, while the number and type of subagents,
