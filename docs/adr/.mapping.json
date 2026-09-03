@@ -27,8 +27,8 @@
       "adrs": [
         {
           "path": "docs/adr/adr-authoring/decision-presentation/0001-present-decision-digest-and-semantic-diff.md",
-          "status": "Accepted (2026-08-17)",
-          "summary": "ADR 상호작용과 문서 리뷰는 Decision Digest·semantic diff·주니어용 한눈에 보기를 우선하고 복잡한 관계를 근거 있는 Mermaid로 설명한다"
+          "status": "Accepted (2026-09-03)",
+          "summary": "ADR 작성과 사람용 보고서는 결정 의도를 먼저 설명하고 중요도·인과 흐름으로 구성하며 AI-slop 신호를 제거한다"
         }
       ],
       "dependsOn": ["adr-authoring/current-state"]
@@ -105,7 +105,7 @@
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
           "status": "Accepted (2026-09-03)",
-          "summary": "구현 리뷰는 Evidence Package와 위험 비례 관점을 유지하며 언어 표준 함수 문서 주석과 ideal·edge 테스트 누락을 PASS 전에 보완한다"
+          "summary": "구현 리뷰는 ADR 전체 구현 범위와 독자 중심 HTML Evidence Package를 검증하며 이해도 질문은 보고서에만 두고 명시적 요청에만 대화형으로 진행한다"
         }
       ],
       "dependsOn": []

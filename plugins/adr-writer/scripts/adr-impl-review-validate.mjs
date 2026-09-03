@@ -15,9 +15,7 @@ const REQUIRED_REPORT_TEXT = [
   "## At a glance",
   "## Review mode",
   "## Scope",
-  "## Background",
-  "## Intuition",
-  "## Code walkthrough",
+  "## ADR intent",
   "## ADR contract coverage",
   "## Notable implementation choices",
   "## Findings",
@@ -25,7 +23,7 @@ const REQUIRED_REPORT_TEXT = [
   "## Residual risks",
   "## Comprehension check",
 ];
-const REQUIRED_EXPLANATION_HEADINGS = ["## Background", "## Intuition", "## Code walkthrough"];
+const REQUIRED_EXPLANATION_FIRST_HEADING = "## ADR intent";
 const REQUIRED_REPAIR_TEXT = [
   "## Repair guide",
   "Files and symbols to change:",
@@ -57,6 +55,22 @@ function resolveArtifact(baseDir, value) {
 
 function stripFencedBlocks(source) {
   return source.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1\s*$/gm, "");
+}
+
+/**
+ * Escape authored headings before using them in section-boundary expressions.
+ * Subject-specific headings stay flexible without letting punctuation alter validation.
+ */
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Read human-facing section order while ignoring headings inside fenced examples.
+ * The validator uses this order to keep ADR intent before narrative and evidence.
+ */
+function topLevelHeadings(source) {
+  return stripFencedBlocks(source).match(/^## .+$/gm) ?? [];
 }
 
 function sectionBody(source, headingPattern, stopPattern) {
@@ -176,6 +190,24 @@ function validateAtAGlance(atAGlance, errors) {
     if (typeof atAGlance[field] !== "string" || !atAGlance[field].trim()) {
       errors.push(`findings.json atAGlance.${field} must be a non-empty string`);
     }
+  }
+}
+
+function validateScopes(data, errors) {
+  for (const field of ["scope", "changeScope"]) {
+    if (!Array.isArray(data[field])) {
+      errors.push(`findings.json ${field} must be an array`);
+      continue;
+    }
+    data[field].forEach((value, index) => {
+      if (typeof value !== "string" || !value.trim()) {
+        errors.push(`findings.json ${field}[${index}] must be a non-empty string`);
+      }
+    });
+  }
+
+  if (data.verdict === "PASS" && Array.isArray(data.scope) && data.scope.length === 0) {
+    errors.push("PASS requires a non-empty complete implementation scope");
   }
 }
 
@@ -397,27 +429,22 @@ function validateHeadingOrder(source, headings, label, errors) {
 }
 
 function validateExplanation(explanation, errors) {
-  validateHeadingOrder(explanation, REQUIRED_EXPLANATION_HEADINGS, "explanation.md", errors);
-
-  const actualHeadings = explanation.match(/^## .+$/gm) ?? [];
-  if (
-    actualHeadings.length !== REQUIRED_EXPLANATION_HEADINGS.length ||
-    actualHeadings.some((heading, index) => heading !== REQUIRED_EXPLANATION_HEADINGS[index])
-  ) {
+  const actualHeadings = topLevelHeadings(explanation);
+  if (actualHeadings[0] !== REQUIRED_EXPLANATION_FIRST_HEADING) {
+    errors.push(`explanation.md must start with ${REQUIRED_EXPLANATION_FIRST_HEADING}`);
+  }
+  if (actualHeadings.length < 2) {
     errors.push(
-      `explanation.md must use exactly these top-level headings: ${REQUIRED_EXPLANATION_HEADINGS.join(
-        " → ",
-      )}`,
+      "explanation.md must include at least one subject-specific heading after ## ADR intent",
     );
   }
 
-  for (let index = 0; index < REQUIRED_EXPLANATION_HEADINGS.length; index++) {
-    const heading = REQUIRED_EXPLANATION_HEADINGS[index];
-    const next = REQUIRED_EXPLANATION_HEADINGS[index + 1];
+  for (let index = 0; index < actualHeadings.length; index++) {
+    const heading = actualHeadings[index];
     const body = sectionBody(
       explanation,
-      new RegExp(`^${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i"),
-      next ? new RegExp(`^${next.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i") : /^##\s+/,
+      new RegExp(`^${escapeRegExp(heading)}\\s*$`, "i"),
+      /^##\s+/,
     );
     if (!body) errors.push(`explanation.md ${heading} must not be empty`);
   }
@@ -429,22 +456,40 @@ function validateReport(report, data, errors) {
   }
   validateHeadingOrder(
     report,
-    ["## Background", "## Intuition", "## Code walkthrough", "## Comprehension check"],
+    [
+      "## At a glance",
+      "## Review mode",
+      "## Scope",
+      "## ADR intent",
+      "## ADR contract coverage",
+      "## Notable implementation choices",
+      "## Findings",
+      "## Tests",
+      "## Residual risks",
+      "## Comprehension check",
+    ],
     "implementation-review.md",
     errors,
   );
 
-  for (const [heading, nextHeading] of [
-    ["Background", "Intuition"],
-    ["Intuition", "Code walkthrough"],
-    ["Code walkthrough", "Visual map|ADR contract coverage"],
-  ]) {
-    const body = sectionBody(
-      report,
-      new RegExp(`^## ${heading}\\s*$`, "i"),
-      new RegExp(`^## (?:${nextHeading})\\s*$`, "i"),
+  const reportHeadings = topLevelHeadings(report);
+  const intentIndex = reportHeadings.indexOf("## ADR intent");
+  const coverageIndex = reportHeadings.indexOf("## ADR contract coverage");
+  const narrativeHeadings =
+    intentIndex >= 0 && coverageIndex > intentIndex
+      ? reportHeadings
+          .slice(intentIndex + 1, coverageIndex)
+          .filter((heading) => heading !== "## Visual map")
+      : [];
+  if (narrativeHeadings.length < 1) {
+    errors.push(
+      "implementation-review.md must include at least one subject-specific narrative heading between ## ADR intent and ## ADR contract coverage",
     );
-    if (!body) errors.push(`implementation-review.md ## ${heading} must not be empty`);
+  }
+
+  for (const heading of ["## ADR intent", ...narrativeHeadings]) {
+    const body = sectionBody(report, new RegExp(`^${escapeRegExp(heading)}\\s*$`, "i"), /^##\s+/);
+    if (!body) errors.push(`implementation-review.md ${heading} must not be empty`);
   }
 
   const atAGlanceBody = sectionBody(report, /^## At a glance\s*$/i, /^##\s+/);
@@ -551,6 +596,7 @@ function main() {
     if (!ALLOWED_VERDICTS.has(data.verdict)) {
       errors.push(`findings.json verdict is invalid: ${data.verdict ?? "(missing)"}`);
     }
+    validateScopes(data, errors);
 
     if (!Array.isArray(data.findings)) {
       errors.push("findings.json findings must be an array");

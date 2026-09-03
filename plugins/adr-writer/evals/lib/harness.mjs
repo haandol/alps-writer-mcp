@@ -67,14 +67,14 @@ export function validateReviewArtifact(dir, report, findings) {
     "explanation.md",
     `# Implementation explanation
 
-## Background
-The change sits inside the reviewed ADR flow.
+## ADR intent
+The implementation must preserve the reviewed ADR decision and contract.
 
-## Intuition
-The implementation preserves the reviewed contract through the described boundary.
+## The reviewed behavior reaches its observable result
+The verified path follows the supplied evidence and tests through the contract boundary.
 
-## Code walkthrough
-The verified path follows the evidence and tests supplied by the scenario.
+## Failure remains inside the decided boundary
+The scenario evidence identifies the relevant failure result without inventing another flow.
 `,
   );
   const atAGlance = {};

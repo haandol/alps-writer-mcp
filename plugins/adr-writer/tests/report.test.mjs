@@ -28,6 +28,41 @@ test("inline findings JSON cannot terminate the report script element", () => {
   assert.equal((result.stdout.match(/<script>/g) ?? []).length, 1);
 });
 
+test("standard reviews render the same standalone HTML with separate implementation and change scopes", () => {
+  const result = render({
+    reviewMode: "standard",
+    adr: "docs/adr/parser/0001.md",
+    status: "Accepted (2026-09-03)",
+    verdict: "PASS",
+    scope: ["src/parser.mjs", "test/parser.test.mjs"],
+    changeScope: [],
+    findings: [],
+    contractCoverage: [
+      {
+        contractId: "D0",
+        requirement: "Parser compatibility",
+        status: "PROVEN",
+        adrBasis: "Decision",
+        implementation: "the parser keeps the accepted input and output behavior",
+        evidence: "src/parser.mjs",
+        tests: "node --test test/parser.test.mjs — PASS",
+      },
+    ],
+    implementationChoices: [],
+    comprehensionCheck: {
+      prGuidance: "Do not open or send the PR until the question passes.",
+      questions: [{ id: "Q1", question: "Why is parser compatibility preserved?" }],
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Review mode · <code>standard<\/code>/);
+  assert.match(result.stdout, /Complete implementation scope ·/);
+  assert.match(result.stdout, /src\/parser\.mjs/);
+  assert.match(result.stdout, /test\/parser\.test\.mjs/);
+  assert.match(result.stdout, /Change scope · none/);
+});
+
 test("arbitrary finding IDs are not interpolated into DOM selectors", () => {
   const hostileId = 'x"] :checked, script[data-x="';
   const result = render({
@@ -213,25 +248,34 @@ test("comprehension questions render without exposing grading criteria", () => {
   assert.doesNotMatch(result.stdout, /SECRET_GRADING_EVIDENCE/);
 });
 
-test("Explain Diff sections render in the predictable order while keeping flexible bodies", () => {
+test("intent-first narrative sections render in reader-priority order", () => {
   const result = render({
     adr: "docs/adr/payments/0001.md",
     verdict: "PASS",
     findings: [],
     contractCoverage: [],
     implementationChoices: [],
-    explanationSections: {
-      background: "Payment settlement owns the durable completion boundary.",
-      intuition: "One idempotency key admits one successful completion.",
-      codeWalkthrough: "Validate, call the provider, then persist success.",
-    },
+    narrativeSections: [
+      {
+        title: "ADR intent",
+        body: "Payment settlement must produce one durable completion.",
+      },
+      {
+        title: "A duplicate request cannot charge twice",
+        body: "One idempotency key admits one successful completion.",
+      },
+      {
+        title: "Provider failure remains pending",
+        body: "Failure never crosses the completion boundary.",
+      },
+    ],
   });
 
   assert.equal(result.status, 0, result.stderr);
-  const background = result.stdout.indexOf("Payment settlement owns");
-  const intuition = result.stdout.indexOf("One idempotency key");
-  const walkthrough = result.stdout.indexOf("Validate, call the provider");
-  assert.ok(background >= 0 && background < intuition && intuition < walkthrough);
+  const intent = result.stdout.indexOf("Payment settlement must");
+  const duplicate = result.stdout.indexOf("One idempotency key");
+  const failure = result.stdout.indexOf("Failure never crosses");
+  assert.ok(intent >= 0 && intent < duplicate && duplicate < failure);
 });
 
 test("At a glance content is escaped in HTML and embedded feedback data", () => {

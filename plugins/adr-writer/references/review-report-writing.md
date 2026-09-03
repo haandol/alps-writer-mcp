@@ -3,6 +3,9 @@
 Use this guide only when writing the report or chat summary a person will read.
 Internal reviewer artifacts keep their evidence-complete formats.
 
+Read `${CLAUDE_PLUGIN_ROOT}/references/reader-first-writing.md` completely and
+apply it with this report-specific guide.
+
 The reader is a junior developer seeing the subject for the first time. Explain it
 like a new teammate, not like a child: preserve exact contracts and evidence, but
 remove the reconstruction work.
@@ -79,6 +82,11 @@ necessary tests`;
 - empty headings and sections whose only content is `none`, unless the owning
   artifact schema requires the section.
 
+Also rewrite repeated contrast templates, one-off ornamental English labels,
+forced numbered symmetry, filler bridges, and visual elements that repeat
+adjacent prose. Never invent a user story, project result, measurement, or
+causal relationship to make a report feel more narrative.
+
 Prefer the shortest wording that preserves the full contract. Concision is not a
 reason to hide evidence or merge independent obligations.
 
@@ -89,15 +97,15 @@ reason to hide evidence or merge independent obligations.
   diagram.
 - **ADR sync** — visualize a changed decision flow, dependency/category movement,
   or unresolved ADR-versus-code branch. Keep semantic diffs in text.
-- **Implementation review** — before contract coverage, always use the fixed
-  `Background`, `Intuition`, and `Code walkthrough` headings in that order, then
-  visualize the request/event path, state/failure path, or changed data
-  relationship when a trigger applies. The headings and order are predictable;
-  their internal paragraphs, lists, tables, examples, optional subsections, and
-  length remain subject-specific. End the report with `Comprehension check`
-  containing one to five material free-response questions. Keep the answer
-  criteria out of the visible report until the reader answers, and state that a
-  code `PASS` does not make the PR comprehension-ready.
+- **Implementation review** — after At a glance and scope, explain `ADR intent`
+  before implementation detail. Between `ADR intent` and contract coverage, use
+  one or more subject-specific headings ordered by importance. Follow a verified
+  user, operator, request, state, or failure flow when it makes the behavior
+  easier to understand; otherwise lead with the most consequential behavior and
+  its result. Execution order is optional. End the report with `Comprehension
+check` containing one to five material free-response questions. Keep the
+  answer criteria out of the visible report until the reader answers, and state
+  that a code `PASS` does not make the PR comprehension-ready.
 - **Implementation refactor** — visualize before/after work flow only when several
   call sites or processing stages are involved. A local rename or extraction does
   not need one.

@@ -16,6 +16,10 @@ Author an ADR directly. Works without an ALPS PRD — this is the plugin's canon
 
 > **Language**: this skill and every other harness prompt are written in English, but **talk to the user and write the ADR body in the language the user writes in** (`authoring-rules.md` "Conventions"). The prompts below are phrasing guides, not literal strings to paste.
 
+Before eliciting or drafting, read
+`${CLAUDE_PLUGIN_ROOT}/references/reader-first-writing.md` completely. Apply it
+to the ADR body and the Decision Digest without weakening any contract.
+
 ## What you are actually writing — one level of an abstraction ladder
 
 Every keep/drop call in this skill follows from one idea, so hold it while you write.
@@ -119,6 +123,7 @@ Follow `concepts.md`, `authoring-rules.md`, and `structure.md` under `docs/adr/`
 - **Describe the Decision as a vertical slice** — connect user action → API → data change without a break, in one paragraph or a sequenceDiagram. Covering the UI/API/Data decisions of one feature (the leaf — a feature sub-folder or a single-feature context) together is normal; never split into per-layer ADRs. When async flow or state transitions are central, use stateDiagram-v2 or flowchart.
 - **Write the final state, not the transition** (`authoring-rules.md` "Final-state wording"). State the currently valid result directly in the body and `.mapping.json` summary: "`LEGACY_EVENT`와 `CURRENT_EVENT`를 혼용하지 않고 `CURRENT_EVENT`만 사용한다" ✗ / "이벤트 이름은 `CURRENT_EVENT`다" ✓. Remove replaced identifiers, previous values, migration steps, and contrast phrases when they add no current contract. Alternatives may name rejected choices, and major changes belong in `decision-log.md`. A real current prohibition or forbidden transition that passed the requirement gate remains.
 - **Write it tight, and in the active voice** (`authoring-rules.md` "Prose style"). An ADR is read under time pressure by someone deciding whether to trust it, so every padding word costs the reader attention the decision needed. Use the active voice by default — "the gateway rejects a duplicate payment", not "duplicate payments are rejected" — because the passive drops the actor, and who validates or owns the state is often the decision itself. Cut hedges ("basically", "it is worth noting that") and throat-clearing ("in order to" → "to"; "has the ability to" → "can"), keep one idea per sentence, prefer the concrete noun to the vague one, and state the decision rather than narrating how you reached it. **But never shorten by deleting content** — a dropped requirement value, permission rule, or fallback policy is a defect, not concision.
+- **Lead with intent and remove AI slop** (`reader-first-writing.md`). Start Context from the verified problem and decision pressure, and state the current Decision before supporting detail. Prefer a verified causal flow to a forced list. Rewrite repeated contrast templates, one-off ornamental English labels, forced numbered symmetry, filler bridges, and tables or diagrams that repeat adjacent prose. Never invent an anecdote, project result, measurement, or causal relationship.
 - **Use diagrams to explain, not decorate** — when a decision flow, state, system boundary, or alternatives relationship is clearer visually, add a Mermaid diagram containing only architecture-level relationships established by the decision. Do not copy the implementation call graph, name file-level symbols, or add a diagram that merely repeats the paragraph.
 - For the full forbidden/keep lists see `authoring-rules.md` (the same rules apply inside diagrams).
 
@@ -190,7 +195,8 @@ Skip the items the harness already proved (Status format, required sections, fil
 - **ADR admission gate (R12)** — does the core subject itself change a durable contract, boundary, provider/model/fallback, key design, or cross-implementation trade-off? If it is only a replaceable implementation means, do not save the ADR.
 - **Final-state wording (R3)** — do the body and mapping summary state the current result directly, without carrying replaced identifiers, previous values, or transition narration outside Alternatives and `decision-log.md`? Confirm that removing comparison residue did not remove a current prohibition.
 - **Decision identity check (R11/R12)** — did the mapping and plausible ADR bodies reveal an existing owner for this architectural question or boundary? If yes, stop and route to edit-in-place; a new provider name, reversed direction, or changed Driver is not by itself a new decision.
-- **Prose style (R20)** — advisory. Apply the easy rewrites and never accept a cut that drops content.
+- **Prose style (R20)** — advisory. Apply `reader-first-writing.md`, including
+  its AI-slop signals, and never accept a cut that drops content.
 
 **Two of these you cannot check as well as a fresh reader, so make them explicit rather than assumed.** The values were in this conversation and the alternatives are yours, so a draft missing a requirement still reads as complete to you, and your own alternatives never look like strawmen. So for **R18a and R19, write the check out** — list the contracts a rebuild must honor and mark each present or absent, instead of concluding "the contract is complete". Anything absent goes back to the user as a question in step 7; **never invent a number to close the gap.**
 
@@ -227,6 +233,7 @@ technical layer.
 **Category**: <category key — e.g. identity/login (context: identity, subdomain: core)>
 **Comprehension load**: <N>/10
 **Decision question**: <the architectural question this ADR answers>
+**Decision intent**: <the verified problem, pressure, and result this decision exists to protect>
 **Current decision**: <2-3 sentences stating the final state>
 **Decision Drivers**: <3-5, one line each>
 **Decision-changing assumptions**: <assumption → what decision is reconsidered if false; omit when none>

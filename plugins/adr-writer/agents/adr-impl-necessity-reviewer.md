@@ -1,6 +1,6 @@
 ---
 name: adr-impl-necessity-reviewer
-description: Adversarially review whether every change in an ADR implementation diff is necessary. Finds removable scope, unrelated refactors, speculative abstractions, and simpler implementations with concrete evidence, without editing the repository.
+description: Adversarially review whether each ADR implementation review unit is necessary. Uses changed units when a diff exists and the complete ADR implementation units for a standalone existing-implementation review.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -11,8 +11,8 @@ The goal of this review is not to praise the implementation but to **find change
 ## Input
 
 - The target ADR and its mapping entry
-- The raw diff and changed files
-- Related call paths and tests
+- The complete ADR implementation scope and related tests
+- The separate raw diff and changed files, which may be empty
 - Project conventions
 - The approved `review-baseline.md` built from the ADR and pre-implementation intent check
 - The authoring rules under `docs/adr/` — `authoring-rules.md` and `concepts.md` (falling back to the same files under `${CLAUDE_PLUGIN_ROOT}/templates/adr/`). Step 1 needs them to draw the contract line; do not judge that line from memory.
@@ -34,9 +34,11 @@ Do not reconstruct those criteria from the summary below — the summary is a re
 
 **Requirement values recorded in the ADR are contract** — limits, quotas, cycles, retention periods, size caps, and response targets go into the minimum contract verbatim. Code that enforces them (cap checks, counters, expiry handling) can never be a removal candidate on the grounds that "it works without it." **Non-numeric requirements are the same contract** — code enforcing the ADR's allowed value sets, transition rules, mandatory fields, permissions, visibility, ordering, uniqueness, and units (transition guards, permission checks, duplicate prevention, required-field validation) is likewise not subject to a deletion hypothesis just because "the happy path never hits it." Conversely, tuning values absent from the ADR (pool sizes, backoff, cache TTL) are not contract, so a change that introduced one is a legitimate deletion candidate. Filing code that enforces a requirement as `[Unnecessary change]` is this review's most expensive misdiagnosis.
 
-### 2. Build the change ledger
+### 2. Build the review-unit ledger
 
-For each meaningful unit of change in the diff, account for:
+When a meaningful change scope exists, use each changed unit. For a standalone review of an existing implementation with no meaningful change scope, use each
+contract-relevant implementation unit in the confirmed complete scope. For every
+unit, account for:
 
 - Which contract it achieves
 - What concretely fails without it
@@ -47,7 +49,11 @@ Prove it with code locations and call paths, not with "it looks necessary."
 
 ### 3. Attack with deletion hypotheses
 
-For each change, try: "if this change were deleted or replaced with a smaller existing structure, would the ADR contract break?" Run the related tests or non-destructive commands where possible. When verification would require modifying the repository, do not run it — propose a concrete test procedure instead.
+For each review unit, try: "if this code were deleted or replaced with a smaller
+existing structure, would the ADR contract break?" Run the related tests or
+non-destructive commands where possible. When verification would require
+modifying the repository, do not run it — propose a concrete test procedure
+instead.
 
 Look for these first:
 
@@ -82,9 +88,9 @@ PASS | FIX_REQUIRED | INCONCLUSIVE
 
 - ...
 
-## Change ledger
+## Review-unit ledger
 
-- <change>: required | removable | uncertain — <evidence>
+- <change or implementation unit>: required | removable | uncertain — <evidence>
 
 ## Findings
 

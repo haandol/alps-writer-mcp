@@ -396,12 +396,12 @@ test("the implementation-review Evidence Package scorer distinguishes verified a
 full
 ## Scope
 payment settlement
-## Background
-Settlement turns a provider result into a durable completion record.
-## Intuition
-Completion is recorded only after the provider result crosses the idempotent boundary.
-## Code walkthrough
+## ADR intent
+Settlement must create one durable completion and preserve pending state on provider failure.
+## Provider failure remains the important unknown
 The duplicate path ran, but the provider-failure path could not be executed.
+## A retry still reaches the idempotent boundary
+Completion is recorded only after the provider result crosses the boundary.
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -523,11 +523,11 @@ test("the PASS Evidence Package scorer rejects architecture approval while allow
 full
 ## Scope
 payment settlement
-## Background
-Settlement turns a provider result into a durable completion record.
-## Intuition
-The idempotent boundary admits one completion and preserves pending state on failure.
-## Code walkthrough
+## ADR intent
+Settlement must create one durable completion and preserve pending state on provider failure.
+## A duplicate request cannot create a second completion
+The idempotent boundary admits one completion.
+## Provider failure leaves the payment pending
 The duplicate and provider-failure paths both passed their targeted tests.
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
@@ -624,6 +624,50 @@ Q1: Why does provider failure leave the payment pending instead of completed?
   assert.equal(
     prematureChecks.find((check) => check.label.includes("only after the final correct answer"))
       ?.pass,
+    false,
+  );
+});
+
+test("the implementation-review completion scorer rejects an automatic Q1 prompt", async () => {
+  const scenario = await loadScenario("impl-review-completion-does-not-auto-quiz.mjs");
+  const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-completion-no-quiz-"));
+  await scenario.build(dir);
+
+  const goodChecks = scenario.score({
+    dir,
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "COMPLETION",
+          summary: "autoQuiz=false; questionVisible=false; reportPath=true; verdict=PASS",
+        },
+      ],
+    },
+    output: "PASS. All targeted tests passed. HTML report: /tmp/review/adr-impl-review-report.html",
+  });
+  assert.ok(
+    goodChecks.every((check) => check.pass),
+    JSON.stringify(goodChecks, null, 2),
+  );
+
+  const badChecks = scenario.score({
+    dir,
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "COMPLETION",
+          summary: "autoQuiz=false; questionVisible=false; reportPath=true; verdict=PASS",
+        },
+      ],
+    },
+    output: `PASS. All tests passed. HTML report: /tmp/review/adr-impl-review-report.html
+
+Q1: Why does provider failure leave the payment pending instead of completed?`,
+  });
+  assert.equal(
+    badChecks.find((check) => check.label.includes("does not expose or ask"))?.pass,
     false,
   );
 });

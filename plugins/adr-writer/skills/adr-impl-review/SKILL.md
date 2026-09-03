@@ -1,6 +1,6 @@
 ---
 name: adr-impl-review
-description: Review code implemented from an ADR using a risk-selected standard or full path, then explain the change through predictable Background, Intuition, Code walkthrough, and Comprehension check sections. Standard reviews use a decision ledger, a sufficiency perspective, and targeted tests; full reviews add separately grounded necessity and sufficiency perspectives plus detailed repair artifacts. Report-only; never edits code or ADRs.
+description: Review the complete code implementation of an ADR using a risk-selected standard or full path, then generate an intent-first standalone HTML Evidence Package whose narrative follows the most important verified user, operator, or system flow. Standard reviews use a decision ledger, a sufficiency perspective, and targeted tests; full reviews add separately grounded necessity and sufficiency perspectives plus detailed repair artifacts. Report-only; never edits code or ADRs.
 argument-hint: "[adr-path-or-category] [--base <ref>] [--mode standard|full]"
 ---
 
@@ -10,10 +10,12 @@ Rather than approving the implementation outright, disprove it in the following 
 
 ```mermaid
 flowchart TD
-    CHANGE["Implementation change"] --> RISK{"Protected surface?"}
+    ADR["Target ADR"] --> SCOPE["Find complete implementation scope"]
+    CHANGE["Implementation change context"] --> RISK{"Protected surface?"}
+    SCOPE --> RISK
     RISK -->|No| STANDARD["Standard: ledger + sufficiency + targeted tests"]
     RISK -->|Yes or unclear| FULL["Full: necessity + sufficiency + evidence artifacts"]
-    STANDARD --> RULING["Evidence-backed result"]
+    STANDARD --> RULING["Validated HTML Evidence Package"]
     FULL --> RULING
 ```
 
@@ -63,14 +65,14 @@ A note on scope: `/adr-impl-review` judges the **code** level against the ADR le
 ## Invariant principles
 
 - **Report-only**: never auto-modify code, ADRs, or the mapping. Write only the Markdown/JSON/HTML review artifacts.
-- **Independently grounded conclusions**: in full mode, necessity and sufficiency derive conclusions from the original ADR, diff, code, tests, and approved baseline without reading each other's results before synthesis. In standard mode, preserve the same grounding for sufficiency. A fixed number or type of agent is not required.
+- **Independently grounded conclusions**: in full mode, necessity and sufficiency derive conclusions from the original ADR, complete implementation scope, separate change scope, code, tests, and approved baseline without reading each other's results before synthesis. In standard mode, preserve the same grounding for sufficiency. A fixed number or type of agent is not required.
 - **The approved ADR is the behavioral spec**: right after implementation, the ADR's admitted decision and requirement contract are authoritative because the implementation cycle confirmed their intent and regeneration checklist before code began. Implementation facts such as API names and actual field names should not be in that spec; when they appear, separate them as `Impl-fact mismatch` and route them for removal. If review finds concrete evidence that the ADR baseline itself is incomplete or contradictory, return it as a blocking contract issue; do not perform a routine confirmation or silently fix the ADR inside impl-review.
 - **Evidence over assertion**: every finding includes the applicable basis among an ADR quote, the actual diff or code location, and a reproduction procedure or execution result. Report a conjecture you could not reproduce only as `Unverified risk`. For an assumption risk, state the externally checkable premise, the contract or safety consequence if it is false, and the missing verification; never request or fabricate private chain-of-thought.
 - **Escalation is exceptional**: ask for human judgment only when the approved contract must change, premises contradict, a material risk cannot be verified, or the repair would exceed the approved scope. Evidence-backed implementation and test defects are remediation work, not approval questions.
 
 Before planning the review execution, read `${CLAUDE_PLUGIN_ROOT}/references/subagent-dispatch.md` completely. The role files under `${CLAUDE_PLUGIN_ROOT}/agents/` define reusable role contracts, not a mandatory topology. Choose the smallest available combination of named agents, generic read-only subagents, or main-session passes that preserves the selected mode's perspectives and evidence. Record an isolation limitation only when it materially affects confidence.
 
-## 1. Fix the target and the change scope
+## 1. Fix the target, implementation scope, and change scope
 
 ADR identification follows the same rules as `/adr-impl`.
 
@@ -79,17 +81,43 @@ ADR identification follows the same rules as `/adr-impl`.
 - With no argument, show the list of `Accepted` ADRs and take a selection.
 - If it is a `Proposed` ADR invoked by `/adr-impl` after implementation, refactoring, and tests, treat it as the selected pre-promotion completion review and do not ask whether it is partial. For any other `Proposed` target, confirm once whether this is a partial-implementation review.
 
-Determine the diff under review by this priority:
+Determine the **change scope** by this priority:
 
 1. A PR / commit range the user supplied, or `--base`.
 2. The current staged + unstaged changes.
 3. For a clean worktree, the merge-base diff between the current branch and the default branch.
 
-If the scope mixes several implementations and cannot be mapped onto the ADR, do not guess — get the base/range confirmed. After fixing the scope, prepare the following original material.
+The change scope explains before/after behavior and is the primary input to a
+change-focused necessity pass. It is never the ceiling of the implementation review.
+
+Independently build the **complete implementation scope** for the selected ADR:
+
+1. Enumerate `D0` and every `R1..Rn` contract row from the ADR.
+2. Extract domain terms, behaviors, states, boundaries, providers, and failure
+   results from each row.
+3. Search the repository from those terms, open the actual code, and trace
+   direct and indirect callers and callees. Check differently named symbols,
+   configuration, generated code, and surviving older paths where relevant.
+4. Find every related ideal and edge-case test. Cross-check each contract row
+   from decision to implementation and from implementation back to its entry
+   points.
+5. Record the confirmed production files, tests, and call paths as the
+   implementation scope. A caller-provided file list is a starting floor, never
+   a search limit.
+
+Do not infer scope from the ADR category name or the current diff. If any
+contract row or core call path cannot be fully narrowed, record the search
+limit, mark the affected coverage `UNVERIFIED`, and return `INCONCLUSIVE` rather
+than `PASS`.
+
+If the change scope mixes several implementations and cannot be mapped onto the
+ADR, do not guess about the necessity pass — get the base/range confirmed. The
+complete implementation scope still comes from the ADR itself. After fixing
+both scopes, prepare the following original material.
 
 - The full ADR text and its entry in `.mapping.json`
-- The raw diff and the list of changed files
-- The direct call paths of the changed code and the related tests
+- The complete implementation file/test inventory and confirmed direct and indirect call paths
+- The raw diff and changed-file list as separate change context
 - **The seeded rule docs the repo actually holds** — `docs/adr/concepts.md` (the abstraction ladder, the requirement gate, the source-of-truth split) and `docs/adr/authoring-rules.md`, falling back to `${CLAUDE_PLUGIN_ROOT}/templates/adr/`. These decide **which level owns a disagreement**, so a reviewer working from remembered defaults can route a contract violation as an implementation fact. A project may have hand-edited or pinned its copy, and if the stamp lags the installed plugin (`rules-doc-stale`) or `concepts.md` is missing because the repo predates the split (`rules-doc-layout-legacy`, in which case that material sits inside `README.md`), **say so in the final report's review limits** — the reviewers judged against those docs, so the reader needs to know which version.
 - Whichever project conventions exist among `AGENTS.md`, `CONTRIBUTING.md`, `CLAUDE.md` — note these are the **project's own** conventions file, a different thing from `docs/adr/concepts.md` above
 - An executable project test command
@@ -98,7 +126,7 @@ Create one review artifact directory and pass its path to every agent that follo
 
 ### 1.1 Select the review mode
 
-Use `full` when any of these surfaces changes: requirement values or rules, public API or wire form, schema or persistence, state or transitions, permissions or visibility, security boundaries, external fallback, concurrency, transactions, resource lifetime, or error semantics. Also use `full` for changes spanning bounded contexts or broad modules, when the user requests a full review, or whenever classification is unclear.
+Use `full` when any of these surfaces changes: requirement values or rules, public API or wire form, schema or persistence, state or transitions, permissions or visibility, security boundaries, external fallback, concurrency, transactions, resource lifetime, or error semantics. Also use `full` when the complete implementation scope spans bounded contexts or broad modules, when the user requests a full review, or whenever classification is unclear.
 
 Use `standard` only for localized implementation or reinforcement of an existing decision that changes none of those protected surfaces. An explicit `--mode standard` never overrides the criteria; upgrade it to `full` and explain why. An explicit `--mode full` is always honored.
 
@@ -109,17 +137,18 @@ Record `reviewMode` and the classification evidence in the artifacts.
 For both review modes, create the plain-language implementation explanation
 using the `adr-impl-explainer` role contract. The model may use a named agent,
 generic read-only subagent, or write it directly. Give that role only the ADR,
-raw diff, changed code scope, and related tests. Save the result as
+complete implementation scope, separate change scope, and related tests. Save the result as
 `explanation.md`.
 
-The explanation has exactly these top-level sections in this order:
+The explanation starts with `ADR intent`, followed by one to three
+subject-specific top-level sections ordered by importance. Follow a verified
+user, operator, request, state, or failure flow when one exists. Otherwise lead
+with the most consequential behavior and result. Do not default to execution or
+file order.
 
-1. `Background`
-2. `Intuition`
-3. `Code walkthrough`
-
-Only the headings and order are fixed. The internal paragraphs, lists, tables,
-examples, optional subsections, diagrams, and length remain subject-specific.
+Only `ADR intent` and its first position are fixed. The later headings name the
+actual behavior or situation. The internal paragraphs, lists, tables, examples,
+optional subsections, diagrams, and length remain subject-specific.
 Do not stop to show it or ask the user to reconfirm the implementation. Never
 pass it to the necessity or sufficiency perspective.
 
@@ -143,12 +172,12 @@ The visible report contains only `id` and `question`. Do not expose
 
 For `standard`, execute this section and then continue at section 7. Sections 2-6 are the full-mode path.
 
-1. Build a decision ledger containing every ADR decision and each independently reviewable requirement-contract row relevant to the diff, including its implementation-independent observable evidence. The sufficiency pass also extracts Notable implementation choices once from code outward.
-2. Apply the `adr-impl-sufficiency-reviewer` role to the ADR, raw diff, changed code and tests, project rule documents, and the ledger. Use a named agent, generic read-only subagent, or separately grounded main-session pass as appropriate. Record an isolation limitation only when it weakens the evidence.
+1. Build a decision ledger containing every ADR decision and each independently reviewable requirement-contract row, including its implementation-independent observable evidence. The sufficiency pass also extracts Notable implementation choices once from the complete implementation scope.
+2. Apply the `adr-impl-sufficiency-reviewer` role to the ADR, complete implementation scope, separate change scope, tests, project rule documents, and the ledger. Use a named agent, generic read-only subagent, or separately grounded main-session pass as appropriate. Record an isolation limitation only when it weakens the evidence.
 3. Execute the related targeted tests and any minimal reproduction needed to account for every ledger row. An unexecuted core path makes the verdict `INCONCLUSIVE`, not `PASS`.
-4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, separate report-writing role, HTML page, fixed Mermaid quota, or post-implementation spec-fitness gate.
-5. Before writing the report, read `${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely. Write a concise `implementation-review.md` with these headings in this relative order: `At a glance`, `Review mode`, `Scope`, `Background`, `Intuition`, `Code walkthrough`, optional `Visual map`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, `Residual risks`, and `Comprehension check`. `At a glance` states verdict, user or operational impact, next action, and remaining risk. The three explanation sections are derived from `explanation.md`; their headings are fixed but internal formatting remains flexible. Add the smallest grounded Mermaid before contract coverage when the shared guide's trigger applies. Under contract coverage, assign `D0` to the Decision and `R1..Rn` to every top-level Requirement contract bullet in source order. Show every ID exactly once with `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`, its exact ADR basis, how the implementation meets it, and the evidence and tests. End with one to five visible questions and the PR-readiness guidance from section 1.2. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, a non-empty `atAGlance` object, the structured non-empty `contractCoverage` array, the structured `implementationChoices` array, the structured `comprehensionCheck` object, and the normal evidence fields.
-6. Run the artifact validator. `PASS` requires every contract-coverage row to be `PROVEN`, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk.
+4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, separate report-writing requirement, fixed Mermaid quota, or post-implementation spec-fitness gate.
+5. Before writing the report, read `${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` and `${CLAUDE_PLUGIN_ROOT}/references/reader-first-writing.md` completely. Write a concise `implementation-review.md` with these headings in this relative order: `At a glance`, `Review mode`, `Scope`, `ADR intent`, one or more subject-specific narrative headings, optional `Visual map`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, `Residual risks`, and `Comprehension check`. `At a glance` states verdict, user or operational impact, next action, and remaining risk. `ADR intent` and the narrative sections are derived from `explanation.md`; order the narrative by reader importance and follow a verified user, operator, request, state, or failure flow when useful. Add the smallest grounded Mermaid before contract coverage when the shared guide's trigger applies. Under contract coverage, assign `D0` to the Decision and `R1..Rn` to every top-level Requirement contract bullet in source order. Show every ID exactly once with `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`, its exact ADR basis, how the implementation meets it, and the evidence and tests. End with one to five visible questions and the PR-readiness guidance from section 1.2. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, a non-empty `atAGlance` object, the structured non-empty `contractCoverage` array, the structured `implementationChoices` array, the structured `comprehensionCheck` object, and the normal evidence fields.
+6. Run the artifact validator. `PASS` requires every contract-coverage row to be `PROVEN`, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk. After validation succeeds, render `findings.json` to `<artifact-dir>/adr-impl-review-report.html`, then run `adr-impl-review-open.mjs`. The helper verifies that the file exists and is non-empty before attempting the environment's default local file opener. A standard review is incomplete until the HTML is valid. If the open attempt is unavailable or fails, keep the validated review result and surface the exact path plus the failure reason.
 
 ## Full mode
 
@@ -173,16 +202,24 @@ For every blocking contract issue, return one consolidated **Decision request** 
 
 ## 3. Derive the two review perspectives independently
 
-Give both perspectives, in common, **only the original material and `review-baseline.md`.** Do not give either perspective `explanation.md` or the other perspective's result. That is what keeps them from anchoring on an earlier interpretation. The model may run them in parallel or sequentially and may use zero, one, or several subagents.
+Give both perspectives, in common, **only the original ADR, complete
+implementation scope, separate change scope, tests, project rules, and
+`review-baseline.md`.** Do not give either perspective `explanation.md` or the
+other perspective's result. That is what keeps them from anchoring on an earlier
+interpretation. The model may run them in parallel or sequentially and may use
+zero, one, or several subagents.
 
 ### 3.1 The necessity review
 
 Apply the `adr-impl-necessity-reviewer` role contract.
 
-- The question: "is each change in this diff strictly necessary to achieve the ADR's goal?"
+- The question: "is each review unit strictly necessary to achieve the ADR's goal?"
 - Success condition: finding changes that can be removed or shrunk, with evidence.
 - Forbidden: style preferences, a taste for future extensibility, unjustified "make it simpler". Also forbidden is filing **code that enforces a requirement the ADR records** (cap checks, counters, expiry handling, and likewise transition guards, permission checks, duplicate prevention, required-field validation) as unnecessary — whether it is a number, a value set, or a permission, that is contract.
-- The core attempt: for each unit of change, test "does the ADR and the approved review baseline still hold if this is deleted?"
+- The core attempt: when a change scope exists, test each changed unit. For a
+  standalone existing-implementation review with no meaningful change scope,
+  test each ADR-related implementation unit. In both cases ask, "does the ADR
+  and the approved review baseline still hold if this is deleted?"
 
 ### 3.2 The sufficiency review and tests
 
@@ -238,10 +275,11 @@ apply the `adr-impl-review-report-writer` role contract. This step creates no ne
 conclusions. The model may use a named agent, generic subagent, or write the
 report directly.
 
-Give the report-writing role the original ADR and diff, `review-baseline.md`,
-the available explanation/necessity/sufficiency artifacts, normalized Notable
-implementation choices, and verified findings and test results. Save the result
-as `implementation-review.md`.
+Give the report-writing role the original ADR, complete implementation scope,
+separate change scope, `review-baseline.md`, the available
+explanation/necessity/sufficiency artifacts, normalized Notable implementation
+choices, and verified findings and test results. Save the result as
+`implementation-review.md`.
 
 The filename must be exactly `implementation-review.md`. Alternatives such as
 `final-review.md` or `review.md` are not allowed. Whichever execution path writes
@@ -249,13 +287,13 @@ it, read and follow
 `${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md`.
 
 Use progressive disclosure. Every report contains `At a glance`, `Review mode`,
-`Scope`, `Background`, `Intuition`, `Code walkthrough`, `ADR contract coverage`,
-`Notable implementation choices`, `Findings`, `Tests`, `Residual risks`, and
-`Comprehension check` by default. `Visual map` is conditional on the shared
-report guide. Only the four explanation/check headings and their relative order
-are fixed; do not prescribe a paragraph, table, example, subsection, or diagram
-quota inside them. Include detailed repair guidance only for `FIX_REQUIRED`,
-`BLOCK`, or when the user asks for it.
+`Scope`, `ADR intent`, at least one subject-specific narrative section, `ADR
+contract coverage`, `Notable implementation choices`, `Findings`, `Tests`,
+`Residual risks`, and `Comprehension check` by default. `Visual map` is
+conditional on the shared report guide. The narrative headings and order follow
+the reader's most important verified flow rather than a fixed tutorial template.
+Include detailed repair guidance only for `FIX_REQUIRED`, `BLOCK`, or when the
+user asks for it.
 
 Before generating the human-facing report and chat summary, read
 `${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely. Include
@@ -322,7 +360,8 @@ Serialize the available role artifacts and the synthesized result into the follo
   },
   "explanation": "/tmp/.../explanation.md",
   "report": "/tmp/.../implementation-review.md",
-  "scope": ["src/checkout/handler.ts"],
+  "scope": ["src/checkout/handler.ts", "src/checkout/client.ts", "test/checkout.test.ts"],
+  "changeScope": ["src/checkout/handler.ts"],
   "conventions": "AGENTS.md",
   "metrics": {
     "startedAt": "2026-08-15T06:30:00.000Z",
@@ -405,27 +444,40 @@ Allowed categories:
 - Shared quality: `Best practice`, `Refactor`
 - Verification state: `Unverified risk`, `Contradiction`
 
-Validate both modes with the first script. Build the HTML only in full mode.
+Validate and build the HTML in both modes.
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-validate.mjs <artifact-dir>
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-report.mjs <findings.json> --out <artifact-dir>/adr-impl-review-report.html
+node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-open.mjs <artifact-dir>/adr-impl-review-report.html
 ```
 
-If the validator fails, do not report completion or generate the HTML. Fill the omissions it names in `implementation-review.md` or `findings.json` and re-run until the validator exits 0. In particular, fill `perspective`, `code`, `evidence`, `test`, and `testResult` for every finding, and where a test could not be run, write `NOT RUN — <reason>` rather than leaving it blank.
+If the validator fails, do not report completion or generate the HTML. Fill the omissions it names in `implementation-review.md` or `findings.json` and re-run until the validator exits 0. In particular, fill `perspective`, `code`, `evidence`, `test`, and `testResult` for every finding, and where a test could not be run, write `NOT RUN — <reason>` rather than leaving it blank. If HTML rendering fails or produces an empty file, the review is also incomplete.
 
-In full mode, open the report and return the verdict, explanation,
-requirement-by-requirement contract coverage, necessity/sufficiency finding
-counts, tests executed, elapsed time, unverified-risk count, Notable
-implementation choices, normalized findings, and comprehension check to the
-caller. In standard mode, return the same concise Evidence Package with the same
-routing metadata. The caller always surfaces this human-readable package before
-completion. A pre-promotion invocation by `/adr-impl` must not ask the user to rule `apply / skip / defer` on `PROVEN` coverage rows, implementation choices, or ordinary evidence-backed repairs; the caller owns remediation. Contract
+In both modes, run `adr-impl-review-open.mjs` immediately after the non-empty
+check. The helper attempts the host's default local file opener exactly once and
+prints `OPENED <path>` or `NOT_OPENED <path> — <reason>`. Do not silently skip
+the command based on an assumption that the environment is headless. A
+`NOT_OPENED` result for a valid artifact does not invalidate the review; state
+the reason and provide the exact path. The ordinary main-session completion
+response contains only the verdict, key impact/action/risk, applied fixes,
+tests, lifecycle result, and the HTML path plus `OPENED` or `NOT_OPENED`
+result. Do not copy any comprehension question, `answerCriteria`, grading
+evidence, or answer request into that completion response. A pre-promotion
+invocation by `/adr-impl` must not ask the user to rule `apply / skip / defer`
+on `PROVEN` coverage rows, implementation choices, or ordinary evidence-backed
+repairs; the caller owns remediation. Contract
 coverage and Notable implementation choices are read-only context, not
 individual approval items.
 
-After the report and lifecycle result are clear, begin the comprehension check
-with `Q1`. Ask one primary question at a time and do not reveal its
+Do not automatically begin the comprehension check after the report or
+lifecycle result. Keep the prepared questions and hidden grading data inside the
+HTML/JSON artifacts. When the user does not explicitly request an interactive
+comprehension check, leave PR comprehension readiness unverified and complete
+the main-session response without a question.
+
+Only when the user explicitly asks to run the comprehension check, load the
+prepared artifact and ask one primary question at a time without revealing its
 `answerCriteria` or `evidence` first. Grade meaning and causal understanding,
 not exact wording.
 
@@ -472,14 +524,25 @@ Once automatic fixes are done, run `/adr-impl-review` again to close the selecte
 - Never pass a reviewer the explanation document or the other reviewer's result.
 - Never use ASCII or box-drawing diagrams instead of Mermaid in the junior-facing report.
 - Never invent components or call relationships in Mermaid that were not confirmed in the actual code.
-- Never omit or reorder `Background`, `Intuition`, `Code walkthrough`, and
-  `Comprehension check` in the human-facing implementation review.
+- Never put implementation chronology ahead of ADR intent and the most
+  important verified user or operational behavior.
+- Never use generic `Background`, `Intuition`, and `Code walkthrough` headings
+  as a mandatory report template.
+- Never invent a story, user reaction, measurement, project outcome, or causal
+  relationship that the ADR, code, tests, configuration, or user did not establish.
 - Never generate more than five primary comprehension questions or add filler to
   reach five.
 - Never reveal a question's answer criteria or evidence before the reader
   answers.
+- Never include a comprehension question, grading criterion, evidence, or answer
+  request in the ordinary main-session completion response.
+- Never start the interactive comprehension check unless the user explicitly
+  requests it.
 - Never call the PR comprehension-ready while a prepared question is failed,
   skipped, or unanswered.
 - Never state that sufficiency is proven merely because the tests passed.
 - Never report an unreproduced conjecture as though it were a confirmed finding.
+- Never treat the current diff or a caller-provided file list as the ceiling of the ADR implementation scope.
+- Never report either review mode complete without a validated, non-empty `adr-impl-review-report.html`.
+- Never finish either review mode without running `adr-impl-review-open.mjs` once and reporting its `OPENED` or `NOT_OPENED` result.
 - Never modify product code, ADRs, the mapping, or existing tests during the review.

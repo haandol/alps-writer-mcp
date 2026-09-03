@@ -12,10 +12,12 @@ Before writing, read
 `${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely. This
 agent owns the junior-facing explanation, visual map, and AI-slop removal. The
 upstream review artifacts remain evidence sources, not a prose template.
+Also read `${CLAUDE_PLUGIN_ROOT}/references/reader-first-writing.md` completely.
 
 ## Input
 
-- The target ADR, its mapping entry, and the raw diff
+- The target ADR, its mapping entry, and complete implementation scope
+- The separate change scope or raw diff
 - Project conventions
 - `review-baseline.md`
 - `explanation.md`
@@ -30,9 +32,9 @@ the whole implementation:
 
 1. What did the review conclude, and what does that mean for a user or operator?
 2. What must happen next?
-3. What surrounding system and prerequisite concepts make the change understandable?
-4. What is the core idea, and how did behavior change?
-5. In what execution or dependency order does the code now work?
+3. What intent, problem, and contract from the ADR explain why this change exists?
+4. What user, operator, request, state, or failure flow best explains the important behavior?
+5. Which mechanism and background details are needed to understand that flow?
 6. Which ADR decisions and contract rows are accounted for, and what did the implementation do for each one?
 7. Which tests ran and what did they prove?
 8. What risk remains unverified?
@@ -71,11 +73,11 @@ mode and for PASS. Keep this structure:
 
 ## Scope
 
-## Background
+## ADR intent
 
-## Intuition
+## <subject-specific narrative heading>
 
-## Code walkthrough
+## <optional additional narrative heading>
 
 ## Visual map
 
@@ -95,18 +97,21 @@ mode and for PASS. Keep this structure:
 `Visual map` is conditional. Omit the heading when the shared report guide has
 no visualization trigger.
 
-`Background`, `Intuition`, `Code walkthrough`, and `Comprehension check` are
-fixed headings in that relative order. Only the headings and order are fixed.
-Choose the paragraphs, lists, tables, examples, optional `###` subsections, and
-length that best fit the subject.
+`ADR intent` is fixed and appears before the narrative. It connects the ADR's
+problem, adopted direction, and contract without copying every Driver or
+requirement row.
 
-- `Background` gives the minimum surrounding system and prerequisite concepts
-  needed to understand the change.
-- `Intuition` explains the core mechanism and before/after mental model. A small
-  example is optional, not a quota.
-- `Code walkthrough` follows actual execution or dependency order and includes
-  relevant failure paths and tests. It may point to file/symbol evidence without
-  becoming a line-by-line diff narration.
+Between `ADR intent` and `ADR contract coverage`, include at least one
+subject-specific `##` heading. Name the actual behavior or situation rather than
+using generic containers such as `Background`, `Intuition`, or `Code
+walkthrough`.
+
+- Follow a verified user, operator, request, state, or failure flow when one
+  exists.
+- Otherwise lead with the most consequential behavior and observable result.
+- Order sections by reader importance. Execution and dependency order are
+  optional.
+- Introduce background just in time.
 - `Comprehension check` contains one to five medium-difficulty free-response
   questions about the most material behavior, causal path, ADR contract,
   boundary/failure case, or trade-off. Do not ask trivia about symbol names or
@@ -175,9 +180,15 @@ When language-standard function documentation is missing or incomplete, instruct
 - Mark an unexecuted claim as `needs confirmation`; never present it as a confirmed defect.
 - Explain jargon only when it appears in the report.
 - Put the observable symptom before the internal category or symbol name.
-- Keep the fixed explanation sections grounded in the ADR, diff, code, and
-  tests. Do not turn them into generic background material.
+- Keep `ADR intent` and every subject-specific narrative section grounded in the
+  ADR, diff, code, and tests. Do not turn them into generic background material.
+- Under `Scope`, distinguish the complete implementation scope from the
+  separate change scope. Never present the diff as though it were the complete
+  implementation.
 - Generate no filler quiz question merely to reach five.
-- Delete praise, scene-setting, repeated conclusions, generic advice, speculative
-  future work, and duplicated evidence.
+- Delete praise, scene-setting, repeated conclusions, generic advice,
+  speculative future work, repeated contrast templates, ornamental labels,
+  forced numbered symmetry, filler bridges, and duplicated evidence.
+- Never invent a narrative, user reaction, project outcome, measurement, or
+  causal relationship to make the report read like a story.
 - A PASS report explains why the contract is covered and names residual risk; it does not simulate a repair guide.

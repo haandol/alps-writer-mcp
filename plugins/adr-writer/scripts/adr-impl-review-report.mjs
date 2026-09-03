@@ -3,10 +3,9 @@
 // self-contained HTML review page, and collect the user's per-finding
 // decisions back as feedback.json.
 //
-// This is the full-mode "show the report, get feedback as a file" half of
-// /adr-impl-review. Independent necessity and sufficiency reviewers produce
-// evidence-backed findings with reviewMode: "full"; the main session serializes
-// them to JSON and hands it here. We turn that JSON into ONE standalone HTML
+// This is the common "show the report, get feedback as a file" half of
+// /adr-impl-review. Standard and full reviews serialize their evidence-backed
+// results to JSON and hand them here. We turn that JSON into ONE standalone HTML
 // file — no server, no
 // browser automation, no python. The page frames each finding as a docket
 // item: the ADR decision (the intended design) set against the code as built,
@@ -39,6 +38,7 @@
 // findings.json schema (all string fields optional unless noted):
 //   {
 //     "adr":        "docs/adr/ordering/checkout/0001-checkout.md",  // required
+//     "reviewMode": "standard" | "full",
 //     "status":     "Accepted (2026-07-10)",
 //     "verdict":    "PASS" | "FIX_REQUIRED" | "INCONCLUSIVE" | "BLOCK", // required
 //     "atAGlance": {                                      // required by validator
@@ -48,7 +48,8 @@
 //     },
 //     "explanation":"/tmp/.../explanation.md",
 //     "report":     "/tmp/.../implementation-review.md",
-//     "scope":      ["src/checkout/handler.ts", "..."],   // code the reviewer read
+//     "scope":      ["src/checkout/handler.ts", "..."],   // complete ADR implementation scope
+//     "changeScope":["src/checkout/handler.ts"],          // separate diff/range scope
 //     "conventions":"AGENTS.md",                          // or "none"
 //     "metrics": {
 //       "elapsedSeconds": 342,
@@ -232,58 +233,78 @@ function normalizeAtAGlance(data) {
   };
 }
 
-function markdownSection(source, heading, nextHeadings) {
+/**
+ * Extract the reader-facing narrative in its authored priority order.
+ * The renderer keeps ADR intent and subject-specific flow headings instead of rebuilding a fixed tutorial template.
+ */
+function markdownSectionsBetween(source, startHeading, endHeading) {
   const lines = String(source ?? "").split(/\r?\n/);
-  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
-  if (start < 0) return "";
-  const stop = new Set(nextHeadings.map((next) => `## ${next}`));
-  const body = [];
+  const start = lines.findIndex((line) => line.trim() === `## ${startHeading}`);
+  if (start < 0) return [];
+  const sections = [];
+  let current = null;
   for (let index = start + 1; index < lines.length; index++) {
-    if (stop.has(lines[index].trim())) break;
-    body.push(lines[index]);
+    const line = lines[index];
+    const heading = line.match(/^##\s+(.+?)\s*$/);
+    if (heading) {
+      if (heading[1] === endHeading) break;
+      if (current) sections.push({ title: current.title, body: current.body.join("\n").trim() });
+      current = { title: heading[1], body: [] };
+      continue;
+    }
+    if (!current) {
+      current = { title: startHeading, body: [] };
+    }
+    current.body.push(line);
   }
-  return body.join("\n").trim();
+  if (current) sections.push({ title: current.title, body: current.body.join("\n").trim() });
+  return sections.filter((section) => section.body);
 }
 
-function loadExplanationSections(data, inputPath) {
+/**
+ * Load narrative sections from explicit JSON, legacy explanation fields, or the validated Markdown report.
+ * This preserves backward rendering while making the current intent-first report the default.
+ */
+function loadNarrativeSections(data, inputPath) {
+  if (Array.isArray(data.narrativeSections)) {
+    return data.narrativeSections;
+  }
   if (
     data.explanationSections &&
     typeof data.explanationSections === "object" &&
     !Array.isArray(data.explanationSections)
   ) {
-    return data.explanationSections;
+    return [
+      { title: "Background", body: data.explanationSections.background || "" },
+      { title: "Intuition", body: data.explanationSections.intuition || "" },
+      { title: "Code walkthrough", body: data.explanationSections.codeWalkthrough || "" },
+    ].filter((section) => section.body);
   }
-  if (!data.report || typeof data.report !== "string") return {};
+  if (!data.report || typeof data.report !== "string") return [];
 
   const baseDir = inputPath === "-" ? process.cwd() : path.dirname(path.resolve(inputPath));
   const reportPath = path.isAbsolute(data.report)
     ? data.report
     : path.resolve(baseDir, data.report);
-  if (!existsSync(reportPath)) return {};
+  if (!existsSync(reportPath)) return [];
 
   const report = readFileSync(reportPath, "utf8");
-  return {
-    background: markdownSection(report, "Background", ["Intuition"]),
-    intuition: markdownSection(report, "Intuition", ["Code walkthrough"]),
-    codeWalkthrough: markdownSection(report, "Code walkthrough", [
-      "Visual map",
-      "ADR contract coverage",
-    ]),
-  };
+  return markdownSectionsBetween(report, "ADR intent", "ADR contract coverage");
 }
 
-function normalizeExplanationSections(data) {
-  const value =
-    data.explanationSections &&
-    typeof data.explanationSections === "object" &&
-    !Array.isArray(data.explanationSections)
-      ? data.explanationSections
-      : {};
-  return {
-    background: value.background || "",
-    intuition: value.intuition || "",
-    codeWalkthrough: value.codeWalkthrough || "",
-  };
+/**
+ * Normalize narrative cards without inventing headings or prose.
+ * Empty sections are dropped so the HTML shows only evidence-backed reader content.
+ */
+function normalizeNarrativeSections(data) {
+  return Array.isArray(data.narrativeSections)
+    ? data.narrativeSections
+        .map((section) => ({
+          title: section?.title || "",
+          body: section?.body || "",
+        }))
+        .filter((section) => section.title && section.body)
+    : [];
 }
 
 function normalizeComprehensionCheck(data) {
@@ -512,14 +533,16 @@ function findingCard(f, i, total) {
 
 function buildHtml(data) {
   const adr = esc(data.adr || "(no path)");
+  const reviewMode = esc(data.reviewMode || "");
   const status = esc(data.status || "");
   const verdictKey = (data.verdict || "").toUpperCase();
   const vmeta = VERDICTS[verdictKey] || { hue: "#566173", note: "" };
   const scope = Array.isArray(data.scope) ? data.scope : [];
+  const changeScope = Array.isArray(data.changeScope) ? data.changeScope : [];
   const metrics = data.metrics && typeof data.metrics === "object" ? data.metrics : null;
   const findings = normalizeFindings(data);
   const atAGlance = normalizeAtAGlance(data);
-  const explanationSections = normalizeExplanationSections(data);
+  const narrativeSections = normalizeNarrativeSections(data);
   const comprehensionCheck = normalizeComprehensionCheck(data);
   const contractCoverage = normalizeContractCoverage(data);
   const implementationChoices = normalizeImplementationChoices(data);
@@ -532,6 +555,9 @@ function buildHtml(data) {
     .join("\n");
   const comprehensionCards = comprehensionCheck.questions
     .map((question) => comprehensionQuestionCard(question))
+    .join("\n");
+  const narrativeCards = narrativeSections
+    .map((section) => explanationCard(section.title, section.body))
     .join("\n");
   const count = findings.length;
   const coverageCount = contractCoverage.length;
@@ -557,8 +583,11 @@ function buildHtml(data) {
   // alongside the reviewer's rulings — the main session gets both in one file.
   const embedded = inlineScriptJson({
     adr: data.adr || "",
+    reviewMode: data.reviewMode || "",
     verdict: verdictKey,
     atAGlance,
+    scope,
+    changeScope,
     findings,
     contractCoverage,
     implementationChoices,
@@ -863,11 +892,15 @@ function buildHtml(data) {
       <p class="doc__path">${adr}</p>
       ${status ? `<div class="doc__status">${status}</div>` : ""}
       <div class="doc__meta">
+        ${reviewMode ? `<div>Review mode · <code>${reviewMode}</code></div>` : ""}
         ${
           scope.length
-            ? `<div>Scope reviewed · ${scope.map((s) => `<code>${esc(s)}</code>`).join(" ")}</div>`
+            ? `<div>Complete implementation scope · ${scope.map((s) => `<code>${esc(s)}</code>`).join(" ")}</div>`
             : ""
         }
+        <div>Change scope · ${
+          changeScope.length ? changeScope.map((s) => `<code>${esc(s)}</code>`).join(" ") : "none"
+        }</div>
         ${data.conventions ? `<div>Project conventions · <code>${esc(data.conventions)}</code></div>` : ""}
         ${data.explanation ? `<div>Plain explanation · <code>${esc(data.explanation)}</code></div>` : ""}
         ${data.report ? `<div>Review report · <code>${esc(data.report)}</code></div>` : ""}
@@ -898,9 +931,7 @@ function buildHtml(data) {
       : ""
   }
 
-  ${explanationCard("Background", explanationSections.background)}
-  ${explanationCard("Intuition", explanationSections.intuition)}
-  ${explanationCard("Code walkthrough", explanationSections.codeWalkthrough)}
+  ${narrativeCards}
 
   ${
     coverageCount
@@ -960,7 +991,10 @@ function buildHtml(data) {
     });
     const out = {
       adr: EMBED.adr,
+      reviewMode: EMBED.reviewMode,
       verdict: EMBED.verdict,
+      scope: EMBED.scope,
+      changeScope: EMBED.changeScope,
       contractCoverage: EMBED.contractCoverage,
       implementationChoices: EMBED.implementationChoices,
       comprehensionCheck: EMBED.comprehensionCheck,
@@ -1011,7 +1045,7 @@ function main() {
   if (!data || typeof data !== "object") die("findings JSON must be an object");
   if (!data.adr) die("findings JSON missing required field: adr");
   if (!data.verdict) die("findings JSON missing required field: verdict");
-  data.explanationSections = loadExplanationSections(data, opts.in);
+  data.narrativeSections = loadNarrativeSections(data, opts.in);
 
   const html = buildHtml(data);
 

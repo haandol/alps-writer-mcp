@@ -171,7 +171,8 @@ plugins/adr-writer/       # ADR plugin (standalone, ALPS-agnostic)
 │   ├── adr-lint-lib.mjs           # pure checkers + the shared vocabularies the CLI and tests read
 │   ├── adr-impl-review-categories.mjs  # finding-category table shared by the validator + renderer
 │   ├── adr-impl-review-validate.mjs    # /adr-impl-review artifact validator
-│   └── adr-impl-review-report.mjs      # renders findings.json → standalone review HTML
+│   ├── adr-impl-review-report.mjs      # renders findings.json → standalone review HTML
+│   └── adr-impl-review-open.mjs        # validates and opens the local HTML report
 ├── hooks/
 │   ├── hooks.json        # SessionStart registration
 │   └── surface-adr-context.mjs  # SessionStart — inject a compact ADR admission directive

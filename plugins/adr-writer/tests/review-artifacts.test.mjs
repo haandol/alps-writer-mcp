@@ -24,14 +24,14 @@ const PR_GUIDANCE =
 function validExplanation() {
   return `# Implementation explanation
 
-## Background
-Settlement turns a provider result into a durable completion record.
+## ADR intent
+Settlement must turn a provider result into one durable completion record without charging twice.
 
-## Intuition
-The completion boundary must admit one successful result and reject duplicates.
+## A duplicate request reaches the completion boundary
+The boundary admits one successful result and returns the stored result for a retry.
 
-## Code walkthrough
-The handler checks the idempotency key, calls the provider, and records completion only after success.
+## Provider failure leaves the payment pending
+The handler records completion only after provider success, so failure never looks completed.
 `;
 }
 
@@ -122,14 +122,14 @@ full
 ## Scope
 stream settlement
 
-## Background
-Settlement turns a provider result into a durable completion record.
+## ADR intent
+Settlement must create one durable completion record and preserve pending state on provider failure.
 
-## Intuition
-The completion boundary must admit one successful result and reject duplicates.
+## A duplicate request cannot create a second settlement
+The completion boundary admits one result and rejects or reuses duplicate work.
 
-## Code walkthrough
-The handler checks the idempotency key, calls the provider, and records completion only after success.
+## Provider failure does not cross the completion boundary
+The handler records completion only after provider success.
 
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
@@ -186,6 +186,8 @@ function validFindings(dir) {
     atAGlance: { ...FULL_AT_A_GLANCE },
     explanation: path.join(dir, "explanation.md"),
     report: path.join(dir, "implementation-review.md"),
+    scope: ["src/stream.mjs", "test/stream.test.mjs"],
+    changeScope: ["src/stream.mjs"],
     metrics: {
       startedAt: "2026-08-15T06:30:00.000Z",
       completedAt: "2026-08-15T06:35:42.000Z",
@@ -254,14 +256,14 @@ standard — localized implementation reinforcement
 ## Scope
 src/parser.mjs
 
-## Background
-The parser converts existing accepted inputs into the same public output shape.
+## ADR intent
+The parser refactor must preserve every accepted input and public output.
 
-## Intuition
-The helper extraction changes organization, not parsing behavior.
+## Existing callers see the same parser behavior
+The helper extraction changes organization without changing validation or output.
 
-## Code walkthrough
-Input validation and output construction still run in the same order.
+## Invalid input still fails at the same boundary
+Input validation remains ahead of output construction.
 
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
@@ -368,6 +370,30 @@ test("review artifact validator requires a complete At a glance handoff", () => 
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /atAGlance\.risk must be a non-empty string/);
+  });
+});
+
+test("review artifact validator requires separate implementation and change scopes", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
+    writeFileSync(path.join(dir, "implementation-review.md"), validReport());
+    const findings = validFindings(dir);
+    delete findings.changeScope;
+    findings.scope = [];
+    findings.verdict = "PASS";
+    findings.findings = [];
+    findings.metrics.sufficiencyFindingCount = 0;
+    findings.contractCoverage = findings.contractCoverage.map((row) => ({
+      ...row,
+      status: "PROVEN",
+      tests: "node --test test/stream.test.mjs — PASS",
+    }));
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /changeScope must be an array/);
+    assert.match(result.stderr, /PASS requires a non-empty complete implementation scope/);
   });
 });
 
@@ -533,18 +559,31 @@ test("human-facing report requires complete coverage and implementation-choice t
   });
 });
 
-test("review artifact validator enforces the flexible fixed-section explanation template", () => {
+test("review artifact validator enforces an intent-first subject-specific explanation", () => {
   withArtifacts((dir) => {
     writeFileSync(
       path.join(dir, "explanation.md"),
-      validExplanation().replace("## Intuition", "## Implementation notes"),
+      validExplanation().replace("## ADR intent", "## Background"),
     );
     writeFileSync(path.join(dir, "implementation-review.md"), validReport());
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
 
     const result = validate(dir);
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /exactly these top-level headings/);
+    assert.match(result.stderr, /must start with ## ADR intent/);
+  });
+
+  withArtifacts((dir) => {
+    writeFileSync(
+      path.join(dir, "explanation.md"),
+      "# Implementation explanation\n\n## ADR intent\nIntent only.\n",
+    );
+    writeFileSync(path.join(dir, "implementation-review.md"), validReport());
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /subject-specific heading after ## ADR intent/);
   });
 });
 

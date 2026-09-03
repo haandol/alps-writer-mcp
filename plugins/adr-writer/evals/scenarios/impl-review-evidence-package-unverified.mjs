@@ -141,7 +141,9 @@ export default {
     });
     return [
       skillText("adr-impl-review"),
-      agentText("adr-impl-review-report-writer"),
+      agentText("adr-impl-review-report-writer", {
+        references: ["references/review-report-writing.md", "references/reader-first-writing.md"],
+      }),
       `\n---\n\n# This run`,
       `Produce the concise human-facing Evidence Package for this completed review.`,
       `The normal response must be the exact complete contents of implementation-review.md,`,
@@ -149,8 +151,9 @@ export default {
       `Do not put conversational prose before or instead of the report file contents.`,
       `Do not invent files or tests beyond the facts below. Show the normal response first.`,
       `The normal response must lead with At a glance (Verdict, Impact, Action, Risk),`,
-      `then Background, Intuition, Code walkthrough, contract coverage, notable implementation choices, findings, residual risks, and Comprehension check.`,
-      `Use the fixed explanation/check headings in that relative order, but choose the internal prose freely.`,
+      `then ADR intent, one or more subject-specific narrative sections ordered by importance, contract coverage, notable implementation choices, findings, residual risks, and Comprehension check.`,
+      `Follow the verified settlement or trust-boundary flow where it helps. Do not default to implementation order.`,
+      `Remove repeated contrast templates, ornamental one-off labels, forced numbered symmetry, filler bridges, and duplicate visuals. Do not invent a story.`,
       `Coverage and choices are read-only.`,
       `The visible Comprehension check must include 1-5 free-response questions and this exact guidance: ${PR_GUIDANCE}`,
       `Include this question exactly: ${QUIZ_QUESTION}`,
@@ -186,6 +189,8 @@ export default {
       adr: "docs/adr/payments/settlement/0001-idempotent-payment-settlement.md",
       status: "Accepted (2026-08-17)",
       verdict: "INCONCLUSIVE",
+      scope: ["src/payments/settle.ts", "test/payments/settle.test.ts"],
+      changeScope: ["src/payments/settle.ts"],
       metrics: {
         startedAt: "2026-08-17T00:00:00.000Z",
         completedAt: "2026-08-17T00:00:02.000Z",
@@ -326,9 +331,14 @@ export default {
           /questionCount\s*=\s*[1-5]\b/i.test(comprehension) &&
           /answersHidden\s*=\s*true/i.test(comprehension) &&
           /prReadyBeforeQuiz\s*=\s*false/i.test(comprehension) &&
-          visible.includes("## Background") &&
-          visible.includes("## Intuition") &&
-          visible.includes("## Code walkthrough") &&
+          visible.includes("## ADR intent") &&
+          visible.indexOf("## ADR intent") < visible.indexOf("## ADR contract coverage") &&
+          /^## (?!ADR intent$|Visual map$|ADR contract coverage$).+/m.test(
+            visible.slice(
+              visible.indexOf("## ADR intent") + "## ADR intent".length,
+              visible.indexOf("## ADR contract coverage"),
+            ),
+          ) &&
           visible.includes("## Comprehension check") &&
           visible.includes(PR_GUIDANCE) &&
           visible.includes(QUIZ_QUESTION),
@@ -344,6 +354,11 @@ export default {
         visible,
         /approve (?:each|this (?:coverage|choice))[^.\n?]*\?|각 (?:행|선택)[^.\n?]*승인(?:해\s*주세요|하시겠습니까|\?)/i,
         "does not ask the user to approve each coverage row or implementation choice",
+      ),
+      expectNoText(
+        visible,
+        /(?:the key is|what matters is|ultimately|firstly|secondly|thirdly).*(?:the key is|what matters is|ultimately|firstly|secondly|thirdly)/is,
+        "does not use repeated filler bridges or forced numbered symmetry",
       ),
       expectNoText(
         visible,

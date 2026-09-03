@@ -4,6 +4,13 @@ This document is the **major decision-change history** of the adr-authoring/deci
 category. Each ADR body describes only the current state, while the timeline of "what
 changed and why" accumulates here, newest first. Git preserves the individual diffs.
 
+## 2026-09-03 — ADR과 사람용 보고서를 의도·중요도·인과 흐름 중심으로 작성
+
+- **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)
+- **Change type**: requirement rule change
+- **What**: ADR과 Decision Digest가 결정 의도를 먼저 설명하고, 중요한 순서와 근거 있는 causal flow를 사용하며 반복 대조문·장식용 명칭·강제 번호 구조·filler bridge·중복 시각 요소를 제거하도록 변경했다.
+- **Why**: 형식적으로 정돈된 나열보다 독자가 현재 결정과 이유를 빠르게 이해하고, 확인되지 않은 story나 과도한 확신을 사실처럼 받아들이지 않아야 한다.
+
 ## 2026-08-28 — 문서 리뷰와 동기화 리포트를 주니어 중심으로 시각화
 
 - **Current ADR**: [present decision digest and semantic diff](./0001-present-decision-digest-and-semantic-diff.md)

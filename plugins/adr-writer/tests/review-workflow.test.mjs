@@ -49,7 +49,7 @@ test("adr-impl-review preserves role boundaries without fixing the agent topolog
   assert.match(skill, /implementationChoices/);
   assert.match(skill, /contractCoverage/);
   assert.match(skill, /PROVEN.*VIOLATED.*UNVERIFIED.*CONTRADICTED/s);
-  assert.match(skill, /caller always surfaces this human-readable package/i);
+  assert.match(skill, /ordinary main-session completion\s+response contains only/i);
   assert.doesNotMatch(skill, /accept.*request change.*investigate/i);
   // No provider's model ID may be embedded in the prompt.
   assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
@@ -94,31 +94,44 @@ test("implementation review separates ADR decisions from code-level AI choices",
   assert.match(reportWriter, /read-only/);
 });
 
-test("implementation review uses a predictable but flexible Explain Diff spine and PR quiz", () => {
+test("implementation review leads with ADR intent and a reader-priority narrative", () => {
   const skill = read("skills/adr-impl-review/SKILL.md");
   const explainer = read("agents/adr-impl-explainer.md");
   const reportWriter = read("agents/adr-impl-review-report-writer.md");
   const guide = read("references/review-report-writing.md");
+  const readerFirst = read("references/reader-first-writing.md");
   const validator = read("scripts/adr-impl-review-validate.mjs");
 
   for (const source of [skill, explainer, reportWriter, guide]) {
-    assert.match(source, /Background/);
-    assert.match(source, /Intuition/);
-    assert.match(source, /Code walkthrough/);
+    assert.match(source, /ADR intent/);
+    assert.match(source, /importance|important/i);
+    assert.match(source, /flow|causal/i);
   }
   for (const source of [skill, reportWriter, guide]) {
-    assert.match(source, /Comprehension check/);
+    assert.match(source, /Comprehension\s+check/);
   }
 
-  assert.match(explainer, /Only these top-level section names and their order are fixed/);
-  assert.match(reportWriter, /Only the headings and order are fixed/);
+  assert.match(explainer, /subject-specific heading/i);
+  assert.match(reportWriter, /Between `ADR intent` and `ADR contract coverage`/);
+  assert.match(readerFirst, /repeated contrast templates/i);
+  assert.match(readerFirst, /ornamental title-cased English labels/i);
+  assert.match(readerFirst, /Never invent an anecdote/i);
+  assert.doesNotMatch(skill, /exactly these top-level sections/i);
   assert.match(skill, /one\s+to five medium-difficulty free-response questions/i);
   assert.match(skill, /Do not expose[\s\S]{0,120}`answerCriteria` or `evidence`/i);
   assert.match(skill, /A `PASS` verdict never implies comprehension readiness/);
   assert.match(skill, /Do not open or send the\s+PR until the comprehension check is passed/);
   assert.match(skill, /Do not persist quiz progress or pass\/fail state/);
+  assert.match(skill, /Do not automatically begin the comprehension check/i);
+  assert.match(skill, /Only when the user explicitly asks to run the comprehension check/i);
+  assert.match(skill, /ordinary main-session completion\s+response contains only/i);
+  assert.match(
+    skill,
+    /Never include a comprehension question, grading criterion, evidence, or answer\s+request in the ordinary main-session completion response/i,
+  );
   assert.match(validator, /must contain 1 to 5 questions/);
   assert.match(validator, /exposes comprehensionCheck/);
+  assert.match(validator, /subject-specific narrative heading/);
 });
 
 test("review orchestration allows named, generic, or main-session execution", () => {
@@ -257,10 +270,13 @@ test("user documentation reflects the pre-implementation baseline and single lif
   assert.match(processReviewSection, /증거 기반 코드·테스트 수정 자동 반영/);
 
   assert.match(sources[0], /does not run for every user prompt/);
-  assert.match(sources[0], /completion review does not repeat a routine human gate/);
+  assert.match(
+    sources[0],
+    /ordinary main-session completion response never prints Q1 or starts grading/i,
+  );
   assert.match(sources[1], /there is no `UserPromptSubmit` hook/);
   assert.match(sources[2], /there is no per-prompt `UserPromptSubmit` hook/);
-  assert.match(sources[2], /pre-approved ADR baseline/);
+  assert.match(sources[2], /approved (?:ADR )?baseline/);
   assert.match(sources[3], /구현 전에 승인된 기준선/);
   assert.match(sources[0], /critical command paths, routing, and efficiency review/);
   assert.match(sources[2], /critical command paths, routing, and efficiency review/);
@@ -317,6 +333,40 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.match(finalReviewSkill, /must not ask the user to rule `apply \/ skip \/ defer`/);
   assert.match(finalReviewSkill, /no routine post-implementation approval remains/);
   assert.match(finalReviewSkill, /elapsed time, per-perspective finding counts/);
+  assert.match(finalReviewSkill, /complete implementation scope/i);
+  assert.match(finalReviewSkill, /never the ceiling of the implementation\s+review/i);
+  assert.match(finalReviewSkill, /direct and indirect callers and callees/i);
+  assert.match(finalReviewSkill, /Validate and build the HTML in both modes/i);
+  assert.match(
+    finalReviewSkill,
+    /node \$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/adr-impl-review-open\.mjs <artifact-dir>\/adr-impl-review-report\.html/i,
+  );
+  assert.match(
+    finalReviewSkill,
+    /`NOT_OPENED` result for a valid artifact[\s\S]{0,160}provide the exact path/i,
+  );
+  assert.match(
+    finalReviewSkill,
+    /Never report either review mode complete without a validated, non-empty `adr-impl-review-report\.html`/i,
+  );
+  assert.match(
+    finalReviewSkill,
+    /Never finish either review mode without running `adr-impl-review-open\.mjs` once/i,
+  );
+
+  const explainer = read("agents/adr-impl-explainer.md");
+  const necessity = read("agents/adr-impl-necessity-reviewer.md");
+  const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
+  const reportWriter = read("agents/adr-impl-review-report-writer.md");
+  assert.match(explainer, /complete implementation scope/i);
+  assert.match(explainer, /Do not stop at files present in the diff/i);
+  assert.match(
+    necessity,
+    /standalone(?: existing-implementation review|\s+review of an existing implementation)/i,
+  );
+  assert.match(sufficiency, /diff explains what changed;\s+it never limits/i);
+  assert.match(sufficiency, /configuration, generated code, and surviving old paths/i);
+  assert.match(reportWriter, /distinguish the complete implementation scope/i);
 
   assert.match(impl, /implementation intent baseline/);
   assert.match(impl, /once per ADR revision/);

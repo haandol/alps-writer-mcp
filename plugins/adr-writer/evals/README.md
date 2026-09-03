@@ -162,19 +162,23 @@ disposable reproduction artifacts.
      directions. A material `UNVERIFIED` obligation must produce
      `INCONCLUSIVE` plus one exception-focused human action; two fully evidenced
      `PROVEN` obligations must produce `PASS` with no new architecture approval.
-     Both use the fixed Background/Intuition/Code walkthrough/Comprehension check
-     spine, keep answer criteria hidden, and mark PR comprehension readiness
-     false before the quiz while leaving the code verdict unchanged. Both
+     Both lead with ADR intent, use subject-specific narrative headings ordered
+     by importance, keep answer criteria hidden, and mark PR comprehension
+     readiness false before the quiz while leaving the code verdict unchanged. Both
      scenarios require complete per-obligation rows, ADR-intent fit for material
      implementation discretion, coverage-first presentation, no invented code
      paths, and no per-row approval. Their scorers also turn the visible reply
      into a real review artifact, then run the shipped artifact validator and
      HTML renderer so a prompt-only success cannot hide a broken report path.
+   - `impl-review-completion-does-not-auto-quiz` checks the normal completion
+     boundary: even when the HTML contains Q1, the main-session response returns
+     only verdict, tests, and report path unless the user explicitly requests
+     the interactive check.
    - `impl-review-comprehension-retry` ↔
-     `impl-review-comprehension-pass` check the interactive PR gate after the
-     evidence report. A wrong answer keeps the code verdict at `PASS`, explains
-     the missing causal concept with evidence, retries the same question, and
-     leaves PR readiness false. Only the final correct answer may mark the PR
+     `impl-review-comprehension-pass` check the explicitly requested interactive
+     PR gate. A wrong answer keeps the code verdict at `PASS`, explains the
+     missing causal concept with evidence, retries the same question, and leaves
+     PR readiness false. Only the final correct answer may mark the PR
      comprehension-ready; neither path reopens ADR approval or Status.
    - `impl-review-surfaces-hidden-contract-assumption` checks both sides of
      implementation-premise handling in one fixture. An unverified
