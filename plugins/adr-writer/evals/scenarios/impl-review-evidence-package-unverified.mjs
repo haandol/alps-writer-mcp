@@ -29,6 +29,13 @@ The implementation review found:
   recovery latency and upstream request rate.
 - There are no confirmed code defects.
 `;
+const PR_GUIDANCE =
+  "Do not open or send the PR until every comprehension question is answered correctly without reading the answer criteria.";
+const QUIZ_QUESTION =
+  "What remains unknown about provider failure, and why does that prevent a complete review verdict?";
+const QUIZ_ANSWER =
+  "The failure path was not executed, so the reviewer cannot verify that the payment remains pending.";
+const QUIZ_EVIDENCE = "ADR R2 and the unavailable provider failure injection";
 
 const ADR = `# ADR 0001: idempotent payment settlement
 
@@ -142,17 +149,22 @@ export default {
       `Do not put conversational prose before or instead of the report file contents.`,
       `Do not invent files or tests beyond the facts below. Show the normal response first.`,
       `The normal response must lead with At a glance (Verdict, Impact, Action, Risk),`,
-      `then contract coverage, notable implementation choices, findings, and residual risks.`,
+      `then Background, Intuition, Code walkthrough, contract coverage, notable implementation choices, findings, residual risks, and Comprehension check.`,
+      `Use the fixed explanation/check headings in that relative order, but choose the internal prose freely.`,
       `Coverage and choices are read-only.`,
+      `The visible Comprehension check must include 1-5 free-response questions and this exact guidance: ${PR_GUIDANCE}`,
+      `Include this question exactly: ${QUIZ_QUESTION}`,
+      `Do not reveal the answer criteria or evidence before the reader answers.`,
       `Keep seven separate coverage columns: Contract ID, Requirement, Status, ADR basis,`,
       `How the implementation meets it, Evidence, Tests. Keep four choice columns: Selected behavior,`,
       `Evidence, Why it fits the ADR intent, Why it matters. Do not collapse either table.`,
-      `In EVAL-FINDINGS use exactly these five tags and include every named field:`,
+      `In EVAL-FINDINGS use exactly these six tags and include every named field:`,
       `COVERAGE_D0 | status=...; implementation=...; evidence=...; tests=...`,
       `COVERAGE_R1 | status=...; implementation=...; evidence=...; tests=...`,
       `COVERAGE_R2 | status=...; implementation=...; evidence=...; tests=...`,
       `CHOICE | value=...; evidence=...; intentFit=...; impact=...`,
       `HUMAN_REVIEW | verdict=...; exception=...; action=...; noPerRowApproval=true`,
+      `COMPREHENSION | questionCount=...; answersHidden=true; prReadyBeforeQuiz=false`,
       CASE,
       TAIL_SPEC,
     ].join("\n");
@@ -165,6 +177,7 @@ export default {
     const r2 = taggedSummary(tail, "COVERAGE_R2");
     const choice = taggedSummary(tail, "CHOICE");
     const humanReview = taggedSummary(tail, "HUMAN_REVIEW");
+    const comprehension = taggedSummary(tail, "COMPREHENSION");
     const d0Row = coverageRow(visible, "D0");
     const r1Row = coverageRow(visible, "R1");
     const r2Row = coverageRow(visible, "R2");
@@ -190,6 +203,17 @@ export default {
           whyItMatters: "changes recovery latency and upstream request rate",
         },
       ],
+      comprehensionCheck: {
+        prGuidance: PR_GUIDANCE,
+        questions: [
+          {
+            id: "Q1",
+            question: QUIZ_QUESTION,
+            answerCriteria: QUIZ_ANSWER,
+            evidence: QUIZ_EVIDENCE,
+          },
+        ],
+      },
       contractCoverage: [
         {
           contractId: "D0",
@@ -296,6 +320,20 @@ export default {
         pass: orderedSections(visible),
         detail: "expected coverage, choices, then findings or residual risks",
         label: "human-facing package leads with coverage before choices and findings",
+      },
+      {
+        pass:
+          /questionCount\s*=\s*[1-5]\b/i.test(comprehension) &&
+          /answersHidden\s*=\s*true/i.test(comprehension) &&
+          /prReadyBeforeQuiz\s*=\s*false/i.test(comprehension) &&
+          visible.includes("## Background") &&
+          visible.includes("## Intuition") &&
+          visible.includes("## Code walkthrough") &&
+          visible.includes("## Comprehension check") &&
+          visible.includes(PR_GUIDANCE) &&
+          visible.includes(QUIZ_QUESTION),
+        detail: comprehension || "missing COMPREHENSION",
+        label: "keeps the explanation predictable and the PR comprehension gate separate",
       },
       {
         pass: artifact.pass,

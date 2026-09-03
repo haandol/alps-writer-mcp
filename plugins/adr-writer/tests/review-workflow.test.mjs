@@ -26,7 +26,7 @@ test("adr-impl-review preserves role boundaries without fixing the agent topolog
   }
 
   assert.match(skill, /Build the review baseline without a post-implementation gate/);
-  assert.match(skill, /do not stop to show it or ask the user to reconfirm/);
+  assert.match(skill, /do not stop to show it or ask the user to reconfirm/i);
   assert.doesNotMatch(
     skill,
     /Never proceed to the adversarial reviews before explicit confirmation/,
@@ -92,6 +92,33 @@ test("implementation review separates ADR decisions from code-level AI choices",
   assert.match(reportWriter, /do not amend the ADR/);
   assert.match(reportWriter, /Use progressive disclosure/);
   assert.match(reportWriter, /read-only/);
+});
+
+test("implementation review uses a predictable but flexible Explain Diff spine and PR quiz", () => {
+  const skill = read("skills/adr-impl-review/SKILL.md");
+  const explainer = read("agents/adr-impl-explainer.md");
+  const reportWriter = read("agents/adr-impl-review-report-writer.md");
+  const guide = read("references/review-report-writing.md");
+  const validator = read("scripts/adr-impl-review-validate.mjs");
+
+  for (const source of [skill, explainer, reportWriter, guide]) {
+    assert.match(source, /Background/);
+    assert.match(source, /Intuition/);
+    assert.match(source, /Code walkthrough/);
+  }
+  for (const source of [skill, reportWriter, guide]) {
+    assert.match(source, /Comprehension check/);
+  }
+
+  assert.match(explainer, /Only these top-level section names and their order are fixed/);
+  assert.match(reportWriter, /Only the headings and order are fixed/);
+  assert.match(skill, /one\s+to five medium-difficulty free-response questions/i);
+  assert.match(skill, /Do not expose[\s\S]{0,120}`answerCriteria` or `evidence`/i);
+  assert.match(skill, /A `PASS` verdict never implies comprehension readiness/);
+  assert.match(skill, /Do not open or send the\s+PR until the comprehension check is passed/);
+  assert.match(skill, /Do not persist quiz progress or pass\/fail state/);
+  assert.match(validator, /must contain 1 to 5 questions/);
+  assert.match(validator, /exposes comprehensionCheck/);
 });
 
 test("review orchestration allows named, generic, or main-session execution", () => {
@@ -421,42 +448,54 @@ test("sufficiency reviewer tests the tests — mutation and static analysis as v
   assert.match(skill, /whether the tests actually catch defects/);
 });
 
-// Comments drift silently as code changes; a test fails loudly. So /adr-impl caps
-// comments at ~3 lines and moves the enumerated behavior into tests, and the review
-// side checks that the move actually happened. The dangerous half of this rule is the
-// reverse direction: told only "shorten long comments", a reviewer deletes prose whose
-// cases nothing covers, destroying the knowledge. Every stage must therefore carry both
-// the cap AND the test-first ordering, plus the exemption for a *why* code cannot state.
-test("the comment cap moves explanation into tests without ever dropping it", () => {
+// Language-native documentation carries why/how, while tests carry executable ideal and
+// edge behavior. Direct ADR references are forbidden even inside those comments: shared
+// domain vocabulary improves search without coupling code to a decision-file location.
+test("adr implementation requires standard function docs plus ideal and edge tests", () => {
   const impl = read("skills/adr-impl/SKILL.md");
-  // the cap, and that it is the WHAT that moves while a short WHY stays
-  assert.match(impl, /three lines or fewer/);
+  assert.match(impl, /GoDoc/);
+  assert.match(impl, /Python docstrings/);
+  assert.match(impl, /why the function is needed/i);
+  assert.match(impl, /how it behaves/i);
+  assert.match(impl, /Reuse the ADR's domain and requirement-contract vocabulary/i);
+  assert.match(impl, /never cite or mention the ADR itself/i);
+  assert.match(impl, /No code comment or docstring may contain an ADR number, path, link/i);
+  assert.match(impl, /exempt from the three-line inline-comment guideline/i);
+  assert.match(impl, /at least one ideal-case test and every relevant edge-case test/i);
+  assert.match(impl, /do not claim completion with only the ideal path/i);
+
+  // Ordinary inline comments still move executable WHAT into tests.
+  assert.match(impl, /ordinary inline comments to three lines or fewer/i);
   assert.match(impl, /move the [*_]what[*_] into tests/);
-  // tests must read as documentation, or they cannot carry what the comment held
   assert.match(impl, /Write the tests so they read as the documentation/);
-  // the guard: never trade coverage for brevity
   assert.match(impl, /Never trade coverage for brevity/);
 
-  // the reviewers apply the same axis, and both know the ordering
   const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
   const skill = read("skills/adr-impl-review/SKILL.md");
   for (const source of [sufficiency, skill]) {
-    assert.match(source, /Do the code and tests carry the explanation/);
-    // a comment whose cases are uncovered is a Test gap, never a delete-me
-    // (the reviewer emphasizes the "not" as **not**, so allow the markup)
+    assert.match(source, /language-standard function documentation/i);
+    assert.match(source, /why the function is needed/i);
+    assert.match(source, /how it enforces/i);
+    assert.match(source, /ADR number, path, link/i);
+    assert.match(source, /ideal-case test/i);
+    assert.match(source, /relevant edge case/i);
+    assert.match(source, /prevents `PASS`|prevents PASS/i);
     assert.match(source, /[Nn]ever propose deleting a comment whose cases are \*{0,2}not\*{0,2}/);
-    // a rationale code cannot express stays, even past the cap
     assert.match(source, /even beyond three lines/);
   }
 
-  // the necessity pass must not treat these tests as removable scope — the mirror of
-  // the rule that code enforcing a requirement value is contract, not excess
   const necessity = read("agents/adr-impl-necessity-reviewer.md");
-  assert.match(necessity, /is not removable scope/);
+  assert.match(
+    necessity,
+    /documentation and tests that document a decided behavior are not removable scope/i,
+  );
+  assert.match(necessity, /without citing the ADR itself/i);
 
-  // and the merge checklist grounds Maintainability in that evidence
   const writer = read("agents/adr-impl-review-report-writer.md");
-  assert.match(writer, /add the test first, then shorten the comment/);
+  assert.match(writer, /why the function exists/i);
+  assert.match(writer, /without any ADR number, path, link, or source reference/i);
+  assert.match(writer, /ideal or relevant edge case/i);
+  assert.match(writer, /add the test first, then shorten the (?:inline )?comment/);
 });
 
 test("implementation review keeps contract evidence without a mandatory merge checklist", () => {

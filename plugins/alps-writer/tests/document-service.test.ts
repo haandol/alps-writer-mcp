@@ -79,6 +79,35 @@ test("save enforces template subsection IDs and titles", () => {
   assert.match(service.getStatus(), /Section 1 \(Overview\): ⬜ Not started/);
 });
 
+test("legacy Technology Stack content migrates to Architecture Constraints on save", () => {
+  const dir = temporaryDirectory();
+  const target = path.join(dir, "legacy-architecture.alps.xml");
+  const service = new DocumentService();
+  service.initDocument("demo", target);
+
+  const legacy = fs
+    .readFileSync(target, "utf8")
+    .replace(
+      '<section id="4" title="High-Level Architecture">\n<!-- Not started -->\n</section>',
+      '<section id="4" title="High-Level Architecture">\n<subsection id="4.2" title="Technology Stack">\nReact and Express\n</subsection>\n</section>',
+    );
+  fs.writeFileSync(target, legacy);
+
+  assert.match(service.loadDocument(target), /ALPS Document: demo/);
+  assert.match(
+    service.saveSection(
+      4,
+      "2",
+      "Architecture Constraints",
+      "No additional durable constraints beyond Section 4.1.",
+    ),
+    /Saved 4\.2/,
+  );
+  const migrated = fs.readFileSync(target, "utf8");
+  assert.match(migrated, /title="Architecture Constraints"/);
+  assert.doesNotMatch(migrated, /Technology Stack|React|Express/);
+});
+
 test("Section 4.1 requires Context and Container as its only Mermaid diagram types", () => {
   const dir = temporaryDirectory();
   const target = path.join(dir, "architecture.alps.xml");

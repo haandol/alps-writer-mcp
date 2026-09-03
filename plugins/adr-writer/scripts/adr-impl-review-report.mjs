@@ -84,6 +84,17 @@
 //         "whyItMatters": "changes recovery latency and upstream request rate"
 //       }
 //     ],
+//     "comprehensionCheck": {                             // required by validator
+//       "prGuidance": "Do not open or send the PR until all questions pass.",
+//       "questions": [
+//         {
+//           "id": "Q1",
+//           "question": "Why does provider failure leave the payment pending?",
+//           "answerCriteria": "kept out of the visible HTML",
+//           "evidence": "kept out of the visible HTML"
+//         }
+//       ]
+//     },
 //     "contractCoverage": [                               // required, non-empty
 //       {
 //         "contractId": "D0" | "R1" | "R2" | "...",
@@ -108,7 +119,7 @@
 // ADR update) from the file alone — even across a context compaction where the
 // original findings.json is no longer in context.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { CATEGORIES, AUTHORITY, VERDICTS } from "./adr-impl-review-categories.mjs";
 
@@ -221,6 +232,77 @@ function normalizeAtAGlance(data) {
   };
 }
 
+function markdownSection(source, heading, nextHeadings) {
+  const lines = String(source ?? "").split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  if (start < 0) return "";
+  const stop = new Set(nextHeadings.map((next) => `## ${next}`));
+  const body = [];
+  for (let index = start + 1; index < lines.length; index++) {
+    if (stop.has(lines[index].trim())) break;
+    body.push(lines[index]);
+  }
+  return body.join("\n").trim();
+}
+
+function loadExplanationSections(data, inputPath) {
+  if (
+    data.explanationSections &&
+    typeof data.explanationSections === "object" &&
+    !Array.isArray(data.explanationSections)
+  ) {
+    return data.explanationSections;
+  }
+  if (!data.report || typeof data.report !== "string") return {};
+
+  const baseDir = inputPath === "-" ? process.cwd() : path.dirname(path.resolve(inputPath));
+  const reportPath = path.isAbsolute(data.report)
+    ? data.report
+    : path.resolve(baseDir, data.report);
+  if (!existsSync(reportPath)) return {};
+
+  const report = readFileSync(reportPath, "utf8");
+  return {
+    background: markdownSection(report, "Background", ["Intuition"]),
+    intuition: markdownSection(report, "Intuition", ["Code walkthrough"]),
+    codeWalkthrough: markdownSection(report, "Code walkthrough", [
+      "Visual map",
+      "ADR contract coverage",
+    ]),
+  };
+}
+
+function normalizeExplanationSections(data) {
+  const value =
+    data.explanationSections &&
+    typeof data.explanationSections === "object" &&
+    !Array.isArray(data.explanationSections)
+      ? data.explanationSections
+      : {};
+  return {
+    background: value.background || "",
+    intuition: value.intuition || "",
+    codeWalkthrough: value.codeWalkthrough || "",
+  };
+}
+
+function normalizeComprehensionCheck(data) {
+  const value =
+    data.comprehensionCheck &&
+    typeof data.comprehensionCheck === "object" &&
+    !Array.isArray(data.comprehensionCheck)
+      ? data.comprehensionCheck
+      : {};
+  const questions = Array.isArray(value.questions) ? value.questions : [];
+  return {
+    prGuidance: value.prGuidance || "",
+    questions: questions.map((question, index) => ({
+      id: question.id || `Q${index + 1}`,
+      question: question.question || "",
+    })),
+  };
+}
+
 function normalizeContractCoverage(data) {
   const rows = Array.isArray(data.contractCoverage) ? data.contractCoverage : [];
   return rows.map((row) => ({
@@ -279,6 +361,23 @@ function implementationChoiceCard(choice, index, total) {
       <div class="meta__row"><span class="meta__k">Impact</span><span class="meta__v">${esc(choice.whyItMatters)}</span></div>
     </div>
   </article>`;
+}
+
+function comprehensionQuestionCard(question) {
+  return `
+  <article class="quiz">
+    <span class="quiz__id">${esc(question.id)}</span>
+    <p class="quiz__question">${esc(question.question)}</p>
+  </article>`;
+}
+
+function explanationCard(title, body) {
+  if (!body) return "";
+  return `
+  <section class="explanation">
+    <h2 class="explanation__title">${esc(title)}</h2>
+    <div class="explanation__body">${esc(body)}</div>
+  </section>`;
 }
 
 function findingCard(f, i, total) {
@@ -420,6 +519,8 @@ function buildHtml(data) {
   const metrics = data.metrics && typeof data.metrics === "object" ? data.metrics : null;
   const findings = normalizeFindings(data);
   const atAGlance = normalizeAtAGlance(data);
+  const explanationSections = normalizeExplanationSections(data);
+  const comprehensionCheck = normalizeComprehensionCheck(data);
   const contractCoverage = normalizeContractCoverage(data);
   const implementationChoices = normalizeImplementationChoices(data);
   const cards = findings.map((f, i) => findingCard(f, i, findings.length)).join("\n");
@@ -428,6 +529,9 @@ function buildHtml(data) {
     .join("\n");
   const choiceCards = implementationChoices
     .map((choice, index) => implementationChoiceCard(choice, index, implementationChoices.length))
+    .join("\n");
+  const comprehensionCards = comprehensionCheck.questions
+    .map((question) => comprehensionQuestionCard(question))
     .join("\n");
   const count = findings.length;
   const coverageCount = contractCoverage.length;
@@ -458,6 +562,7 @@ function buildHtml(data) {
     findings,
     contractCoverage,
     implementationChoices,
+    comprehensionCheck,
   });
 
   return `<!doctype html>
@@ -558,6 +663,17 @@ function buildHtml(data) {
     text-transform: uppercase; color: var(--ink-2); margin-bottom: 7px;
   }
   .overview__value { margin: 0; font-size: 13.5px; }
+  .explanation {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; margin: 14px 0;
+  }
+  .explanation__title {
+    font: 700 11px/1 var(--mono); letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--ink-2); margin: 0 0 12px;
+  }
+  .explanation__body {
+    white-space: pre-wrap; font-size: 13.5px; overflow-wrap: anywhere;
+  }
 
   .count { font: 600 11px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
            color: var(--ink-2); margin: 22px 0 12px; }
@@ -600,6 +716,16 @@ function buildHtml(data) {
     padding: 11px 13px; margin: 10px 0 12px;
   }
   .choice__value p { margin: 0; font: 600 13.5px/1.5 var(--mono); word-break: break-word; }
+  .quiz {
+    background: var(--card); border: 1px solid var(--line);
+    border-left: 3px solid #7457a6; border-radius: 8px;
+    padding: 14px 16px; margin-bottom: 12px;
+  }
+  .quiz__id {
+    display: block; font: 700 10.5px/1 var(--mono); letter-spacing: 0.14em;
+    color: #7457a6; margin-bottom: 8px;
+  }
+  .quiz__question { margin: 0; font-size: 14px; }
   .finding__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .tag {
     font: 600 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
@@ -772,6 +898,10 @@ function buildHtml(data) {
       : ""
   }
 
+  ${explanationCard("Background", explanationSections.background)}
+  ${explanationCard("Intuition", explanationSections.intuition)}
+  ${explanationCard("Code walkthrough", explanationSections.codeWalkthrough)}
+
   ${
     coverageCount
       ? `<p class="count">ADR contract coverage · ${provenCount} / ${coverageCount} proven · read-only evidence</p>${coverageCards}`
@@ -785,6 +915,17 @@ function buildHtml(data) {
   ${empty}
   ${count ? `<p class="count">${count} finding(s) · rule on each one</p>` : ""}
   ${cards}
+
+  ${
+    comprehensionCheck.questions.length
+      ? `<p class="count">Comprehension check · ${comprehensionCheck.questions.length} question(s) · PR gate</p>
+         <section class="overview">
+           <h2 class="overview__title">PR comprehension readiness</h2>
+           <p class="overview__value">${esc(comprehensionCheck.prGuidance)}</p>
+         </section>
+         ${comprehensionCards}`
+      : ""
+  }
 
   ${
     data.notes
@@ -822,6 +963,7 @@ function buildHtml(data) {
       verdict: EMBED.verdict,
       contractCoverage: EMBED.contractCoverage,
       implementationChoices: EMBED.implementationChoices,
+      comprehensionCheck: EMBED.comprehensionCheck,
       reviews,
       status: "complete",
     };
@@ -869,6 +1011,7 @@ function main() {
   if (!data || typeof data !== "object") die("findings JSON must be an object");
   if (!data.adr) die("findings JSON missing required field: adr");
   if (!data.verdict) die("findings JSON missing required field: verdict");
+  data.explanationSections = loadExplanationSections(data, opts.in);
 
   const html = buildHtml(data);
 

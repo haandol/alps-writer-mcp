@@ -29,6 +29,41 @@ available model for each role—while preserving the same user-visible workflow.
 Comprehension-load behavior, dependency gates, risk-selected reviews, Evidence
 Packages, and completion rules remain stable regardless of that orchestration.
 
+## The core rule: preserve reproducible conditions, not recoverable facts
+
+The system persists only information whose loss would make a future
+implementation violate human intent, an admitted decision, or a requirement.
+It does not persist a second copy of facts that an agent can recover by reading
+code, tests, dependency metadata, or deterministic tool output.
+
+Apply the tests in this order:
+
+1. **Requirement gate** — if the fact disappeared, could regenerated code violate
+   a required value, state, permission, ordering rule, failure guarantee,
+   boundary, or success condition? If yes, preserve it at the level that owns
+   the contract.
+2. **Code-readthrough test** — if the fact is not a requirement and an agent can
+   recover it from the implementation, leave it in code and tests.
+3. **ADR admission gate and litmus test** — if code cannot explain why one
+   durable alternative was adopted and changing the fact would change the
+   architectural decision, preserve the decision, rationale, trade-off, and
+   decision-changing assumptions in an ADR.
+
+“Reproducible” does not mean recreating the same files, functions, libraries, or
+module layout. It means a different implementation can be generated while still
+honoring the same observable product behavior and architectural constraints.
+
+| Level             | Persist                                                                                                                                    | Do not persist                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| ALPS PRD          | user problem, observable outcomes, product contracts, success conditions, explicit non-goals, durable system constraints                   | code paths, stack inventories, implementation plans, copied tickets/logs     |
+| ADR               | admitted decision, exact requirement contract, rationale, alternatives, durable boundaries, implementation-independent observable evidence | libraries, SDKs, signatures, field tables, tuning values, internal call flow |
+| Code and tests    | implementation structure, identifiers, dependencies, tuning, enforcement, executable verification                                          | PRD or ADR back-references                                                   |
+| Issue, PR, commit | change-specific intent and verbatim history                                                                                                | a competing source of product or architecture truth                          |
+
+Plans, search results, mapping snapshots, approval views, reviewer transcripts,
+eval results, and derived evidence packages stay disposable because the
+authoritative artifacts can reproduce them.
+
 ## What is ALPS?
 
 **ALPS** (Agentic Lean Product Spec) is a PRD format built for agentic development. A traditional PRD assumes a human reader who fills in gaps from intuition; ALPS assumes an AI agent that needs an unambiguous specification to write reliable code.
@@ -81,7 +116,7 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 
 **alps-writer (PRD)**
 
-- 9-section ALPS (PRD) template with structured XML templates, conversation guides, and per-Feature demos connected to the end-to-end demo scenario
+- 9-section ALPS (PRD) template with structured XML templates, conversation guides, durable architecture constraints, and per-Feature demos connected to the end-to-end demo scenario
 - 4-section Lite ALPS template that starts from Desired Business Impact and has AI propose the minimum solution, one product-level C4 Context, Essential User Experiences, and executable demo
 - Interactive Q&A workflow — atomic confirmation by default, with explicit batch approval for complete structured input
 - Contract-complete plain-text approval digests — concise raw-text views preserve every requirement value and rule before subsection-level persistence
@@ -96,12 +131,13 @@ Codex users on Amazon Bedrock should disable multi-agent before running ADR revi
 
 - **ADR-driven development cycle** — author ADRs directly with `/adr-new`, implement them with `/adr-impl`, and keep them in sync with `/adr-sync`
 - **Domain-aware gap resolution** — `/adr-impl` derives obligations already implied by the contract, reuses established project/domain defaults for reversible implementation choices, and packages only real product-policy gaps as one recommendation-led Decision request
+- **Searchable implementation documentation and executable cases** — `/adr-impl` requires language-standard why/how comments for changed functions, reuses contract terminology without citing ADR files, and tests both the ideal path and relevant edge cases
 - **Junior-readable review reports** — document, sync, implementation, and refactor reviews lead with verdict, impact, action, and risk, explain unfamiliar terms once, preserve exact evidence below, and use grounded Mermaid for multi-participant, state, dependency, data, and failure flows
 - **Disposable comprehension signal** — ADR digests, implementation plans, and document reviews show only an ephemeral `1–10` score from an internal five-axis assessment; the score never becomes an ADR field or workflow gate
 - **Requested Stacked PR fallback** — when one Feature and ADR must stay intact, `/adr-impl` can offer dependency-ordered PR layers with one review question each; it never creates a Stack from the score alone
 - **ADR admission gate** — record durable requirement/architecture decisions while leaving replaceable libraries, SDKs, frameworks, and credential/auth wiring at the code level
 - **Verified implementation refactoring** — before Status promotion, independently review efficiency, complexity, coupling, duplication, and proportionate reuse; immediately apply only local behavior-preserving changes with before/after tests and propose the rest
-- **Risk-based implementation review** — every review returns a junior-readable Evidence Package with one status/evidence row per ADR obligation plus read-only material implementation choices and their ADR-intent fit. Localized changes use a sufficiency perspective and targeted tests; protected-surface changes add separately grounded necessity/sufficiency perspectives. The model chooses the available orchestration. Complex flows receive grounded Mermaid while simple local PASS reports stay short, and completion review does not repeat a routine human gate
+- **Risk-based implementation review** — every review returns a junior-readable Evidence Package with one status/evidence row per ADR obligation plus read-only material implementation choices and their ADR-intent fit. Localized changes use a sufficiency perspective and targeted tests; protected-surface changes add separately grounded necessity/sufficiency perspectives. Both modes explain the diff through the predictable `Background → Intuition → Code walkthrough → Comprehension check` spine while leaving each section's internal format flexible. The final one-to-five-question free-response check is separate from the code verdict: completion review does not repeat a routine human gate for architecture approval, but the user is told not to open or send the PR until the questions pass
 - **Provider-aware review fallback** — Codex sessions on Amazon Bedrock avoid unsupported subagent dispatch and retries; reviews continue through available model-selected paths while preserving the same evidence and refactor safety gates
 - **Model-selected review orchestration** — review perspectives and evidence are contractual, while subagent count, named/generic/main-session execution, parallelism, and model selection remain disposable choices made from current capability and risk
 - **ADR-first hook** — one `SessionStart` hook runs only on startup, resume, clear, and compaction recovery, injecting the admission-aware directive without mapping contents; admitted work reads `docs/adr/.mapping.json` before coding

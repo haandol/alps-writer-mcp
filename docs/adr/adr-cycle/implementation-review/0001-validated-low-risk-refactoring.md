@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Status
 
-Accepted (2026-08-28)
+Accepted (2026-09-03)
 
 ## Context
 
@@ -16,6 +16,10 @@ full 리뷰에서도 모든 PASS 결과에 긴 repair guide, 고정 개수의 �
 
 하지만 다이어그램 사용을 막연한 선택으로만 두고 계약 coverage 표부터 보여주면, 해당 구현을 처음 보는 개발자는 요청 흐름과 실패 지점을 머릿속에서 다시 조립한 뒤에야 증거를 읽을 수 있다. 쉬운 설명은 증거를 줄이는 일이 아니라 결론과 시스템 관계를 먼저 보여주고 상세 증거를 그 뒤에 두는 일이어야 한다.
 
+AI가 큰 diff를 빠르게 만들수록 코드 검토의 병목은 문법 확인보다 사람이 변경의 배경, 핵심 아이디어와 실제 실행 흐름을 자기 mental model로 만들 수 있는지로 이동한다. 사람이 검증 결과만 읽고 코드를 설명하지 못한 채 PR을 보내면 이후 수정과 장애 대응에서 인지부채가 기술부채로 전환된다.
+
+구현 설명의 형식을 완전히 자유롭게 두면 주제마다 중요한 내용을 찾는 위치가 달라지고, 반대로 문단 수·예시 수·다이어그램 수까지 고정하면 단순 변경도 형식 비용을 지불한다. 여러 구현을 반복해서 읽을 때 예측 가능한 순서를 제공하되 각 주제에 필요한 설명 방법은 자유롭게 선택해야 한다.
+
 계약 대조가 자유 형식 요약에 머물면 사용자는 어떤 요구사항이 구현됐고 어떤 항목이 검증되지 않았는지 다시 ADR과 diff에서 조합해야 한다. 구현 재량도 선택한 값과 중요성만 보여주면 그 선택이 ADR 의도와 양립하는지 판단하기 어렵다. 구현 리뷰는 ADR의 각 계약 행을 사람이 읽을 수 있는 달성 상태로 연결하고, ADR이 의도적으로 열어둔 중요한 구현 선택은 의도 적합성과 함께 설명해야 한다.
 
 구현 선택 자체가 교체 가능한 재량이어도 그 동작이 provider 보장, 입력 출처, 순서, 유일성이나 trust boundary 같은 외부 전제에 의존할 수 있다. 그 전제가 틀릴 때 계약이나 안전이 깨지는데 검증 근거가 없다면 정상 구현 재량으로 숨기지 않고 완료를 막아야 한다.
@@ -24,13 +28,15 @@ full 리뷰에서도 모든 PASS 결과에 긴 repair guide, 고정 개수의 �
 
 구현 리뷰의 계약은 필요한 관점, 증거와 완료 판정이다. named agent, generic subagent, main-session pass, 병렬 또는 순차 실행은 그 계약을 실현하는 방법이다. 특정 orchestration 방법을 고정하면 provider capability와 모델 개선이 바뀐 뒤에도 절차가 검토 목적보다 오래 남는다.
 
+완료 리뷰가 코드 동작과 테스트 통과만 확인하고 함수 문서화 형식과 테스트 범주를 보지 않으면 구현 skill의 필수 규칙이 권고로 약화된다. 특히 ideal case만 통과하거나 함수 주석이 구현 내용을 반복하거나 결정 문서를 직접 참조해도 `PASS`할 수 있다. 리뷰는 언어 표준 문서 주석의 `why`·`how`, 계약 용어 일치와 ADR 직접 참조 부재, ideal·edge case 검증을 완료 증거로 다뤄야 한다.
+
 리뷰 하네스가 없어져도 ADR, 코드, 테스트와 프로젝트 문서만으로 결정과 구현 상태를 읽을 수 있어야 한다. 하네스는 이 자료에서 일시적인 Evidence Package를 파생하며, 서브에이전트 수, 모델 계열, 실행 순서와 중간 분석을 영속 권위로 만들지 않는다.
 
 ## Decision Drivers
 
 - 계약과 보호 표면 변경은 실행 경로와 provider가 달라도 강도를 낮추지 않는 필요성·충분성 관점과 증거 검토가 필요하며, 그 관점을 확보할 orchestration은 현재 모델이 판단해야 한다.
-- 사용자는 승인된 ADR의 각 계약 행별 달성 상태, finding, 테스트와 잔여 위험을 전체 diff 없이 파악하되 충족된 행과 구현 재량마다 별도 판정을 요구받지 않아야 한다.
-- 해당 구현을 처음 보는 주니어 개발자가 결론, 영향, 필요한 조치와 남은 위험을 상세 증거보다 먼저 이해할 수 있어야 하며, 관계를 재구성해야 하는 리뷰는 근거 있는 Mermaid를 사용하되 단순 PASS에 고정 형식 비용을 만들지 않아야 한다.
+- 사용자는 승인된 ADR의 각 계약 행별 달성 상태, finding, 테스트와 잔여 위험을 전체 diff 없이 파악하되 충족된 행과 구현 재량마다 별도 판정을 요구받지 않아야 한다. ADR 동작을 구현한 함수의 언어 표준 문서 주석과 ideal·edge case 테스트가 누락되거나 계약과 어긋나면 완료 전에 자동 보완되어야 한다.
+- 해당 구현을 처음 보는 주니어 개발자가 결론, 영향, 변경의 배경·핵심 직관·코드 흐름과 남은 위험을 상세 증거보다 먼저 이해하고 다시 설명할 수 있어야 하며, 중요한 이해를 확인하지 못한 상태는 코드 적합성 `PASS`와 구분해 PR 전달 전에 드러내야 한다. 관계를 재구성해야 하는 리뷰는 근거 있는 Mermaid를 사용하되 단순 PASS에 고정 형식 비용을 만들지 않아야 한다.
 - 구현 재량은 런타임, 운영, 비용이나 향후 변경에 중요한 항목만 한 번 추출해 ADR 의도 적합성을 설명하고, 계약 핵심 경로가 의존하는 외부 전제까지 검증해 틀릴 때 계약·안전이 깨지는 미검증 전제는 완료를 막아야 한다.
 - 플러그인 제거 후에도 ADR, 코드, 테스트와 프로젝트 문서가 각각 자기 추상화 수준의 질문에 답할 수 있어야 한다.
 
@@ -42,13 +48,19 @@ full 리뷰에서도 모든 PASS 결과에 긴 repair guide, 고정 개수의 �
 
 `standard`는 위 보호 표면을 바꾸지 않는 국소 구현과 기존 결정의 강화에 적용한다. ADR decision ledger, 관련 테스트, 충분성 관점과 간결한 결과를 요구한다. 분류가 모호하면 `full`을 선택한다.
 
-두 모드의 기본 결과는 verdict, ADR contract coverage, findings, tests와 residual risks다. `full`도 finding이 없으면 이 기본 결과로 끝낼 수 있다.
+두 모드의 기본 결과는 verdict, 구현 이해 설명, ADR contract coverage, findings, tests, residual risks와 comprehension check다. `full`도 finding이 없으면 이 기본 결과로 끝낼 수 있다.
 
 ADR contract coverage는 Decision과 requirement contract의 각 독립 행을 그대로 추적한다. 각 행은 `PROVEN`, `VIOLATED`, `UNVERIFIED`, `CONTRADICTED` 중 하나의 상태와 ADR 근거, 구현 내용, 코드 또는 실행 증거, 검증한 테스트를 가진다. `PROVEN`은 실행하거나 확인한 증거가 해당 계약을 지지하고 현재 반례를 찾지 못했다는 뜻이며 수학적 완전 증명을 뜻하지 않는다.
 
-리뷰는 **Evidence Package**를 한눈에 보기와 계약별 증거로 구성한다. 한눈에 보기는 verdict, 사용자 또는 운영 영향, 필요한 다음 조치와 남은 위험을 평이한 언어로 답한다. ADR contract coverage는 그 다음 첫 증거 section으로 제공한다. 사람은 각 요구사항이 무엇으로 달성됐는지, 어떤 행이 위반되거나 검증되지 않았는지 전체 diff를 재구성하지 않고 확인할 수 있어야 한다. 완료 보고는 항상 이 package를 사용자에게 보여주지만 `PROVEN` 행마다 별도 승인을 요구하지 않는다. `VIOLATED`, `UNVERIFIED`, `CONTRADICTED`와 계약 변경만 finding과 escalation 경로로 확장한다.
+리뷰는 **Evidence Package**를 한눈에 보기, 구현 이해 설명과 계약별 증거로 구성한다. 한눈에 보기는 verdict, 사용자 또는 운영 영향, 필요한 다음 조치와 남은 위험을 평이한 언어로 답한다. 구현 이해 설명은 `Background`, `Intuition`, `Code walkthrough` 순서로 제공하고 그 뒤에 계약 coverage와 검토 증거를 둔다. 사람은 변경이 놓인 시스템 문맥, 핵심 작동 원리, 실제 실행 순서와 각 요구사항의 달성 상태를 전체 diff에서 다시 조립하지 않고 확인할 수 있어야 한다. 완료 보고는 항상 이 package를 사용자에게 보여주지만 `PROVEN` 행마다 별도 승인을 요구하지 않는다. `VIOLATED`, `UNVERIFIED`, `CONTRADICTED`와 계약 변경만 finding과 escalation 경로로 확장한다.
 
 사람용 구현 리뷰와 refactor 결과는 해당 코드를 처음 보는 주니어 개발자를 독자로 가정한다. 피할 수 없는 도메인·기술 용어는 처음 한 번만 짧게 설명하고, finding 제목은 내부 category나 symbol보다 사용자·운영 증상을 먼저 말한다. 규칙 ID, 경로, symbol과 정확한 증거는 상세 section에 유지한다.
+
+사람용 구현 리뷰는 `Background`, `Intuition`, `Code walkthrough`, `Comprehension check` 네 section의 이름과 상대 순서를 고정한다. `Background`는 변경을 이해하는 데 필요한 주변 시스템과 선행 개념을, `Intuition`은 왜 이 접근이 동작하는지와 변경 전후의 핵심 mental model을, `Code walkthrough`는 실제 실행 또는 의존 순서와 실패 경로를 설명한다. section 내부의 문단 수, 목록·표·예시·다이어그램 사용과 설명 길이는 고정하지 않고 주제의 근거와 복잡도에 맞춘다.
+
+`Comprehension check`는 리뷰에서 가장 중요한 개념만 골라 1개 이상 5개 이하의 중간 난이도 자유응답 질문을 제공한다. 질문은 symbol 이름이나 줄 번호 암기보다 변경 전후 동작, 인과관계, ADR 계약, 실패·경계 조건과 중요한 trade-off를 확인한다. 질문별 판정 기준과 코드·ADR·테스트 근거는 review artifact에 유지하지만 사용자가 답하기 전에는 정답을 노출하지 않는다.
+
+구현 verdict와 사람의 comprehension readiness는 서로 다른 판정이다. `PASS`는 코드와 ADR 계약의 검토 결과일 뿐 사용자가 구현을 이해했다는 증거가 아니다. 사용자는 준비된 모든 질문에 근거와 의미가 맞는 답을 하기 전에는 PR을 열거나 보내지 않도록 안내받는다. 틀리거나 불완전한 답에는 부족한 개념과 근거를 설명하고 같은 핵심 개념을 다시 확인한다. 이 흐름은 아키텍처 승인, ADR Status 전이 또는 코드 적합성 verdict를 다시 여는 절차가 아니며 퀴즈 진행 상태를 영속 권위로 저장하지 않는다.
 
 다음 중 하나라도 있으면 근거 있는 Mermaid를 포함한다.
 
@@ -67,6 +79,10 @@ ADR contract coverage는 Decision과 requirement contract의 각 독립 행을 �
 
 리뷰는 구현자의 내부 사고과정을 재구성하지 않는다. 대신 provider 보장, input provenance, ordering, uniqueness, trust boundary, platform behavior처럼 코드가 의존하는 외부 검증 가능한 전제만 확인한다. 전제가 코드, 테스트, 설정이나 권위 있는 외부 계약으로 확인되면 증거로 사용한다. 확인되지 않았고 틀릴 경우 ADR 계약 행이나 안전 속성을 위반할 수 있으면 `Unverified risk`로 기록하고 해당 coverage를 `UNVERIFIED`로 유지해 `PASS`를 금지한다. finding에는 전제, 틀릴 때 영향받는 계약·안전 속성과 부족한 검증을 명시한다.
 
+충분성 검토는 ADR 동작을 위해 직접 작성하거나 실질 변경한 이름 있는 함수·메서드마다 해당 언어와 저장소의 표준 문서 주석이 있는지 확인한다. 주석은 함수의 존재 이유와 계약 동작·상태·실패 규칙을 설명하고 현재 ADR의 도메인·계약 용어를 가능한 한 그대로 사용해야 한다. 코드와 모든 주석·docstring에 ADR 번호·경로·링크, `ADR` 출처 표기나 결정 문서 직접 참조가 있으면 제거 대상이다. 누락되거나 형식·내용이 불충분한 표준 문서 주석은 즉시 보완할 `Best practice` finding이며, 일반 인라인 주석의 길이 제한을 표준 문서 주석에 적용하지 않는다.
+
+충분성 검토는 구현한 각 ADR 동작에 ideal case와 관련 edge case 자동 테스트가 모두 있는지 계약 행별로 대조한다. ideal case 누락, 요구사항 경계·잘못된 입력·금지 전이·오류·fallback·중복·순서·동시성·부분 실패 중 관련 반례 누락, 또는 실행되지 않은 테스트는 `Test gap`이다. 무관한 edge category를 채우는 것은 요구하지 않지만, 관련 반례가 누락된 상태에서는 `PASS`하지 않는다.
+
 ADR completeness gap을 발견하면 먼저 명시 계약에서 도출되는 의무인지, 저장소 관례나 권위 있는 도메인 규칙으로 정할 수 있는 가역적 기본값인지 판단한다. Derived obligation은 부모 coverage 행의 검증 의무로 포함하고, domain default는 Notable implementation choice로 기록한다. 여러 domain-valid 결과가 남거나 제품 정책·금액·권한·규제·보존기간·비가역 데이터·public contract·durable fallback을 정해야 할 때만 blocking contract issue로 처리한다. 이때 단순히 질문이 필요하다고 보고하지 않고 추천안과 근거, 현실적인 대안, 영향과 정확한 ADR 계약 문구를 하나의 Decision request로 제공한다.
 
 HTML은 Evidence Package의 계약별 달성 상태와 구현 선택을 먼저 표시하고 findings의 판정과 메모를 지원할 수 있다. 계약 coverage와 Notable implementation choices는 읽기 전용이며 개별 판정을 요구하지 않는다.
@@ -83,7 +99,7 @@ flowchart LR
     Risk{보호 표면 변경?}
     Standard[standard 리뷰]
     Full[full 리뷰]
-    Evidence[계약·finding·test·risk]
+    Evidence[설명·계약·finding·test·quiz·risk]
 
     Change --> Risk
     Risk -->|아니오| Standard
@@ -102,6 +118,16 @@ flowchart LR
 - 모든 리뷰 결과는 verdict, ADR contract coverage, findings, tests와 residual risks를 포함한다.
 - 모든 사람용 리뷰 결과는 verdict, 사용자·운영 영향, 필요한 조치와 남은 위험을 담은 한눈에 보기로 시작한다.
 - 사람용 리뷰와 refactor 결과는 해당 구현을 처음 보는 주니어 개발자가 이해할 수 있는 평이한 언어를 사용하고, 피할 수 없는 용어는 처음 한 번만 설명한다.
+- 사람용 구현 리뷰는 `Background`, `Intuition`, `Code walkthrough`, `Comprehension check` section을 이 순서로 포함한다.
+- 네 section은 이름과 상대 순서만 고정하며 내부 문단 수, 설명 길이, 목록·표·예시·Mermaid 사용 여부를 고정하지 않는다.
+- `Background`는 변경에 필요한 주변 시스템과 선행 개념을, `Intuition`은 핵심 작동 원리와 변경 전후 mental model을, `Code walkthrough`는 실제 실행 또는 의존 순서와 실패 경로를 근거와 함께 설명한다.
+- `Comprehension check`는 중요한 이해를 확인하는 중간 난이도 자유응답 질문을 1개 이상 5개 이하로 제공한다.
+- 퀴즈는 변경 전후 동작, 인과관계, ADR 계약, 실패·경계 조건과 중요한 trade-off 중 해당 구현에 중요한 항목을 다루며 사소한 symbol·줄 번호 암기를 요구하지 않는다.
+- 질문별 판정 기준과 ADR·코드·테스트 근거는 artifact에 포함하되 사용자가 답하기 전에 정답을 노출하지 않는다.
+- 퀴즈 답은 정확한 문구가 아니라 핵심 개념과 인과관계를 기준으로 판정하고, 틀리거나 불완전하면 부족한 개념과 근거를 설명한 뒤 같은 핵심 개념을 다시 확인한다.
+- 코드 리뷰 `PASS`와 comprehension readiness를 구분하고, 준비된 모든 질문을 통과하기 전에는 PR을 열거나 보내지 않도록 안내한다.
+- comprehension check는 ADR 승인, Status 전이, 코드 적합성 verdict와 자동 remediation을 다시 열거나 차단하지 않는다.
+- 퀴즈 진행·통과 상태는 ADR, mapping 또는 별도 registry에 저장하지 않는다.
 - ADR contract coverage는 Decision과 requirement contract의 각 독립 행을 누락 없이 한 행씩 포함한다.
 - 각 contract coverage 행은 `PROVEN`, `VIOLATED`, `UNVERIFIED`, `CONTRADICTED` 상태와 ADR 근거, 구현 내용, 증거와 검증한 테스트를 포함한다.
 - `PASS`는 모든 contract coverage 행이 `PROVEN`이고 필수 테스트가 통과하며 미해결 finding과 중대한 미검증 위험이 없을 때만 허용한다.
@@ -115,6 +141,12 @@ flowchart LR
 - 코드에서 선택의 역사적 근거나 대안을 알 수 없다는 이유만으로 `Unverified risk`를 만들지 않는다.
 - 안전이나 계약에 영향을 주는 미확정 구현 동작은 `Unverified risk`로 처리한다.
 - 구현 재량과 계약 핵심 경로가 의존하는 provider 보장, 입력 출처, 순서, 유일성, trust boundary와 platform behavior 같은 외부 전제를 검토한다.
+- ADR 동작을 위해 직접 작성하거나 실질 변경한 이름 있는 함수·메서드는 언어와 저장소의 표준 문서 주석을 가져야 한다.
+- 표준 문서 주석은 함수의 존재 이유와 계약 동작·상태·실패 규칙을 설명하고 현재 ADR의 도메인·계약 용어를 가능한 한 그대로 사용해야 한다.
+- 코드와 모든 주석·docstring의 ADR 번호·경로·링크, `ADR` 출처 표기나 결정 문서 직접 참조는 `PASS` 전에 제거한다.
+- 표준 문서 주석 누락이나 불충분한 `why`·`how`는 즉시 보완할 `Best practice` finding이며 일반 인라인 주석 길이 제한을 적용하지 않는다.
+- 구현한 각 ADR 동작은 ideal case와 해당 계약에 관련된 edge case 자동 테스트를 모두 가져야 한다.
+- ideal case, 관련 edge case 또는 테스트 실행 증거가 누락되면 `Test gap`이며 `PASS`할 수 없다.
 - 외부 전제가 미검증이고 틀릴 경우 계약이나 안전을 위반할 수 있으면 `Unverified risk`로 처리하고 영향받는 coverage를 `UNVERIFIED`로 유지한다.
 - `Unverified risk`는 전제, 전제가 틀릴 때 영향받는 계약·안전 속성과 부족한 검증을 명시하며 내부 사고과정을 요구하지 않는다.
 - ADR completeness gap은 derived obligation, project/domain default, product decision으로 분류한 뒤 escalation한다.
@@ -142,10 +174,16 @@ flowchart LR
 
 - 같은 ADR 계약을 리뷰하면 각 독립 계약 행이 Evidence Package에 정확히 한 번 나타나고 상태, 구현 내용, ADR 근거, 증거와 테스트를 함께 보여준다.
 - 하나라도 `PROVEN`이 아닌 coverage 행이 있으면 artifact validator가 `PASS`를 거부한다.
+- 서로 다른 구현 주제의 report fixture가 모두 `Background`, `Intuition`, `Code walkthrough`, `Comprehension check` 순서를 유지하면서 section 내부 표현은 주제에 맞게 달라진다.
+- artifact validator는 comprehension question이 1개 미만이거나 5개를 초과하고, 판정 기준·근거가 없거나 사용자 보고서가 정답을 미리 노출하면 실패한다.
+- 구현의 중요 동작을 틀리게 답한 fixture는 PR-ready로 안내되지 않고 부족한 개념과 근거를 받은 뒤 재확인 경로로 이동한다.
+- 모든 질문에 의미상 맞게 답한 fixture만 PR comprehension-ready 안내를 받으며 이 결과가 구현 verdict나 ADR Status를 바꾸지 않는다.
 - 복수 참여자와 실패·재시도가 있는 fixture는 한눈에 보기와 근거 있는 Mermaid를 생성하고, 단일 파일 PASS fixture는 불필요한 다이어그램 없이 끝난다.
 - 구현을 처음 보는 개발자는 한눈에 보기와 다이어그램만으로 verdict, 영향, 다음 조치와 위험을 설명할 수 있고, 상세 표에서 각 결론의 근거를 추적할 수 있다.
 - 중요한 구현 재량이 있으면 Markdown과 HTML이 선택 내용, 코드 근거, ADR 의도와 양립하는 이유와 중요성을 읽기 전용으로 보여준다.
 - 계약·안전에 영향을 주는 숨은 외부 전제를 fixture에 두면 reviewer가 이를 `Unverified risk`로 드러내고 `PASS`하지 않는다.
+- 언어 표준 문서 주석이 없거나 `why`·`how`가 빠지거나 ADR 파일을 직접 참조하는 fixture는 reviewer가 즉시 보완 finding을 만들고 `PASS`하지 않는다.
+- ideal case만 있고 관련 edge case가 빠진 fixture는 `Test gap`으로 실패하며, 두 범주와 문서 주석이 모두 충족된 반대 fixture는 해당 축에서 finding 없이 통과한다.
 - 하나는 프로젝트·도메인 기본값으로 자동 해소되고 다른 하나는 제품 정책으로 남는 fixture에서 reviewer가 두 경로를 구분한다.
 - 사람은 Evidence Package에서 요구사항별 달성 내용을 확인할 수 있고 `PROVEN` 행이나 구현 재량마다 판정을 요구받지 않는다.
 
@@ -175,6 +213,14 @@ flowchart LR
    - 장점: 사용자-visible 판정은 유지하면서 현재 모델과 실행 환경에 맞는 최소 경로를 선택할 수 있다.
    - 단점: 같은 리뷰도 agent 수와 실행 순서가 달라질 수 있다.
 
+7. **구현 설명과 퀴즈 형식을 전부 자유롭게 둠**
+   - 장점: 주제별 최적 형식을 제한하지 않는다.
+   - 단점: 여러 리뷰를 읽을 때 배경, 핵심 원리, 코드 흐름과 이해 확인 위치를 매번 다시 찾아야 한다.
+
+8. **section 내부 형식까지 고정된 tutorial template 사용**
+   - 장점: 모든 보고서 모양이 동일하다.
+   - 단점: 단순 변경에도 불필요한 예시·표·다이어그램을 만들고 주제에 맞는 설명 방식을 제한한다.
+
 ## Consequences
 
 ### Positive
@@ -182,12 +228,14 @@ flowchart LR
 - 보호 표면 변경은 기존의 독립 검토와 계약 대조 강도를 유지한다.
 - PASS 결과와 단순 finding은 짧은 보고서로 검토할 수 있다.
 - 사용자는 요구사항별 달성 내용과 검증 근거를 Evidence Package에서 바로 확인할 수 있다.
-- 구현을 처음 보는 주니어 개발자도 결론과 시스템 흐름을 먼저 읽고 필요한 증거로 내려갈 수 있다.
+- 구현을 처음 보는 주니어 개발자도 예측 가능한 Background, Intuition, Code walkthrough 순서로 mental model을 만든 뒤 필요한 증거로 내려갈 수 있다.
+- 사용자는 최대 다섯 개의 중요한 질문으로 자신의 이해를 확인하고 이해하지 못한 코드를 PR로 전달하는 인지부채를 줄일 수 있다.
 - 관계가 복잡한 리뷰는 Mermaid로 흐름을 외부화하고, 단순 리뷰는 같은 형식 비용을 지불하지 않는다.
 - 구현 선택이 ADR로 올라가지 않으면서도 중요한 재량과 ADR 의도 적합성을 확인할 수 있다.
 - 구현 선택을 한 번만 추출하고 별도 판정을 제거해 prompt와 renderer 유지비가 줄어든다.
 - 저위험 리팩토링과 자동 수정의 안전 조건은 유지된다.
 - 모델은 현재 capability와 변경 위험에 맞는 최소 orchestration을 선택할 수 있다.
+- 언어 표준 문서 주석과 ideal·edge 테스트가 구현자의 선택적 습관이 아니라 완료 검토의 검증 가능한 조건이 된다.
 - 플러그인 제거와 모델 교체가 ADR·코드·테스트의 권위 구조를 바꾸지 않는다.
 
 ### Negative
@@ -196,7 +244,10 @@ flowchart LR
 - coverage 행을 ADR 계약 행과 정확히 대응시키는 정규화 비용이 생긴다.
 - diagram과 상세 guide 필요성을 모델이 판단해야 한다.
 - 보고서 작성자는 다이어그램 트리거와 생략 조건을 판정해야 한다.
+- 모든 review가 최소 한 개의 comprehension question을 생성하므로 작은 변경도 짧은 추가 비용을 지불한다.
+- 자유응답 판정은 객관식보다 guessing은 줄지만 의미상 맞는 다른 표현을 판단해야 한다.
 - 읽기 전용 구현 선택 목록은 사용자별 판정 상태를 저장하지 않는다.
+- 함수별 문서 주석과 edge case 검토가 추가되어 작은 구현의 완료 비용이 늘어난다.
 - 같은 review contract라도 모델과 실행 환경에 따라 agent 수와 실행 순서가 달라질 수 있다.
 
 ### Risks
@@ -204,9 +255,14 @@ flowchart LR
 - 모델이 필요한 diagram을 생략할 수 있다. 참여자·단계·상태·경계·실패 흐름의 명시적 트리거를 적용한다.
 - 모델이 시각화를 장식으로 남발할 수 있다. 트리거가 없으면 생략하고 모든 node와 edge를 코드 또는 ADR 근거에 연결한다.
 - 쉬운 설명이 모호한 요약으로 퇴화할 수 있다. 한눈에 보기는 증거를 삭제하지 않고 verdict, 영향, 조치와 위험만 먼저 배치한다.
+- 고정 section이 내용까지 고정된 boilerplate로 퇴화할 수 있다. section 이름과 순서만 검증하고 내부 표현과 길이는 주제에 맡긴다.
+- 퀴즈가 사소한 암기 문제나 보고서 문장 복사로 퇴화할 수 있다. 중요한 동작, 인과관계, 계약과 실패 경로를 자유응답으로 묻고 판정 근거를 artifact에 유지한다.
+- 사용자가 `PASS`를 comprehension 통과로 오해할 수 있다. 코드 verdict와 PR comprehension readiness를 항상 별도 문장으로 표시한다.
 - 모델이 여러 계약을 한 coverage 행으로 묶어 일부 누락을 숨길 수 있다. ADR의 독립 계약 행과 coverage 행을 일대일로 검증한다.
 - 구현 선택 목록이 사소한 표현을 나열할 수 있다. 런타임, 운영, 비용과 향후 변경에 중요한 항목만 허용한다.
 - reviewer가 코드가 의존하는 외부 전제를 놓칠 수 있다. 계약·안전 결과가 달라지는 숨은 전제 시나리오를 behavior eval로 반복 검증한다.
+- reviewer가 주석 존재만 보고 `why`·`how` 품질이나 ADR 직접 참조를 놓칠 수 있다. 정적 계약 테스트와 양방향 behavior eval로 누락 fixture와 충족 fixture를 함께 검증한다.
+- reviewer가 모든 일반적 edge category를 요구해 테스트를 부풀릴 수 있다. 계약 행과 실제 반례의 관련성을 근거로 선택하고 무관한 조합은 finding으로 만들지 않는다.
 - 상세 guide가 필요한 finding을 짧게 끝낼 수 있다. `FIX_REQUIRED`와 `BLOCK`에는 finding별 변경 범위와 완료 기준을 요구한다.
 - orchestration 자유가 관점 누락으로 이어질 수 있다. artifact validator와 behavior eval은 agent 호출 형태가 아니라 coverage, 관점, 증거와 판정을 검증한다.
 

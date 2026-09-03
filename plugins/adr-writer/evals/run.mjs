@@ -13,6 +13,7 @@
 //   node evals/run.mjs                          # every scenario, 1 run each
 //   node evals/run.mjs --runs 10                # 10 runs each (rates)
 //   node evals/run.mjs --only requirement-value # one scenario (substring match)
+//   node evals/run.mjs --changed main            # scenarios affected since main
 //   node evals/run.mjs --list                   # names, no agent calls
 //   node evals/run.mjs --dry-run                # build fixtures + print prompts
 //   node evals/run.mjs --out report.md          # write a shareable report
@@ -34,6 +35,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_CMD, runAgent } from "./lib/harness.mjs";
+import { scenarioNamesForChangedPaths } from "./impact-map.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +43,7 @@ function parseArgs(argv) {
   const o = {
     runs: 1,
     only: null,
+    changed: null,
     list: false,
     dryRun: false,
     out: null,
@@ -52,6 +55,7 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === "--runs") o.runs = Number(argv[++i]);
     else if (a === "--only") o.only = argv[++i];
+    else if (a === "--changed") o.changed = argv[++i];
     else if (a === "--list") o.list = true;
     else if (a === "--dry-run") o.dryRun = true;
     else if (a === "--out") o.out = argv[++i];
@@ -64,13 +68,16 @@ function parseArgs(argv) {
     } else die(`unknown argument: ${a}`);
   }
   if (!Number.isInteger(o.runs) || o.runs < 1) die(`--runs must be a positive integer`);
+  if (o.only && o.changed) die(`--only and --changed are mutually exclusive`);
+  if (o.changed != null && !o.changed.trim()) die(`--changed requires a Git base`);
   return o;
 }
 
 function readHelp() {
   return `adr evals — run behaviour scenarios against a real agent
 
-  node evals/run.mjs [--runs N] [--only <substring>] [--list] [--dry-run]
+  node evals/run.mjs [--runs N] [--only <substring> | --changed <git-base>]
+                     [--list] [--dry-run]
                      [--out report.md] [--cmd '<agent command>']
                      [--include-transcript] [--include-fixture-paths]
 
@@ -95,6 +102,34 @@ async function loadScenarios() {
     out.push({ file: f, ...mod.default });
   }
   return out;
+}
+
+function changedPaths(base) {
+  const repo = path.resolve(HERE, "..", "..", "..");
+  const commands = [
+    ["diff", "--name-only", `${base}...HEAD`],
+    ["diff", "--name-only"],
+    ["diff", "--name-only", "--cached"],
+    ["ls-files", "--others", "--exclude-standard"],
+  ];
+  const paths = new Set();
+
+  for (const [index, args] of commands.entries()) {
+    const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+    if (result.status !== 0) {
+      if (index === 0) {
+        die(
+          `unable to compare changed files against "${base}": ${result.stderr.trim() || result.stdout.trim()}`,
+        );
+      }
+      continue;
+    }
+    for (const line of result.stdout.split(/\r?\n/)) {
+      if (line.trim()) paths.add(line.trim());
+    }
+  }
+
+  return [...paths].sort();
 }
 
 // ── one run of one scenario ───────────────────────────────────────────────
@@ -203,17 +238,36 @@ function rate(passed, total) {
 function main() {
   const opts = parseArgs(process.argv.slice(2));
   loadScenarios().then(async (all) => {
-    const scenarios = opts.only ? all.filter((s) => s.name.includes(opts.only)) : all;
-    if (!scenarios.length)
+    let scenarios = all;
+    let changed = [];
+    if (opts.only) {
+      scenarios = all.filter((s) => s.name.includes(opts.only));
+    } else if (opts.changed) {
+      changed = changedPaths(opts.changed);
+      const impacted = scenarioNamesForChangedPaths(changed, all);
+      scenarios = all.filter((scenario) => impacted.has(scenario.name));
+    }
+
+    if (!scenarios.length) {
+      if (opts.changed) {
+        process.stdout.write(
+          `adr evals — no behaviour scenarios impacted by ${changed.length} changed file(s) since ${opts.changed}\n`,
+        );
+        return;
+      }
       die(opts.only ? `no scenario matches "${opts.only}"` : `no scenarios found`);
+    }
 
     if (opts.list) {
-      for (const s of all) process.stdout.write(`${s.name}\n  ${s.description}\n`);
+      for (const s of scenarios) process.stdout.write(`${s.name}\n  ${s.description}\n`);
       return;
     }
 
     process.stdout.write(
       `adr evals — ${scenarios.length} scenario(s) × ${opts.runs} run(s)\n` +
+        (opts.changed
+          ? `changed files: ${changed.length} since ${opts.changed} (plus working tree)\n`
+          : "") +
         `agent: ${opts.dryRun ? "(dry run, not invoked)" : opts.cmd}\n\n`,
     );
 

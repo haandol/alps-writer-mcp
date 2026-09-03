@@ -2,6 +2,8 @@
 
 Newest first. Record only major decision changes.
 
+- **2026-09-03 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 완료 리뷰가 언어 표준 함수 문서 주석의 존재 이유·동작 설명·계약 용어와 ADR 직접 참조 부재를 확인하고, 각 구현 동작의 ideal case와 관련 edge case가 모두 검증되지 않으면 `PASS`하지 않도록 강화했다.
+- **2026-09-02 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 구현 리뷰에 `Background → Intuition → Code walkthrough → Comprehension check`의 예측 가능한 section 순서와 최대 5개의 자유응답 퀴즈를 추가하고, 코드 `PASS`와 사람의 PR comprehension readiness를 분리했다.
 - **2026-08-28 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 구현 리뷰의 필요성·충분성 관점과 증거 계약은 유지하되 서브에이전트 수, 모델 계열, 병렬·순차 실행과 보고서 역할 분리는 현재 모델의 orchestration 판단으로 내리고, 저위험 리팩토링은 agent 출처가 아니라 국소 범위·동작 보존·전후 테스트로 판정하도록 변경했다.
 - **2026-08-28 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 사람용 구현·refactor 리포트를 결론·영향·조치·위험의 한눈에 보기로 시작하고, 복수 참여자·상태·외부 경계·실패 흐름에는 근거 있는 Mermaid를 포함하되 단순한 국소 PASS에는 강제하지 않도록 변경했다.
 - **2026-08-18 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 계약·안전에 영향을 주는 외부 전제를 검증하고, ADR completeness gap을 derived obligation·domain default·product decision으로 분류해 마지막 항목만 Decision request로 escalation하도록 변경했다.

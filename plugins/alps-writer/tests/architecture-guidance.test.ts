@@ -38,7 +38,25 @@ test("the Section 4 guide requires both diagrams and keeps implementation detail
     assert.deepEqual(c4Declarations(source), expectedC4Levels);
     assert.match(source, /MUST contain both/);
     assert.match(source, /only C4 levels ALPS uses/);
-    assert.match(source, /modules, classes, functions, files, or methods/);
+    assert.match(source, /modules, classes, functions, files, methods, libraries, or frameworks/);
+    assert.match(source, /Architecture Constraints/);
+    assert.match(source, /regenerated implementation must preserve/i);
+    assert.match(source, /Do NOT save an AI-recommended technology stack/i);
+    assert.doesNotMatch(source, /<tech_stack_wizard>|### 4\.2 Technology Stack/);
+  }
+});
+
+test("Section 4.2 stores durable constraints instead of a recoverable technology inventory", () => {
+  const template = read("src/templates/chapters/04-architecture.xml");
+  const runtimeSection = new TemplateService().getSection(4, true);
+
+  assert.match(template, /subsection id="4\.2" title="Architecture Constraints"/);
+  assert.match(runtimeSection, /### 4\.2 Architecture Constraints/);
+  for (const source of [template, runtimeSection]) {
+    assert.match(source, /Scale assumption/);
+    assert.match(source, /Data and security boundary/);
+    assert.match(source, /Exclude replaceable frameworks, SDKs, ORMs/);
+    assert.doesNotMatch(source, /React|Express|MongoDB|Tailwind|Technology Stack/);
   }
 });
 

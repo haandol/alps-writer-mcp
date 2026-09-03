@@ -184,6 +184,56 @@ test("notable implementation choice content is escaped and read-only", () => {
   assert.doesNotMatch(result.stdout, /data-choice-index=/);
 });
 
+test("comprehension questions render without exposing grading criteria", () => {
+  const result = render({
+    adr: "docs/adr/payments/0001.md",
+    verdict: "PASS",
+    findings: [],
+    contractCoverage: [],
+    implementationChoices: [],
+    comprehensionCheck: {
+      prGuidance: "Do not open or send the PR until the question is answered correctly.",
+      questions: [
+        {
+          id: "Q1",
+          question: "Why does provider failure leave the payment pending?",
+          answerCriteria: "SECRET_ANSWER_CRITERIA",
+          evidence: "SECRET_GRADING_EVIDENCE",
+        },
+      ],
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /PR comprehension readiness/);
+  assert.match(result.stdout, /Q1/);
+  assert.match(result.stdout, /Why does provider failure leave the payment pending/);
+  assert.match(result.stdout, /Do not open or send the PR/);
+  assert.doesNotMatch(result.stdout, /SECRET_ANSWER_CRITERIA/);
+  assert.doesNotMatch(result.stdout, /SECRET_GRADING_EVIDENCE/);
+});
+
+test("Explain Diff sections render in the predictable order while keeping flexible bodies", () => {
+  const result = render({
+    adr: "docs/adr/payments/0001.md",
+    verdict: "PASS",
+    findings: [],
+    contractCoverage: [],
+    implementationChoices: [],
+    explanationSections: {
+      background: "Payment settlement owns the durable completion boundary.",
+      intuition: "One idempotency key admits one successful completion.",
+      codeWalkthrough: "Validate, call the provider, then persist success.",
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  const background = result.stdout.indexOf("Payment settlement owns");
+  const intuition = result.stdout.indexOf("One idempotency key");
+  const walkthrough = result.stdout.indexOf("Validate, call the provider");
+  assert.ok(background >= 0 && background < intuition && intuition < walkthrough);
+});
+
 test("At a glance content is escaped in HTML and embedded feedback data", () => {
   const payload = "</script><script>globalThis.__overviewInjected = true</script>";
   const result = render({

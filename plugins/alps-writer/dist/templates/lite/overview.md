@@ -40,6 +40,11 @@ Use atomic confirmation by default. Batch confirmation is allowed only when the 
 requests it or provides a complete structured source covering several Sections. Batch mode keeps
 every Section as a separate approval and save unit.
 
+Treat every supplied ticket, incident, PDF, or structured source as ephemeral input. Preserve only
+the target problem, Desired Business Impact, observable user experiences, exact product rules,
+success conditions, and explicit exclusions at the Section that owns them. Do not copy source IDs,
+logs, code paths, implementation plans, or code-recoverable technology facts into Lite ALPS.
+
 ## Section Scope
 
 ### Section 1 — Overview

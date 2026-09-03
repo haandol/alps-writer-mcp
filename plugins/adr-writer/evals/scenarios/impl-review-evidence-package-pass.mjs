@@ -30,6 +30,12 @@ The implementation review found:
   recovery latency and upstream request rate.
 - There are no confirmed findings or unverified core risks.
 `;
+const PR_GUIDANCE =
+  "Do not open or send the PR until every comprehension question is answered correctly without reading the answer criteria.";
+const QUIZ_QUESTION = "Why does a provider failure leave the payment pending instead of completed?";
+const QUIZ_ANSWER =
+  "A successful provider result must cross the idempotent completion boundary before completion is recorded.";
+const QUIZ_EVIDENCE = "ADR R2 and the provider failure test";
 
 const ADR = `# ADR 0001: idempotent payment settlement
 
@@ -91,7 +97,7 @@ function completeTableRow(row) {
 export default {
   name: "impl-review-evidence-package-pass",
   description:
-    "/adr-impl-review must return PASS without another human gate when every obligation is PROVEN, while still surfacing complete read-only coverage and ADR-intent fit.",
+    "/adr-impl-review must return PASS without another architecture decision when every obligation is PROVEN, while still surfacing complete read-only coverage, ADR-intent fit, and a separate pre-PR comprehension check.",
 
   build(dir) {
     seedRuleDocs(dir);
@@ -122,17 +128,22 @@ export default {
       `Do not put conversational prose before or instead of the report file contents.`,
       `Do not invent files or tests beyond the facts below. Show the normal response first.`,
       `The normal response must lead with At a glance (Verdict, Impact, Action, Risk),`,
-      `then contract coverage, notable implementation choices, findings, and residual risks.`,
+      `then Background, Intuition, Code walkthrough, contract coverage, notable implementation choices, findings, residual risks, and Comprehension check.`,
+      `Use the fixed explanation/check headings in that relative order, but choose the internal prose freely.`,
       `Coverage and choices are read-only.`,
+      `The visible Comprehension check must include 1-5 free-response questions and this exact guidance: ${PR_GUIDANCE}`,
+      `Include this question exactly: ${QUIZ_QUESTION}`,
+      `Do not reveal the answer criteria or evidence before the reader answers.`,
       `Keep seven separate coverage columns: Contract ID, Requirement, Status, ADR basis,`,
       `How the implementation meets it, Evidence, Tests. Keep four choice columns: Selected behavior,`,
       `Evidence, Why it fits the ADR intent, Why it matters. Do not collapse either table.`,
-      `In EVAL-FINDINGS use exactly these five tags and include every named field:`,
+      `In EVAL-FINDINGS use exactly these six tags and include every named field:`,
       `COVERAGE_D0 | status=...; implementation=...; evidence=...; tests=...`,
       `COVERAGE_R1 | status=...; implementation=...; evidence=...; tests=...`,
       `COVERAGE_R2 | status=...; implementation=...; evidence=...; tests=...`,
       `CHOICE | value=...; evidence=...; intentFit=...; impact=...`,
       `HUMAN_REVIEW | verdict=...; decisionRequired=...; noPerRowApproval=true`,
+      `COMPREHENSION | questionCount=...; answersHidden=true; prReadyBeforeQuiz=false`,
       CASE,
       TAIL_SPEC,
     ].join("\n");
@@ -145,6 +156,7 @@ export default {
     const r2 = taggedSummary(tail, "COVERAGE_R2");
     const choice = taggedSummary(tail, "CHOICE");
     const humanReview = taggedSummary(tail, "HUMAN_REVIEW");
+    const comprehension = taggedSummary(tail, "COMPREHENSION");
     const [d0Row, r1Row, r2Row] = coverageRows(visible);
     const artifact = validateReviewArtifact(dir, visible, {
       reviewMode: "full",
@@ -168,6 +180,17 @@ export default {
           whyItMatters: "changes recovery latency and upstream request rate",
         },
       ],
+      comprehensionCheck: {
+        prGuidance: PR_GUIDANCE,
+        questions: [
+          {
+            id: "Q1",
+            question: QUIZ_QUESTION,
+            answerCriteria: QUIZ_ANSWER,
+            evidence: QUIZ_EVIDENCE,
+          },
+        ],
+      },
       contractCoverage: [
         {
           contractId: "D0",
@@ -248,7 +271,21 @@ export default {
           /decisionRequired\s*=\s*(?:false|none|no|없음|불필요)/i.test(humanReview) &&
           /noPerRowApproval\s*=\s*true/i.test(humanReview),
         detail: humanReview || "missing HUMAN_REVIEW",
-        label: "PASS completes without another human decision or per-row approval",
+        label: "PASS completes without another architecture decision or per-row approval",
+      },
+      {
+        pass:
+          /questionCount\s*=\s*[1-5]\b/i.test(comprehension) &&
+          /answersHidden\s*=\s*true/i.test(comprehension) &&
+          /prReadyBeforeQuiz\s*=\s*false/i.test(comprehension) &&
+          visible.includes("## Background") &&
+          visible.includes("## Intuition") &&
+          visible.includes("## Code walkthrough") &&
+          visible.includes("## Comprehension check") &&
+          visible.includes(PR_GUIDANCE) &&
+          visible.includes(QUIZ_QUESTION),
+        detail: comprehension || "missing COMPREHENSION",
+        label: "keeps a predictable explanation and a separate pre-PR comprehension gate",
       },
       expectNoText(
         visible,

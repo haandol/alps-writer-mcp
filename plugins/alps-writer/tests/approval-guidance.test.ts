@@ -34,6 +34,37 @@ test("approval guidance uses a contract-complete plain-text digest", () => {
   assert.doesNotMatch(overview, /print FULL section/i);
 });
 
+test("reference handling keeps durable contracts and drops source or code-recoverable detail", () => {
+  const sources = [read("skills/alps-init/SKILL.md"), read("src/templates/overview.md")];
+
+  for (const source of sources) {
+    assert.match(source, /ephemeral input/i);
+    assert.match(source, /product intent/i);
+    assert.match(source, /observable behavior/i);
+    assert.match(source, /durable boundar/i);
+    assert.match(source, /ticket IDs?/i);
+    assert.match(source, /logs/i);
+    assert.match(source, /code paths?/i);
+    assert.match(source, /implementation plans?/i);
+    assert.match(source, /recoverable from code|code-recoverable/i);
+  }
+
+  for (const source of [
+    read("skills/lite-alps-init/SKILL.md"),
+    read("src/templates/lite/overview.md"),
+  ]) {
+    assert.match(source, /ephemeral input/i);
+    assert.match(source, /target problem/i);
+    assert.match(source, /Desired Business Impact/i);
+    assert.match(source, /observable/i);
+    assert.match(source, /source IDs?/i);
+    assert.match(source, /logs/i);
+    assert.match(source, /code paths?/i);
+    assert.match(source, /implementation plans?/i);
+    assert.match(source, /code-recoverable technology facts/i);
+  }
+});
+
 test("Lite reuses Full's focused-question authoring without changing Full", () => {
   const fullSkill = read("skills/alps-init/SKILL.md");
   const fullOverview = read("src/templates/overview.md");

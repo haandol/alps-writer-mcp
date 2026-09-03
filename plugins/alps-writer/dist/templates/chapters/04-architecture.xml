@@ -1,16 +1,17 @@
 <section id="4" title="High-Level Architecture">
   <description>
-- Section 4 answers "what is the system MADE OF" — the cross-cutting picture: overall topology, the technology stack, and external integrations. State each of these ONCE here.
-- It does NOT describe how an individual feature uses that stack — that is Section 7.3 (the vertical slice of each feature through UI → API → Data). Section 7.3 *uses* what Section 4 declares; it must not re-declare or fork the stack.
-- Keep system-wide planning facts here so the PRD has one source before handoff: if the same fact (e.g., the auth mechanism, the database choice) also appears per-feature in Section 7.3, the PRD drifts internally. `/feature-to-adr` later transfers durable contracts and boundaries into ADRs and classifies replaceable technology means as code discretion. After successful handoff, ADRs are the implementation authority and this section may remain as legacy planning context.
+- Section 4 answers which system boundaries and constraints a regenerated implementation must preserve.
+- It does NOT inventory technologies that a developer can recover from code or dependency metadata. Frameworks, SDKs, ORMs, internal database products, credential wiring, and CI tools remain implementation discretion unless a product, contract, regulation, or external boundary mandates the choice.
+- Section 4.1 shows the product and major runtime/data boundaries once. Section 4.2 records only durable architecture constraints. Section 7.3 explains how one Feature crosses the approved boundaries without re-declaring implementation technology.
+- `/feature-to-adr` later transfers durable contracts and boundaries into ADRs and leaves replaceable technology means to code. After successful handoff, ADRs are the implementation authority and this Section remains legacy planning context.
   </description>
   <subsection id="4.1" title="System Diagram">
     <description>
 - Provide both a Context diagram and a Container diagram using Mermaid C4 syntax.
 - The Context diagram is required. Show the people, external systems, the target system, and their relationships.
-- The Container diagram is required. Show the major independently running or deployable applications and data stores inside the target system, their responsibilities, technologies at category level, and their relationships.
+- The Container diagram is required. Show the major independently running or deployable applications and data stores inside the target system, their responsibilities, durable boundaries, and relationships.
 - These are the only C4 levels allowed in an ALPS PRD. Do not generate Component, Dynamic, Deployment, or Code-level C4 diagrams.
-- Keep modules, classes, functions, files, methods, and other implementation details out of both diagrams.
+- Keep modules, classes, functions, files, methods, libraries, frameworks, and other implementation details out of both diagrams.
     </description>
     <example>
 ```mermaid
@@ -47,25 +48,23 @@ Rel(api, llm, "Requests language generation from")
 ```
     </example>
   </subsection>
-  <subsection id="4.2" title="Technology Stack">
+  <subsection id="4.2" title="Architecture Constraints">
     <description>
-- List the key technologies and frameworks to be used in the MVP.
-- If the user is non-technical, follow the tech_stack_wizard in the section guide to help them choose.
-- Cover these categories as applicable:
-  - Frontend: How users interact with the product (e.g., web framework, mobile framework)
-  - Backend: Server-side logic and APIs (e.g., language, framework)
-  - Database: Where data is stored (e.g., relational, document-based)
-  - Infrastructure: Where the product runs and how it is deployed (e.g., cloud provider, CI/CD)
-  - External Services: Third-party APIs or services (e.g., payment, email, AI/ML)
-- Not all categories are required — include only what is relevant to the MVP.
-- Record the expected launch scale that drove this choice as a one-line "Scale assumption". Write it down rather than leaving it in the conversation: it is the main driver behind the stack, and Section 6.2 reuses it as the starting point for the performance NFR. Distinguish total from concurrent users when both are known.
+- Record only conditions a regenerated implementation must preserve:
+  - Scale assumption: expected total and concurrent usage when it constrains the product or an NFR.
+  - Access boundary: required user channels such as browser, mobile, or both.
+  - Mandated platform or external provider: only when a contract, regulation, organization policy, or durable system boundary requires it.
+  - Data and security boundary: residency, isolation, trust, encryption, or privacy constraints.
+  - Deployment boundary: required regions, environments, availability, recovery, or offline constraints.
+- State the requirement and its basis. Do not list a technology merely because it is the current or recommended implementation.
+- Exclude replaceable frameworks, SDKs, ORMs, internal database products, credential plumbing, module layouts, CI tools, and tuning values. Code and dependency metadata own those facts.
+- If no additional durable constraints exist beyond Section 4.1, state that directly instead of inventing a technology recommendation.
     </description>
     <example>
 - Scale assumption: ~1,000 total users at launch, tens concurrent at peak
-- Frontend: React (Tailwind CSS)
-- Backend: Node.js (Express)
-- Database: MongoDB
-- Infrastructure: AWS (EC2), GitHub Actions (CI/CD)
+- Access boundary: users access the MVP through a web browser.
+- Data boundary: customer documents remain in the contracted region.
+- External provider boundary: the model provider must satisfy the organization's no-training data policy.
     </example>
   </subsection>
 </section>

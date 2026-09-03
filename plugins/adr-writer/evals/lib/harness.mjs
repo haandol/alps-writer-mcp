@@ -62,7 +62,21 @@ export function seedMapping(dir, mapping = { categories: {} }) {
 export function validateReviewArtifact(dir, report, findings) {
   const artifactDir = path.join(dir, "review-artifact");
   const reportPath = write(artifactDir, "implementation-review.md", report);
-  const explanationPath = write(artifactDir, "explanation.md", "# Review explanation\n");
+  const explanationPath = write(
+    artifactDir,
+    "explanation.md",
+    `# Implementation explanation
+
+## Background
+The change sits inside the reviewed ADR flow.
+
+## Intuition
+The implementation preserves the reviewed contract through the described boundary.
+
+## Code walkthrough
+The verified path follows the evidence and tests supplied by the scenario.
+`,
+  );
   const atAGlance = {};
   for (const field of ["impact", "action", "risk"]) {
     const match = report.match(new RegExp(`^[-*]\\s+${field}:\\s*(.+)$`, "im"));
@@ -76,7 +90,7 @@ export function validateReviewArtifact(dir, report, findings) {
         ...findings,
         atAGlance: findings.atAGlance ?? atAGlance,
         report: reportPath,
-        explanation: findings.reviewMode === "full" ? explanationPath : undefined,
+        explanation: explanationPath,
       },
       null,
       2,
