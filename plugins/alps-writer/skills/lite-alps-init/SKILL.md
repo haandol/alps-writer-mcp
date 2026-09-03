@@ -37,6 +37,10 @@ implementation readiness.
      source covering several Sections.
    - Batch mode still keeps every Section as a separate approval unit and saves each subsection
      separately.
+   - Treat a supplied ticket, incident, PDF, or structured source as ephemeral input. Preserve only
+     the target problem, Desired Business Impact, observable experience, exact product rules,
+     success conditions, and explicit exclusions. Do not copy source IDs, logs, code paths,
+     implementation plans, or code-recoverable technology facts into Lite ALPS.
 5. Use the authoring order **1 → 2 → 3 → 4**.
    - Sections 1, 2, and 4 are required.
    - Section 3 is optional and remains unwritten when the user has no explicit exclusions and the

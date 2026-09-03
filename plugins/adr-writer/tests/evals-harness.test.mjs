@@ -380,6 +380,10 @@ test("the implementation-review Evidence Package scorer distinguishes verified a
           summary:
             "verdict=INCONCLUSIVE; exception=의무 2 미검증; action=verify failure injection or accept risk; noPerRowApproval=true",
         },
+        {
+          tag: "COMPREHENSION",
+          summary: "questionCount=1; answersHidden=true; prReadyBeforeQuiz=false",
+        },
       ],
     },
     output: `# ADR implementation review
@@ -392,6 +396,12 @@ test("the implementation-review Evidence Package scorer distinguishes verified a
 full
 ## Scope
 payment settlement
+## Background
+Settlement turns a provider result into a durable completion record.
+## Intuition
+Completion is recorded only after the provider result crosses the idempotent boundary.
+## Code walkthrough
+The duplicate path ran, but the provider-failure path could not be executed.
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -408,6 +418,10 @@ Provider failure remains unverified. Coverage and choices are read-only.
 Duplicate settlement PASS; provider failure NOT RUN.
 ## Residual risks
 Provider failure remains unverified.
+## Comprehension check
+Do not open or send the PR until every comprehension question is answered correctly without reading the answer criteria.
+
+1. Q1 — What remains unknown about provider failure, and why does that prevent a complete review verdict?
 === EVAL-VERDICT: INCONCLUSIVE ===`,
   });
   assert.ok(
@@ -460,7 +474,7 @@ Approve each row?
   assert.equal(badChecks.find((check) => check.label.includes("complete table row"))?.pass, false);
 });
 
-test("the PASS Evidence Package scorer rejects a new human gate", async () => {
+test("the PASS Evidence Package scorer rejects architecture approval while allowing a separate comprehension gate", async () => {
   const scenario = await loadScenario("impl-review-evidence-package-pass.mjs");
   const dir = mkdtempSync(path.join(tmpdir(), "adr-eval-evidence-pass-gate-"));
   await scenario.build(dir);
@@ -493,6 +507,10 @@ test("the PASS Evidence Package scorer rejects a new human gate", async () => {
           tag: "HUMAN_REVIEW",
           summary: "verdict=PASS; decisionRequired=true; noPerRowApproval=false",
         },
+        {
+          tag: "COMPREHENSION",
+          summary: "questionCount=1; answersHidden=true; prReadyBeforeQuiz=false",
+        },
       ],
     },
     output: `# ADR implementation review
@@ -505,6 +523,12 @@ test("the PASS Evidence Package scorer rejects a new human gate", async () => {
 full
 ## Scope
 payment settlement
+## Background
+Settlement turns a provider result into a durable completion record.
+## Intuition
+The idempotent boundary admits one completion and preserves pending state on failure.
+## Code walkthrough
+The duplicate and provider-failure paths both passed their targeted tests.
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -521,15 +545,150 @@ Approve each choice?
 Both targeted tests passed.
 ## Residual risks
 Unverified core risk: none.
+## Comprehension check
+Do not open or send the PR until every comprehension question is answered correctly without reading the answer criteria.
+
+1. Q1 — Why does a provider failure leave the payment pending instead of completed?
 === EVAL-VERDICT: PASS ===`,
   });
   assert.equal(
-    checks.find((check) => check.label.includes("without another human decision"))?.pass,
+    checks.find((check) => check.label.includes("without another architecture decision"))?.pass,
     false,
   );
   assert.equal(
     checks.find((check) => check.label.includes("approve each coverage row"))?.pass,
     false,
+  );
+});
+
+test("the comprehension gate scorer separates retry from final PR readiness", async () => {
+  const retryScenario = await loadScenario("impl-review-comprehension-retry.mjs");
+  const retryDir = mkdtempSync(path.join(tmpdir(), "adr-eval-comprehension-retry-"));
+  await retryScenario.build(retryDir);
+  const retryChecks = retryScenario.score({
+    dir: retryDir,
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "QUIZ_RESULT",
+          summary: "question=Q1; correct=false; prReady=false; retry=Q1; verdict=PASS",
+        },
+      ],
+    },
+    output: `Your answer focuses on retry timing, not the completion rule. The PR is not comprehension-ready. A provider result must succeed before it crosses the completion boundary and records completion; provider failure therefore leaves the payment pending.
+
+Q1: Why does provider failure leave the payment pending instead of completed?
+=== EVAL-VERDICT: PASS ===`,
+  });
+  assert.ok(
+    retryChecks.every((check) => check.pass),
+    JSON.stringify(retryChecks, null, 2),
+  );
+
+  const passScenario = await loadScenario("impl-review-comprehension-pass.mjs");
+  const passDir = mkdtempSync(path.join(tmpdir(), "adr-eval-comprehension-pass-"));
+  await passScenario.build(passDir);
+  const passChecks = passScenario.score({
+    dir: passDir,
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "QUIZ_RESULT",
+          summary: "question=Q1; correct=true; prReady=true; verdict=PASS",
+        },
+      ],
+    },
+    output: `Correct. You identified that a successful provider result must cross the completion boundary before completion is recorded. The PR is comprehension-ready.
+=== EVAL-VERDICT: PASS ===`,
+  });
+  assert.ok(
+    passChecks.every((check) => check.pass),
+    JSON.stringify(passChecks, null, 2),
+  );
+
+  const prematureChecks = passScenario.score({
+    dir: passDir,
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "QUIZ_RESULT",
+          summary: "question=Q1; correct=false; prReady=true; verdict=PASS",
+        },
+      ],
+    },
+    output: "The PR is comprehension-ready.",
+  });
+  assert.equal(
+    prematureChecks.find((check) => check.label.includes("only after the final correct answer"))
+      ?.pass,
+    false,
+  );
+});
+
+test("the implementation documentation scorer requires why/how, no ADR reference, and ideal plus edge tests", async () => {
+  const scenario = await loadScenario("impl-requires-standard-docs-and-ideal-edge-tests.mjs");
+  const goodChecks = scenario.score({
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "CASE_A",
+          summary:
+            "verdict=FIX_REQUIRED; documentation=missing; ideal=present; edge=missing; action=add GoDoc and provider failure plus duplicate edge tests",
+        },
+        {
+          tag: "CASE_B",
+          summary:
+            "verdict=PASS; documentation=GoDoc standard; why=present; how=present; terminology=reused; adrReference=none; ideal=present; edge=present",
+        },
+        {
+          tag: "CASE_C",
+          summary:
+            "verdict=FIX_REQUIRED; adrReference=present; action=remove the reference and preserve domain contract terms",
+        },
+      ],
+    },
+    output: `Case A — FIX_REQUIRED. Add GoDoc explaining why SettlePayment exists and how it preserves pending payment behavior, then add provider-failure and duplicate-settlement tests.
+
+Case B — PASS on this policy axis. The GoDoc carries why/how with the contract vocabulary, and the ideal and relevant edge tests are present.
+
+Case C — FIX_REQUIRED. Remove the decision-document reference while retaining the pending payment, provider failure, and at-most-once completion terms.
+=== EVAL-VERDICT: PASS ===`,
+  });
+  assert.ok(
+    goodChecks.every((check) => check.pass),
+    JSON.stringify(goodChecks, null, 2),
+  );
+
+  const badChecks = scenario.score({
+    tail: {
+      verdict: "PASS",
+      findings: [
+        {
+          tag: "CASE_A",
+          summary:
+            "verdict=PASS; documentation=optional; ideal=present; edge=optional; action=none",
+        },
+        {
+          tag: "CASE_B",
+          summary:
+            "verdict=PASS; documentation=GoDoc; why=present; how=present; terminology=reused; adrReference=none; ideal=present; edge=present",
+        },
+        {
+          tag: "CASE_C",
+          summary: "verdict=PASS; adrReference=allowed; action=keep it",
+        },
+      ],
+    },
+    output: "Case A — PASS. Case B — PASS. Case C — PASS because an ADR reference is acceptable.",
+  });
+  assert.equal(
+    badChecks.some((check) => !check.pass),
+    true,
+    "optional comments, happy-path-only tests, and direct ADR references must fail",
   );
 });
 

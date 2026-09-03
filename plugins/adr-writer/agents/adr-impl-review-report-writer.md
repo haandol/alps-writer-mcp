@@ -25,13 +25,18 @@ upstream review artifacts remain evidence sources, not a prose template.
 
 ## Core report
 
-Every report must let the reader answer five questions without reconstructing the whole implementation:
+Every report must let the reader answer these questions without reconstructing
+the whole implementation:
 
 1. What did the review conclude, and what does that mean for a user or operator?
 2. What must happen next?
-3. Which ADR decisions and contract rows are accounted for, and what did the implementation do for each one?
-4. Which tests ran and what did they prove?
-5. What risk remains unverified?
+3. What surrounding system and prerequisite concepts make the change understandable?
+4. What is the core idea, and how did behavior change?
+5. In what execution or dependency order does the code now work?
+6. Which ADR decisions and contract rows are accounted for, and what did the implementation do for each one?
+7. Which tests ran and what did they prove?
+8. What risk remains unverified?
+9. Which one to five important questions would reveal whether the reader can explain the implementation?
 
 Start with `At a glance`:
 
@@ -54,7 +59,8 @@ Use exactly `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`. Keep the ADR 
 
 Concise means short cells, not fewer columns. Do not merge ADR basis, implementation, evidence, and tests into a smaller summary or a prose sentence.
 
-Use progressive disclosure. The default report is concise, including in full mode and for PASS. Keep this structure:
+Use progressive disclosure. The default report is concise, including in full
+mode and for PASS. Keep this structure:
 
 ```markdown
 # ADR implementation review
@@ -64,6 +70,12 @@ Use progressive disclosure. The default report is concise, including in full mod
 ## Review mode
 
 ## Scope
+
+## Background
+
+## Intuition
+
+## Code walkthrough
 
 ## Visual map
 
@@ -76,10 +88,36 @@ Use progressive disclosure. The default report is concise, including in full mod
 ## Tests
 
 ## Residual risks
+
+## Comprehension check
 ```
 
 `Visual map` is conditional. Omit the heading when the shared report guide has
 no visualization trigger.
+
+`Background`, `Intuition`, `Code walkthrough`, and `Comprehension check` are
+fixed headings in that relative order. Only the headings and order are fixed.
+Choose the paragraphs, lists, tables, examples, optional `###` subsections, and
+length that best fit the subject.
+
+- `Background` gives the minimum surrounding system and prerequisite concepts
+  needed to understand the change.
+- `Intuition` explains the core mechanism and before/after mental model. A small
+  example is optional, not a quota.
+- `Code walkthrough` follows actual execution or dependency order and includes
+  relevant failure paths and tests. It may point to file/symbol evidence without
+  becoming a line-by-line diff narration.
+- `Comprehension check` contains one to five medium-difficulty free-response
+  questions about the most material behavior, causal path, ADR contract,
+  boundary/failure case, or trade-off. Do not ask trivia about symbol names or
+  line numbers.
+
+The visible report contains the questions and this guidance: a code-review
+`PASS` does not prove human understanding, and the reader should not open or send
+the PR until every question can be answered without looking at the answer
+criteria. Keep each question's semantic answer criteria and ADR/code/test
+evidence in `findings.json`; do not expose them in the report before the reader
+answers.
 
 The ADR supplies architectural decisions and contracts. **These are material code-level choices the ADR intentionally does not own**, so list them under `Notable implementation choices` only when they affect runtime behavior, failure handling, operations, cost, or future maintenance. They do not amend the ADR.
 
@@ -124,9 +162,12 @@ For each actionable finding include:
 - Completion criteria
 - Needs confirmation
 
-Keep the fix steps proportional to the finding. Ban vague instructions such as "handle appropriately" or "add the necessary tests". Do not create a tutorial, glossary, code-reading tour, merge checklist, or extra diagram unless it directly helps resolve a verified finding.
+Keep the fix steps proportional to the finding. Ban vague instructions such as
+"handle appropriately" or "add the necessary tests". Do not add another
+tutorial, glossary, merge checklist, or extra diagram outside the fixed
+explanation sections unless it directly helps resolve a verified finding.
 
-When a long comment describes behavior that lacks coverage, instruct the reader to add the test first, then shorten the comment.
+When language-standard function documentation is missing or incomplete, instruct the reader to add a comment that states why the function exists and how it enforces the relevant behavior, using the contract's domain vocabulary without any ADR number, path, link, or source reference. When an ideal or relevant edge case is missing, name that exact test gap. When a long inline comment describes behavior that lacks coverage, instruct the reader to add the test first, then shorten the inline comment.
 
 ## Evidence discipline
 
@@ -134,6 +175,9 @@ When a long comment describes behavior that lacks coverage, instruct the reader 
 - Mark an unexecuted claim as `needs confirmation`; never present it as a confirmed defect.
 - Explain jargon only when it appears in the report.
 - Put the observable symptom before the internal category or symbol name.
+- Keep the fixed explanation sections grounded in the ADR, diff, code, and
+  tests. Do not turn them into generic background material.
+- Generate no filler quiz question merely to reach five.
 - Delete praise, scene-setting, repeated conclusions, generic advice, speculative
   future work, and duplicated evidence.
 - A PASS report explains why the contract is covered and names residual risk; it does not simulate a repair guide.

@@ -38,8 +38,8 @@
       "adrs": [
         {
           "path": "docs/adr/alps-authoring/c4-architecture/0001-context-and-container-only-prd-architecture.md",
-          "status": "Accepted (2026-08-15)",
-          "summary": "ALPS PRD의 High-Level Architecture는 C4 Context와 Container를 모두 필수로 사용하고 그 외 C4 및 Code 수준 다이어그램은 제외한다"
+          "status": "Accepted (2026-09-02)",
+          "summary": "ALPS PRD의 High-Level Architecture는 C4 Context와 Container 및 재구현 후에도 유지할 아키텍처 제약만 보존하고 교체 가능한 기술 스택은 기록하지 않는다"
         }
       ],
       "dependsOn": []
@@ -104,8 +104,8 @@
       "adrs": [
         {
           "path": "docs/adr/adr-cycle/implementation-review/0001-validated-low-risk-refactoring.md",
-          "status": "Accepted (2026-08-28)",
-          "summary": "구현 리뷰는 주니어용 Evidence Package와 계약 증거, 필요성·충분성 관점을 유지하되 agent 수와 실행 방식은 모델이 선택하고 저위험 리팩토링은 근거와 전후 테스트로 판정한다"
+          "status": "Accepted (2026-09-03)",
+          "summary": "구현 리뷰는 Evidence Package와 위험 비례 관점을 유지하며 언어 표준 함수 문서 주석과 ideal·edge 테스트 누락을 PASS 전에 보완한다"
         }
       ],
       "dependsOn": []
@@ -126,8 +126,8 @@
       "adrs": [
         {
           "path": "docs/adr/delivery/development-flow/0001-safe-proportional-development-gates.md",
-          "status": "Accepted (2026-08-28)",
-          "summary": "개발 흐름은 기존 복잡도 평가와 안전 게이트를 유지하며 하네스를 제거 가능한 계층으로 두고 action-level orchestration은 모델이 선택한다"
+          "status": "Accepted (2026-09-03)",
+          "summary": "개발 흐름은 안전 게이트와 모델 재량 orchestration을 유지하며 ADR 구현 함수의 언어 표준 문서 주석과 ideal·edge 테스트를 완료 조건으로 요구한다"
         }
       ],
       "dependsOn": ["adr-cycle/implementation-review", "alps-authoring/spec-handoff"]

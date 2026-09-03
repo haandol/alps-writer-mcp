@@ -89,8 +89,15 @@ reason to hide evidence or merge independent obligations.
   diagram.
 - **ADR sync** — visualize a changed decision flow, dependency/category movement,
   or unresolved ADR-versus-code branch. Keep semantic diffs in text.
-- **Implementation review** — visualize the request/event path, state/failure path,
-  or changed data relationship before contract coverage when a trigger applies.
+- **Implementation review** — before contract coverage, always use the fixed
+  `Background`, `Intuition`, and `Code walkthrough` headings in that order, then
+  visualize the request/event path, state/failure path, or changed data
+  relationship when a trigger applies. The headings and order are predictable;
+  their internal paragraphs, lists, tables, examples, optional subsections, and
+  length remain subject-specific. End the report with `Comprehension check`
+  containing one to five material free-response questions. Keep the answer
+  criteria out of the visible report until the reader answers, and state that a
+  code `PASS` does not make the PR comprehension-ready.
 - **Implementation refactor** — visualize before/after work flow only when several
   call sites or processing stages are involved. A local rename or extraction does
   not need one.

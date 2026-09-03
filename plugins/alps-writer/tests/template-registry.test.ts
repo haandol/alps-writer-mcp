@@ -94,6 +94,15 @@ test("the shipped templates expose the titles the tools advertise", () => {
       assert.doesNotMatch(title, /&(amp|lt|gt|quot|apos);/, `${id} title was not decoded`);
     }
   }
+
+  assert.deepEqual(registry.validateSubsection(4, "2", "Architecture Constraints"), {
+    ok: true,
+    fullId: "4.2",
+  });
+  assert.deepEqual(registry.validateSubsection(4, "2", "Technology Stack"), {
+    ok: false,
+    message: 'Title for 4.2 must be "Architecture Constraints".',
+  });
 });
 
 test("the Lite templates use fixed sections, keep Section 3 optional, and require Section 4", () => {

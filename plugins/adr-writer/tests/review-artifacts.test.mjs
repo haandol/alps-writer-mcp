@@ -18,6 +18,52 @@ const STANDARD_AT_A_GLANCE = {
   action: "None.",
   risk: "The review used the standard sufficiency perspective because no protected surface changed.",
 };
+const PR_GUIDANCE =
+  "Do not open or send the PR until every comprehension question is answered correctly without reading the answer criteria.";
+
+function validExplanation() {
+  return `# Implementation explanation
+
+## Background
+Settlement turns a provider result into a durable completion record.
+
+## Intuition
+The completion boundary must admit one successful result and reject duplicates.
+
+## Code walkthrough
+The handler checks the idempotency key, calls the provider, and records completion only after success.
+`;
+}
+
+function validComprehensionCheck() {
+  return {
+    prGuidance: PR_GUIDANCE,
+    questions: [
+      {
+        id: "Q1",
+        question: "Why must settlement record completion only once?",
+        answerCriteria:
+          "The idempotency boundary prevents duplicate requests from creating duplicate completion records.",
+        evidence: "ADR R1; src/stream.mjs:4; duplicate settlement test",
+      },
+    ],
+  };
+}
+
+function validParserComprehensionCheck() {
+  return {
+    prGuidance: PR_GUIDANCE,
+    questions: [
+      {
+        id: "Q1",
+        question: "Why does the helper extraction preserve parser compatibility?",
+        answerCriteria:
+          "The accepted inputs, validation order, and public output shape remain unchanged.",
+        evidence: "ADR R1; src/parser.mjs; parser compatibility test",
+      },
+    ],
+  };
+}
 
 function withArtifacts(run) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "adr-review-artifacts-"));
@@ -76,6 +122,15 @@ full
 ## Scope
 stream settlement
 
+## Background
+Settlement turns a provider result into a durable completion record.
+
+## Intuition
+The completion boundary must admit one successful result and reject duplicates.
+
+## Code walkthrough
+The handler checks the idempotency key, calls the provider, and records completion only after success.
+
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -99,6 +154,11 @@ node --test test/stream.test.mjs — FAIL
 
 ## Residual risks
 None beyond F1.
+
+## Comprehension check
+${PR_GUIDANCE}
+
+1. Q1 — Why must settlement record completion only once?
 
 ## Repair guide
 Fix F1 before merge.
@@ -143,6 +203,7 @@ function validFindings(dir) {
         whyItMatters: "changes recovery latency and request rate",
       },
     ],
+    comprehensionCheck: validComprehensionCheck(),
     contractCoverage: [
       {
         contractId: "D0",
@@ -193,6 +254,15 @@ standard — localized implementation reinforcement
 ## Scope
 src/parser.mjs
 
+## Background
+The parser converts existing accepted inputs into the same public output shape.
+
+## Intuition
+The helper extraction changes organization, not parsing behavior.
+
+## Code walkthrough
+Input validation and output construction still run in the same order.
+
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -210,12 +280,17 @@ node --test test/parser.test.mjs — PASS
 
 ## Residual risks
 Standard sufficiency perspective only; no protected surface changed.
+
+## Comprehension check
+${PR_GUIDANCE}
+
+1. Q1 — Why does the helper extraction preserve parser compatibility?
 `;
 }
 
 test("review artifact validator accepts a concise full report without Mermaid", () => {
   withArtifacts((dir) => {
-    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), validReport());
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
 
@@ -226,7 +301,7 @@ test("review artifact validator accepts a concise full report without Mermaid", 
 
 test("review artifact validator accepts inline-code contract IDs and statuses", () => {
   withArtifacts((dir) => {
-    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), validReportWithInlineCodeCells());
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
 
@@ -237,7 +312,7 @@ test("review artifact validator accepts inline-code contract IDs and statuses", 
 
 test("review artifact validator rejects missing core headings and evidence fields", () => {
   withArtifacts((dir) => {
-    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), "# short report\n");
     const findings = validFindings(dir);
     delete findings.findings[0].evidence;
@@ -253,7 +328,7 @@ test("review artifact validator rejects missing core headings and evidence field
 
 test("review artifact validator requires internally consistent review metrics", () => {
   withArtifacts((dir) => {
-    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), validReport());
     const findings = validFindings(dir);
     findings.metrics.unverifiedRiskCount = 1;
@@ -267,7 +342,7 @@ test("review artifact validator requires internally consistent review metrics", 
 
 test("review artifact validator rejects incomplete notable implementation choices", () => {
   withArtifacts((dir) => {
-    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), validReport());
     const findings = validFindings(dir);
     delete findings.implementationChoices[0].intentFit;
@@ -281,7 +356,7 @@ test("review artifact validator rejects incomplete notable implementation choice
 
 test("review artifact validator requires a complete At a glance handoff", () => {
   withArtifacts((dir) => {
-    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(
       path.join(dir, "implementation-review.md"),
       validReport().replace(`- Risk: ${FULL_AT_A_GLANCE.risk}\n`, ""),
@@ -298,17 +373,18 @@ test("review artifact validator requires a complete At a glance handoff", () => 
 
 test("review artifact validator rejects missing coverage fields and non-proven PASS rows", () => {
   withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
     const findings = validFindings(dir);
     findings.reviewMode = "standard";
     findings.verdict = "PASS";
     findings.atAGlance = { ...STANDARD_AT_A_GLANCE };
+    findings.comprehensionCheck = validParserComprehensionCheck();
     findings.findings = [];
     findings.implementationChoices = [];
     findings.metrics.sufficiencyFindingCount = 0;
     findings.contractCoverage[1].status = "UNVERIFIED";
     delete findings.contractCoverage[1].evidence;
-    delete findings.explanation;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
 
     const result = validate(dir);
@@ -318,15 +394,17 @@ test("review artifact validator rejects missing coverage fields and non-proven P
   });
 });
 
-test("review artifact validator accepts concise standard-mode artifacts without Mermaid or explanation", () => {
+test("review artifact validator accepts concise standard-mode artifacts without Mermaid", () => {
   withArtifacts((dir) => {
     writeAdr(dir, "Existing parsing behavior remains unchanged");
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
     const findings = validFindings(dir);
     writeAdr(dir, "Existing parsing behavior remains unchanged");
     findings.reviewMode = "standard";
     findings.verdict = "PASS";
     findings.atAGlance = { ...STANDARD_AT_A_GLANCE };
+    findings.comprehensionCheck = validParserComprehensionCheck();
     findings.findings = [];
     findings.implementationChoices = [];
     findings.contractCoverage = [
@@ -350,7 +428,6 @@ test("review artifact validator accepts concise standard-mode artifacts without 
       },
     ];
     findings.metrics.sufficiencyFindingCount = 0;
-    delete findings.explanation;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
 
     const result = validate(dir);
@@ -360,12 +437,13 @@ test("review artifact validator accepts concise standard-mode artifacts without 
 
 test("standard-mode artifacts reject necessity findings and missing contract coverage", () => {
   withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), "# ADR implementation review\n");
     const findings = validFindings(dir);
     findings.reviewMode = "standard";
     findings.atAGlance = { ...STANDARD_AT_A_GLANCE };
+    findings.comprehensionCheck = validParserComprehensionCheck();
     findings.metrics.necessityFindingCount = 1;
-    delete findings.explanation;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
 
     const result = validate(dir);
@@ -377,12 +455,14 @@ test("standard-mode artifacts reject necessity findings and missing contract cov
 
 test("PASS rejects omitted ADR rows, duplicate IDs, unexecuted tests, and blocking findings", () => {
   withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "implementation-review.md"), validStandardReport());
     const findings = validFindings(dir);
     writeAdr(dir, "Existing parsing behavior remains unchanged");
     findings.reviewMode = "standard";
     findings.verdict = "PASS";
     findings.atAGlance = { ...STANDARD_AT_A_GLANCE };
+    findings.comprehensionCheck = validParserComprehensionCheck();
     findings.contractCoverage = [
       {
         contractId: "D0",
@@ -417,7 +497,6 @@ test("PASS rejects omitted ADR rows, duplicate IDs, unexecuted tests, and blocki
         testResult: "NOT RUN",
       },
     ];
-    delete findings.explanation;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
 
     const result = validate(dir);
@@ -444,12 +523,72 @@ test("human-facing report requires complete coverage and implementation-choice t
           "| 250 ms fixed retry | src/stream.mjs:8 |",
         ),
     );
-    writeFileSync(path.join(dir, "explanation.md"), "# explanation\n");
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
 
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /must have seven non-empty columns/);
     assert.match(result.stderr, /must have four non-empty columns/);
+  });
+});
+
+test("review artifact validator enforces the flexible fixed-section explanation template", () => {
+  withArtifacts((dir) => {
+    writeFileSync(
+      path.join(dir, "explanation.md"),
+      validExplanation().replace("## Intuition", "## Implementation notes"),
+    );
+    writeFileSync(path.join(dir, "implementation-review.md"), validReport());
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(validFindings(dir), null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /exactly these top-level headings/);
+  });
+});
+
+test("review artifact validator requires one to five hidden-answer comprehension questions", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
+    const findings = validFindings(dir);
+    findings.comprehensionCheck.questions = Array.from({ length: 6 }, (_, index) => ({
+      id: `Q${index + 1}`,
+      question: `Question ${index + 1}?`,
+      answerCriteria: `Answer ${index + 1}`,
+      evidence: `Evidence ${index + 1}`,
+    }));
+    writeFileSync(
+      path.join(dir, "implementation-review.md"),
+      validReport().replace(
+        "1. Q1 — Why must settlement record completion only once?",
+        `1. Q1 — Why must settlement record completion only once?\n\n${findings.comprehensionCheck.questions
+          .slice(1)
+          .map((question, index) => `${index + 2}. ${question.id} — ${question.question}`)
+          .join("\n")}`,
+      ),
+    );
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /must contain 1 to 5 questions/);
+  });
+
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
+    const findings = validFindings(dir);
+    writeFileSync(
+      path.join(dir, "implementation-review.md"),
+      validReport().replace(
+        "1. Q1 — Why must settlement record completion only once?",
+        `1. Q1 — Why must settlement record completion only once?\n\n${findings.comprehensionCheck.questions[0].answerCriteria}`,
+      ),
+    );
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /exposes comprehensionCheck\.questions\[0\]\.answerCriteria/);
   });
 });

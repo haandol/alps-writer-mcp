@@ -15,12 +15,17 @@ const REQUIRED_REPORT_TEXT = [
   "## At a glance",
   "## Review mode",
   "## Scope",
+  "## Background",
+  "## Intuition",
+  "## Code walkthrough",
   "## ADR contract coverage",
   "## Notable implementation choices",
   "## Findings",
   "## Tests",
   "## Residual risks",
+  "## Comprehension check",
 ];
+const REQUIRED_EXPLANATION_HEADINGS = ["## Background", "## Intuition", "## Code walkthrough"];
 const REQUIRED_REPAIR_TEXT = [
   "## Repair guide",
   "Files and symbols to change:",
@@ -214,6 +219,47 @@ function validateContractCoverage(row, index, errors) {
   }
 }
 
+function validateComprehensionCheck(check, errors) {
+  if (!check || typeof check !== "object" || Array.isArray(check)) {
+    errors.push("findings.json comprehensionCheck must be an object");
+    return;
+  }
+
+  if (typeof check.prGuidance !== "string" || !check.prGuidance.trim()) {
+    errors.push("findings.json comprehensionCheck.prGuidance must be a non-empty string");
+  }
+
+  if (!Array.isArray(check.questions)) {
+    errors.push("findings.json comprehensionCheck.questions must be an array");
+    return;
+  }
+  if (check.questions.length < 1 || check.questions.length > 5) {
+    errors.push("findings.json comprehensionCheck.questions must contain 1 to 5 questions");
+  }
+
+  const seen = new Set();
+  for (const [index, question] of check.questions.entries()) {
+    const label = `comprehensionCheck.questions[${index}]`;
+    if (!question || typeof question !== "object" || Array.isArray(question)) {
+      errors.push(`${label} must be an object`);
+      continue;
+    }
+    for (const field of ["id", "question", "answerCriteria", "evidence"]) {
+      if (typeof question[field] !== "string" || !question[field].trim()) {
+        errors.push(`${label}.${field} must be a non-empty string`);
+      }
+    }
+    const expectedId = `Q${index + 1}`;
+    if (question.id !== expectedId) {
+      errors.push(`${label}.id must be ${expectedId}`);
+    }
+    if (seen.has(question.id)) {
+      errors.push(`comprehensionCheck contains duplicate question id: ${question.id}`);
+    }
+    seen.add(question.id);
+  }
+}
+
 function validateContractCompleteness(rows, expectedRows, errors) {
   const expected = new Map(expectedRows.map((row) => [row.contractId, row]));
   const seen = new Set();
@@ -337,9 +383,68 @@ function validateMetrics(metrics, findings, errors) {
   }
 }
 
+function validateHeadingOrder(source, headings, label, errors) {
+  let previous = -1;
+  for (const heading of headings) {
+    const index = source.indexOf(heading);
+    if (index < 0) continue;
+    if (index <= previous) {
+      errors.push(`${label} headings must keep this order: ${headings.join(" → ")}`);
+      return;
+    }
+    previous = index;
+  }
+}
+
+function validateExplanation(explanation, errors) {
+  validateHeadingOrder(explanation, REQUIRED_EXPLANATION_HEADINGS, "explanation.md", errors);
+
+  const actualHeadings = explanation.match(/^## .+$/gm) ?? [];
+  if (
+    actualHeadings.length !== REQUIRED_EXPLANATION_HEADINGS.length ||
+    actualHeadings.some((heading, index) => heading !== REQUIRED_EXPLANATION_HEADINGS[index])
+  ) {
+    errors.push(
+      `explanation.md must use exactly these top-level headings: ${REQUIRED_EXPLANATION_HEADINGS.join(
+        " → ",
+      )}`,
+    );
+  }
+
+  for (let index = 0; index < REQUIRED_EXPLANATION_HEADINGS.length; index++) {
+    const heading = REQUIRED_EXPLANATION_HEADINGS[index];
+    const next = REQUIRED_EXPLANATION_HEADINGS[index + 1];
+    const body = sectionBody(
+      explanation,
+      new RegExp(`^${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i"),
+      next ? new RegExp(`^${next.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i") : /^##\s+/,
+    );
+    if (!body) errors.push(`explanation.md ${heading} must not be empty`);
+  }
+}
+
 function validateReport(report, data, errors) {
   for (const text of REQUIRED_REPORT_TEXT) {
     if (!report.includes(text)) errors.push(`implementation-review.md missing: ${text}`);
+  }
+  validateHeadingOrder(
+    report,
+    ["## Background", "## Intuition", "## Code walkthrough", "## Comprehension check"],
+    "implementation-review.md",
+    errors,
+  );
+
+  for (const [heading, nextHeading] of [
+    ["Background", "Intuition"],
+    ["Intuition", "Code walkthrough"],
+    ["Code walkthrough", "Visual map|ADR contract coverage"],
+  ]) {
+    const body = sectionBody(
+      report,
+      new RegExp(`^## ${heading}\\s*$`, "i"),
+      new RegExp(`^## (?:${nextHeading})\\s*$`, "i"),
+    );
+    if (!body) errors.push(`implementation-review.md ## ${heading} must not be empty`);
   }
 
   const atAGlanceBody = sectionBody(report, /^## At a glance\s*$/i, /^##\s+/);
@@ -378,6 +483,32 @@ function validateReport(report, data, errors) {
       errors.push(
         `implementation-review.md implementationChoices[${index}] must have four non-empty columns`,
       );
+    }
+  }
+
+  const comprehensionBody = sectionBody(report, /^## Comprehension check\s*$/i, /^##\s+/);
+  const check = data.comprehensionCheck;
+  if (check?.prGuidance && !comprehensionBody.includes(check.prGuidance)) {
+    errors.push("implementation-review.md missing comprehensionCheck.prGuidance");
+  }
+  for (const [index, question] of (check?.questions ?? []).entries()) {
+    if (
+      !comprehensionBody.includes(question.id) ||
+      !comprehensionBody.includes(question.question)
+    ) {
+      errors.push(`implementation-review.md missing comprehensionCheck.questions[${index}] prompt`);
+    }
+    for (const hiddenField of ["answerCriteria", "evidence"]) {
+      const hiddenValue = question[hiddenField];
+      if (
+        typeof hiddenValue === "string" &&
+        hiddenValue.trim() &&
+        comprehensionBody.includes(hiddenValue.trim())
+      ) {
+        errors.push(
+          `implementation-review.md exposes comprehensionCheck.questions[${index}].${hiddenField}`,
+        );
+      }
     }
   }
 
@@ -449,6 +580,8 @@ function main() {
       );
     }
 
+    validateComprehensionCheck(data.comprehensionCheck, errors);
+
     if (!Array.isArray(data.contractCoverage) || data.contractCoverage.length === 0) {
       errors.push("findings.json contractCoverage must be a non-empty array");
     } else {
@@ -465,11 +598,11 @@ function main() {
     if (!reportPath || path.resolve(reportPath) !== path.resolve(expectedReport)) {
       errors.push("findings.json report must point to implementation-review.md");
     }
-    if (data.reviewMode === "full") {
-      const explanationPath = resolveArtifact(artifactDir, data.explanation);
-      if (!explanationPath || !existsSync(explanationPath)) {
-        errors.push("full review explanation must point to an existing file");
-      }
+    const explanationPath = resolveArtifact(artifactDir, data.explanation);
+    if (!explanationPath || !existsSync(explanationPath)) {
+      errors.push("review explanation must point to an existing file");
+    } else {
+      validateExplanation(readFileSync(explanationPath, "utf8"), errors);
     }
 
     if (existsSync(expectedReport)) {

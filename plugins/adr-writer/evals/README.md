@@ -23,10 +23,19 @@ node evals/run.mjs --list                        # scenario names
 node evals/run.mjs --dry-run --only review-      # build fixtures, print prompts, no agent
 node evals/run.mjs --only review-catches         # one scenario, one run
 node evals/run.mjs --only review-catches --runs 10   # rates
+node evals/run.mjs --changed main --list          # affected scenarios only
+node evals/run.mjs --changed main --runs 5        # affected branch + working-tree scenarios
 node evals/run.mjs --runs 5 --out /tmp/report.md     # everything, shareable report
 node evals/run.mjs --only review-catches --out /tmp/report.md \
   --include-transcript --include-fixture-paths        # explicit sensitive detail
 ```
+
+`--changed <git-base>` uses the disposable routing table in `impact-map.mjs` to
+select scenarios affected by the branch diff, staged files, and unstaged files.
+The table does not become a source of product or ADR truth; it only avoids
+calling a live model for unrelated prompts. Shared ADR rule or eval-harness
+changes select every scenario. If no rule matches, the command exits successfully
+without invoking an agent.
 
 The agent command is configurable, since this plugin ships for two clients and
 models outlive this directory:
@@ -120,6 +129,10 @@ disposable reproduction artifacts.
    - `alps-approval-digest-preserves-contract` checks that concise raw-text
      approval omits implementation detail without dropping values, permissions,
      state rules, or the Demo checkpoint.
+   - `alps-reference-routes-only-durable-context` checks the source-lifetime
+     boundary: an incident or ticket may supply product and architecture
+     constraints, but its ID, logs, code paths, and recoverable technology
+     snapshot must not become ALPS content.
    - `alps-high-load-suggests-feature-split` checks that a Section 7 Feature at
      `8/10` or higher receives two or three user-behavior split candidates,
      retains the original-Feature option, and never becomes a blocking gate.
@@ -148,12 +161,21 @@ disposable reproduction artifacts.
      `impl-review-evidence-package-pass` check both Evidence Package verdict
      directions. A material `UNVERIFIED` obligation must produce
      `INCONCLUSIVE` plus one exception-focused human action; two fully evidenced
-     `PROVEN` obligations must produce `PASS` with no new human gate. Both
+     `PROVEN` obligations must produce `PASS` with no new architecture approval.
+     Both use the fixed Background/Intuition/Code walkthrough/Comprehension check
+     spine, keep answer criteria hidden, and mark PR comprehension readiness
+     false before the quiz while leaving the code verdict unchanged. Both
      scenarios require complete per-obligation rows, ADR-intent fit for material
      implementation discretion, coverage-first presentation, no invented code
      paths, and no per-row approval. Their scorers also turn the visible reply
      into a real review artifact, then run the shipped artifact validator and
      HTML renderer so a prompt-only success cannot hide a broken report path.
+   - `impl-review-comprehension-retry` ↔
+     `impl-review-comprehension-pass` check the interactive PR gate after the
+     evidence report. A wrong answer keeps the code verdict at `PASS`, explains
+     the missing causal concept with evidence, retries the same question, and
+     leaves PR readiness false. Only the final correct answer may mark the PR
+     comprehension-ready; neither path reopens ADR approval or Status.
    - `impl-review-surfaces-hidden-contract-assumption` checks both sides of
      implementation-premise handling in one fixture. An unverified
      `x-tenant-id` provenance premise that can break tenant isolation must become
@@ -172,6 +194,12 @@ disposable reproduction artifacts.
      an exact, already-approved ADR revision. It requires a complete non-blocking
      progress update, immediate continuation, no ADR rewrite, and no routine
      approval request in either the structured tail or the visible report.
+   - `impl-requires-standard-docs-and-ideal-edge-tests` checks the implementation
+     completion policy in both directions. Missing GoDoc/docstring-style
+     documentation or a happy-path-only test suite must produce repair findings;
+     a why/how comment using contract vocabulary plus ideal and relevant edge
+     tests can pass. A comment that cites an ADR number or path still fails and
+     must retain only the domain vocabulary.
    - `impl-high-load-asks-before-split` checks that an `/adr-impl` plan at
      `8/10` or higher asks whether to review a split or proceed with the original
      ADR, waits for that choice, and does not generate concrete candidates first.

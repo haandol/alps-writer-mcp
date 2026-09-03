@@ -60,7 +60,7 @@ Look for these first:
 
 Do not report style preferences, naming tastes, or unjustified "YAGNI".
 
-**A test that documents a decided behavior is not removable scope.** `/adr-impl` step 4 requires that an explanation growing past ~3 comment lines move out of prose and into tests, so tests covering boundaries, ordering and state transitions, rejected inputs, failure and fallback paths, or a requirement value are carrying the contract — filing them as `[Unnecessary change]` would delete that knowledge and is the same misdiagnosis as removing the code that enforces a requirement value. A test for behavior the ADR never decided is a legitimate deletion candidate, but say so as `[Simpler alternative]`/`[Unnecessary change]` on the _behavior_, not on the fact that it is tested.
+**Language-standard function documentation and tests that document a decided behavior are not removable scope.** `/adr-impl` requires each named function or method created or materially changed for the target behavior to explain its why and how in the repository's language-native documentation form, using the contract's domain vocabulary without citing the ADR itself. It also requires an ideal-case test and the relevant edge cases. Removing that documentation or tests covering boundaries, ordering and state transitions, rejected inputs, failure and fallback paths, duplicates, concurrency, partial failure, or a requirement value would delete knowledge the completion contract requires. A test for behavior the ADR never decided remains a legitimate deletion candidate, but say so as `[Simpler alternative]`/`[Unnecessary change]` on the _behavior_, not on the fact that it is tested.
 
 ## Finding categories
 

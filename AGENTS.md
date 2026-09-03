@@ -22,7 +22,40 @@ Full ALPS applies the C4 analogy literally in Section 4 with both a Mermaid
 Code-level C4 diagrams belong below the PRD resolution and must not be generated
 there.
 
-**The goal is selective reading: a reader loads one level, gets its question answered, and stops.** "Why is the refresh window 7 days?" is answered by the ADR without opening a source file; "how is rotation implemented?" is answered by the code without reading the PRD. That only holds while each level carries **its own resolution and no other** — which is why the plugins constrain what may be written at each level as strictly as they do.
+### The persistence rule — preserve conditions, not recoverable facts
+
+**The goal is selective reading: a reader loads one level, gets its question
+answered, and stops.** Persist only what is needed to regenerate an implementation
+that preserves human intent, admitted decisions, and exact requirements. Do not
+persist a second copy of facts recoverable from code, tests, dependency metadata,
+search, or deterministic tools.
+
+Apply these tests in order:
+
+1. **Requirement gate** — if the fact vanished, could regenerated code violate a
+   required value, state, permission, ordering rule, failure guarantee, boundary,
+   or success condition? If yes, preserve it at the owning level even when the
+   current code also enforces it.
+2. **Code-readthrough test** — if the fact is not a requirement and an agent can
+   recover it from code, tests, dependency metadata, or deterministic output,
+   leave it there. Do not copy libraries, SDKs, signatures, fields, module
+   layouts, internal call flow, commands, or tuning values into PRDs or ADRs.
+3. **ADR admission gate and litmus test** — if code cannot explain why one
+   durable alternative was adopted and changing the fact would change the
+   architectural decision, preserve the decision, rationale, alternatives,
+   trade-offs, and decision-changing assumptions in the ADR.
+
+The regeneration target is **behavior and constraints, not identical code**.
+Files, functions, libraries, and internal structure may differ. Required values,
+allowed states, permissions, ordering, failure behavior, user-visible outcomes,
+and durable system/data/security/external boundaries may not.
+
+| Owner               | Durable content                                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ALPS PRD            | user problem, observable outcome, product contract, success condition, explicit non-goal, durable product/system constraint                           |
+| ADR                 | admitted architecture decision, exact requirement contract, rationale, alternatives, durable boundary, implementation-independent observable evidence |
+| Code and tests      | implementation structure, identifiers, dependencies, tuning, enforcement, executable verification                                                     |
+| Issue / PR / commit | change-specific intent and verbatim history                                                                                                           |
 
 Two leaks break it, and nearly every rule in `plugins/adr-writer/templates/adr/` exists to catch one of them:
 
@@ -37,7 +70,7 @@ Both reduce to one test, and it is the test to apply when reviewing a change to 
 
 The same ladder governs **context lifetime**. Persist only information whose loss would erase human intent, an important decision or trade-off, or a requirement future work must honor. Put it at the level that owns it: product intent in the PRD, admitted architecture decisions and contracts in ADRs, major transitions in `decision-log.md`, implementation truth in code and tests, repository-wide conventions here or in README/CONTRIBUTING, and change-specific intent in the Issue, PR, or commit history.
 
-Everything a capable coding agent can recover by reading those artifacts, running a deterministic tool, repeating a search, or asking one short question should remain **ephemeral**. This includes approval state, implementation plans, search results, discovered code scopes, mapping snapshots, intermediate summaries, subagent transcripts, exploratory reasoning, temporary review artifacts, and reproducible test/build observations. If approval evidence is absent, ask again rather than building an approval registry. A derived cache may exist for performance, but it must be disposable, non-authoritative, and safe to rebuild.
+Everything a capable coding agent can recover by reading those artifacts, running a deterministic tool, repeating a search, or asking one short question should remain **ephemeral**. This includes approval state, implementation plans, search results, discovered code scopes, copied tickets and logs, mapping snapshots, intermediate summaries, subagent transcripts, exploratory reasoning, temporary review artifacts, eval results, and reproducible test/build observations. If approval evidence is absent, ask again rather than building an approval registry. A derived cache may exist for performance, but it must be disposable, non-authoritative, and safe to rebuild.
 
 Apply the single-level read test at runtime through **selective reading and progressive disclosure**: keep hooks and core skill instructions compact; load mappings, ADR bodies, detailed references, and reviewer instructions only when the active path needs them; and do not carry intermediate context into later stages when authoritative artifacts are sufficient.
 
@@ -85,7 +118,7 @@ Build (inside `plugins/alps-writer/`) runs `tsc --noEmit` (typecheck), then esbu
 
 Tests use Node's built-in test runner. ALPS TypeScript tests run through `tsx`; ADR tests are dependency-free `.mjs` tests. Run all suites with `pnpm test`.
 
-**Behaviour evals** (`plugins/adr-writer/evals/`) are separate and NOT in `pnpm test`. `pnpm test` proves a prompt _says_ something; the evals check whether an agent given that prompt _does_ it, by running real scenarios against a live model and reporting per-check hit rates. They cost money, take minutes, and are non-deterministic, so they never gate CI — their job is reproducing a reported defect (`node evals/run.mjs --only <name> --runs 10`) and telling you whether it happens 3/10 or 10/10, which decides the fix. The harness itself _is_ covered by `pnpm test` via a stub agent, because an eval whose scorer cannot tell a bad reply from a good one reports green and is worse than no eval. See `plugins/adr-writer/evals/README.md`.
+**Behaviour evals** (`plugins/adr-writer/evals/`) are separate and NOT in `pnpm test`. `pnpm test` proves a prompt _says_ something; the evals check whether an agent given that prompt _does_ it, by running real scenarios against a live model and reporting per-check hit rates. They cost money, take minutes, and are non-deterministic, so they never gate CI — their job is reproducing a reported defect (`node evals/run.mjs --only <name> --runs 10`) and telling you whether it happens 3/10 or 10/10, which decides the fix. Use `node evals/run.mjs --changed <base> --list` to preview the disposable impact-map selection for a branch without invoking a model. The harness itself _is_ covered by `pnpm test` via a stub agent, because an eval whose scorer cannot tell a bad reply from a good one reports green and is worse than no eval. See `plugins/adr-writer/evals/README.md`.
 
 ## Repository Structure
 
@@ -97,7 +130,7 @@ Tests use Node's built-in test runner. ALPS TypeScript tests run through `tsx`; 
 package.json              # Private workspace root (prettier/husky/lint-staged); version pinned 0.0.0
 pnpm-workspace.yaml       # packages: plugins/alps-writer
 .github/workflows/
-└── ci.yaml               # test (node 20/22) + lint/format/bump:check/build + dist-drift gate
+└── ci.yaml               # Node 24 test/build/runtime jobs + dist-drift gate
 scripts/
 └── bump-version.mjs      # Set/verify the release version across all 13 sites
 .adr-invariants-code-ignore # Self-hosting exclusions for code→ADR example scanning
