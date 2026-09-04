@@ -66,7 +66,11 @@ Look for these first:
 
 Do not report style preferences, naming tastes, or unjustified "YAGNI".
 
-**Language-standard function documentation and tests that document a decided behavior are not removable scope.** `/adr-impl` requires each named function or method created or materially changed for the target behavior to explain its why and how in the repository's language-native documentation form, using the contract's domain vocabulary without citing the ADR itself. It also requires an ideal-case test and the relevant edge cases. Removing that documentation or tests covering boundaries, ordering and state transitions, rejected inputs, failure and fallback paths, duplicates, concurrency, partial failure, or a requirement value would delete knowledge the completion contract requires. A test for behavior the ADR never decided remains a legitimate deletion candidate, but say so as `[Simpler alternative]`/`[Unnecessary change]` on the _behavior_, not on the fact that it is tested.
+Read `${CLAUDE_PLUGIN_ROOT}/references/implementation-evidence.md` completely.
+Documentation and executable evidence required by that contract are not
+removable scope. A test for behavior the ADR never decided remains a legitimate
+deletion candidate, but report it on the behavior rather than on the fact that
+it is tested.
 
 ## Finding categories
 

@@ -197,21 +197,9 @@ this preflight after the answer. Do not label an answerable PRD gap as final
 before writing ADRs and report `Result: BLOCKED`. Do not report the Feature as
 transferred.
 
-Estimate the current Feature and each ADR candidate with the same internal
-five-axis comprehension-load rubric: conceptual breadth, contract density,
-state and flow complexity, boundary coupling, and uncertainty and verification
-burden. Score each axis from 0 to 2 and sum them. Show 1 rather than 0, so the
-displayed range is 1-10. Do not show or expose the axis scores or rationale.
-Calibrate the total internally: 1 = one statement/rule; 2 = one action and one
-success condition; 3 = few flows or exceptions; 4 = recommended-range lower
-bound; 5 = best-balanced unit; 6 = recommended-range upper bound; 7 = high
-load; 8 = very high load; 9 = strongly coupled behaviors/contracts; 10 =
-maximum review load, first check for mixed Features or decisions. Treat 4-6 as
-the recommended range. A low score never requires merging and a high score
-never blocks work. Do not print the whole rubric.
-Show only `Comprehension load: <N>/10` for each item. Do not write or persist
-this score in the ALPS document, an ADR, or `.mapping.json`; it is advisory and
-does not block drafting, approval, or implementation.
+Before scoring the Feature or ADR candidates, read
+`${CLAUDE_PLUGIN_ROOT}/../adr-writer/references/comprehension-load.md`
+completely and apply its advisory score to each item.
 
 When the Feature scores 8/10 or higher, offer up to three Feature split
 candidates before transfer and explicitly offer keeping the original Feature.

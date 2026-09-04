@@ -165,8 +165,10 @@ For each question, keep these machine-readable fields:
 - `answerCriteria` — the concepts and causal relationship a correct answer must contain
 - `evidence` — the ADR, code, or test evidence used to grade it
 
-The visible report contains only `id` and `question`. Do not expose
-`answerCriteria` or `evidence` before the reader answers.
+The visible report initially contains only `id` and `question`. The standalone
+HTML may reveal `answerCriteria` and `evidence` only after the reader enters an
+answer and explicitly requests self-check. That local comparison does not grade
+meaning or mark the PR comprehension-ready.
 
 ## Standard mode
 
@@ -176,8 +178,11 @@ For `standard`, execute this section and then continue at section 7. Sections 2-
 2. Apply the `adr-impl-sufficiency-reviewer` role to the ADR, complete implementation scope, separate change scope, tests, project rule documents, and the ledger. Use a named agent, generic read-only subagent, or separately grounded main-session pass as appropriate. Record an isolation limitation only when it weakens the evidence.
 3. Execute the related targeted tests and any minimal reproduction needed to account for every ledger row. An unexecuted core path makes the verdict `INCONCLUSIVE`, not `PASS`.
 4. Verify and synthesize findings using section 4's evidence rules. Standard mode has no necessity pass, separate report-writing requirement, fixed Mermaid quota, or post-implementation spec-fitness gate.
-5. Before writing the report, read `${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` and `${CLAUDE_PLUGIN_ROOT}/references/reader-first-writing.md` completely. Write a concise `implementation-review.md` with these headings in this relative order: `At a glance`, `Review mode`, `Scope`, `ADR intent`, one or more subject-specific narrative headings, optional `Visual map`, `ADR contract coverage`, `Notable implementation choices`, `Findings`, `Tests`, `Residual risks`, and `Comprehension check`. `At a glance` states verdict, user or operational impact, next action, and remaining risk. `ADR intent` and the narrative sections are derived from `explanation.md`; order the narrative by reader importance and follow a verified user, operator, request, state, or failure flow when useful. Add the smallest grounded Mermaid before contract coverage when the shared guide's trigger applies. Under contract coverage, assign `D0` to the Decision and `R1..Rn` to every top-level Requirement contract bullet in source order. Show every ID exactly once with `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`, its exact ADR basis, how the implementation meets it, and the evidence and tests. End with one to five visible questions and the PR-readiness guidance from section 1.2. Write `findings.json` with `"reviewMode": "standard"`, `necessityFindingCount: 0`, a non-empty `atAGlance` object, the structured non-empty `contractCoverage` array, the structured `implementationChoices` array, the structured `comprehensionCheck` object, and the normal evidence fields.
-6. Run the artifact validator. `PASS` requires every contract-coverage row to be `PROVEN`, all required targeted tests passing, no evidence-backed must-fix finding, and no unverified core risk. After validation succeeds, render `findings.json` to `<artifact-dir>/adr-impl-review-report.html`, then run `adr-impl-review-open.mjs`. The helper verifies that the file exists and is non-empty before attempting the environment's default local file opener. A standard review is incomplete until the HTML is valid. If the open attempt is unavailable or fails, keep the validated review result and surface the exact path plus the failure reason.
+5. Continue at **Report and artifact stage** below. In standard mode,
+   `reviewMode` is `standard`, `necessityFindingCount` is zero, and `PASS`
+   requires every contract-coverage row to be `PROVEN`, all required targeted
+   tests passing, no evidence-backed must-fix finding, and no unverified core
+   risk.
 
 ## Full mode
 
@@ -231,13 +236,10 @@ Apply the `adr-impl-sufficiency-reviewer` role contract.
 - **Compare non-numeric requirements item by item too** — allowed value sets, transition rules, mandatory fields, permissions, visibility, ordering, uniqueness, and units are each ledger rows as well. An added or removed set member, a forbidden transition becoming allowed, and mandatory → optional are all `Spec violation`. **Split enums** — a differing identifier name is `Impl-fact mismatch` (correct the ADR), while a differing allowed set or transition rule is `Spec violation` (correct the code).
 - **Inspect hidden implementation premises** — for every material choice and every contract-critical call path, ask which externally checkable fact must hold for the implementation to preserve the ADR contract and safety. Verify provider guarantees, caller authentication, input provenance, ordering, uniqueness, trust boundaries, and platform behavior from code, tests, configuration, or an authoritative external contract. If a premise is not verified and its falsehood could break a contract row or safety property, emit `Unverified risk`, mark the affected coverage row `UNVERIFIED`, and do not return `PASS`. Do not reconstruct the implementer's private reasoning.
 - **Resolve apparent requirement gaps before escalating** — connect a logical consequence to its explicit parent contract, recognize an established project/domain default as implementation discretion, and escalate only when several valid product behaviors remain or the missing rule affects money, permissions, legal/compliance behavior, retention, irreversible data, a public contract, or durable fallback. For an escalation, produce the complete Decision request instead of a bare ambiguity note.
-- Tests: actually run the related tests, and use a minimal reproduction where possible. Go as far as checking **whether the tests actually catch defects** — if property or mutation tooling already exists in the project, run it restricted to the core invariants and record weak tests as `Test gap`; if static or security analysis (CodeQL and the like) is already configured, use it as evidence limited to this ADR's code scope. Do not install new tooling or modify product code, and pass out-of-scope vulnerabilities to `/security-review` only.
-- **Do language-standard function documentation and executable cases preserve the explanation?** For every named function or method created or materially changed in handwritten code for the target behavior:
-  - Require the repository's language-native documentation form (GoDoc, Python docstring, JSDoc/TSDoc, Rustdoc, JavaDoc/KDoc, or the local equivalent). It must state both why the function is needed and how it enforces the contract-relevant state, permission, ordering, failure, or fallback behavior. A missing comment, non-standard placement, or name/signature restatement is `Best practice` weighted `now`, produces `FIX_REQUIRED`, and is auto-repaired by the `/adr-impl` caller.
-  - The comment should reuse the ADR's domain and requirement-contract vocabulary so the implementation is searchable by those terms, but it must never cite or mention the ADR itself. An ADR number, path, link, `ADR` source label, or wording such as "the ADR requires" in any code comment or docstring is `Best practice` weighted `now`; remove the reference while preserving the domain terms.
-  - Do not apply the roughly-three-line guideline to a language-standard documentation comment that needs more space to state its why and how. Apply it only to ordinary inline comments. For an inline comment block over ~3 lines that enumerates behavior, check whether a test covers each case — a missing case is `Test gap`, a fully covered block is `Refactor` (shorten the inline comment to the why). Never propose deleting a comment whose cases are **not** covered, and never flag a comment that holds a why code cannot express, even beyond three lines.
-  - For every implemented ADR behavior, require at least one ideal-case test and every relevant edge-case test. Select edge cases from the contract: requirement boundaries, empty or invalid input, forbidden transitions, failure and fallback, duplicates, reordering, concurrency, partial failure, or restart behavior when relevant. A missing ideal case or relevant edge case is `Test gap` and prevents `PASS`; unrelated edge categories are not required.
-  - A test whose name does not read as the behavior it proves, or one asserting several unrelated behaviors, is `Refactor`, since the tests must remain executable documentation.
+- Before checking documentation and tests, read
+  `${CLAUDE_PLUGIN_ROOT}/references/implementation-evidence.md` completely and
+  apply its completion and review classifications. Run the related targeted
+  tests and any already-configured verification tooling it permits.
 - Create temporary reproduction files only in the artifact directory, and never change repository files.
 
 Choose the orchestration from current capability, risk, context size, latency,
@@ -268,255 +270,22 @@ The synthesized verdict:
 - `INCONCLUSIVE`: an important path could not be executed or the scope could not be fixed, so PASS/FIX cannot be judged honestly.
 - `BLOCK`: a fork in the decision itself, or a structural collapse, requires a human architectural decision before any individual code fix.
 
-## 5. Generate the concise evidence report
+## Report and artifact stage
 
-Once the independently grounded reviews and evidence verification are done,
-apply the `adr-impl-review-report-writer` role contract. This step creates no new
-conclusions. The model may use a named agent, generic subagent, or write the
-report directly.
+Only after evidence synthesis and verdict selection, read
+`references/artifact-contract.md` completely and follow it exactly. It owns the
+common standard/full `implementation-review.md`, `findings.json`,
+materialization, validation, HTML rendering/opening, completion response, and
+optional interactive comprehension behavior. Do not load it during scope
+discovery or the independent review perspectives.
 
-Give the report-writing role the original ADR, complete implementation scope,
-separate change scope, `review-baseline.md`, the available
-explanation/necessity/sufficiency artifacts, normalized Notable implementation
-choices, and verified findings and test results. Save the result as
-`implementation-review.md`.
+## Finding routing
 
-The filename must be exactly `implementation-review.md`. Alternatives such as
-`final-review.md` or `review.md` are not allowed. Whichever execution path writes
-it, read and follow
-`${CLAUDE_PLUGIN_ROOT}/agents/adr-impl-review-report-writer.md`.
-
-Use progressive disclosure. Every report contains `At a glance`, `Review mode`,
-`Scope`, `ADR intent`, at least one subject-specific narrative section, `ADR
-contract coverage`, `Notable implementation choices`, `Findings`, `Tests`,
-`Residual risks`, and `Comprehension check` by default. `Visual map` is
-conditional on the shared report guide. The narrative headings and order follow
-the reader's most important verified flow rather than a fixed tutorial template.
-Include detailed repair guidance only for `FIX_REQUIRED`, `BLOCK`, or when the
-user asks for it.
-
-Before generating the human-facing report and chat summary, read
-`${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely. Include
-the smallest grounded Mermaid when one of its relationship triggers applies,
-using only relationships confirmed in the actual code. A local one-file PASS may
-omit the diagram when the whole relationship is clear in one or two sentences.
-Do not require a diagram count or type.
-
-- Overall change structure: `flowchart`
-- Core request/event flow: `sequenceDiagram`
-- State transitions, if there is state: `stateDiagram-v2`
-- Relationships, if the data model changed: `erDiagram`
-- A separate `flowchart` when the failure, retry, and rollback flow is complex
-
-Diagrams must provide a review map, not decoration. Tie each node to confirmed
-code or ADR evidence, then add one `Notice:` sentence naming the review point.
-Point clearly in the prose to where a finding occurs and the expected flow after
-the fix. Never guess at an edge you could not confirm in the actual code. Never
-use ASCII or box-drawing diagrams.
-
-Render ADR contract coverage before findings as a read-only table with `Contract ID`, `Requirement`, `Status`, `ADR basis`, `How the implementation meets it`, `Evidence`, and `Tests`. Keep the ADR wording recognizable so the reader can trace each row without reopening the whole document. Never merge several obligations into one row.
-
-Render Notable implementation choices as a read-only table with `Selected value or behavior`, `Code evidence`, `Why it fits the ADR intent`, and `Why it matters`. These rows are below ADR resolution and do not amend the ADR. If a row would alter the ADR contract or durable boundary, it must be an `Undecided behavior` finding instead.
-
-Concise means short cells, not fewer columns. Never collapse ADR basis, implementation, evidence, and tests into fewer columns, and never replace the four-column implementation-choice table with prose. The human-facing package must preserve these separate fields even when there is only one row.
-
-End the report with `Comprehension check`. Include one to five numbered
-free-response questions from the structured check. State explicitly:
-
-- the code verdict and comprehension readiness are separate;
-- a `PASS` verdict does not prove the reader understands the implementation;
-- the PR must not be opened or sent until every question is answered correctly
-  without reading the answer criteria.
-
-Do not put the answer criteria or evidence under the visible questions.
-
-For each actionable finding in a conditional repair guide, include:
-
-1. What the problem is and which user or operational symptom it manifests as
-2. The difference between the ADR decision and the actual code
-3. The order of files and symbols to read
-4. The reproduction command and the current result
-5. The fix steps and the scope not to touch
-6. The expected behavior after the fix
-7. The tests that must pass and the completion criteria
-8. The confidence level and what has not been confirmed yet
-
-Do not add a glossary, code-reading tour, merge checklist, or extra diagram unless it directly helps resolve a verified finding.
-
-## 6. Generate the evidence page
-
-Serialize the available role artifacts and the synthesized result into the following JSON.
-
-```json
-{
-  "reviewMode": "full",
-  "adr": "docs/adr/ordering/checkout/0001-checkout.md",
-  "status": "Accepted (2026-07-10)",
-  "verdict": "FIX_REQUIRED",
-  "atAGlance": {
-    "impact": "A cancelled checkout can still leave an upstream request running.",
-    "action": "Pass the cancellation signal through the upstream client and rerun the cancellation test.",
-    "risk": "Restart recovery remains unverified because no local queue was available."
-  },
-  "explanation": "/tmp/.../explanation.md",
-  "report": "/tmp/.../implementation-review.md",
-  "scope": ["src/checkout/handler.ts", "src/checkout/client.ts", "test/checkout.test.ts"],
-  "changeScope": ["src/checkout/handler.ts"],
-  "conventions": "AGENTS.md",
-  "metrics": {
-    "startedAt": "2026-08-15T06:30:00.000Z",
-    "completedAt": "2026-08-15T06:35:42.000Z",
-    "elapsedSeconds": 342,
-    "necessityFindingCount": 1,
-    "sufficiencyFindingCount": 0,
-    "unverifiedRiskCount": 0,
-    "testCommandCount": 2
-  },
-  "implementationChoices": [
-    {
-      "choice": "retry uses a 250 ms fixed delay",
-      "evidence": "src/checkout/client.ts:42 — retryDelayMs: 250",
-      "intentFit": "keeps retries bounded and preserves the ADR's explicit failure result",
-      "whyItMatters": "changes recovery latency and upstream request rate"
-    }
-  ],
-  "comprehensionCheck": {
-    "prGuidance": "Do not open or send the PR until every comprehension question is answered correctly without reading the answer criteria.",
-    "questions": [
-      {
-        "id": "Q1",
-        "question": "Why does provider failure leave the payment pending rather than completed?",
-        "answerCriteria": "The provider result is required before the idempotent completion boundary records success.",
-        "evidence": "ADR R2; src/payments/settle.ts:42; provider failure test"
-      }
-    ]
-  },
-  "contractCoverage": [
-    {
-      "contractId": "R1",
-      "requirement": "a payment is completed at most once",
-      "status": "PROVEN",
-      "adrBasis": "Requirement contract — Prohibitions",
-      "implementation": "the settlement path rejects an existing idempotency key",
-      "evidence": "src/payments/settle.ts:42 — exact code or execution evidence",
-      "tests": "pnpm test -- settlement — PASS"
-    }
-  ],
-  "findings": [
-    {
-      "category": "Unnecessary change",
-      "perspective": "necessity",
-      "summary": "the new event bus is not needed for this ADR",
-      "confidence": "high",
-      "adrQuote": "on cancellation, abort the upstream call",
-      "code": "src/events/bus.ts:18 — the actual code fragment",
-      "evidence": "the existing abort-signal path meets the same goal",
-      "test": "pnpm test -- cancel",
-      "testResult": "pass after excluding the new bus path",
-      "fix": "remove the new event bus and its wiring"
-    }
-  ],
-  "notes": "review limits or contradictions"
-}
-```
-
-`reviewMode`, `atAGlance`, `metrics`, `contractCoverage`,
-`implementationChoices`, `comprehensionCheck`, and `explanation` are mandatory
-even for `PASS` with zero findings or zero choices. `atAGlance` contains
-non-empty `impact`, `action`, and `risk`; use `None` only when that axis was
-checked and is empty. `comprehensionCheck.questions` contains one to five
-questions with non-empty `id`, `question`, `answerCriteria`, and `evidence`.
-`contractCoverage` is non-empty because `D0` always represents the ADR Decision
-even when there is no explicit requirement-contract subsection. The artifact
-validator reads the ADR, derives `D0/R1..Rn`, rejects missing or duplicate IDs,
-rejects missing or reordered explanation/check sections, rejects invalid quiz
-counts or exposed answer criteria, and rejects `PASS` when tests were not
-executed, a coverage row is not `PROVEN`, an unverified risk remains, or a
-blocking finding remains. Count the raw findings each independent perspective
-produced before deduplication, count `Unverified risk` entries after synthesis,
-and count distinct test or reproduction commands actually executed. In standard
-mode the necessity count is zero by definition.
-
-Allowed categories:
-
-- Necessity: `Unnecessary change`, `Simpler alternative`
-- Sufficiency: `Spec violation`, `Decision changed in code`, `Undecided behavior`, `Impl-fact mismatch`, `Test gap`
-- Shared quality: `Best practice`, `Refactor`
-- Verification state: `Unverified risk`, `Contradiction`
-
-Validate and build the HTML in both modes.
-
-```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-validate.mjs <artifact-dir>
-node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-report.mjs <findings.json> --out <artifact-dir>/adr-impl-review-report.html
-node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-open.mjs <artifact-dir>/adr-impl-review-report.html
-```
-
-If the validator fails, do not report completion or generate the HTML. Fill the omissions it names in `implementation-review.md` or `findings.json` and re-run until the validator exits 0. In particular, fill `perspective`, `code`, `evidence`, `test`, and `testResult` for every finding, and where a test could not be run, write `NOT RUN — <reason>` rather than leaving it blank. If HTML rendering fails or produces an empty file, the review is also incomplete.
-
-In both modes, run `adr-impl-review-open.mjs` immediately after the non-empty
-check. The helper attempts the host's default local file opener exactly once and
-prints `OPENED <path>` or `NOT_OPENED <path> — <reason>`. Do not silently skip
-the command based on an assumption that the environment is headless. A
-`NOT_OPENED` result for a valid artifact does not invalidate the review; state
-the reason and provide the exact path. The ordinary main-session completion
-response contains only the verdict, key impact/action/risk, applied fixes,
-tests, lifecycle result, and the HTML path plus `OPENED` or `NOT_OPENED`
-result. Do not copy any comprehension question, `answerCriteria`, grading
-evidence, or answer request into that completion response. A pre-promotion
-invocation by `/adr-impl` must not ask the user to rule `apply / skip / defer`
-on `PROVEN` coverage rows, implementation choices, or ordinary evidence-backed
-repairs; the caller owns remediation. Contract
-coverage and Notable implementation choices are read-only context, not
-individual approval items.
-
-Do not automatically begin the comprehension check after the report or
-lifecycle result. Keep the prepared questions and hidden grading data inside the
-HTML/JSON artifacts. When the user does not explicitly request an interactive
-comprehension check, leave PR comprehension readiness unverified and complete
-the main-session response without a question.
-
-Only when the user explicitly asks to run the comprehension check, load the
-prepared artifact and ask one primary question at a time without revealing its
-`answerCriteria` or `evidence` first. Grade meaning and causal understanding,
-not exact wording.
-
-- On a correct answer, briefly state why it is correct and ask the next question.
-- On an incomplete or incorrect answer, state that the PR is not
-  comprehension-ready, explain the missing concept with the stored evidence,
-  and let the reader retry the same question. A retry does not create a sixth
-  primary question.
-- If a question is skipped or the session ends before all questions pass, keep
-  PR comprehension readiness unverified.
-- Only after every prepared question passes may the response say the PR is
-  comprehension-ready.
-
-This interactive check does not reopen the implementation verdict, block
-evidence-backed remediation, or delay an otherwise valid ADR Status transition.
-Do not persist quiz progress or pass/fail state in the ADR, mapping, repository,
-or another registry.
-
-## 7. Routing and integrated remediation
-
-This command itself remains report-only. When `/adr-impl` invoked it as the pre-promotion completion gate, return findings in these two groups:
-
-- **Auto-remediate in the caller**: `Unnecessary change`, `Simpler alternative`, `Refactor`, `Spec violation`, `Best practice` weighted `now`, `Test gap`, and confirmed `Impl-fact mismatch`, when the fix is evidence-backed, remains within the approved scope, and does not change the ADR contract. `/adr-impl` applies them, records what changed, reruns affected tests, and reruns the same review mode.
-- **Escalate**: a changed/new ADR decision, contradictory premises, a material `Unverified risk`, destructive migration, or a broad repair outside the approved scope.
-
-Detailed routes:
-
-- `Unnecessary change` → remove the code and re-run related tests.
-- `Simpler alternative` / `Refactor` → simplify only when the ADR decision and observable behavior remain unchanged.
-- `Spec violation` / `Best practice` → fix the code; minor `next-cycle` advice may remain advisory when it does not affect PASS.
-- `Decision changed in code` → the user decides between updating the ADR and reverting the code. **If they choose to update the ADR, the edit is not the whole job** — a decision change of this kind is **major** by definition (replacing the adopted alternative, inverting a Driver, changing a requirement value), so it also takes **one line in the category's `decision-log.md`**, which is what preserves the old approach's rationale once the body is overwritten to current state (`authoring-rules.md` "What to log — minor vs major"). Route the edit to whichever command owns it rather than doing it here: **`/adr-impl <category>`** when the code is being reworked in the same cycle (its step 1 does the edit-in-place, the log line, and the Status handling), or **`/adr-sync <category>`** when the code already stands and only the ADR must catch up (its "intended decision change" branch). Supersede with a new ADR via `/adr-new` only when the decision topic itself forked and the old decision must stay separately referenceable (`authoring-rules.md` "Changing an ADR — edit-in-place vs supersede").
-- `Undecided behavior` → first confirm the behavior passes the ADR admission gate. If it is replaceable implementation discretion, close the finding with no ADR change. Otherwise the user decides whether to add the admitted decision to the ADR or remove it from the code. Adding it goes through the same owners — `/adr-impl` or `/adr-sync` for an in-place addition, `/adr-new` when it is a separate durable decision.
-- A blocking ADR-completeness gap → return one consolidated Decision request with recommendation, basis, realistic alternatives, impact, and exact contract wording; the caller updates the ADR revision after the user's answer.
-- `Impl-fact mismatch` → use `/adr-sync <category>` to remove the stale implementation detail, or correct it only when it is an admitted public/architectural contract.
-- `Test gap` → add a test that detects the failure first, then fix the code.
-- `Unverified risk` → reproduce or verify the concrete failure hypothesis or externally checkable premise first, or explicitly accept the risk. State which contract or safety property could fail if the premise is false. Do not fix it straight away.
-- `Contradiction` → do not fix anything before a human decides which of the two premises holds.
-
-Once automatic fixes are done, run `/adr-impl-review` again to close the selected review path. Full mode closes both necessity and sufficiency passes; standard mode closes its sufficiency pass. On `PASS`, the caller completes the Status transition and reports the fixes; no routine post-implementation approval remains. The comprehension check is not an approval, but it still governs whether the human should open or send the PR.
+This command itself remains report-only. Only when findings exist or
+`/adr-impl` needs the pre-promotion routing result, read
+`references/remediation-routing.md` completely. It owns the
+**Auto-remediate in the caller** and escalation routes. Do not load it for a
+finding-free standalone review.
 
 ## Prohibited
 
@@ -524,6 +293,9 @@ Once automatic fixes are done, run `/adr-impl-review` again to close the selecte
 - Never pass a reviewer the explanation document or the other reviewer's result.
 - Never use ASCII or box-drawing diagrams instead of Mermaid in the junior-facing report.
 - Never invent components or call relationships in Mermaid that were not confirmed in the actual code.
+- Never expose raw Markdown list markers or a supported Mermaid fence as the primary human-facing rendering.
+- Never re-sort synthesized findings by category after the report writer has ordered them for the reader.
+- Never show ruling controls for ordinary evidence-backed remediation or read-only context.
 - Never put implementation chronology ahead of ADR intent and the most
   important verified user or operational behavior.
 - Never use generic `Background`, `Intuition`, and `Code walkthrough` headings

@@ -181,16 +181,22 @@ test("every verdict is complete and named", () => {
   }
 });
 
-// The SKILL prompt tells the reviewing subagent which category tags to emit. A
-// tag it invents that the validator does not accept fails the run; a category
-// added here that the SKILL never mentions is dead vocabulary. Assert the shipped
-// prompt names every one.
-test("the impl-review SKILL documents every finding category", () => {
-  const skill = readFileSync(
+// The core skill and its stage-loaded artifact/routing references tell the
+// reviewer which category tags to emit. A tag it invents that the validator does
+// not accept fails the run; a category added here that the prompt contract never
+// mentions is dead vocabulary.
+test("the impl-review prompt contract documents every finding category", () => {
+  const promptContract = [
     path.join(PLUGIN_ROOT, "skills", "adr-impl-review", "SKILL.md"),
-    "utf8",
-  );
+    path.join(PLUGIN_ROOT, "skills", "adr-impl-review", "references", "artifact-contract.md"),
+    path.join(PLUGIN_ROOT, "skills", "adr-impl-review", "references", "remediation-routing.md"),
+  ]
+    .map((file) => readFileSync(file, "utf8"))
+    .join("\n");
   for (const name of CATEGORY_NAMES) {
-    assert.ok(skill.includes(name), `SKILL.md never mentions the "${name}" category`);
+    assert.ok(
+      promptContract.includes(name),
+      `impl-review prompt contract never mentions the "${name}" category`,
+    );
   }
 });

@@ -24,7 +24,7 @@ test("inline findings JSON cannot terminate the report script element", () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(result.stdout, /<\/script><script>globalThis\.__injected/);
-  assert.match(result.stdout, /\\u003c\/script\\u003e\\u003cscript\\u003e/);
+  assert.match(result.stdout, /&lt;\/script&gt;&lt;script&gt;/);
   assert.equal((result.stdout.match(/<script>/g) ?? []).length, 1);
 });
 
@@ -68,7 +68,7 @@ test("arbitrary finding IDs are not interpolated into DOM selectors", () => {
   const result = render({
     adr: "docs/adr/test.md",
     verdict: "FIX_REQUIRED",
-    findings: [{ id: hostileId, category: "Test gap", summary: "coverage" }],
+    findings: [{ id: hostileId, category: "Decision changed in code", summary: "coverage" }],
   });
 
   assert.equal(result.status, 0, result.stderr);
@@ -167,21 +167,27 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   assert.match(result.stdout, /Restart recovery preserves queued work/);
   assert.match(result.stdout, /D0 · PROVEN/);
   assert.match(result.stdout, /R1 · UNVERIFIED/);
-  assert.match(result.stdout, /1 \/ 2 proven/);
+  assert.match(result.stdout, /PROVEN 1/);
   assert.match(result.stdout, /How the implementation meets it/);
   assert.match(result.stdout, /Review report/);
   assert.ok(
-    result.stdout.indexOf("ADR contract coverage ·") <
-      result.stdout.indexOf("notable implementation choice(s) ·"),
-    "contract coverage must appear before implementation choices",
+    result.stdout.indexOf("finding-s1") < result.stdout.indexOf("ADR contract coverage"),
+    "findings must appear before detailed contract coverage",
   );
   assert.ok(
-    result.stdout.indexOf("ADR contract coverage ·") < result.stdout.indexOf("finding(s) ·"),
-    "contract coverage must appear before findings",
+    result.stdout.indexOf("ADR contract coverage") <
+      result.stdout.indexOf("Notable implementation choices"),
+    "contract coverage must remain before implementation choices inside evidence",
   );
   assert.doesNotMatch(result.stdout, /Repair guide ·/);
   assert.doesNotMatch(result.stdout, /Review this implementation choice/);
   assert.doesNotMatch(result.stdout, /choice_reviews/);
+  assert.doesNotMatch(result.stdout, /name="dec-0"/);
+  assert.match(result.stdout, /name="dec-1"/);
+  assert.ok(
+    result.stdout.indexOf('id="finding-n1"') < result.stdout.indexOf('id="finding-s1"'),
+    "renderer must preserve the report writer's finding order",
+  );
 });
 
 test("notable implementation choice content is escaped and read-only", () => {
@@ -240,12 +246,18 @@ test("comprehension questions render without exposing grading criteria", () => {
   });
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /PR comprehension readiness/);
+  assert.match(result.stdout, /Comprehension check/);
   assert.match(result.stdout, /Q1/);
   assert.match(result.stdout, /Why does provider failure leave the payment pending/);
   assert.match(result.stdout, /Do not open or send the PR/);
+  assert.match(result.stdout, /class="quiz__answer"/);
+  assert.match(result.stdout, /class="quiz__check"/);
   assert.doesNotMatch(result.stdout, /SECRET_ANSWER_CRITERIA/);
   assert.doesNotMatch(result.stdout, /SECRET_GRADING_EVIDENCE/);
+  assert.match(
+    result.stdout,
+    new RegExp(Buffer.from("SECRET_ANSWER_CRITERIA", "utf8").toString("base64")),
+  );
 });
 
 test("intent-first narrative sections render in reader-priority order", () => {
@@ -278,7 +290,144 @@ test("intent-first narrative sections render in reader-priority order", () => {
   assert.ok(intent >= 0 && intent < duplicate && duplicate < failure);
 });
 
-test("At a glance content is escaped in HTML and embedded feedback data", () => {
+test("narrative Markdown and supported Mermaid render as HTML instead of raw source", () => {
+  const result = render({
+    language: "en",
+    adr: "docs/adr/payments/0001.md",
+    verdict: "PASS",
+    findings: [],
+    contractCoverage: [],
+    implementationChoices: [],
+    narrativeSections: [
+      {
+        title: "ADR intent",
+        body: `The flow keeps **one completion**.
+
+- Reject duplicates
+- Preserve pending state
+
+\`\`\`mermaid
+sequenceDiagram
+  participant API
+  participant Provider
+  API->>Provider: request with example id 42
+  Provider-->>API: success
+\`\`\`
+
+\`\`\`ts
+const id = 42;
+\`\`\``,
+      },
+    ],
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /<strong>one completion<\/strong>/);
+  assert.match(result.stdout, /<ul><li>Reject duplicates<\/li>/);
+  assert.match(result.stdout, /class="diagram diagram--sequence"/);
+  assert.match(result.stdout, /request with example id 42/);
+  assert.match(result.stdout, /<pre><code class="language-ts">const id = 42;/);
+  assert.doesNotMatch(result.stdout, /```mermaid/);
+});
+
+test("the report uses a table of contents and progressive disclosure", () => {
+  const result = render({
+    language: "en",
+    adr: "docs/adr/test.md",
+    verdict: "PASS",
+    findings: [],
+    scope: ["src/a.ts"],
+    changeScope: [],
+    contractCoverage: [
+      {
+        contractId: "D0",
+        requirement: "Decision",
+        status: "PROVEN",
+        adrBasis: "Decision",
+        implementation: "implemented",
+        evidence: "src/a.ts",
+        tests: "node --test — PASS",
+      },
+      {
+        contractId: "R1",
+        requirement: "Failure path",
+        status: "UNVERIFIED",
+        adrBasis: "Failure path",
+        implementation: "not executed",
+        evidence: "environment unavailable",
+        tests: "NOT RUN",
+      },
+    ],
+    implementationChoices: [
+      {
+        choice: "fixed retry",
+        evidence: "src/a.ts",
+        intentFit: "preserves the contract",
+        whyItMatters: "latency",
+      },
+    ],
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /<nav class="toc"/);
+  assert.match(result.stdout, /<details class="review-meta">/);
+  assert.match(result.stdout, /<details class="coverage coverage--proven" id="contract-D0">/);
+  assert.match(
+    result.stdout,
+    /<details class="coverage coverage--unverified" id="contract-R1" open>/,
+  );
+  assert.match(result.stdout, /<summary>Notable implementation choices · 1<\/summary>/);
+});
+
+test("ruling controls appear only for findings that require human judgment", () => {
+  const result = render({
+    adr: "docs/adr/test.md",
+    verdict: "FIX_REQUIRED",
+    findings: [
+      { id: "f1", category: "Spec violation", summary: "fix in code" },
+      { id: "f2", category: "Decision changed in code", summary: "choose a direction" },
+    ],
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(
+    result.stdout.slice(
+      result.stdout.indexOf('id="finding-f1"'),
+      result.stdout.indexOf('id="finding-f2"'),
+    ),
+    /class="ruling"/,
+  );
+  assert.match(result.stdout, /id="finding-f2"[\s\S]*class="ruling"/);
+  assert.match(result.stdout, /id="export"/);
+
+  const readOnly = render({
+    adr: "docs/adr/test.md",
+    verdict: "FIX_REQUIRED",
+    findings: [{ id: "f1", category: "Spec violation", summary: "fix in code" }],
+  });
+  assert.equal(readOnly.status, 0, readOnly.stderr);
+  assert.doesNotMatch(readOnly.stdout, /id="export"/);
+});
+
+test("HTML chrome follows the selected report language", () => {
+  const result = render({
+    language: "ko",
+    adr: "docs/adr/test.md",
+    verdict: "PASS",
+    atAGlance: { impact: "영향 없음", action: "없음", risk: "없음" },
+    findings: [],
+    contractCoverage: [],
+    implementationChoices: [],
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /<html lang="ko">/);
+  assert.match(result.stdout, />목차</);
+  assert.match(result.stdout, />한눈에 보기</);
+  assert.match(result.stdout, />확인할 항목 · 0</);
+});
+
+test("At a glance content is escaped without duplicating PASS feedback data", () => {
   const payload = "</script><script>globalThis.__overviewInjected = true</script>";
   const result = render({
     adr: "docs/adr/test.md",
@@ -295,7 +444,8 @@ test("At a glance content is escaped in HTML and embedded feedback data", () => 
 
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(result.stdout, /<\/script><script>globalThis\.__overviewInjected/);
-  assert.match(result.stdout, /\\u003c\/script\\u003e\\u003cscript\\u003e/);
+  assert.match(result.stdout, /&lt;\/script&gt;&lt;script&gt;/);
+  assert.doesNotMatch(result.stdout, /\\u003c\/script\\u003e/);
   assert.equal((result.stdout.match(/<script>/g) ?? []).length, 1);
 });
 

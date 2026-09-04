@@ -22,11 +22,10 @@
 //                      "advisory"   decision-neutral, no ADR↔code tension
 //   defaultDecision  seeds the ruling radio so the common follow-up is
 //                    pre-selected while the user stays in control
-//   priority         remediation order, lower sorts first. Code must-fix (Spec
-//                    violation, Undecided behavior, Best practice) rises above
-//                    ADR-side actions (Decision changed, Impl-fact mismatch) and
-//                    advisory (Refactor, Test gap), so the docket reads
-//                    top-to-bottom as "fix these first". Mirrors SKILL step 7.
+//   priority         remediation priority retained for shared routing and
+//                    compatibility. The HTML renderer preserves the report
+//                    writer's reader-facing order instead of category-sorting
+//                    the final narrative.
 //
 // Dependency-free and side-effect-free: importable from a CLI without running one.
 

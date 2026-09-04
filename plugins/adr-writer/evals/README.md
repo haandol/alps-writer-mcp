@@ -166,8 +166,8 @@ disposable reproduction artifacts.
      by importance, keep answer criteria hidden, and mark PR comprehension
      readiness false before the quiz while leaving the code verdict unchanged. Both
      scenarios require complete per-obligation rows, ADR-intent fit for material
-     implementation discretion, coverage-first presentation, no invented code
-     paths, and no per-row approval. Their scorers also turn the visible reply
+     implementation discretion, findings before detailed evidence, no invented
+     code paths, and no per-row approval. Their scorers also turn the visible reply
      into a real review artifact, then run the shipped artifact validator and
      HTML renderer so a prompt-only success cannot hide a broken report path.
    - `impl-review-completion-does-not-auto-quiz` checks the normal completion

@@ -6,7 +6,10 @@ tools: Read, Grep, Glob, Bash
 
 # adr-impl-review-report-writer
 
-Turn verified review results into `implementation-review.md`. Never invent new defects or change a reviewer's verdict. Never edit code, ADRs, or tests. This role is an optional report-writing execution path; the caller may produce the same artifact directly when that is the smaller strategy.
+Turn verified review results into the narrative source for
+`implementation-review.md`. Never invent new defects or change a reviewer's
+verdict. Never edit code, ADRs, or tests. The caller materializes the repeated
+evidence sections from `findings.json` before validation.
 
 Before writing, read
 `${CLAUDE_PLUGIN_ROOT}/references/review-report-writing.md` completely. This
@@ -51,19 +54,18 @@ Start with `At a glance`:
 - `Action` — the next required action, or `None`.
 - `Risk` — the remaining uncertainty, or `None`.
 
-The JSON handoff must carry the same non-empty `atAGlance.impact`,
-`atAGlance.action`, and `atAGlance.risk` values.
+Put `<!-- generated from findings.json -->` under `At a glance`. The JSON
+handoff carries the non-empty `atAGlance.impact`, `atAGlance.action`, and
+`atAGlance.risk` values, and the materializer writes the final visible section.
 
 Under `ADR contract coverage`, state Contract compliance explicitly: compare every recorded value, allowed set, transition, permission, mandatory field, ordering rule, uniqueness rule, and unit against the code. Keep one row per independent ADR obligation and include the implementation-independent observable evidence when selecting verification. The existence of similar logic is not enough when its value or rule differs.
 
-Render coverage as a read-only table before findings. `D0` is the ADR Decision; `R1..Rn` are the top-level `### Requirement contract` bullets in source order. Keep every ID exactly once:
-
-| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
-| ----------- | ----------- | ------ | --------- | ------------------------------- | -------- | ----- |
-
-Use exactly `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`. Keep the ADR wording recognizable. `PROVEN` means the inspected or executed evidence supports the row and no counterexample was found; it is not a mathematical proof. Never merge several obligations into one row.
-
-Concise means short cells, not fewer columns. Do not merge ADR basis, implementation, evidence, and tests into a smaller summary or a prose sentence.
+Render actionable `Findings` after the reader-facing narrative. Put
+`<!-- generated from findings.json -->` under `ADR contract coverage` and
+`Notable implementation choices`; do not manually duplicate their tables in
+Markdown. `findings.json` keeps every `D0` / `R1..Rn` coverage row and every
+material choice. The materializer writes the same seven-column coverage and
+four-column read-only choice tables before artifact validation.
 
 Use progressive disclosure. The default report is concise, including in full
 mode and for PASS. Keep this structure:
@@ -72,6 +74,8 @@ mode and for PASS. Keep this structure:
 # ADR implementation review
 
 ## At a glance
+
+<!-- generated from findings.json -->
 
 ## Review mode
 
@@ -85,17 +89,23 @@ mode and for PASS. Keep this structure:
 
 ## Visual map
 
+## Findings
+
 ## ADR contract coverage
+
+<!-- generated from findings.json -->
 
 ## Notable implementation choices
 
-## Findings
+<!-- generated from findings.json -->
 
 ## Tests
 
 ## Residual risks
 
 ## Comprehension check
+
+<!-- generated from findings.json -->
 ```
 
 `Visual map` is conditional. Omit the heading when the shared report guide has
@@ -105,7 +115,7 @@ no visualization trigger.
 problem, adopted direction, and contract without copying every Driver or
 requirement row.
 
-Between `ADR intent` and `ADR contract coverage`, include at least one
+Between `ADR intent` and `Findings`, include at least one
 subject-specific `##` heading. Name the actual behavior or situation rather than
 using generic containers such as `Background`, `Intuition`, or `Code
 walkthrough`.
@@ -121,25 +131,33 @@ walkthrough`.
   boundary/failure case, or trade-off. Do not ask trivia about symbol names or
   line numbers.
 
-The visible report contains the questions and this guidance: a code-review
-`PASS` does not prove human understanding, and the reader should not open or send
-the PR until every question can be answered without looking at the answer
-criteria. Keep each question's semantic answer criteria and ADR/code/test
-evidence in `findings.json`; do not expose them in the report before the reader
-answers.
+Do not manually copy the questions into Markdown. Keep the PR guidance, visible
+questions, semantic answer criteria, and ADR/code/test evidence in
+`findings.json`. The materializer writes only the guidance and visible prompts;
+the answer criteria remain hidden until the reader answers.
 
-The ADR supplies architectural decisions and contracts. **These are material code-level choices the ADR intentionally does not own**, so list them under `Notable implementation choices` only when they affect runtime behavior, failure handling, operations, cost, or future maintenance. They do not amend the ADR.
+The standalone HTML owns progressive disclosure:
 
-Render the choices as a read-only table:
+- It is one responsive page with a table of contents and section anchors.
+- It shows At a glance, ADR intent, the important narrative, and Findings before detailed evidence.
+- It keeps `PROVEN` coverage, scope, metrics, and Notable implementation choices collapsed by default while opening exceptional coverage.
+- It renders Markdown lists, inline code, fenced `<pre>` code blocks, and supported Mermaid relationships. Unsupported Mermaid syntax keeps an explicit source fallback.
+- A finding includes `contractIds` when it relates to one or more `D0` / `R1..Rn` rows. Keep findings in reader order; do not re-sort them by category after synthesis.
+- Ruling controls appear only for findings that require human judgment: `Decision changed in code`, admitted `Undecided behavior`, material `Unverified risk`, or `Contradiction`.
+- Comprehension questions remain collapsed. The HTML may reveal hidden criteria only after the reader enters an answer and explicitly requests self-check; this never marks the PR comprehension-ready.
+- Use the report language for the HTML `lang` and fixed interface labels.
 
-| Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
-| -------------------------- | ------------- | -------------------------- | -------------- |
+The ADR supplies architectural decisions and contracts. **These are material
+code-level choices the ADR intentionally does not own**, so add them to
+`implementationChoices` only when they affect runtime behavior, failure
+handling, operations, cost, or future maintenance. They do not amend the ADR.
 
 Explain intent fit only through the contract or boundary the implementation preserves; never invent historical rationale. Do not ask the reader to accept, change, or investigate each choice. An item that passes the admission gate belongs in Findings as `Undecided behavior`, not in this table.
 
 When a choice or contract-critical path relies on an externally checkable premise that was not verified, do not hide it in this table. Report it as `Unverified risk`, naming the premise, the contract or safety consequence if it is false, and the missing verification. Do not reconstruct private chain-of-thought.
 
-Keep this four-column table even when there is only one choice. Do not collapse a material implementation choice into prose.
+Keep all four structured fields even when there is only one choice. The
+materializer owns the Markdown table.
 
 ## Conditional diagrams
 
@@ -152,7 +170,7 @@ Add the smallest useful Mermaid when a shared-guide trigger applies:
 - `stateDiagram-v2` when state transitions are central
 - `erDiagram` when changed data relationships are central
 
-Place it before contract coverage. Do not require a diagram count or a particular
+Place it before findings. Do not require a diagram count or a particular
 diagram type. A small local PASS report may contain no diagram. Ground every
 node and edge in code evidence and add one `Notice:` sentence explaining what
 the reader should verify.
@@ -176,7 +194,9 @@ Keep the fix steps proportional to the finding. Ban vague instructions such as
 tutorial, glossary, merge checklist, or extra diagram outside the fixed
 explanation sections unless it directly helps resolve a verified finding.
 
-When language-standard function documentation is missing or incomplete, instruct the reader to add a comment that states why the function exists and how it enforces the relevant behavior, using the contract's domain vocabulary without any ADR number, path, link, or source reference. When an ideal or relevant edge case is missing, name that exact test gap. When a long inline comment describes behavior that lacks coverage, instruct the reader to add the test first, then shorten the inline comment.
+When a finding concerns documentation, tests, or long inline comments, read
+`${CLAUDE_PLUGIN_ROOT}/references/implementation-evidence.md` completely and
+derive the repair guidance from that contract.
 
 ## Evidence discipline
 
@@ -189,6 +209,8 @@ When language-standard function documentation is missing or incomplete, instruct
 - Under `Scope`, distinguish the complete implementation scope from the
   separate change scope. Never present the diff as though it were the complete
   implementation.
+- Give every finding zero or more `contractIds`; use an empty list only for
+  decision-neutral findings that genuinely do not map to a contract row.
 - Generate no filler quiz question merely to reach five.
 - Delete praise, scene-setting, repeated conclusions, generic advice,
   speculative future work, repeated contrast templates, ornamental labels,

@@ -110,14 +110,18 @@ reason to hide evidence or merge independent obligations.
 - **ADR sync** — visualize a changed decision flow, dependency/category movement,
   or unresolved ADR-versus-code branch. Keep semantic diffs in text.
 - **Implementation review** — after At a glance and scope, explain `ADR intent`
-  before implementation detail. Between `ADR intent` and contract coverage, use
+  before implementation detail. Between `ADR intent` and findings, use
   one or more subject-specific headings ordered by importance. Follow a verified
   user, operator, request, state, or failure flow when it makes the behavior
   easier to understand; otherwise lead with the most consequential behavior and
-  its result. Execution order is optional. End the report with `Comprehension
-check` containing one to five material free-response questions. Keep the
-  answer criteria out of the visible report until the reader answers, and state
-  that a code `PASS` does not make the PR comprehension-ready.
+  its result. Execution order is optional. Put findings before detailed contract
+  evidence. The standalone HTML keeps `PROVEN` coverage, scope, metrics, and
+  implementation choices collapsed, opens exceptional coverage, and links
+  findings to contract IDs without re-sorting them by category. End the report
+  with `Comprehension check` containing one to five material free-response
+  questions. Keep the check collapsed. Reveal criteria only after answer entry
+  and an explicit self-check action, and state that this comparison does not
+  make the PR comprehension-ready.
 - **Implementation refactor** — visualize before/after work flow only when several
   call sites or processing stages are involved. A local rename or extraction does
   not need one.

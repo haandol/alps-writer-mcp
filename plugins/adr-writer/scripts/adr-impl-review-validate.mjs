@@ -16,9 +16,9 @@ const REQUIRED_REPORT_TEXT = [
   "## Review mode",
   "## Scope",
   "## ADR intent",
+  "## Findings",
   "## ADR contract coverage",
   "## Notable implementation choices",
-  "## Findings",
   "## Tests",
   "## Residual risks",
   "## Comprehension check",
@@ -178,6 +178,15 @@ function validateFinding(finding, index, errors) {
   if (finding.confidence && !ALLOWED_CONFIDENCE.has(finding.confidence)) {
     errors.push(`${label}.confidence must be high, medium, or low`);
   }
+  if (!Array.isArray(finding.contractIds)) {
+    errors.push(`${label}.contractIds must be an array`);
+  } else {
+    finding.contractIds.forEach((contractId, contractIndex) => {
+      if (typeof contractId !== "string" || !contractId.trim()) {
+        errors.push(`${label}.contractIds[${contractIndex}] must be a non-empty string`);
+      }
+    });
+  }
 }
 
 function validateAtAGlance(atAGlance, errors) {
@@ -324,6 +333,20 @@ function validateContractCompleteness(rows, expectedRows, errors) {
   }
 }
 
+function validateFindingContractLinks(findings, coverageRows, errors) {
+  const validIds = new Set(coverageRows.map((row) => row?.contractId).filter(Boolean));
+  for (const [findingIndex, finding] of findings.entries()) {
+    if (!Array.isArray(finding?.contractIds)) continue;
+    for (const contractId of finding.contractIds) {
+      if (!validIds.has(contractId)) {
+        errors.push(
+          `findings[${findingIndex}].contractIds references unknown contract row: ${contractId}`,
+        );
+      }
+    }
+  }
+}
+
 function validatePass(data, errors) {
   if (data.verdict !== "PASS") return;
 
@@ -461,9 +484,9 @@ function validateReport(report, data, errors) {
       "## Review mode",
       "## Scope",
       "## ADR intent",
+      "## Findings",
       "## ADR contract coverage",
       "## Notable implementation choices",
-      "## Findings",
       "## Tests",
       "## Residual risks",
       "## Comprehension check",
@@ -474,16 +497,16 @@ function validateReport(report, data, errors) {
 
   const reportHeadings = topLevelHeadings(report);
   const intentIndex = reportHeadings.indexOf("## ADR intent");
-  const coverageIndex = reportHeadings.indexOf("## ADR contract coverage");
+  const findingsIndex = reportHeadings.indexOf("## Findings");
   const narrativeHeadings =
-    intentIndex >= 0 && coverageIndex > intentIndex
+    intentIndex >= 0 && findingsIndex > intentIndex
       ? reportHeadings
-          .slice(intentIndex + 1, coverageIndex)
+          .slice(intentIndex + 1, findingsIndex)
           .filter((heading) => heading !== "## Visual map")
       : [];
   if (narrativeHeadings.length < 1) {
     errors.push(
-      "implementation-review.md must include at least one subject-specific narrative heading between ## ADR intent and ## ADR contract coverage",
+      "implementation-review.md must include at least one subject-specific narrative heading between ## ADR intent and ## Findings",
     );
   }
 
@@ -517,7 +540,7 @@ function validateReport(report, data, errors) {
     }
   }
 
-  const choiceRows = tableRows(report, "Notable implementation choices", "Findings");
+  const choiceRows = tableRows(report, "Notable implementation choices", "Tests");
   if (choiceRows.length < (data.implementationChoices ?? []).length) {
     errors.push(
       `implementation-review.md has ${choiceRows.length} complete implementation-choice rows for ${data.implementationChoices.length} choices`,
@@ -588,6 +611,9 @@ function main() {
 
   const data = readJson(findingsPath, errors);
   if (data) {
+    if (typeof data.language !== "string" || !data.language.trim()) {
+      errors.push("findings.json language must be a non-empty string");
+    }
     if (!ALLOWED_MODES.has(data.reviewMode)) {
       errors.push("findings.json reviewMode must be standard or full");
     }
@@ -637,6 +663,7 @@ function main() {
         expectedContractRows(artifactDir, data.adr, errors),
         errors,
       );
+      validateFindingContractLinks(data.findings ?? [], data.contractCoverage, errors);
       validatePass(data, errors);
     }
 

@@ -858,7 +858,11 @@ test("the decision-log format has one source: the seed file", () => {
 // leaving the user to guess which command does it.
 test("impl-review routes ADR edits to the commands that own them", () => {
   const skill = read(path.join(ADR_ROOT, "skills", "adr-impl-review", "SKILL.md"));
-  const decisionChanged = skill.slice(skill.indexOf("- `Decision changed in code` →"));
+  const routing = read(
+    path.join(ADR_ROOT, "skills", "adr-impl-review", "references", "remediation-routing.md"),
+  );
+  assert.match(skill, /read\s+`references\/remediation-routing\.md` completely/i);
+  const decisionChanged = routing.slice(routing.indexOf("- `Decision changed in code` →"));
   const block = decisionChanged.slice(0, decisionChanged.indexOf("- `Impl-fact mismatch`"));
   for (const cmd of [/\/adr-impl /, /\/adr-sync/, /\/adr-new/]) {
     assert.match(block, cmd, `the Decision-changed routing must name ${cmd}`);
@@ -1000,13 +1004,14 @@ test("ADR authoring keeps decision-changing assumptions inside existing ADR sect
 });
 
 test("Feature and ADR comprehension load is scored internally but shown as one advisory line", () => {
-  const sources = [
-    read(path.join(PLUGINS_ROOT, "alps-writer", "src", "guides", "07.md")),
+  const alpsGuide = read(path.join(PLUGINS_ROOT, "alps-writer", "src", "guides", "07.md"));
+  const skills = [
     read(path.join(PLUGINS_ROOT, "alps-writer", "skills", "feature-to-adr", "SKILL.md")),
     read(path.join(ADR_ROOT, "skills", "adr-new", "SKILL.md")),
     read(path.join(ADR_ROOT, "skills", "adr-impl", "SKILL.md")),
     read(path.join(ADR_ROOT, "skills", "adr-review", "SKILL.md")),
   ];
+  const rubric = read(path.join(ADR_ROOT, "references", "comprehension-load.md"));
   const axes = [
     "conceptual breadth",
     "contract density",
@@ -1015,44 +1020,43 @@ test("Feature and ADR comprehension load is scored internally but shown as one a
     "uncertainty and verification burden",
   ];
 
-  for (const source of sources) {
-    for (const axis of axes) {
-      assert.match(
-        source,
-        new RegExp(axis.split(" ").join("\\s+"), "i"),
-        `missing comprehension-load axis: ${axis}`,
-      );
-    }
-    assert.match(source, /인지비용:\s*<N>\/10|Comprehension load:\s*<N>\/10/i);
-    assert.match(source, /show\s+1\s+rather\s+than\s+0|합계가\s*0이면\s*1점/i);
-    assert.match(source, /do not (?:show|expose)[\s\S]{0,80}axis|축별[\s\S]{0,80}출력하지/i);
+  for (const axis of axes) {
     assert.match(
-      source,
-      /do not (?:write|persist|store)[\s\S]{0,160}ADR|ADR[\s\S]{0,160}저장하지/i,
+      rubric,
+      new RegExp(axis.split(" ").join("\\s+"), "i"),
+      `missing comprehension-load axis: ${axis}`,
     );
-    assert.match(source, /does not\s+block|must not\s+block|차단하지/i);
-    assert.match(source, /1\s*=\s*one statement|1점.*단일 문구/i);
-    assert.match(source, /5\s*=\s*best-balanced|5점.*균형/i);
-    assert.match(source, /10\s*=\s*maximum review load|10점.*최대/i);
-    assert.match(source, /(?:Treat\s+)?4-6\s+as\s+the\s+recommended\s+range|4~6점.*권장 범위/i);
-    assert.match(source, /low score never requires merging|낮은 점수.*자동 병합/i);
-    assert.match(source, /Do not print the whole rubric|전체 rubric.*출력하지/i);
+  }
+  assert.match(rubric, /Comprehension load:\s*<N>\/10/i);
+  assert.match(rubric, /Display 1 rather than 0/i);
+  assert.match(rubric, /Do not expose the axis/i);
+  assert.match(rubric, /never write it to an ALPS document, ADR/i);
+  assert.match(rubric, /does not by itself block work/i);
+  assert.match(rubric, /1 — one statement or rule/i);
+  assert.match(rubric, /5 the balanced center/i);
+  assert.match(rubric, /10 — maximum review load/i);
+  assert.match(rubric, /4-6 — recommended range/i);
+  assert.match(rubric, /low score never requires merging/i);
+
+  for (const source of skills) {
+    assert.match(source, /comprehension-load\.md/);
+    assert.match(source, /Comprehension load:\s*<N>\/10|advisory score/i);
   }
 
-  const alpsGuide = sources[0];
+  assert.match(alpsGuide, /인지비용:\s*<N>\/10|Comprehension load:\s*<N>\/10/i);
   assert.match(alpsGuide, /8\/10 or higher[\s\S]{0,160}up to three/i);
   assert.match(alpsGuide, /keep the original Feature/i);
   assert.match(alpsGuide, /never blocks approval or saving/i);
   assert.match(alpsGuide, /observable user behavior|관찰 가능한 사용자 행동/i);
 
-  const featureHandoff = sources[1];
+  const featureHandoff = skills[0];
   assert.match(featureHandoff, /Feature scores 8\/10 or higher[\s\S]{0,160}up to three/i);
   assert.match(featureHandoff, /keeping the original Feature/i);
   assert.match(featureHandoff, /never blocks drafting, approval, or transfer/i);
   assert.match(featureHandoff, /Section 6 and Section 7 Feature\s+boundaries together/i);
   assert.match(featureHandoff, /Only when the user asks to split ADR work/i);
 
-  for (const source of [sources[2], sources[4]]) {
+  for (const source of [skills[1], skills[3]]) {
     assert.match(
       source,
       /only when the user asks[\s\S]{0,80}split|사용자가[\s\S]{0,80}분할[\s\S]{0,80}요청/i,
@@ -1061,7 +1065,7 @@ test("Feature and ADR comprehension load is scored internally but shown as one a
     assert.match(source, /implementation steps|구현 단계/i);
   }
 
-  const adrImpl = sources[3];
+  const adrImpl = skills[2];
   assert.match(adrImpl, /8\/10.*or higher/i);
   assert.match(adrImpl, /review a split[\s\S]{0,80}proceed with the original ADR/i);
   assert.match(adrImpl, /Do not include concrete split candidates/i);

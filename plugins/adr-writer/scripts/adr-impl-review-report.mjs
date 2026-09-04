@@ -7,14 +7,12 @@
 // /adr-impl-review. Standard and full reviews serialize their evidence-backed
 // results to JSON and hand them here. We turn that JSON into ONE standalone HTML
 // file — no server, no
-// browser automation, no python. The page frames each finding as a docket
-// item: the ADR decision (the intended design) set against the code as built,
-// with a direction indicator that says which side is authoritative — so the
-// reviewer can see the tension and rule on it (apply / skip / defer + a note).
-// Material code-level choices absent from the ADR render as read-only context.
-// "Export rulings" builds the JSON in-browser and downloads feedback.json,
-// which the main session reads to route follow-ups (fix the code, /adr-sync,
-// update the ADR).
+// browser automation, no python. The page leads with the verdict and verified
+// narrative, puts findings before the evidence appendix, and keeps complete
+// coverage available through anchored disclosures. Only findings that require a
+// human decision expose apply / skip / defer controls. Material code-level
+// choices absent from the ADR render as collapsed read-only context. When a
+// decision is required, the export action builds feedback.json in-browser.
 //
 // Why static HTML and not a served page: the rest of this plugin is
 // dependency-free Node/bash by design (no external LLM calls, no runtime deps),
@@ -37,6 +35,7 @@
 //
 // findings.json schema (all string fields optional unless noted):
 //   {
+//     "language":   "en",                                         // required
 //     "adr":        "docs/adr/ordering/checkout/0001-checkout.md",  // required
 //     "reviewMode": "standard" | "full",
 //     "status":     "Accepted (2026-07-10)",
@@ -74,7 +73,8 @@
 //         "confidence": "high" | "medium" | "low",         // evidence strength; low never pre-selects fix
 //         "evidence": "why the claim is supported",
 //         "test": "targeted command or proposed reproduction",
-//         "testResult": "PASS/FAIL/NOT RUN plus the observed result"
+//         "testResult": "PASS/FAIL/NOT RUN plus the observed result",
+//         "contractIds": ["D0", "R1"]
 //       }
 //     ],
 //     "implementationChoices": [                          // required (may be [])
@@ -115,10 +115,10 @@
 // scripts/adr-impl-review-categories.mjs, which adr-impl-review-validate.mjs
 // validates against so the two cannot drift.
 //
-// The download (feedback.json) echoes every finding field back alongside the
-// reviewer's ruling, so the main session can route follow-ups (fix / /adr-sync /
-// ADR update) from the file alone — even across a context compaction where the
-// original findings.json is no longer in context.
+// The download (feedback.json) echoes every finding field back. Findings that do
+// not require human judgment use decision: "not-required", so the main session
+// can route follow-ups from the file alone without asking the reader to rule on
+// automatic remediation or read-only evidence.
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -165,6 +165,382 @@ function inlineScriptJson(value) {
   });
 }
 
+const USER_DECISION_CATEGORIES = new Set([
+  "Decision changed in code",
+  "Undecided behavior",
+  "Unverified risk",
+  "Contradiction",
+]);
+
+const UI = {
+  en: {
+    title: "ADR implementation review",
+    toc: "Contents",
+    overview: "At a glance",
+    impact: "Impact",
+    action: "Action",
+    risk: "Risk",
+    reviewDetails: "Review details",
+    reviewMode: "Review mode",
+    completeScope: "Complete implementation scope",
+    changeScope: "Change scope",
+    conventions: "Project conventions",
+    explanation: "Plain explanation",
+    report: "Review report",
+    metrics: "Review metrics",
+    findings: "Findings",
+    noCounterexample: "No unnecessary change or counterexample was confirmed.",
+    incomplete: "There are no confirmed findings, but the review did not complete.",
+    evidence: "Evidence",
+    coverage: "ADR contract coverage",
+    coverageSummary: "Coverage summary",
+    choices: "Notable implementation choices",
+    comprehension: "Comprehension check",
+    residualNotes: "Review notes",
+    implementation: "How the implementation meets it",
+    tests: "Tests",
+    adr: "ADR",
+    selectedChoice: "implementation choice",
+    intentFit: "Why it fits the ADR intent",
+    suggestion: "Suggestion",
+    basis: "Basis",
+    route: "Route",
+    weight: "Weight",
+    perspective: "Perspective",
+    result: "Result",
+    currentCode: "Current code",
+    adrDecision: "ADR decision",
+    ruling: "Decision",
+    apply: "apply",
+    skip: "skip",
+    defer: "defer",
+    notePlaceholder: "optional note — decision basis or requested direction",
+    exportHint: "Resolve only the findings that require a human decision, then export.",
+    export: "Export decisions",
+    saved: "Saved · feedback.json",
+    selfCheck: "Check my answer",
+    answerPlaceholder: "Write your answer before revealing the criteria.",
+    answerRequired: "Write an answer first.",
+    answerCriteria: "Answer criteria",
+    gradingEvidence: "Evidence used for the criteria",
+    selfCheckLimit:
+      "This self-check reveals criteria for comparison. It does not mark the PR comprehension-ready.",
+    diagramFallback:
+      "This Mermaid syntax is not supported by the compact renderer. Source follows.",
+    proven: "proven",
+    none: "none",
+  },
+  ko: {
+    title: "ADR 구현 리뷰",
+    toc: "목차",
+    overview: "한눈에 보기",
+    impact: "영향",
+    action: "조치",
+    risk: "위험",
+    reviewDetails: "리뷰 상세",
+    reviewMode: "리뷰 모드",
+    completeScope: "전체 구현 범위",
+    changeScope: "변경 범위",
+    conventions: "프로젝트 규칙",
+    explanation: "구현 설명",
+    report: "리뷰 보고서",
+    metrics: "리뷰 지표",
+    findings: "확인할 항목",
+    noCounterexample: "불필요한 변경이나 확인된 반례를 찾지 못했습니다.",
+    incomplete: "확인된 finding은 없지만 리뷰가 완료되지 않았습니다.",
+    evidence: "상세 근거",
+    coverage: "ADR 계약 충족 근거",
+    coverageSummary: "계약 충족 요약",
+    choices: "주요 구현 선택",
+    comprehension: "이해도 확인",
+    residualNotes: "리뷰 메모",
+    implementation: "구현이 계약을 충족하는 방식",
+    tests: "테스트",
+    adr: "ADR",
+    selectedChoice: "구현 선택",
+    intentFit: "ADR 의도와 양립하는 이유",
+    suggestion: "제안",
+    basis: "근거",
+    route: "경로",
+    weight: "시점",
+    perspective: "관점",
+    result: "결과",
+    currentCode: "현재 코드",
+    adrDecision: "ADR 결정",
+    ruling: "사용자 결정",
+    apply: "반영",
+    skip: "제외",
+    defer: "보류",
+    notePlaceholder: "선택 근거나 원하는 방향을 적어주세요 (선택)",
+    exportHint: "사용자 결정이 필요한 finding만 판단한 뒤 내보내세요.",
+    export: "결정 내보내기",
+    saved: "저장됨 · feedback.json",
+    selfCheck: "내 답과 비교하기",
+    answerPlaceholder: "판정 기준을 보기 전에 답을 작성하세요.",
+    answerRequired: "먼저 답을 작성하세요.",
+    answerCriteria: "판정 기준",
+    gradingEvidence: "판정 근거",
+    selfCheckLimit:
+      "이 self-check는 비교할 기준만 보여줍니다. PR 이해 준비도를 자동 판정하지 않습니다.",
+    diagramFallback: "간이 renderer가 지원하지 않는 Mermaid 문법입니다. 원문을 표시합니다.",
+    proven: "충족",
+    none: "없음",
+  },
+};
+
+function detectLanguage(data) {
+  if (typeof data.language === "string" && data.language.trim()) {
+    return data.language.trim().toLowerCase().startsWith("ko") ? "ko" : "en";
+  }
+  const sample = [
+    data.atAGlance?.impact,
+    data.atAGlance?.action,
+    data.atAGlance?.risk,
+    ...(Array.isArray(data.narrativeSections)
+      ? data.narrativeSections.flatMap((section) => [section?.title, section?.body])
+      : []),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return /[가-힣]/.test(sample) ? "ko" : "en";
+}
+
+function slug(value, fallback = "section") {
+  const normalized = String(value ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9가-힣]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || fallback;
+}
+
+function base64(value) {
+  return Buffer.from(String(value ?? ""), "utf8").toString("base64");
+}
+
+function renderInlineMarkdown(value) {
+  let rendered = esc(value);
+  rendered = rendered.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  rendered = rendered.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+  return rendered;
+}
+
+function mermaidLabel(raw, id) {
+  const quoted = raw.match(
+    /\["([^"]+)"\]|\[([^\]]+)\]|\{"([^"]+)"\}|\{([^}]+)\}|\("([^"]+)"\)|\(([^)]+)\)/,
+  );
+  return (quoted?.slice(1).find(Boolean) || id).replace(/<br\s*\/?>/gi, " · ");
+}
+
+function renderRelationshipDiagram(className, ariaLabel, relations) {
+  return `<figure class="diagram ${className}" aria-label="${esc(ariaLabel)}"><div class="flow">${relations
+    .map(
+      (relation) =>
+        `<div class="flow__edge"><span class="flow__node">${esc(relation.from)}</span><span class="flow__arrow">${esc(relation.arrow || "→")}${relation.label ? `<small>${esc(relation.label)}</small>` : ""}</span><span class="flow__node">${esc(relation.to)}</span></div>`,
+    )
+    .join("")}</div></figure>`;
+}
+
+function renderMermaid(source, ui) {
+  const lines = String(source ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("%%"));
+  const kind = lines[0] || "";
+  const body = lines.slice(1);
+
+  if (/^sequenceDiagram\b/i.test(kind)) {
+    const participants = new Map();
+    const messages = [];
+    for (const line of body) {
+      const participant = line.match(
+        /^(?:participant|actor)\s+([A-Za-z0-9_.-]+)(?:\s+as\s+(.+))?$/i,
+      );
+      if (participant) {
+        participants.set(participant[1], participant[2] || participant[1]);
+        continue;
+      }
+      const message = line.match(
+        /^([A-Za-z0-9_.-]+)\s*(-{1,2}>+|-->>|->>)\s*([A-Za-z0-9_.-]+)\s*:\s*(.+)$/,
+      );
+      if (message) {
+        participants.set(message[1], participants.get(message[1]) || message[1]);
+        participants.set(message[3], participants.get(message[3]) || message[3]);
+        messages.push({ from: message[1], to: message[3], label: message[4] });
+      }
+    }
+    if (messages.length) {
+      return `<figure class="diagram diagram--sequence" aria-label="sequence diagram">
+        <div class="diagram__participants">${[...participants.entries()]
+          .map(
+            ([id, label]) =>
+              `<span><code>${esc(id)}</code>${label === id ? "" : ` ${esc(label)}`}</span>`,
+          )
+          .join("")}</div>
+        <ol class="sequence">${messages
+          .map(
+            (message) =>
+              `<li><span class="sequence__route"><strong>${esc(participants.get(message.from))}</strong><span aria-hidden="true">→</span><strong>${esc(participants.get(message.to))}</strong></span><span>${renderInlineMarkdown(message.label)}</span></li>`,
+          )
+          .join("")}</ol>
+      </figure>`;
+    }
+  }
+
+  if (/^(?:flowchart|graph)\b/i.test(kind)) {
+    const labels = new Map();
+    const edges = [];
+    for (const line of body) {
+      for (const match of line.matchAll(
+        /([A-Za-z0-9_.-]+)(\["[^"]+"\]|\[[^\]]+\]|\{"[^"]+"\}|\{[^}]+\}|\("[^"]+"\)|\([^)]+\))/g,
+      )) {
+        labels.set(match[1], mermaidLabel(match[2], match[1]));
+      }
+      const edge = line.match(
+        /^([A-Za-z0-9_.-]+)(?:\[[^\]]+\]|\{[^}]+\}|\([^)]+\))?\s*[-.=]+>(?:\|([^|]+)\|)?\s*([A-Za-z0-9_.-]+)/,
+      );
+      if (edge) edges.push({ from: edge[1], to: edge[3], label: edge[2] || "" });
+    }
+    if (edges.length) {
+      return renderRelationshipDiagram(
+        "diagram--flow",
+        "flowchart",
+        edges.map((edge) => ({
+          from: labels.get(edge.from) || edge.from,
+          to: labels.get(edge.to) || edge.to,
+          label: edge.label,
+        })),
+      );
+    }
+  }
+
+  if (/^stateDiagram-v2\b/i.test(kind)) {
+    const transitions = body
+      .map((line) => line.match(/^([A-Za-z0-9_*.-]+)\s*-->\s*([A-Za-z0-9_*.-]+)(?:\s*:\s*(.+))?$/))
+      .filter(Boolean)
+      .map((match) => ({ from: match[1], to: match[2], label: match[3] || "" }));
+    if (transitions.length) {
+      return renderRelationshipDiagram("diagram--state", "state diagram", transitions);
+    }
+  }
+
+  if (/^erDiagram\b/i.test(kind)) {
+    const relations = body
+      .map((line) =>
+        line.match(/^([A-Za-z0-9_.-]+)\s+([|o}{.-]+)--([|o}{.-]+)\s+([A-Za-z0-9_.-]+)\s*:\s*(.+)$/),
+      )
+      .filter(Boolean)
+      .map((match) => ({
+        from: match[1],
+        relation: `${match[2]}--${match[3]}`,
+        to: match[4],
+        label: match[5],
+      }));
+    if (relations.length) {
+      return renderRelationshipDiagram(
+        "diagram--er",
+        "entity relationship diagram",
+        relations.map((relation) => ({
+          from: relation.from,
+          to: relation.to,
+          arrow: relation.relation,
+          label: relation.label,
+        })),
+      );
+    }
+  }
+
+  return `<figure class="diagram diagram--fallback"><figcaption>${esc(ui.diagramFallback)}</figcaption><pre><code>${esc(source)}</code></pre></figure>`;
+}
+
+function renderMarkdown(source, ui) {
+  const lines = String(source ?? "").split(/\r?\n/);
+  const out = [];
+  let paragraph = [];
+  let listType = null;
+  let listItems = [];
+  let fence = null;
+  let fenceLines = [];
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    out.push(`<p>${paragraph.map((line) => renderInlineMarkdown(line.trim())).join(" ")}</p>`);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (!listType) return;
+    out.push(
+      `<${listType}>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</${listType}>`,
+    );
+    listType = null;
+    listItems = [];
+  };
+
+  for (const line of lines) {
+    const fenceMatch = line.match(/^```\s*([A-Za-z0-9_-]*)\s*$/);
+    if (fenceMatch) {
+      if (fence) {
+        flushParagraph();
+        flushList();
+        const body = fenceLines.join("\n");
+        out.push(
+          fence.toLowerCase() === "mermaid"
+            ? renderMermaid(body, ui)
+            : `<pre><code${fence ? ` class="language-${esc(fence)}"` : ""}>${esc(body)}</code></pre>`,
+        );
+        fence = null;
+        fenceLines = [];
+      } else {
+        flushParagraph();
+        flushList();
+        fence = fenceMatch[1] || "text";
+      }
+      continue;
+    }
+    if (fence) {
+      fenceLines.push(line);
+      continue;
+    }
+
+    const heading = line.match(/^###\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      out.push(`<h3>${renderInlineMarkdown(heading[1])}</h3>`);
+      continue;
+    }
+    const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+    const ordered = line.match(/^\s*\d+\.\s+(.+)$/);
+    if (unordered || ordered) {
+      flushParagraph();
+      const nextType = unordered ? "ul" : "ol";
+      if (listType && listType !== nextType) flushList();
+      listType = nextType;
+      listItems.push((unordered || ordered)[1]);
+      continue;
+    }
+    const quote = line.match(/^>\s?(.+)$/);
+    if (quote) {
+      flushParagraph();
+      flushList();
+      out.push(`<blockquote>${renderInlineMarkdown(quote[1])}</blockquote>`);
+      continue;
+    }
+    if (!line.trim()) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+    paragraph.push(line);
+  }
+  if (fence) {
+    out.push(`<pre><code>${esc(fenceLines.join("\n"))}</code></pre>`);
+  }
+  flushParagraph();
+  flushList();
+  return out.join("\n");
+}
+
 function normalizeFindings(data) {
   const findings = Array.isArray(data.findings) ? data.findings : [];
   const known = Object.prototype.hasOwnProperty.bind(CATEGORIES);
@@ -196,19 +572,12 @@ function normalizeFindings(data) {
       evidence: f.evidence || "",
       test: f.test || "",
       testResult: f.testResult || "",
+      contractIds: Array.isArray(f.contractIds)
+        ? f.contractIds.filter((value) => typeof value === "string" && value.trim())
+        : [],
     };
   });
-  // Stable sort by remediation priority; unknown categories float to the top so
-  // they cannot hide. Array.prototype.sort is stable in Node, so ties keep the
-  // reviewer's original ordering.
-  return mapped
-    .map((f, i) => ({ f, i }))
-    .sort((a, b) => {
-      const pa = a.f.unknownCat ? -1 : (CATEGORIES[a.f.category]?.priority ?? 99);
-      const pb = b.f.unknownCat ? -1 : (CATEGORIES[b.f.category]?.priority ?? 99);
-      return pa - pb || a.i - b.i;
-    })
-    .map((x) => x.f);
+  return mapped;
 }
 
 function normalizeImplementationChoices(data) {
@@ -289,7 +658,10 @@ function loadNarrativeSections(data, inputPath) {
   if (!existsSync(reportPath)) return [];
 
   const report = readFileSync(reportPath, "utf8");
-  return markdownSectionsBetween(report, "ADR intent", "ADR contract coverage");
+  const beforeFindings = markdownSectionsBetween(report, "ADR intent", "Findings");
+  return beforeFindings.length
+    ? beforeFindings
+    : markdownSectionsBetween(report, "ADR intent", "ADR contract coverage");
 }
 
 /**
@@ -320,6 +692,8 @@ function normalizeComprehensionCheck(data) {
     questions: questions.map((question, index) => ({
       id: question.id || `Q${index + 1}`,
       question: question.question || "",
+      answerCriteria: question.answerCriteria || "",
+      evidence: question.evidence || "",
     })),
   };
 }
@@ -337,71 +711,85 @@ function normalizeContractCoverage(data) {
   }));
 }
 
-function contractCoverageCard(row, index, total) {
+function contractCoverageCard(row, index, total, ui) {
   const idx = String(index + 1).padStart(2, "0");
   const status = String(row.status || "UNVERIFIED").toUpperCase();
   const statusClass = ["PROVEN", "VIOLATED", "UNVERIFIED", "CONTRADICTED"].includes(status)
     ? status.toLowerCase()
     : "unverified";
 
+  const open = status === "PROVEN" ? "" : " open";
   return `
-  <article class="coverage coverage--${statusClass}">
-    <header class="finding__head">
+  <details class="coverage coverage--${statusClass}" id="contract-${esc(row.contractId)}"${open}>
+    <summary class="coverage__summary">
       <span class="coverage__status">${esc(row.contractId)} · ${esc(status)}</span>
+      <span class="coverage__requirement">${esc(row.requirement) || "(no requirement)"}</span>
       <span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span>
-    </header>
+    </summary>
+    <div class="coverage__body">
     <h3 class="finding__title">${esc(row.requirement) || "(no requirement)"}</h3>
     <div class="coverage__implementation">
-      <span class="side__label">How the implementation meets it</span>
+      <span class="side__label">${esc(ui.implementation)}</span>
       <p>${esc(row.implementation)}</p>
     </div>
     <div class="meta">
-      <div class="meta__row"><span class="meta__k">ADR</span><span class="meta__v">${esc(row.adrBasis)}</span></div>
-      <div class="meta__row"><span class="meta__k">Evidence</span><span class="meta__v meta__v--mono">${esc(row.evidence)}</span></div>
-      <div class="meta__row"><span class="meta__k">Tests</span><span class="meta__v meta__v--mono">${esc(row.tests)}</span></div>
+      <div class="meta__row"><span class="meta__k">${esc(ui.adr)}</span><span class="meta__v">${esc(row.adrBasis)}</span></div>
+      <div class="meta__row"><span class="meta__k">${esc(ui.evidence)}</span><span class="meta__v meta__v--mono">${esc(row.evidence)}</span></div>
+      <div class="meta__row"><span class="meta__k">${esc(ui.tests)}</span><span class="meta__v meta__v--mono">${esc(row.tests)}</span></div>
     </div>
-  </article>`;
+    </div>
+  </details>`;
 }
 
-function implementationChoiceCard(choice, index, total) {
+function implementationChoiceCard(choice, index, total, ui) {
   const idx = String(index + 1).padStart(2, "0");
 
   return `
   <article class="choice">
     <header class="finding__head">
-      <span class="tag choice__tag">implementation choice</span>
+      <span class="tag choice__tag">${esc(ui.selectedChoice)}</span>
       <span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span>
     </header>
     <h3 class="finding__title">${esc(choice.choice) || "(no choice)"}</h3>
     <div class="choice__value">
-      <span class="side__label">Why it fits the ADR intent</span>
+      <span class="side__label">${esc(ui.intentFit)}</span>
       <p>${esc(choice.intentFit)}</p>
     </div>
     <div class="meta">
-      <div class="meta__row"><span class="meta__k">Evidence</span><span class="meta__v meta__v--mono">${esc(choice.evidence)}</span></div>
-      <div class="meta__row"><span class="meta__k">Impact</span><span class="meta__v">${esc(choice.whyItMatters)}</span></div>
+      <div class="meta__row"><span class="meta__k">${esc(ui.evidence)}</span><span class="meta__v meta__v--mono">${esc(choice.evidence)}</span></div>
+      <div class="meta__row"><span class="meta__k">${esc(ui.impact)}</span><span class="meta__v">${esc(choice.whyItMatters)}</span></div>
     </div>
   </article>`;
 }
 
-function comprehensionQuestionCard(question) {
+function comprehensionQuestionCard(question, index, ui) {
   return `
   <article class="quiz">
     <span class="quiz__id">${esc(question.id)}</span>
     <p class="quiz__question">${esc(question.question)}</p>
+    <textarea class="quiz__answer" data-question-index="${index}" rows="3" placeholder="${esc(ui.answerPlaceholder)}"></textarea>
+    <button class="quiz__check" type="button" data-question-index="${index}" data-answer="${base64(question.answerCriteria)}" data-evidence="${base64(question.evidence)}">${esc(ui.selfCheck)}</button>
+    <p class="quiz__required" data-question-index="${index}" hidden>${esc(ui.answerRequired)}</p>
+    <div class="quiz__feedback" data-question-index="${index}" hidden>
+      <strong>${esc(ui.answerCriteria)}</strong>
+      <p class="quiz__criteria"></p>
+      <strong>${esc(ui.gradingEvidence)}</strong>
+      <p class="quiz__evidence"></p>
+      <p class="quiz__limit">${esc(ui.selfCheckLimit)}</p>
+    </div>
   </article>`;
 }
 
-function explanationCard(title, body) {
+function explanationCard(title, body, id, ui) {
   if (!body) return "";
   return `
-  <section class="explanation">
+  <section class="explanation" id="${esc(id)}">
     <h2 class="explanation__title">${esc(title)}</h2>
-    <div class="explanation__body">${esc(body)}</div>
+    <div class="explanation__body">${renderMarkdown(body, ui)}</div>
   </section>`;
 }
 
-function findingCard(f, i, total) {
+function findingCard(f, i, total, ui) {
   // Unrecognized category → a loud "uncategorized" card (bright orange, own blurb) so a
   // mislabeled finding demands attention instead of blending into advisory grey.
   const meta = f.unknownCat
@@ -430,13 +818,13 @@ function findingCard(f, i, total) {
   if (hasAdr || hasCode) {
     const adrSide = hasAdr
       ? `<div class="side side--adr">
-           <span class="side__label">ADR decision</span>
+           <span class="side__label">${esc(ui.adrDecision)}</span>
            <p class="side__body side__body--quote">${esc(f.adrQuote)}</p>
          </div>`
       : "";
     const codeSide = hasCode
       ? `<div class="side side--code">
-           <span class="side__label">Current code</span>
+           <span class="side__label">${esc(ui.currentCode)}</span>
            <p class="side__body side__body--mono">${esc(f.code)}</p>
          </div>`
       : "";
@@ -457,39 +845,39 @@ function findingCard(f, i, total) {
   const meta_rows = [];
   if (f.fix)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Suggestion</span><span class="meta__v">${esc(f.fix)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.suggestion)}</span><span class="meta__v">${esc(f.fix)}</span></div>`,
     );
   if (f.basis)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Basis</span><span class="meta__v">${esc(f.basis)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.basis)}</span><span class="meta__v">${esc(f.basis)}</span></div>`,
     );
   if (f.route)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Route</span><span class="meta__v meta__v--mono">${esc(f.route)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.route)}</span><span class="meta__v meta__v--mono">${esc(f.route)}</span></div>`,
     );
   if (f.weight)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Weight</span><span class="meta__v">${esc(f.weight)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.weight)}</span><span class="meta__v">${esc(f.weight)}</span></div>`,
     );
   if (f.impact)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Impact</span><span class="meta__v">${esc(f.impact)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.impact)}</span><span class="meta__v">${esc(f.impact)}</span></div>`,
     );
   if (f.perspective)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Perspective</span><span class="meta__v">${esc(f.perspective)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.perspective)}</span><span class="meta__v">${esc(f.perspective)}</span></div>`,
     );
   if (f.evidence)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Evidence</span><span class="meta__v">${esc(f.evidence)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.evidence)}</span><span class="meta__v">${esc(f.evidence)}</span></div>`,
     );
   if (f.test)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Test</span><span class="meta__v meta__v--mono">${esc(f.test)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.tests)}</span><span class="meta__v meta__v--mono">${esc(f.test)}</span></div>`,
     );
   if (f.testResult)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">Result</span><span class="meta__v">${esc(f.testResult)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.result)}</span><span class="meta__v">${esc(f.testResult)}</span></div>`,
     );
   const metaBlock = meta_rows.length ? `<div class="meta">${meta_rows.join("")}</div>` : "";
 
@@ -509,34 +897,47 @@ function findingCard(f, i, total) {
     }><label class="seg__label" for="${id}">${label}</label>`;
   };
 
+  const contractLinks = f.contractIds.length
+    ? `<div class="contract-links">${f.contractIds
+        .map((contractId) => `<a href="#contract-${esc(contractId)}">${esc(contractId)}</a>`)
+        .join("")}</div>`
+    : "";
+  const needsDecision = USER_DECISION_CATEGORIES.has(f.category);
+  const ruling = needsDecision
+    ? `<footer class="ruling">
+      <span class="ruling__label">${esc(ui.ruling)}</span>
+      <div class="seg" role="radiogroup" aria-label="${esc(f.summary)} ruling">
+        ${opt("fix", ui.apply)}
+        ${opt("skip", ui.skip)}
+        ${opt("defer", ui.defer)}
+      </div>
+      <textarea class="ruling__note" data-finding-index="${i}" rows="2" placeholder="${esc(ui.notePlaceholder)}"></textarea>
+    </footer>`
+    : "";
+
   return `
-  <article class="finding" style="--sev:${meta.hue}">
+  <article class="finding" id="finding-${esc(f.id)}" data-needs-decision="${needsDecision}" style="--sev:${meta.hue}">
     <header class="finding__head">
       <span class="tag">${esc(tagText)}</span>
       <span class="finding__head-right">${confChip}<span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span></span>
     </header>
     <h3 class="finding__title">${esc(f.summary) || "(no summary)"}</h3>
+    ${contractLinks}
     ${meta.blurb ? `<p class="finding__blurb">${esc(meta.blurb)}</p>` : ""}
     ${confront}
     ${metaBlock}
-    <footer class="ruling">
-      <span class="ruling__label">Ruling</span>
-      <div class="seg" role="radiogroup" aria-label="${esc(f.summary)} ruling">
-        ${opt("fix", "apply")}
-        ${opt("skip", "skip")}
-        ${opt("defer", "defer")}
-      </div>
-      <textarea class="ruling__note" data-finding-index="${i}" rows="2" placeholder="note (optional) — the basis for your ruling, or the fix direction"></textarea>
-    </footer>
+    ${ruling}
   </article>`;
 }
 
 function buildHtml(data) {
+  const language = detectLanguage(data);
+  const ui = UI[language];
   const adr = esc(data.adr || "(no path)");
   const reviewMode = esc(data.reviewMode || "");
   const status = esc(data.status || "");
   const verdictKey = (data.verdict || "").toUpperCase();
-  const vmeta = VERDICTS[verdictKey] || { hue: "#566173", note: "" };
+  const verdictHue = VERDICTS[verdictKey]?.hue || "#566173";
   const scope = Array.isArray(data.scope) ? data.scope : [];
   const changeScope = Array.isArray(data.changeScope) ? data.changeScope : [];
   const metrics = data.metrics && typeof data.metrics === "object" ? data.metrics : null;
@@ -546,60 +947,86 @@ function buildHtml(data) {
   const comprehensionCheck = normalizeComprehensionCheck(data);
   const contractCoverage = normalizeContractCoverage(data);
   const implementationChoices = normalizeImplementationChoices(data);
-  const cards = findings.map((f, i) => findingCard(f, i, findings.length)).join("\n");
+  const narrativeWithIds = narrativeSections.map((section, index) => ({
+    ...section,
+    id: `narrative-${slug(section.title, `section-${index + 1}`)}-${index + 1}`,
+  }));
+  const cards = findings.map((f, i) => findingCard(f, i, findings.length, ui)).join("\n");
   const coverageCards = contractCoverage
-    .map((row, index) => contractCoverageCard(row, index, contractCoverage.length))
+    .map((row, index) => contractCoverageCard(row, index, contractCoverage.length, ui))
     .join("\n");
   const choiceCards = implementationChoices
-    .map((choice, index) => implementationChoiceCard(choice, index, implementationChoices.length))
+    .map((choice, index) =>
+      implementationChoiceCard(choice, index, implementationChoices.length, ui),
+    )
     .join("\n");
   const comprehensionCards = comprehensionCheck.questions
-    .map((question) => comprehensionQuestionCard(question))
+    .map((question, index) => comprehensionQuestionCard(question, index, ui))
     .join("\n");
-  const narrativeCards = narrativeSections
-    .map((section) => explanationCard(section.title, section.body))
+  const narrativeCards = narrativeWithIds
+    .map((section) => explanationCard(section.title, section.body, section.id, ui))
     .join("\n");
   const count = findings.length;
   const coverageCount = contractCoverage.length;
   const choiceCount = implementationChoices.length;
   const provenCount = contractCoverage.filter((row) => row.status === "PROVEN").length;
+  const violatedCount = contractCoverage.filter((row) => row.status === "VIOLATED").length;
+  const unverifiedCount = contractCoverage.filter((row) => row.status === "UNVERIFIED").length;
+  const contradictedCount = contractCoverage.filter((row) => row.status === "CONTRADICTED").length;
+  const decisionCount = findings.filter((finding) =>
+    USER_DECISION_CATEGORIES.has(finding.category),
+  ).length;
+  const hasOverview = atAGlance.impact || atAGlance.action || atAGlance.risk;
+  const tocItems = [
+    hasOverview ? { id: "overview", label: ui.overview } : null,
+    ...narrativeWithIds.map((section) => ({ id: section.id, label: section.title })),
+    { id: "findings", label: ui.findings },
+    coverageCount || choiceCount ? { id: "evidence", label: ui.evidence } : null,
+    comprehensionCheck.questions.length ? { id: "comprehension", label: ui.comprehension } : null,
+  ].filter(Boolean);
 
   const empty =
     count === 0 && verdictKey === "PASS"
       ? `<div class="conforms">
            <div class="conforms__stamp">Conforms</div>
-           <p class="conforms__lead">No unnecessary changes or counterexamples were confirmed.</p>
-           <p class="conforms__sub">The contract coverage above contains the implementation and targeted-test evidence.</p>
+           <p class="conforms__lead">${esc(ui.noCounterexample)}</p>
+           <p class="conforms__sub">${esc(ui.evidence)} · ${provenCount} / ${coverageCount} ${esc(ui.proven)}</p>
          </div>`
       : count === 0
         ? `<div class="conforms">
              <div class="conforms__stamp">${esc(verdictKey || "unruled")}</div>
-             <p class="conforms__lead">There are no confirmed findings, but the review did not complete.</p>
-             <p class="conforms__sub">Address the verdict note above and the "needs confirmation" items in the detailed report first.</p>
+             <p class="conforms__lead">${esc(ui.incomplete)}</p>
            </div>`
         : "";
 
   // Embed the findings so the download echoes the original context back
   // alongside the reviewer's rulings — the main session gets both in one file.
-  const embedded = inlineScriptJson({
-    adr: data.adr || "",
-    reviewMode: data.reviewMode || "",
-    verdict: verdictKey,
-    atAGlance,
-    scope,
-    changeScope,
-    findings,
-    contractCoverage,
-    implementationChoices,
-    comprehensionCheck,
-  });
+  const embedded = inlineScriptJson(
+    decisionCount
+      ? {
+          adr: data.adr || "",
+          reviewMode: data.reviewMode || "",
+          verdict: verdictKey,
+          atAGlance,
+          scope,
+          changeScope,
+          findings,
+          contractCoverage,
+          implementationChoices,
+          comprehensionCheck: {
+            prGuidance: comprehensionCheck.prGuidance,
+            questions: comprehensionCheck.questions.map(({ id, question }) => ({ id, question })),
+          },
+        }
+      : {},
+  );
 
   return `<!doctype html>
-<html lang="ko">
+<html lang="${language}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ADR Impl Review — ${adr}</title>
+<title>${esc(ui.title)} — ${adr}</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -613,7 +1040,7 @@ function buildHtml(data) {
     --adr-wash: #e9eff5;   /* cool — the intended design (blueprint) */
     --code-wash: #f5f0e9;  /* warm — the thing as built (material)   */
     --focus: #1f5fa8;
-    --verdict: ${vmeta.hue};
+    --verdict: ${verdictHue};
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -628,13 +1055,49 @@ function buildHtml(data) {
     }
   }
   * { box-sizing: border-box; }
+  :target { scroll-margin-top: 20px; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--paper); color: var(--ink);
-    font: 15px/1.6 var(--sans);
-    padding-bottom: 96px;
+    font: 15px/1.65 var(--sans);
   }
-  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 32px; }
+  body.has-bar { padding-bottom: 96px; }
+  a { color: var(--focus); }
+  code {
+    font-family: var(--mono); font-size: .92em;
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    margin: 14px 0; padding: 14px 16px; overflow: auto;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: color-mix(in srgb, var(--ink) 5%, var(--card));
+    white-space: pre-wrap;
+  }
+  pre code { background: transparent; padding: 0; white-space: pre-wrap; }
+  blockquote {
+    margin: 14px 0; padding: 8px 14px; border-left: 3px solid var(--focus);
+    background: color-mix(in srgb, var(--focus) 7%, var(--card));
+  }
+  .page {
+    width: min(1180px, 100%); margin: 0 auto;
+    display: grid; grid-template-columns: 220px minmax(0, 860px); gap: 28px;
+    align-items: start; padding: 34px 20px 48px;
+  }
+  .wrap { min-width: 0; }
+  .toc {
+    position: sticky; top: 20px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px;
+  }
+  .toc__title {
+    margin: 0 0 10px; font: 700 10px/1 var(--mono);
+    letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2);
+  }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .toc li { margin: 6px 0; font-size: 13px; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--focus); text-decoration: underline; }
 
   /* ── docket header ─────────────────────────────────────────────── */
   .doc {
@@ -653,7 +1116,12 @@ function buildHtml(data) {
     word-break: break-all; margin: 0;
   }
   .doc__status { font: 500 12px/1 var(--mono); color: var(--ink-2); margin-top: 8px; }
-  .doc__meta { margin-top: 12px; font-size: 12.5px; color: var(--ink-2); }
+  .review-meta {
+    margin-top: 14px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--card); padding: 0 12px;
+  }
+  .review-meta summary { cursor: pointer; padding: 9px 0; font-weight: 650; color: var(--ink-2); }
+  .doc__meta { padding: 0 0 12px; font-size: 12.5px; color: var(--ink-2); }
   .doc__meta div { margin-top: 3px; }
   .doc__meta code {
     font: 12px/1.5 var(--mono);
@@ -697,15 +1165,34 @@ function buildHtml(data) {
     padding: 16px 18px; margin: 14px 0;
   }
   .explanation__title {
-    font: 700 11px/1 var(--mono); letter-spacing: 0.16em;
-    text-transform: uppercase; color: var(--ink-2); margin: 0 0 12px;
+    font: 680 20px/1.3 var(--sans); letter-spacing: -0.01em;
+    color: var(--ink); margin: 0 0 12px;
   }
   .explanation__body {
-    white-space: pre-wrap; font-size: 13.5px; overflow-wrap: anywhere;
+    font-size: 14px; overflow-wrap: anywhere;
   }
+  .explanation__body p { margin: 10px 0; }
+  .explanation__body ul, .explanation__body ol { margin: 10px 0; padding-left: 24px; }
 
-  .count { font: 600 11px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
-           color: var(--ink-2); margin: 22px 0 12px; }
+  .section-title {
+    font: 700 11px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-2); margin: 28px 0 12px;
+  }
+  .section-disclosure {
+    margin: 22px 0; background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 0 16px;
+  }
+  .section-disclosure > summary {
+    cursor: pointer; padding: 15px 0; font-weight: 700;
+  }
+  .section-disclosure__body { padding: 0 0 16px; }
+  .coverage-summary {
+    display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px;
+  }
+  .coverage-summary span {
+    border: 1px solid var(--line); background: var(--card);
+    border-radius: 999px; padding: 5px 10px; font: 650 11px/1 var(--mono);
+  }
 
   /* ── finding ───────────────────────────────────────────────────── */
   .finding {
@@ -717,7 +1204,7 @@ function buildHtml(data) {
     --coverage: #566173;
     background: var(--card); border: 1px solid var(--line);
     border-left: 3px solid var(--coverage); border-radius: 8px;
-    padding: 16px 18px 14px; margin-bottom: 14px;
+    margin-bottom: 12px; overflow: hidden;
   }
   .coverage--proven { --coverage: #2e7d4f; }
   .coverage--violated { --coverage: #c0362c; }
@@ -727,6 +1214,12 @@ function buildHtml(data) {
     font: 700 10.5px/1 var(--mono); letter-spacing: 0.14em;
     color: var(--coverage);
   }
+  .coverage__summary {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+    cursor: pointer; padding: 13px 15px;
+  }
+  .coverage__requirement { font-weight: 650; }
+  .coverage__body { padding: 0 16px 14px; border-top: 1px solid var(--line); }
   .coverage__implementation {
     background: color-mix(in srgb, var(--coverage) 8%, var(--card));
     border: 1px solid var(--line); border-radius: 7px;
@@ -755,6 +1248,23 @@ function buildHtml(data) {
     color: #7457a6; margin-bottom: 8px;
   }
   .quiz__question { margin: 0; font-size: 14px; }
+  .quiz__answer {
+    width: 100%; margin-top: 12px; padding: 9px 10px; resize: vertical;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink);
+    font: 13.5px/1.5 var(--sans);
+  }
+  .quiz__check {
+    margin-top: 9px; padding: 8px 12px; border: 1px solid var(--ink);
+    border-radius: 7px; background: var(--ink); color: var(--card); cursor: pointer;
+    font-weight: 650;
+  }
+  .quiz__required { color: #c0362c; margin: 8px 0 0; }
+  .quiz__feedback {
+    margin-top: 12px; padding: 12px; border: 1px solid var(--line);
+    border-radius: 8px; background: color-mix(in srgb, #7457a6 7%, var(--card));
+  }
+  .quiz__feedback p { margin: 5px 0 10px; }
+  .quiz__limit { color: var(--ink-2); font-size: 12.5px; }
   .finding__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .tag {
     font: 600 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
@@ -773,6 +1283,11 @@ function buildHtml(data) {
     margin: 11px 0 5px;
   }
   .finding__blurb { font-size: 13px; color: var(--ink-2); margin: 0 0 14px; }
+  .contract-links { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 10px; }
+  .contract-links a {
+    font: 650 11px/1 var(--mono); text-decoration: none;
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px;
+  }
 
   /* confrontation: ADR decision vs code as built */
   .confront {
@@ -838,6 +1353,35 @@ function buildHtml(data) {
               color: var(--ink-2); }
   .notes__v { font-size: 13.5px; color: var(--ink); margin: 8px 0 0; }
 
+  /* ── grounded Mermaid render ─────────────────────────────────── */
+  .diagram {
+    margin: 16px 0; padding: 14px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--paper);
+  }
+  .diagram__participants { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .diagram__participants span {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 999px; padding: 5px 9px; font-size: 12px;
+  }
+  .sequence { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .sequence li {
+    display: grid; grid-template-columns: minmax(180px, .8fr) 1fr; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+  }
+  .sequence__route { display: flex; align-items: center; gap: 8px; }
+  .flow { display: grid; gap: 10px; }
+  .flow__edge {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center; gap: 10px;
+  }
+  .flow__node {
+    display: block; padding: 9px 10px; text-align: center;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-weight: 650;
+  }
+  .flow__arrow { color: var(--focus); text-align: center; font: 700 16px/1 var(--mono); }
+  .flow__arrow small { display: block; margin-top: 5px; color: var(--ink-2); font: 11px/1.25 var(--sans); }
+  .diagram--fallback figcaption { color: #b4690e; margin-bottom: 8px; font-weight: 650; }
+
   /* conforming (empty) state */
   .conforms { text-align: center; padding: 48px 24px; }
   .conforms__stamp {
@@ -870,7 +1414,11 @@ function buildHtml(data) {
   button.export.done { background: #2e7d4f; border-color: #2e7d4f; }
 
   @media (max-width: 620px) {
+    .page { display: block; padding: 18px 14px 36px; }
+    .toc { position: static; margin-bottom: 18px; }
     .overview__grid { grid-template-columns: 1fr; }
+    .coverage__summary { grid-template-columns: 1fr auto; }
+    .coverage__status { grid-column: 1 / -1; }
     .confront, .confront--single { grid-template-columns: 1fr; }
     .rel { flex-direction: row; gap: 8px; border-left: none; border-right: none;
            border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -878,54 +1426,68 @@ function buildHtml(data) {
     .bar__inner { flex-direction: column; align-items: stretch; }
     .bar .hint { text-align: center; }
     button.export { width: 100%; }
+    .sequence li { grid-template-columns: 1fr; }
+    .flow__edge { grid-template-columns: 1fr; }
+    .flow__arrow { transform: rotate(90deg); padding: 4px; }
   }
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; }
   }
 </style>
 </head>
-<body>
-<div class="wrap">
+<body class="${decisionCount ? "has-bar" : ""}">
+<div class="page">
+<nav class="toc" aria-label="${esc(ui.toc)}">
+  <h2 class="toc__title">${esc(ui.toc)}</h2>
+  <ol>
+    ${tocItems.map((item) => `<li><a href="#${esc(item.id)}">${esc(item.label)}</a></li>`).join("")}
+  </ol>
+</nav>
+<main class="wrap">
   <header class="doc">
     <div class="doc__id">
-      <p class="eyebrow">ADR IMPL REVIEW</p>
+      <p class="eyebrow">${esc(ui.title)}</p>
       <p class="doc__path">${adr}</p>
       ${status ? `<div class="doc__status">${status}</div>` : ""}
+      <details class="review-meta">
+      <summary>${esc(ui.reviewDetails)}</summary>
       <div class="doc__meta">
-        ${reviewMode ? `<div>Review mode · <code>${reviewMode}</code></div>` : ""}
+        ${reviewMode ? `<div>${esc(ui.reviewMode)} · <code>${reviewMode}</code></div>` : ""}
         ${
           scope.length
-            ? `<div>Complete implementation scope · ${scope.map((s) => `<code>${esc(s)}</code>`).join(" ")}</div>`
+            ? `<div>${esc(ui.completeScope)} · ${scope.map((s) => `<code>${esc(s)}</code>`).join(" ")}</div>`
             : ""
         }
-        <div>Change scope · ${
-          changeScope.length ? changeScope.map((s) => `<code>${esc(s)}</code>`).join(" ") : "none"
+        <div>${esc(ui.changeScope)} · ${
+          changeScope.length
+            ? changeScope.map((s) => `<code>${esc(s)}</code>`).join(" ")
+            : esc(ui.none)
         }</div>
-        ${data.conventions ? `<div>Project conventions · <code>${esc(data.conventions)}</code></div>` : ""}
-        ${data.explanation ? `<div>Plain explanation · <code>${esc(data.explanation)}</code></div>` : ""}
-        ${data.report ? `<div>Review report · <code>${esc(data.report)}</code></div>` : ""}
+        ${data.conventions ? `<div>${esc(ui.conventions)} · <code>${esc(data.conventions)}</code></div>` : ""}
+        ${data.explanation ? `<div>${esc(ui.explanation)} · <code>${esc(data.explanation)}</code></div>` : ""}
+        ${data.report ? `<div>${esc(ui.report)} · <code>${esc(data.report)}</code></div>` : ""}
         ${
           metrics
-            ? `<div>Review metrics · ${esc(metrics.elapsedSeconds)}s · necessity ${esc(metrics.necessityFindingCount)} · sufficiency ${esc(metrics.sufficiencyFindingCount)} · tests ${esc(metrics.testCommandCount)}</div>`
+            ? `<div>${esc(ui.metrics)} · ${esc(metrics.elapsedSeconds)}s · necessity ${esc(metrics.necessityFindingCount)} · sufficiency ${esc(metrics.sufficiencyFindingCount)} · tests ${esc(metrics.testCommandCount)}</div>`
             : ""
         }
       </div>
+      </details>
     </div>
     <div class="stamp">
       <div class="stamp__k">VERDICT</div>
       <div class="stamp__v">${esc(verdictKey || "—")}</div>
     </div>
-    ${vmeta.note ? `<p class="vnote">${esc(vmeta.note)}</p>` : ""}
   </header>
 
   ${
-    atAGlance.impact || atAGlance.action || atAGlance.risk
-      ? `<section class="overview">
-           <h2 class="overview__title">At a glance</h2>
+    hasOverview
+      ? `<section class="overview" id="overview">
+           <h2 class="overview__title">${esc(ui.overview)}</h2>
            <div class="overview__grid">
-             <div class="overview__item"><span class="overview__key">Impact</span><p class="overview__value">${esc(atAGlance.impact || "Not provided")}</p></div>
-             <div class="overview__item"><span class="overview__key">Action</span><p class="overview__value">${esc(atAGlance.action || "Not provided")}</p></div>
-             <div class="overview__item"><span class="overview__key">Risk</span><p class="overview__value">${esc(atAGlance.risk || "Not provided")}</p></div>
+             <div class="overview__item"><span class="overview__key">${esc(ui.impact)}</span><p class="overview__value">${esc(atAGlance.impact)}</p></div>
+             <div class="overview__item"><span class="overview__key">${esc(ui.action)}</span><p class="overview__value">${esc(atAGlance.action)}</p></div>
+             <div class="overview__item"><span class="overview__key">${esc(ui.risk)}</span><p class="overview__value">${esc(atAGlance.risk)}</p></div>
            </div>
          </section>`
       : ""
@@ -933,59 +1495,102 @@ function buildHtml(data) {
 
   ${narrativeCards}
 
-  ${
-    coverageCount
-      ? `<p class="count">ADR contract coverage · ${provenCount} / ${coverageCount} proven · read-only evidence</p>${coverageCards}`
-      : ""
-  }
-  ${
-    choiceCount
-      ? `<p class="count">${choiceCount} notable implementation choice(s) · read-only context</p>${choiceCards}`
-      : ""
-  }
-  ${empty}
-  ${count ? `<p class="count">${count} finding(s) · rule on each one</p>` : ""}
-  ${cards}
+  <section id="findings">
+    <h2 class="section-title">${esc(ui.findings)} · ${count}</h2>
+    ${empty}
+    ${cards}
+  </section>
 
   ${
-    comprehensionCheck.questions.length
-      ? `<p class="count">Comprehension check · ${comprehensionCheck.questions.length} question(s) · PR gate</p>
-         <section class="overview">
-           <h2 class="overview__title">PR comprehension readiness</h2>
-           <p class="overview__value">${esc(comprehensionCheck.prGuidance)}</p>
-         </section>
-         ${comprehensionCards}`
+    coverageCount || choiceCount
+      ? `<section id="evidence">
+          <h2 class="section-title">${esc(ui.evidence)}</h2>
+          <div class="coverage-summary" aria-label="${esc(ui.coverageSummary)}">
+            <span>PROVEN ${provenCount}</span>
+            <span>VIOLATED ${violatedCount}</span>
+            <span>UNVERIFIED ${unverifiedCount}</span>
+            <span>CONTRADICTED ${contradictedCount}</span>
+          </div>
+          ${coverageCount ? `<h3>${esc(ui.coverage)}</h3>${coverageCards}` : ""}
+          ${
+            choiceCount
+              ? `<details class="section-disclosure">
+                  <summary>${esc(ui.choices)} · ${choiceCount}</summary>
+                  <div class="section-disclosure__body">${choiceCards}</div>
+                </details>`
+              : ""
+          }
+        </section>`
       : ""
   }
 
   ${
     data.notes
-      ? `<section class="notes"><div class="notes__k">Notes</div><p class="notes__v">${esc(data.notes)}</p></section>`
+      ? `<details class="section-disclosure"><summary>${esc(ui.residualNotes)}</summary><section class="notes"><p class="notes__v">${esc(data.notes)}</p></section></details>`
       : ""
   }
+
+  ${
+    comprehensionCheck.questions.length
+      ? `<details class="section-disclosure" id="comprehension">
+          <summary>${esc(ui.comprehension)} · ${comprehensionCheck.questions.length}</summary>
+          <div class="section-disclosure__body">
+            <section class="overview">
+              <p class="overview__value">${esc(comprehensionCheck.prGuidance)}</p>
+            </section>
+            ${comprehensionCards}
+          </div>
+        </details>`
+      : ""
+  }
+</main>
 </div>
 
-<div class="bar">
+${
+  decisionCount
+    ? `<div class="bar">
   <div class="bar__inner">
-    <span class="hint">Review the findings, add notes, then export.</span>
-    <button class="export" id="export">Export rulings</button>
+    <span class="hint">${esc(ui.exportHint)}</span>
+    <button class="export" id="export">${esc(ui.export)}</button>
   </div>
-</div>
+</div>`
+    : ""
+}
 
 <script>
   const EMBED = ${embedded};
-  document.getElementById("export").addEventListener("click", () => {
+  const decode = (encoded) => {
+    const bytes = Uint8Array.from(atob(encoded || ""), (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  };
+  document.querySelectorAll(".quiz__check").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = button.dataset.questionIndex;
+      const answer = document.querySelector('.quiz__answer[data-question-index="' + index + '"]');
+      const required = document.querySelector('.quiz__required[data-question-index="' + index + '"]');
+      const feedback = document.querySelector('.quiz__feedback[data-question-index="' + index + '"]');
+      if (!answer || !answer.value.trim()) {
+        if (required) required.hidden = false;
+        if (feedback) feedback.hidden = true;
+        return;
+      }
+      if (required) required.hidden = true;
+      if (feedback) {
+        feedback.querySelector(".quiz__criteria").textContent = decode(button.dataset.answer);
+        feedback.querySelector(".quiz__evidence").textContent = decode(button.dataset.evidence);
+        feedback.hidden = false;
+      }
+    });
+  });
+  const exportButton = document.getElementById("export");
+  if (exportButton) exportButton.addEventListener("click", () => {
     const reviews = EMBED.findings.map((f, index) => {
       const picked = document.querySelector('input[name="dec-' + index + '"]:checked');
       const note = document.querySelector('textarea.ruling__note[data-finding-index="' + index + '"]');
-      // Echo the whole finding back (route/fix/adrQuote/code/basis/weight/…)
-      // and add the ruling, so feedback.json is a self-contained handoff: the
-      // main session can route follow-ups from the file alone even after a
-      // context compaction dropped the original findings.json.
       return {
         ...f,
         finding_id: f.id,
-        decision: picked ? picked.value : "defer",
+        decision: picked ? picked.value : "not-required",
         comment: note ? note.value.trim() : "",
       };
     });
@@ -1011,7 +1616,7 @@ function buildHtml(data) {
     a.remove();
     URL.revokeObjectURL(url);
     const btn = document.getElementById("export");
-    btn.textContent = "Saved · feedback.json";
+    btn.textContent = ${inlineScriptJson(ui.saved)};
     btn.classList.add("done");
   });
 </script>

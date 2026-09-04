@@ -402,6 +402,8 @@ Settlement must create one durable completion and preserve pending state on prov
 The duplicate path ran, but the provider-failure path could not be executed.
 ## A retry still reaches the idempotent boundary
 Completion is recorded only after the provider result crosses the boundary.
+## Findings
+Provider failure remains unverified. Coverage and choices are read-only.
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -412,8 +414,6 @@ Completion is recorded only after the provider result crosses the boundary.
 | Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
 | --- | --- | --- | --- |
 | 250 ms | fixed delay | bounded retries preserve failure contract | recovery latency |
-## Findings
-Provider failure remains unverified. Coverage and choices are read-only.
 ## Tests
 Duplicate settlement PASS; provider failure NOT RUN.
 ## Residual risks
@@ -529,6 +529,8 @@ Settlement must create one durable completion and preserve pending state on prov
 The idempotent boundary admits one completion.
 ## Provider failure leaves the payment pending
 The duplicate and provider-failure paths both passed their targeted tests.
+## Findings
+Approve each choice?
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -539,8 +541,6 @@ The duplicate and provider-failure paths both passed their targeted tests.
 | Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
 | --- | --- | --- | --- |
 | 250 ms | fixed delay | bounded retries preserve failure contract | recovery latency |
-## Findings
-Approve each choice?
 ## Tests
 Both targeted tests passed.
 ## Residual risks

@@ -206,21 +206,9 @@ Fix what the pass finds before step 7. If the draft needs splitting, or a DB sch
 
 Show a verified **Decision Digest** and ask for approval. The digest is an ephemeral reading view over the ADR, not a second artifact or source of truth; the complete ADR body and `.mapping.json` remain authoritative. Show the full ADR body or detailed Alternatives only when the user asks or when the digest cannot expose a material ambiguity:
 
-Before showing the digest, evaluate five internal axes from 0 to 2 and sum them:
-conceptual breadth, contract density, state and flow complexity, boundary
-coupling, and uncertainty and verification burden. Show 1 rather than 0, so the
-displayed range is 1-10.
-Calibrate the total internally: 1 = one statement/rule; 2 = one action and one
-success condition; 3 = few flows or exceptions; 4 = recommended-range lower
-bound; 5 = best-balanced unit; 6 = recommended-range upper bound; 7 = high
-load; 8 = very high load; 9 = strongly coupled behaviors/contracts; 10 =
-maximum review load, first check for mixed Features or decisions. Treat 4-6 as
-the recommended range. A low score never requires merging and a high score
-never blocks work. Do not print the whole rubric.
-Do not show or expose the axis scores or rationale. Show only
-`Comprehension load: <N>/10`. Do not write or persist this score in the ADR,
-`.mapping.json`, Status, or any other authoritative artifact. It is advisory and
-does not block approval or implementation.
+Before showing the digest, read
+`${CLAUDE_PLUGIN_ROOT}/references/comprehension-load.md` completely and apply
+its advisory score.
 
 Only when the user asks to split, offer up to three candidates. Split into
 separate ADRs only for independent decisions. Keep one inherently difficult

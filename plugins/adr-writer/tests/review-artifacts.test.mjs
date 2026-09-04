@@ -131,6 +131,13 @@ The completion boundary admits one result and rejects or reuses duplicate work.
 ## Provider failure does not cross the completion boundary
 The handler records completion only after provider success.
 
+## Findings
+### F1. Duplicate settlement
+- Files and symbols to change: src/stream.mjs
+- Scope not to touch: protocol
+- Completion criteria: one record
+- Needs confirmation: none
+
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -141,13 +148,6 @@ The handler records completion only after provider success.
 | Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
 | --- | --- | --- | --- |
 | 250 ms fixed retry | src/stream.mjs:8 | Preserves bounded recovery | Affects recovery latency |
-
-## Findings
-### F1. Duplicate settlement
-- Files and symbols to change: src/stream.mjs
-- Scope not to touch: protocol
-- Completion criteria: one record
-- Needs confirmation: none
 
 ## Tests
 node --test test/stream.test.mjs — FAIL
@@ -180,6 +180,7 @@ function validReportWithInlineCodeCells() {
 function validFindings(dir) {
   const adr = writeAdr(dir);
   return {
+    language: "en",
     reviewMode: "full",
     adr,
     verdict: "FIX_REQUIRED",
@@ -236,6 +237,7 @@ function validFindings(dir) {
         evidence: "deterministic race reproduced two records",
         test: "node --test test/stream.test.mjs",
         testResult: "FAIL: expected 1, got 2",
+        contractIds: ["R1"],
       },
     ],
   };
@@ -265,6 +267,9 @@ The helper extraction changes organization without changing validation or output
 ## Invalid input still fails at the same boundary
 Input validation remains ahead of output construction.
 
+## Findings
+None
+
 ## ADR contract coverage
 | Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -273,9 +278,6 @@ Input validation remains ahead of output construction.
 
 ## Notable implementation choices
 None found.
-
-## Findings
-None
 
 ## Tests
 node --test test/parser.test.mjs — PASS
@@ -339,6 +341,22 @@ test("review artifact validator requires internally consistent review metrics", 
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /unverifiedRiskCount is 1, expected 0/);
+  });
+});
+
+test("review artifact validator requires report language and valid finding contract links", () => {
+  withArtifacts((dir) => {
+    writeFileSync(path.join(dir, "explanation.md"), validExplanation());
+    writeFileSync(path.join(dir, "implementation-review.md"), validReport());
+    const findings = validFindings(dir);
+    delete findings.language;
+    findings.findings[0].contractIds = ["R99"];
+    writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
+
+    const result = validate(dir);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /language must be a non-empty string/);
+    assert.match(result.stderr, /references unknown contract row: R99/);
   });
 });
 
@@ -521,6 +539,7 @@ test("PASS rejects omitted ADR rows, duplicate IDs, unexecuted tests, and blocki
         evidence: "no executed parser test",
         test: "node --test test/parser.test.mjs",
         testResult: "NOT RUN",
+        contractIds: ["R1"],
       },
     ];
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));

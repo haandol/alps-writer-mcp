@@ -78,22 +78,9 @@ Pass each reviewer: the ADR path, that category's `.mapping.json` entry, and **t
 - Require only the agent file's existing review-result format in the response.
 - If the scope is large, tell the user the execution grouping, rather than silently reviewing a subset. Never truncate the scope without saying so.
 
-For each ADR, evaluate five internal axes from 0 to 2 and sum them:
-conceptual breadth, contract density, state and flow complexity, boundary
-coupling, and uncertainty and verification burden. Show 1 rather than 0, so the
-displayed range is 1-10. Do not show or expose the
-axis scores or rationale. Add only `Comprehension load: <N>/10` beside the ADR
-in the disposable report and chat summary. Do not write or persist this score
-in the ADR, `.mapping.json`, Status, or any other authoritative artifact. It is
-advisory and does not block the document verdict or follow-up work.
-
-Calibrate the total internally: 1 = one statement/rule; 2 = one action and one
-success condition; 3 = few flows or exceptions; 4 = recommended-range lower
-bound; 5 = best-balanced unit; 6 = recommended-range upper bound; 7 = high
-load; 8 = very high load; 9 = strongly coupled behaviors/contracts; 10 =
-maximum review load, first check for mixed Features or decisions. Treat 4-6 as
-the recommended range. A low score never requires merging and a high score
-never blocks work. Do not print the whole rubric.
+Before scoring the first ADR, read
+`${CLAUDE_PLUGIN_ROOT}/references/comprehension-load.md` completely. Apply the
+same advisory score to every ADR in the sweep.
 
 Only when the user asks to split, offer up to three candidates. Split ADRs only
 for independent decisions. Keep one inherently difficult decision in one ADR

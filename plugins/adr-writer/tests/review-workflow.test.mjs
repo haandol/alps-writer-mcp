@@ -13,6 +13,8 @@ function read(relativePath) {
 
 test("adr-impl-review preserves role boundaries without fixing the agent topology", () => {
   const skill = read("skills/adr-impl-review/SKILL.md");
+  const artifactContract = read("skills/adr-impl-review/references/artifact-contract.md");
+  const reviewContract = `${skill}\n${artifactContract}`;
   const agents = [
     ["agents/adr-impl-explainer.md", "name: adr-impl-explainer"],
     ["agents/adr-impl-necessity-reviewer.md", "name: adr-impl-necessity-reviewer"],
@@ -22,7 +24,7 @@ test("adr-impl-review preserves role boundaries without fixing the agent topolog
 
   for (const [file, name] of agents) {
     assert.match(read(file), new RegExp(name));
-    assert.match(skill, new RegExp(name.replace("name: ", "")));
+    assert.match(reviewContract, new RegExp(name.replace("name: ", "")));
   }
 
   assert.match(skill, /Build the review baseline without a post-implementation gate/);
@@ -45,14 +47,14 @@ test("adr-impl-review preserves role boundaries without fixing the agent topolog
     skill,
     /selected value or behavior, code evidence, why it fits the ADR intent, and why it matters/i,
   );
-  assert.match(skill, /progressive disclosure/i);
-  assert.match(skill, /implementationChoices/);
-  assert.match(skill, /contractCoverage/);
+  assert.match(artifactContract, /progressive disclosure/i);
+  assert.match(artifactContract, /implementationChoices/);
+  assert.match(artifactContract, /contractCoverage/);
   assert.match(skill, /PROVEN.*VIOLATED.*UNVERIFIED.*CONTRADICTED/s);
-  assert.match(skill, /ordinary main-session completion\s+response contains only/i);
-  assert.doesNotMatch(skill, /accept.*request change.*investigate/i);
+  assert.match(artifactContract, /ordinary main-session completion\s+response contains only/i);
+  assert.doesNotMatch(reviewContract, /accept.*request change.*investigate/i);
   // No provider's model ID may be embedded in the prompt.
-  assert.doesNotMatch(skill, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
+  assert.doesNotMatch(reviewContract, /gpt-[0-9]|claude-[a-z0-9]|gemini-[0-9]/);
 });
 
 test("implementation review separates ADR decisions from code-level AI choices", () => {
@@ -61,6 +63,7 @@ test("implementation review separates ADR decisions from code-level AI choices",
   const explainer = read("agents/adr-impl-explainer.md");
   const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
   const reportWriter = read("agents/adr-impl-review-report-writer.md");
+  const materializer = read("scripts/adr-impl-review-materialize.mjs");
 
   assert.match(impl, /never written into the ADR/);
   assert.match(review, /admission gate/);
@@ -83,11 +86,9 @@ test("implementation review separates ADR decisions from code-level AI choices",
     sufficiency,
     /Tuning values and replaceable libraries[\s\S]{0,200}are out of scope/,
   );
-  assert.match(
-    reportWriter,
-    /These are material code-level choices the ADR intentionally does not own/,
-  );
-  assert.match(reportWriter, /Why it fits the ADR intent/);
+  assert.match(reportWriter, /material\s+code-level choices the ADR intentionally does not own/i);
+  assert.match(reportWriter, /implementationChoices/);
+  assert.match(materializer, /Why it fits the ADR intent/);
   assert.match(reportWriter, /one row per independent ADR obligation/);
   assert.match(reportWriter, /do not amend the ADR/);
   assert.match(reportWriter, /Use progressive disclosure/);
@@ -96,6 +97,8 @@ test("implementation review separates ADR decisions from code-level AI choices",
 
 test("implementation review leads with ADR intent and a reader-priority narrative", () => {
   const skill = read("skills/adr-impl-review/SKILL.md");
+  const artifactContract = read("skills/adr-impl-review/references/artifact-contract.md");
+  const reviewContract = `${skill}\n${artifactContract}`;
   const explainer = read("agents/adr-impl-explainer.md");
   const reportWriter = read("agents/adr-impl-review-report-writer.md");
   const guide = read("references/review-report-writing.md");
@@ -107,27 +110,33 @@ test("implementation review leads with ADR intent and a reader-priority narrativ
     assert.match(source, /importance|important/i);
     assert.match(source, /flow|causal/i);
   }
-  for (const source of [skill, reportWriter, guide]) {
+  for (const source of [reviewContract, reportWriter, guide]) {
     assert.match(source, /Comprehension\s+check/);
   }
 
   assert.match(explainer, /subject-specific heading/i);
-  assert.match(reportWriter, /Between `ADR intent` and `ADR contract coverage`/);
+  assert.match(reportWriter, /Between `ADR intent` and `Findings`/);
   assert.match(readerFirst, /repeated contrast templates/i);
   assert.match(readerFirst, /ornamental title-cased English labels/i);
   assert.match(readerFirst, /Never invent an anecdote/i);
   assert.match(guide, /language the user explicitly requests or currently uses/i);
   assert.match(guide, /target ADR's dominant\s+language/i);
   assert.match(guide, /multi-ADR report/i);
-  assert.doesNotMatch(skill, /exactly these top-level sections/i);
-  assert.match(skill, /one\s+to five medium-difficulty free-response questions/i);
-  assert.match(skill, /Do not expose[\s\S]{0,120}`answerCriteria` or `evidence`/i);
+  assert.doesNotMatch(reviewContract, /exactly these top-level sections/i);
+  assert.match(reviewContract, /one\s+to five medium-difficulty free-response questions/i);
+  assert.match(
+    reviewContract,
+    /may reveal `answerCriteria` and `evidence` only after the reader enters an\s+answer/i,
+  );
   assert.match(skill, /A `PASS` verdict never implies comprehension readiness/);
   assert.match(skill, /Do not open or send the\s+PR until the comprehension check is passed/);
-  assert.match(skill, /Do not persist quiz progress or pass\/fail state/);
-  assert.match(skill, /Do not automatically begin the comprehension check/i);
-  assert.match(skill, /Only when the user explicitly asks to run the comprehension check/i);
-  assert.match(skill, /ordinary main-session completion\s+response contains only/i);
+  assert.match(artifactContract, /Do not persist quiz progress or pass\/fail state/);
+  assert.match(artifactContract, /Do not automatically begin the comprehension check/i);
+  assert.match(
+    artifactContract,
+    /Only when the user explicitly asks to run the comprehension check/i,
+  );
+  assert.match(artifactContract, /ordinary main-session completion\s+response contains only/i);
   assert.match(
     skill,
     /Never include a comprehension question, grading criterion, evidence, or answer\s+request in the ordinary main-session completion response/i,
@@ -211,6 +220,9 @@ test("sufficiency review is a pre-promotion completion gate", () => {
 test("large skill details are loaded through explicit progressive-disclosure references", () => {
   const sync = read("skills/adr-sync/SKILL.md");
   const hygiene = read("skills/adr-sync/references/repository-hygiene.md");
+  const implReview = read("skills/adr-impl-review/SKILL.md");
+  const artifactContract = read("skills/adr-impl-review/references/artifact-contract.md");
+  const remediationRouting = read("skills/adr-impl-review/references/remediation-routing.md");
 
   assert.match(sync, /read `references\/repository-hygiene\.md` completely/);
   assert.match(sync, /Do not read that reference.*when no candidate exists/);
@@ -228,6 +240,41 @@ test("large skill details are loaded through explicit progressive-disclosure ref
     "Mapping and index hygiene",
   ]) {
     assert.match(hygiene, new RegExp(`^## ${section}$`, "m"));
+  }
+
+  assert.match(
+    implReview,
+    /Only after evidence synthesis and verdict selection, read\s+`references\/artifact-contract\.md` completely/i,
+  );
+  assert.match(
+    implReview,
+    /Do not load it during scope\s+discovery or the independent review perspectives/i,
+  );
+  assert.match(
+    implReview,
+    /Only when findings exist[\s\S]{0,160}read\s+`references\/remediation-routing\.md` completely/i,
+  );
+  assert.match(artifactContract, /Implementation review artifact contract/);
+  assert.match(remediationRouting, /Implementation review remediation routing/);
+  assert.ok(
+    implReview.trim().split(/\s+/).length < 4500,
+    "adr-impl-review SKILL.md should stay below 4.5k words",
+  );
+});
+
+test("core skill prompts stay within the progressive-disclosure budget", () => {
+  const budgets = [
+    ["skills/adr-new/SKILL.md", 6500],
+    ["skills/adr-impl/SKILL.md", 6000],
+    ["skills/adr-impl-review/SKILL.md", 4500],
+    ["skills/adr-sync/SKILL.md", 5000],
+    ["skills/adr-rollup/SKILL.md", 5000],
+    ["../alps-writer/skills/feature-to-adr/SKILL.md", 2500],
+  ];
+
+  for (const [file, maximum] of budgets) {
+    const words = read(file).trim().split(/\s+/).length;
+    assert.ok(words < maximum, `${file} should stay below ${maximum} words; got ${words}`);
   }
 });
 
@@ -322,6 +369,9 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.match(impl, /`BLOCK` and unresolved `INCONCLUSIVE` preserve the current lifecycle state/);
 
   const finalReviewSkill = read("skills/adr-impl-review/SKILL.md");
+  const artifactContract = read("skills/adr-impl-review/references/artifact-contract.md");
+  const remediationRouting = read("skills/adr-impl-review/references/remediation-routing.md");
+  const finalReviewContract = `${finalReviewSkill}\n${artifactContract}\n${remediationRouting}`;
   assert.match(finalReviewSkill, /Report-only/);
   assert.match(finalReviewSkill, /This command itself remains report-only/);
   assert.match(finalReviewSkill, /selected pre-promotion completion review/);
@@ -332,28 +382,28 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
     finalReviewSkill,
     /In full mode, the necessity and sufficiency perspectives are grounded separately/,
   );
-  assert.match(finalReviewSkill, /Auto-remediate in the caller/);
-  assert.match(finalReviewSkill, /must not ask the user to rule `apply \/ skip \/ defer`/);
-  assert.match(finalReviewSkill, /no routine post-implementation approval remains/);
+  assert.match(remediationRouting, /Auto-remediate in the caller/);
+  assert.match(artifactContract, /must not ask the user to rule\s+`apply \/ skip \/ defer`/);
+  assert.match(remediationRouting, /no routine post-implementation approval\s+remains/);
   assert.match(finalReviewSkill, /elapsed time, per-perspective finding counts/);
   assert.match(finalReviewSkill, /complete implementation scope/i);
   assert.match(finalReviewSkill, /never the ceiling of the implementation\s+review/i);
   assert.match(finalReviewSkill, /direct and indirect callers and callees/i);
-  assert.match(finalReviewSkill, /Validate and build the HTML in both modes/i);
+  assert.match(artifactContract, /Validate and build the HTML in both modes/i);
   assert.match(
-    finalReviewSkill,
+    artifactContract,
     /node \$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/adr-impl-review-open\.mjs <artifact-dir>\/adr-impl-review-report\.html/i,
   );
   assert.match(
-    finalReviewSkill,
+    artifactContract,
     /`NOT_OPENED` result for a valid artifact[\s\S]{0,160}provide the exact path/i,
   );
   assert.match(
-    finalReviewSkill,
+    finalReviewContract,
     /Never report either review mode complete without a validated, non-empty `adr-impl-review-report\.html`/i,
   );
   assert.match(
-    finalReviewSkill,
+    finalReviewContract,
     /Never finish either review mode without running `adr-impl-review-open\.mjs` once/i,
   );
 
@@ -492,13 +542,14 @@ test("spec fitness is approved before implementation and not reopened as a routi
 test("sufficiency reviewer tests the tests — mutation and static analysis as verification lenses", () => {
   const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
   const skill = read("skills/adr-impl-review/SKILL.md");
-  assert.match(sufficiency, /Testing the tests/);
-  assert.match(sufficiency, /mutation/);
-  assert.match(sufficiency, /Static\/security analysis/);
+  const evidence = read("references/implementation-evidence.md");
+  assert.match(sufficiency, /implementation-evidence\.md/);
+  assert.match(skill, /implementation-evidence\.md/);
+  assert.match(evidence, /mutation/);
+  assert.match(evidence, /static, or security tooling/i);
   // Use only already-configured tooling; never install anything new.
-  assert.match(sufficiency, /already configured/);
-  assert.match(sufficiency, /Do not install new tools/);
-  assert.match(skill, /whether the tests actually catch defects/);
+  assert.match(evidence, /already exists/);
+  assert.match(evidence, /Do not install new tools/);
 });
 
 // Language-native documentation carries why/how, while tests carry executable ideal and
@@ -506,68 +557,54 @@ test("sufficiency reviewer tests the tests — mutation and static analysis as v
 // domain vocabulary improves search without coupling code to a decision-file location.
 test("adr implementation requires standard function docs plus ideal and edge tests", () => {
   const impl = read("skills/adr-impl/SKILL.md");
-  assert.match(impl, /GoDoc/);
-  assert.match(impl, /Python docstrings/);
-  assert.match(impl, /why the function is needed/i);
-  assert.match(impl, /how it behaves/i);
-  assert.match(impl, /Reuse the ADR's domain and requirement-contract vocabulary/i);
-  assert.match(impl, /never cite or mention the ADR itself/i);
-  assert.match(impl, /No code comment or docstring may contain an ADR number, path, link/i);
-  assert.match(impl, /exempt from the three-line inline-comment guideline/i);
-  assert.match(impl, /at least one ideal-case test and every relevant edge-case test/i);
-  assert.match(impl, /do not claim completion with only the ideal path/i);
-
-  // Ordinary inline comments still move executable WHAT into tests.
-  assert.match(impl, /ordinary inline comments to three lines or fewer/i);
-  assert.match(impl, /move the [*_]what[*_] into tests/);
-  assert.match(impl, /Write the tests so they read as the documentation/);
-  assert.match(impl, /Never trade coverage for brevity/);
+  const evidence = read("references/implementation-evidence.md");
+  assert.match(impl, /implementation-evidence\.md/);
+  assert.match(evidence, /GoDoc/);
+  assert.match(evidence, /Python docstring/);
+  assert.match(evidence, /why the function is needed/i);
+  assert.match(evidence, /how it enforces/i);
+  assert.match(evidence, /requirement-contract vocabulary/i);
+  assert.match(evidence, /never cite the ADR itself/i);
+  assert.match(evidence, /no ADR number/);
+  assert.match(evidence, /may exceed three lines/i);
+  assert.match(evidence, /at least one ideal-case automated test/i);
+  assert.match(evidence, /every edge case relevant/i);
+  assert.match(evidence, /roughly three lines/i);
+  assert.match(evidence, /move the what\s+into tests/i);
+  assert.match(evidence, /Do not delete a long comment before its cases are covered/i);
 
   const sufficiency = read("agents/adr-impl-sufficiency-reviewer.md");
   const skill = read("skills/adr-impl-review/SKILL.md");
   for (const source of [sufficiency, skill]) {
-    assert.match(source, /language-standard function documentation/i);
-    assert.match(source, /why the function is needed/i);
-    assert.match(source, /how it enforces/i);
-    assert.match(source, /ADR number, path, link/i);
-    assert.match(source, /ideal-case test/i);
-    assert.match(source, /relevant edge case/i);
-    assert.match(source, /prevents `PASS`|prevents PASS/i);
-    assert.match(source, /[Nn]ever propose deleting a comment whose cases are \*{0,2}not\*{0,2}/);
-    assert.match(source, /even beyond three lines/);
+    assert.match(source, /implementation-evidence\.md/);
   }
 
   const necessity = read("agents/adr-impl-necessity-reviewer.md");
-  assert.match(
-    necessity,
-    /documentation and tests that document a decided behavior are not removable scope/i,
-  );
-  assert.match(necessity, /without citing the ADR itself/i);
+  assert.match(necessity, /implementation-evidence\.md/);
+  assert.match(necessity, /not\s+removable scope/i);
 
   const writer = read("agents/adr-impl-review-report-writer.md");
-  assert.match(writer, /why the function exists/i);
-  assert.match(writer, /without any ADR number, path, link, or source reference/i);
-  assert.match(writer, /ideal or relevant edge case/i);
-  assert.match(writer, /add the test first, then shorten the (?:inline )?comment/);
+  assert.match(writer, /implementation-evidence\.md/);
 });
 
 test("implementation review keeps contract evidence without a mandatory merge checklist", () => {
   const writer = read("agents/adr-impl-review-report-writer.md");
   const skill = read("skills/adr-impl-review/SKILL.md");
+  const artifactContract = read("skills/adr-impl-review/references/artifact-contract.md");
+  const reviewContract = `${skill}\n${artifactContract}`;
+  const materializer = read("scripts/adr-impl-review-materialize.mjs");
   assert.match(writer, /ADR contract coverage/);
-  assert.match(skill, /ADR contract coverage/);
+  assert.match(reviewContract, /ADR contract coverage/);
   assert.match(writer, /PROVEN/);
-  assert.match(skill, /contractCoverage/);
-  assert.match(skill, /PASS.*every contract-coverage row.*PROVEN/is);
-  assert.match(writer, /How the implementation meets it/);
-  assert.match(writer, /Tests/);
-  assert.match(writer, /short cells, not fewer columns/);
-  assert.match(writer, /Do not collapse a material implementation choice into prose/);
-  assert.match(skill, /short cells, not fewer columns/);
-  assert.match(skill, /never replace the four-column implementation-choice table with prose/i);
+  assert.match(reviewContract, /contractCoverage/);
+  assert.match(reviewContract, /PASS.*every contract-coverage row.*PROVEN/is);
+  assert.match(materializer, /How the implementation meets it/);
+  assert.match(materializer, /Selected value or behavior/);
+  assert.match(writer, /generated from findings\.json/);
+  assert.match(artifactContract, /adr-impl-review-materialize\.mjs/);
   assert.match(writer, /Residual risks/);
   assert.doesNotMatch(writer, /Merge decision checklist/);
-  assert.doesNotMatch(skill, /seven-axis merge decision checklist/);
+  assert.doesNotMatch(reviewContract, /seven-axis merge decision checklist/);
 });
 
 test("repair guidance and Mermaid are conditional on the review evidence", () => {
@@ -594,7 +631,7 @@ test("human-facing review reports use one junior-readable visual writing guide",
   const reportProducers = [
     read("skills/adr-review/SKILL.md"),
     read("skills/adr-sync/SKILL.md"),
-    read("skills/adr-impl-review/SKILL.md"),
+    read("skills/adr-impl-review/references/artifact-contract.md"),
     read("skills/adr-impl-refactor/SKILL.md"),
     read("agents/adr-impl-review-report-writer.md"),
   ];

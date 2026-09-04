@@ -130,26 +130,18 @@ Check whether the gray zone the ADR decided appears verbatim in the code's behav
 - Record two axes for each cleanup — **weight** (`now` | `next-cycle`, the _timing_) and **impact** (an effort×payoff pair such as `low-effort/high-payoff`, the _value_). They are different axes: distinguishing cheap/high-impact cleanups from expensive/low-impact ones is what lets the user decide what to touch first. Weight alone tells them "when" but not "why first."
 - Ground cleanups in _which code hurts and why_, as in D3 — never leave generic advice like "extract function."
 
-**D4-b. Do language-standard function documentation and executable cases preserve the explanation?**
+**D4-b. Do documentation and executable cases preserve the explanation?**
 
-For every named function or method created or materially changed in handwritten code for the target behavior, inspect both the language-native documentation and its tests.
-
-- **Language-standard documentation is mandatory** — require GoDoc, Python docstrings, JSDoc/TSDoc, Rustdoc, JavaDoc/KDoc, or the repository's equivalent. The comment must state both why the function is needed and how it enforces the contract-relevant state, permission, ordering, failure, or fallback behavior. A missing comment, non-standard placement, or name/signature restatement is `[Best practice]` weighted `now` and makes the review `FIX_REQUIRED`.
-- **Reuse contract vocabulary without citing its source** — the documentation should reuse the ADR's domain and requirement-contract terms so repository search finds the implementation. No code comment or docstring may contain an ADR number, path, link, `ADR` source label, or wording such as "the ADR requires". Record `[Best practice]` weighted `now` and remove the direct reference while preserving the domain terms.
-- **The three-line guideline applies only to ordinary inline comments** — a language-standard documentation comment may be longer when needed to state its why and how. For an inline comment block over ~3 lines that enumerates behavior, check whether a test covers each enumerated case; where one is missing, record `[Test gap]`, and where all are covered, record `[Refactor]` to shorten the inline comment to the why. Never propose deleting a comment whose cases are **not** covered.
-- **Ideal and edge tests are both mandatory** — for every implemented ADR behavior, require at least one ideal-case test plus every relevant edge case. Select from requirement boundaries, empty or invalid input, forbidden transitions, failure and fallback, duplicates, reordering, concurrency, partial failure, and restart behavior only when the contract makes the category relevant. A missing ideal case or relevant edge case is `[Test gap]` and prevents `PASS`; do not require unrelated categories merely to fill a checklist.
-- **Tests remain executable documentation** — a name that does not read as the behavior it proves (`test transition 3`), or one test asserting many unrelated behaviors so a failure does not name the broken rule, is `[Refactor]`.
-- **Non-executable rationale still stays** — a comment holding a why code cannot express (an external constraint, a spec quirk, an upstream API's behavior, a trap that looks safe) is correct even beyond three lines. Judge project conventions and surrounding files first where they impose a stricter standard.
+Before this dimension, read
+`${CLAUDE_PLUGIN_ROOT}/references/implementation-evidence.md` completely. Apply
+its documentation, inline-comment, test, and finding classifications.
 
 **D5. Test coverage — is the decided behavior verified?**
 
-- For each gray-zone decision in the ADR (domain rules, state transitions, fallback, boundary conditions), is there a test that holds it? If only the happy path is covered and the core of the decision (e.g. revoking the family on reuse detection, the fallback path) is untested, record a gap.
-- **When tests exist, do not stop at confirming their existence — run them and use the result as evidence.** Bash is granted, so use the test command from `AGENTS.md`/`package.json` to run **only the tests that verify this decision** (do not force a full run or environmental side effects) and quote pass/fail. A test that exists and fails is itself strong evidence of a `[Spec violation]`. If the environment makes execution impossible, state "could not run — existence confirmed only."
-- Beyond the happy path, pick relevant categories and try counterexamples: empty values and boundaries, errors, retries, duplicates, reordering, concurrent execution, partial failure, process restart, external-dependency latency and failure, permissions and security, backward compatibility. Do not pad with irrelevant categories.
-- **Testing the tests — verify that a test actually catches a defect.** That a test exists and that it fails on wrong code are different facts (an extension of the section-4 framing). A test with high coverage that catches no counterexample is a gap.
-  - **Mutation** — if a property-based or mutation tool is **already present** in the project, run it **restricted** to the decision's core invariants. If the tests pass a mutation such as an inverted condition or changed operator, that signals weak tests for that decision, so record `[Test gap]`. Do not install new tools.
-  - **Static/security analysis** — if static analysis such as CodeQL or linter security rules is **already configured** in the project, cite its results as evidence **limited to the code scope this ADR governs.** For a decision-adjacent vulnerability (input-validation placement, injection, authentication paths), classify it as `[Best practice]` (basis: which rule) or `[Spec violation]` (the ADR decided a security invariant and it is violated). Do not install tools or spill into a global security scan — leave out-of-scope vulnerabilities as a single `/security-review` line in Notes (symmetric with D3's `/code-review` boundary).
-- Never modify product code or existing tests. Create temporary reproductions only in the artifact directory you were given, and record the commands and results.
+- Run the targeted tests and any already-configured property, mutation, static, or
+  security checks selected by `implementation-evidence.md`. Keep them restricted
+  to this ADR's code scope. Never modify product code or existing tests; create
+  temporary reproductions only in the artifact directory.
 
 **D6. No code→ADR back-references (R17)**
 

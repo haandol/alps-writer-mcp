@@ -22,6 +22,11 @@ export const IMPL_REVIEW_VALIDATE = path.join(
   "scripts",
   "adr-impl-review-validate.mjs",
 );
+export const IMPL_REVIEW_MATERIALIZE = path.join(
+  PLUGIN_ROOT,
+  "scripts",
+  "adr-impl-review-materialize.mjs",
+);
 export const IMPL_REVIEW_REPORT = path.join(PLUGIN_ROOT, "scripts", "adr-impl-review-report.mjs");
 
 // The seeded rule docs a real repo holds. Fixtures get the real files, not
@@ -96,6 +101,16 @@ The scenario evidence identifies the relevant failure result without inventing a
       2,
     ) + "\n",
   );
+  const materialized = spawnSync(process.execPath, [IMPL_REVIEW_MATERIALIZE, artifactDir], {
+    cwd: dir,
+    encoding: "utf8",
+  });
+  if (materialized.status !== 0) {
+    return {
+      pass: false,
+      detail: materialized.stderr.trim() || materialized.stdout.trim() || "materializer failed",
+    };
+  }
   const validation = spawnSync(process.execPath, [IMPL_REVIEW_VALIDATE, artifactDir], {
     cwd: dir,
     encoding: "utf8",
@@ -118,6 +133,7 @@ The scenario evidence identifies the relevant failure result without inventing a
         ? "artifact validator and HTML renderer passed"
         : rendered.stderr.trim() || "HTML renderer failed",
     html: rendered.stdout,
+    report: read(artifactDir, "implementation-review.md"),
   };
 }
 

@@ -39,9 +39,9 @@ independence of the conclusions, not a fixed number or type of agent.
 Orchestration discretion does not remove or weaken the workflow's observable
 contracts: ADR admission, dependency ordering, approval boundaries,
 comprehension-load behavior, risk-selected review mode, contract coverage,
-evidence requirements, the fixed Explain Diff section spine, the pre-PR
-comprehension check, remediation routes, and Status transitions remain as
-specified by their owning artifacts.
+evidence requirements, the reader-first implementation-review spine, the
+pre-PR comprehension check, remediation routes, and Status transitions remain
+as specified by their owning artifacts.
 
 Choose the smallest execution strategy that satisfies those contracts. Record a
 capability or isolation limitation only when it materially affects confidence or

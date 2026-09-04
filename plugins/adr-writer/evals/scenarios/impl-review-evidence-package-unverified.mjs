@@ -110,8 +110,10 @@ function orderedSections(visible) {
   const lastCoverageRow = Math.max(...coverageRows);
   return (
     coverageRows.every((index) => index >= 0) &&
+    findingHeading >= 0 &&
+    findingHeading < Math.min(...coverageRows) &&
     choiceRow > lastCoverageRow &&
-    (findingHeading < 0 || findingHeading > choiceRow)
+    choiceRow >= 0
   );
 }
 
@@ -146,21 +148,20 @@ export default {
       }),
       `\n---\n\n# This run`,
       `Produce the concise human-facing Evidence Package for this completed review.`,
-      `The normal response must be the exact complete contents of implementation-review.md,`,
+      `The normal response is the narrative source for implementation-review.md,`,
       `starting with "# ADR implementation review" and including every required core heading.`,
+      `Under At a glance, ADR contract coverage, Notable implementation choices, and Comprehension check, write only <!-- generated from findings.json -->.`,
       `Do not put conversational prose before or instead of the report file contents.`,
       `Do not invent files or tests beyond the facts below. Show the normal response first.`,
       `The normal response must lead with At a glance (Verdict, Impact, Action, Risk),`,
-      `then ADR intent, one or more subject-specific narrative sections ordered by importance, contract coverage, notable implementation choices, findings, residual risks, and Comprehension check.`,
+      `then ADR intent, one or more subject-specific narrative sections ordered by importance, findings, contract coverage, notable implementation choices, residual risks, and Comprehension check.`,
       `Follow the verified settlement or trust-boundary flow where it helps. Do not default to implementation order.`,
       `Remove repeated contrast templates, ornamental one-off labels, forced numbered symmetry, filler bridges, and duplicate visuals. Do not invent a story.`,
       `Coverage and choices are read-only.`,
       `The visible Comprehension check must include 1-5 free-response questions and this exact guidance: ${PR_GUIDANCE}`,
       `Include this question exactly: ${QUIZ_QUESTION}`,
       `Do not reveal the answer criteria or evidence before the reader answers.`,
-      `Keep seven separate coverage columns: Contract ID, Requirement, Status, ADR basis,`,
-      `How the implementation meets it, Evidence, Tests. Keep four choice columns: Selected behavior,`,
-      `Evidence, Why it fits the ADR intent, Why it matters. Do not collapse either table.`,
+      `Keep the complete coverage, choice, and comprehension fields in the machine-readable handoff; the materializer owns their Markdown tables and visible prompts.`,
       `In EVAL-FINDINGS use exactly these six tags and include every named field:`,
       `COVERAGE_D0 | status=...; implementation=...; evidence=...; tests=...`,
       `COVERAGE_R1 | status=...; implementation=...; evidence=...; tests=...`,
@@ -181,14 +182,17 @@ export default {
     const choice = taggedSummary(tail, "CHOICE");
     const humanReview = taggedSummary(tail, "HUMAN_REVIEW");
     const comprehension = taggedSummary(tail, "COMPREHENSION");
-    const d0Row = coverageRow(visible, "D0");
-    const r1Row = coverageRow(visible, "R1");
-    const r2Row = coverageRow(visible, "R2");
     const artifact = validateReviewArtifact(dir, visible, {
+      language: "en",
       reviewMode: "full",
       adr: "docs/adr/payments/settlement/0001-idempotent-payment-settlement.md",
       status: "Accepted (2026-08-17)",
       verdict: "INCONCLUSIVE",
+      atAGlance: {
+        impact: "Provider failure behavior remains unverified.",
+        action: "Verify provider failure injection or accept the documented risk.",
+        risk: "A provider failure could record completion without executed evidence.",
+      },
       scope: ["src/payments/settle.ts", "test/payments/settle.test.ts"],
       changeScope: ["src/payments/settle.ts"],
       metrics: {
@@ -258,9 +262,14 @@ export default {
           evidence: "failure injection is unavailable",
           test: "provider failure injection",
           testResult: "NOT RUN — unavailable",
+          contractIds: ["D0", "R2"],
         },
       ],
     });
+    const materializedVisible = artifact.report || visible;
+    const d0Row = coverageRow(materializedVisible, "D0");
+    const r1Row = coverageRow(materializedVisible, "R1");
+    const r2Row = coverageRow(materializedVisible, "R2");
 
     return [
       {
@@ -322,26 +331,27 @@ export default {
         label: "human review focuses on the material verification exception, not every row",
       },
       {
-        pass: orderedSections(visible),
-        detail: "expected coverage, choices, then findings or residual risks",
-        label: "human-facing package leads with coverage before choices and findings",
+        pass: orderedSections(materializedVisible),
+        detail: "expected findings before coverage, then choices",
+        label: "human-facing package leads with findings before detailed evidence",
       },
       {
         pass:
           /questionCount\s*=\s*[1-5]\b/i.test(comprehension) &&
           /answersHidden\s*=\s*true/i.test(comprehension) &&
           /prReadyBeforeQuiz\s*=\s*false/i.test(comprehension) &&
-          visible.includes("## ADR intent") &&
-          visible.indexOf("## ADR intent") < visible.indexOf("## ADR contract coverage") &&
-          /^## (?!ADR intent$|Visual map$|ADR contract coverage$).+/m.test(
-            visible.slice(
-              visible.indexOf("## ADR intent") + "## ADR intent".length,
-              visible.indexOf("## ADR contract coverage"),
+          materializedVisible.includes("## ADR intent") &&
+          materializedVisible.indexOf("## ADR intent") <
+            materializedVisible.indexOf("## Findings") &&
+          /^## (?!ADR intent$|Visual map$|Findings$).+/m.test(
+            materializedVisible.slice(
+              materializedVisible.indexOf("## ADR intent") + "## ADR intent".length,
+              materializedVisible.indexOf("## Findings"),
             ),
           ) &&
-          visible.includes("## Comprehension check") &&
-          visible.includes(PR_GUIDANCE) &&
-          visible.includes(QUIZ_QUESTION),
+          materializedVisible.includes("## Comprehension check") &&
+          materializedVisible.includes(PR_GUIDANCE) &&
+          materializedVisible.includes(QUIZ_QUESTION),
         detail: comprehension || "missing COMPREHENSION",
         label: "keeps the explanation predictable and the PR comprehension gate separate",
       },
@@ -351,17 +361,17 @@ export default {
         label: "generated report passes the shipped artifact validator and HTML renderer",
       },
       expectNoText(
-        visible,
+        materializedVisible,
         /approve (?:each|this (?:coverage|choice))[^.\n?]*\?|각 (?:행|선택)[^.\n?]*승인(?:해\s*주세요|하시겠습니까|\?)/i,
         "does not ask the user to approve each coverage row or implementation choice",
       ),
       expectNoText(
-        visible,
+        materializedVisible,
         /(?:the key is|what matters is|ultimately|firstly|secondly|thirdly).*(?:the key is|what matters is|ultimately|firstly|secondly|thirdly)/is,
         "does not use repeated filler bridges or forced numbered symmetry",
       ),
       expectNoText(
-        visible,
+        materializedVisible,
         /\b(?:src|test|tests)\/[\w./-]+|[\w./-]+\.(?:ts|js|mjs):\d+/i,
         "does not invent code or test paths absent from the supplied evidence",
       ),
