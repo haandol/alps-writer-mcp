@@ -91,7 +91,7 @@ function coverageRows(visible) {
 }
 
 function completeTableRow(row) {
-  return Boolean(row && row.split("|").filter((cell) => cell.trim()).length >= 7);
+  return Boolean(row && row.split("|").filter((cell) => cell.trim()).length >= 4);
 }
 
 export default {

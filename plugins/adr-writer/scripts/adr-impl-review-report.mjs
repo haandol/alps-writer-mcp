@@ -63,6 +63,12 @@
 //         "category": "Spec violation",   // one of the recognized tags below
 //         "perspective": "necessity" | "sufficiency" | "both",
 //         "summary":  "family revocation on reuse detection is not implemented",
+//         "whyItMatters": "a reused token can keep the rest of its family active",
+//         "expectedBehavior": "reuse revokes the entire token family",
+//         "observedBehavior": "only the reused token is invalidated",
+//         "requestedChange": "revoke every token in the detected family",
+//         "editTargets": "src/auth/refresh.ts — reuse-detection branch",
+//         "completionCriteria": "family revocation test passes and no sibling token remains valid",
 //         "adrQuote": "when reuse is detected, revoke the entire token family",  // ADR decision, 1 line
 //         "code":     "src/auth/refresh.ts: on reuse it invalidates only that one token",
 //         "fix":      "switch to family-level revocation",
@@ -188,12 +194,30 @@ const UI = {
     explanation: "Plain explanation",
     report: "Review report",
     metrics: "Review metrics",
-    findings: "Findings",
-    noCounterexample: "No unnecessary change or counterexample was confirmed.",
-    incomplete: "There are no confirmed findings, but the review did not complete.",
-    evidence: "Evidence",
-    coverage: "ADR contract coverage",
-    coverageSummary: "Coverage summary",
+    findings: "Work to do",
+    noCounterexample: "No additional work was identified.",
+    incomplete: "No work item was confirmed, but the review did not complete.",
+    evidence: "Technical evidence",
+    coverage: "Contract verification",
+    coverageSummary: "Contract verification summary",
+    taskFix: "Fix required",
+    taskDecide: "Decision required",
+    taskVerify: "Verification required",
+    taskNote: "Suggestions",
+    whyItMatters: "Why it matters",
+    expectedBehavior: "Expected behavior",
+    observedBehavior: "Observed behavior",
+    requestedChange: "Requested change",
+    editTargets: "Where to change",
+    completionCriteria: "Done when",
+    technicalEvidence: "Technical evidence",
+    category: "Category",
+    confidence: "Confidence",
+    reviewResult: "Review result",
+    statusProven: "Met",
+    statusViolated: "Fix required",
+    statusUnverified: "Verification required",
+    statusContradicted: "Conflicting evidence",
     choices: "Notable implementation choices",
     comprehension: "Comprehension check",
     residualNotes: "Review notes",
@@ -245,12 +269,30 @@ const UI = {
     explanation: "구현 설명",
     report: "리뷰 보고서",
     metrics: "리뷰 지표",
-    findings: "확인할 항목",
-    noCounterexample: "불필요한 변경이나 확인된 반례를 찾지 못했습니다.",
-    incomplete: "확인된 finding은 없지만 리뷰가 완료되지 않았습니다.",
-    evidence: "상세 근거",
-    coverage: "ADR 계약 충족 근거",
-    coverageSummary: "계약 충족 요약",
+    findings: "해야 할 작업",
+    noCounterexample: "추가로 처리할 작업이 없습니다.",
+    incomplete: "확정된 작업은 없지만 리뷰가 완료되지 않았습니다.",
+    evidence: "상세 기술 근거",
+    coverage: "계약 검증 결과",
+    coverageSummary: "계약 검증 요약",
+    taskFix: "수정 필요",
+    taskDecide: "결정 필요",
+    taskVerify: "검증 필요",
+    taskNote: "참고",
+    whyItMatters: "왜 중요한가",
+    expectedBehavior: "기대 동작",
+    observedBehavior: "현재 동작",
+    requestedChange: "요청하는 변경",
+    editTargets: "수정 위치",
+    completionCriteria: "완료 조건",
+    technicalEvidence: "상세 기술 근거",
+    category: "분류",
+    confidence: "근거 수준",
+    reviewResult: "검토 결과",
+    statusProven: "충족됨",
+    statusViolated: "수정 필요",
+    statusUnverified: "검증 필요",
+    statusContradicted: "근거 충돌",
     choices: "주요 구현 선택",
     comprehension: "이해도 확인",
     residualNotes: "리뷰 메모",
@@ -556,10 +598,21 @@ function normalizeFindings(data) {
       );
     }
     return {
+      sourceIndex: i,
       id: f.id || `f${i + 1}`,
       category,
       unknownCat,
       summary: f.summary || "",
+      whyItMatters: f.whyItMatters || f.impact || f.evidence || "",
+      expectedBehavior: f.expectedBehavior || f.adrQuote || "",
+      observedBehavior: f.observedBehavior || f.code || "",
+      requestedChange: f.requestedChange || f.fix || f.route || "",
+      editTargets: f.editTargets || f.code || "",
+      completionCriteria:
+        f.completionCriteria ||
+        [f.test, f.testResult]
+          .filter((value) => typeof value === "string" && value.trim())
+          .join(" — "),
       adrQuote: f.adrQuote || "",
       code: f.code || "",
       fix: f.fix || "",
@@ -575,6 +628,10 @@ function normalizeFindings(data) {
       contractIds: Array.isArray(f.contractIds)
         ? f.contractIds.filter((value) => typeof value === "string" && value.trim())
         : [],
+      actionGroup:
+        category === "Best practice" && f.weight === "next-cycle"
+          ? "note"
+          : CATEGORIES[category]?.actionGroup || "decide",
     };
   });
   return mapped;
@@ -717,26 +774,36 @@ function contractCoverageCard(row, index, total, ui) {
   const statusClass = ["PROVEN", "VIOLATED", "UNVERIFIED", "CONTRADICTED"].includes(status)
     ? status.toLowerCase()
     : "unverified";
+  const statusLabel =
+    {
+      PROVEN: ui.statusProven,
+      VIOLATED: ui.statusViolated,
+      UNVERIFIED: ui.statusUnverified,
+      CONTRADICTED: ui.statusContradicted,
+    }[status] || ui.statusUnverified;
 
   const open = status === "PROVEN" ? "" : " open";
   return `
   <details class="coverage coverage--${statusClass}" id="contract-${esc(row.contractId)}"${open}>
     <summary class="coverage__summary">
-      <span class="coverage__status">${esc(row.contractId)} · ${esc(status)}</span>
+      <span class="coverage__status">${esc(statusLabel)} · ${esc(row.contractId)}</span>
       <span class="coverage__requirement">${esc(row.requirement) || "(no requirement)"}</span>
       <span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span>
     </summary>
     <div class="coverage__body">
     <h3 class="finding__title">${esc(row.requirement) || "(no requirement)"}</h3>
     <div class="coverage__implementation">
-      <span class="side__label">${esc(ui.implementation)}</span>
+      <span class="side__label">${esc(ui.reviewResult)}</span>
       <p>${esc(row.implementation)}</p>
     </div>
-    <div class="meta">
-      <div class="meta__row"><span class="meta__k">${esc(ui.adr)}</span><span class="meta__v">${esc(row.adrBasis)}</span></div>
-      <div class="meta__row"><span class="meta__k">${esc(ui.evidence)}</span><span class="meta__v meta__v--mono">${esc(row.evidence)}</span></div>
-      <div class="meta__row"><span class="meta__k">${esc(ui.tests)}</span><span class="meta__v meta__v--mono">${esc(row.tests)}</span></div>
-    </div>
+    <details class="technical-evidence">
+      <summary>${esc(ui.technicalEvidence)}</summary>
+      <div class="meta">
+        <div class="meta__row"><span class="meta__k">${esc(ui.adr)}</span><span class="meta__v">${esc(row.adrBasis)}</span></div>
+        <div class="meta__row"><span class="meta__k">${esc(ui.evidence)}</span><span class="meta__v meta__v--mono">${esc(row.evidence)}</span></div>
+        <div class="meta__row"><span class="meta__k">${esc(ui.tests)}</span><span class="meta__v meta__v--mono">${esc(row.tests)}</span></div>
+      </div>
+    </details>
     </div>
   </details>`;
 }
@@ -789,7 +856,7 @@ function explanationCard(title, body, id, ui) {
   </section>`;
 }
 
-function findingCard(f, i, total, ui) {
+function findingCard(f, dataIndex, displayIndex, total, ui) {
   // Unrecognized category → a loud "uncategorized" card (bright orange, own blurb) so a
   // mislabeled finding demands attention instead of blending into advisory grey.
   const meta = f.unknownCat
@@ -806,8 +873,14 @@ function findingCard(f, i, total, ui) {
         defaultDecision: "defer",
       };
   const auth = AUTHORITY[meta.authority] || AUTHORITY.advisory;
-  const tagText = f.unknownCat ? `uncategorized: ${f.category}` : f.category;
-  const idx = String(i + 1).padStart(2, "0");
+  const actionLabels = {
+    fix: ui.taskFix,
+    decide: ui.taskDecide,
+    verify: ui.taskVerify,
+    note: ui.taskNote,
+  };
+  const tagText = actionLabels[f.actionGroup] || ui.taskDecide;
+  const idx = String(displayIndex + 1).padStart(2, "0");
 
   // Confrontation: the ADR decision vs the code as built. Render the center
   // direction indicator only when both sides are present; degrade to a single
@@ -839,13 +912,15 @@ function findingCard(f, i, total, ui) {
     confront = `<div class="confront${single}">${adrSide}${center}${codeSide}</div>`;
   }
 
-  // Follow-up meta: suggested action, sync route, convention basis, and the two
-  // advisory axes — weight (timing) and impact (effort×payoff), kept distinct so the
-  // reviewer can tell a cheap high-value cleanup from an expensive low-value one.
+  // Technical evidence stays available without forcing the reader to start from
+  // category, route, confidence, commands, and raw code fragments.
   const meta_rows = [];
-  if (f.fix)
+  meta_rows.push(
+    `<div class="meta__row"><span class="meta__k">${esc(ui.category)}</span><span class="meta__v">${esc(f.category)}</span></div>`,
+  );
+  if (f.confidence)
     meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">${esc(ui.suggestion)}</span><span class="meta__v">${esc(f.fix)}</span></div>`,
+      `<div class="meta__row"><span class="meta__k">${esc(ui.confidence)}</span><span class="meta__v">${esc(f.confidence)}</span></div>`,
     );
   if (f.basis)
     meta_rows.push(
@@ -858,10 +933,6 @@ function findingCard(f, i, total, ui) {
   if (f.weight)
     meta_rows.push(
       `<div class="meta__row"><span class="meta__k">${esc(ui.weight)}</span><span class="meta__v">${esc(f.weight)}</span></div>`,
-    );
-  if (f.impact)
-    meta_rows.push(
-      `<div class="meta__row"><span class="meta__k">${esc(ui.impact)}</span><span class="meta__v">${esc(f.impact)}</span></div>`,
     );
   if (f.perspective)
     meta_rows.push(
@@ -879,7 +950,13 @@ function findingCard(f, i, total, ui) {
     meta_rows.push(
       `<div class="meta__row"><span class="meta__k">${esc(ui.result)}</span><span class="meta__v">${esc(f.testResult)}</span></div>`,
     );
-  const metaBlock = meta_rows.length ? `<div class="meta">${meta_rows.join("")}</div>` : "";
+  const metaBlock = meta_rows.length
+    ? `<details class="technical-evidence">
+        <summary>${esc(ui.technicalEvidence)}</summary>
+        ${confront}
+        <div class="meta">${meta_rows.join("")}</div>
+      </details>`
+    : "";
 
   // Low-confidence findings must NOT pre-select "apply" — weak evidence should
   // not nudge the user toward a code change. Fall back to "defer" so the user
@@ -891,8 +968,8 @@ function findingCard(f, i, total, ui) {
       ? `<span class="conf conf--${conf}" title="evidence strength">${conf}</span>`
       : "";
   const opt = (val, label) => {
-    const id = `r-${i}-${val}`;
-    return `<input type="radio" class="seg__input" id="${id}" name="dec-${i}" value="${val}"${
+    const id = `r-${dataIndex}-${val}`;
+    return `<input type="radio" class="seg__input" id="${id}" name="dec-${dataIndex}" value="${val}"${
       dec === val ? " checked" : ""
     }><label class="seg__label" for="${id}">${label}</label>`;
   };
@@ -911,7 +988,7 @@ function findingCard(f, i, total, ui) {
         ${opt("skip", ui.skip)}
         ${opt("defer", ui.defer)}
       </div>
-      <textarea class="ruling__note" data-finding-index="${i}" rows="2" placeholder="${esc(ui.notePlaceholder)}"></textarea>
+      <textarea class="ruling__note" data-finding-index="${dataIndex}" rows="2" placeholder="${esc(ui.notePlaceholder)}"></textarea>
     </footer>`
     : "";
 
@@ -922,12 +999,71 @@ function findingCard(f, i, total, ui) {
       <span class="finding__head-right">${confChip}<span class="finding__idx">${idx}<span class="finding__idx-total"> / ${String(total).padStart(2, "0")}</span></span></span>
     </header>
     <h3 class="finding__title">${esc(f.summary) || "(no summary)"}</h3>
-    ${contractLinks}
-    ${meta.blurb ? `<p class="finding__blurb">${esc(meta.blurb)}</p>` : ""}
-    ${confront}
+    <div class="task-impact">
+      <span class="side__label">${esc(ui.whyItMatters)}</span>
+      <p>${esc(f.whyItMatters)}</p>
+    </div>
+    <div class="task-comparison">
+      <div class="task-field">
+        <span class="side__label">${esc(ui.expectedBehavior)}</span>
+        <p>${esc(f.expectedBehavior)}</p>
+      </div>
+      <div class="task-field">
+        <span class="side__label">${esc(ui.observedBehavior)}</span>
+        <p>${esc(f.observedBehavior)}</p>
+      </div>
+    </div>
+    <div class="task-next">
+      <div class="task-field task-field--primary">
+        <span class="side__label">${esc(ui.requestedChange)}</span>
+        <p>${esc(f.requestedChange)}</p>
+      </div>
+      <div class="task-field">
+        <span class="side__label">${esc(ui.editTargets)}</span>
+        <p class="meta__v--mono">${esc(f.editTargets)}</p>
+      </div>
+      <div class="task-field">
+        <span class="side__label">${esc(ui.completionCriteria)}</span>
+        <p>${esc(f.completionCriteria)}</p>
+      </div>
+    </div>
     ${metaBlock}
+    ${contractLinks}
     ${ruling}
   </article>`;
+}
+
+function groupedFindingCards(findings, ui) {
+  const groups = [
+    ["fix", ui.taskFix],
+    ["decide", ui.taskDecide],
+    ["verify", ui.taskVerify],
+    ["note", ui.taskNote],
+  ];
+  let renderedIndex = 0;
+  return groups
+    .map(([group, label]) => {
+      const items = findings.filter((finding) => finding.actionGroup === group);
+      if (items.length === 0) return "";
+      const cards = items
+        .map((finding) => {
+          const card = findingCard(
+            finding,
+            finding.sourceIndex,
+            renderedIndex,
+            findings.length,
+            ui,
+          );
+          renderedIndex += 1;
+          return card;
+        })
+        .join("\n");
+      return `<section class="task-group task-group--${group}">
+        <h3 class="task-group__title">${esc(label)} · ${items.length}</h3>
+        ${cards}
+      </section>`;
+    })
+    .join("\n");
 }
 
 function buildHtml(data) {
@@ -951,7 +1087,7 @@ function buildHtml(data) {
     ...section,
     id: `narrative-${slug(section.title, `section-${index + 1}`)}-${index + 1}`,
   }));
-  const cards = findings.map((f, i) => findingCard(f, i, findings.length, ui)).join("\n");
+  const cards = groupedFindingCards(findings, ui);
   const coverageCards = contractCoverage
     .map((row, index) => contractCoverageCard(row, index, contractCoverage.length, ui))
     .join("\n");
@@ -976,6 +1112,12 @@ function buildHtml(data) {
   const decisionCount = findings.filter((finding) =>
     USER_DECISION_CATEGORIES.has(finding.category),
   ).length;
+  const taskCounts = Object.fromEntries(
+    ["fix", "decide", "verify", "note"].map((group) => [
+      group,
+      findings.filter((finding) => finding.actionGroup === group).length,
+    ]),
+  );
   const hasOverview = atAGlance.impact || atAGlance.action || atAGlance.risk;
   const tocItems = [
     hasOverview ? { id: "overview", label: ui.overview } : null,
@@ -1200,6 +1342,41 @@ function buildHtml(data) {
     border-left: 3px solid var(--sev); border-radius: 10px;
     padding: 16px 18px 14px; margin-bottom: 14px;
   }
+  .task-summary {
+    display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 18px;
+  }
+  .task-summary span {
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--card); padding: 6px 10px; font: 650 11px/1 var(--mono);
+  }
+  .task-group { margin: 18px 0 26px; }
+  .task-group__title {
+    font: 720 15px/1.3 var(--sans); margin: 0 0 10px; color: var(--ink);
+  }
+  .task-impact, .task-field {
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--paper); padding: 11px 13px;
+  }
+  .task-impact { margin: 12px 0; }
+  .task-impact p, .task-field p { margin: 0; font-size: 13.5px; }
+  .task-comparison {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px; margin-bottom: 10px;
+  }
+  .task-next { display: grid; gap: 10px; margin-bottom: 12px; }
+  .task-field--primary {
+    background: color-mix(in srgb, var(--sev) 8%, var(--card));
+    border-color: color-mix(in srgb, var(--sev) 32%, var(--line));
+  }
+  .technical-evidence {
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--card); margin: 12px 0;
+  }
+  .technical-evidence > summary {
+    cursor: pointer; padding: 10px 12px; font-weight: 650; color: var(--ink-2);
+  }
+  .technical-evidence .confront { margin: 0 12px 12px; }
+  .technical-evidence .meta { padding: 0 12px 12px; margin: 0; }
   .coverage {
     --coverage: #566173;
     background: var(--card); border: 1px solid var(--line);
@@ -1417,6 +1594,7 @@ function buildHtml(data) {
     .page { display: block; padding: 18px 14px 36px; }
     .toc { position: static; margin-bottom: 18px; }
     .overview__grid { grid-template-columns: 1fr; }
+    .task-comparison { grid-template-columns: 1fr; }
     .coverage__summary { grid-template-columns: 1fr auto; }
     .coverage__status { grid-column: 1 / -1; }
     .confront, .confront--single { grid-template-columns: 1fr; }
@@ -1497,6 +1675,16 @@ function buildHtml(data) {
 
   <section id="findings">
     <h2 class="section-title">${esc(ui.findings)} · ${count}</h2>
+    ${
+      count
+        ? `<div class="task-summary">
+            <span>${esc(ui.taskFix)} ${taskCounts.fix}</span>
+            <span>${esc(ui.taskDecide)} ${taskCounts.decide}</span>
+            <span>${esc(ui.taskVerify)} ${taskCounts.verify}</span>
+            <span>${esc(ui.taskNote)} ${taskCounts.note}</span>
+          </div>`
+        : ""
+    }
     ${empty}
     ${cards}
   </section>
@@ -1506,10 +1694,10 @@ function buildHtml(data) {
       ? `<section id="evidence">
           <h2 class="section-title">${esc(ui.evidence)}</h2>
           <div class="coverage-summary" aria-label="${esc(ui.coverageSummary)}">
-            <span>PROVEN ${provenCount}</span>
-            <span>VIOLATED ${violatedCount}</span>
-            <span>UNVERIFIED ${unverifiedCount}</span>
-            <span>CONTRADICTED ${contradictedCount}</span>
+            <span>${esc(ui.statusProven)} ${provenCount}</span>
+            <span>${esc(ui.statusViolated)} ${violatedCount}</span>
+            <span>${esc(ui.statusUnverified)} ${unverifiedCount}</span>
+            <span>${esc(ui.statusContradicted)} ${contradictedCount}</span>
           </div>
           ${coverageCount ? `<h3>${esc(ui.coverage)}</h3>${coverageCards}` : ""}
           ${

@@ -117,7 +117,8 @@ reason to hide evidence or merge independent obligations.
   its result. Execution order is optional. Put findings before detailed contract
   evidence. The standalone HTML keeps `PROVEN` coverage, scope, metrics, and
   implementation choices collapsed, opens exceptional coverage, and links
-  findings to contract IDs without re-sorting them by category. End the report
+  findings to contract IDs, group them by required human action rather than
+  technical category, and preserve importance order inside each group. End the report
   with `Comprehension check` containing one to five material free-response
   questions. Keep the check collapsed. Reveal criteria only after answer entry
   and an explicit self-check action, and state that this comparison does not

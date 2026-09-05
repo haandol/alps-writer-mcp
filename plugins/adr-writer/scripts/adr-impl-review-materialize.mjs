@@ -38,13 +38,44 @@ function replaceSection(source, heading, nextHeading, body) {
   ].join("\n");
 }
 
-function coverageTable(rows) {
+const COVERAGE_STATUS_LABELS = {
+  en: {
+    PROVEN: "Met",
+    VIOLATED: "Fix required",
+    UNVERIFIED: "Verification required",
+    CONTRADICTED: "Conflicting evidence",
+  },
+  ko: {
+    PROVEN: "충족됨",
+    VIOLATED: "수정 필요",
+    UNVERIFIED: "검증 필요",
+    CONTRADICTED: "근거 충돌",
+  },
+};
+
+function reportLanguage(data) {
+  return String(data.language || "")
+    .toLowerCase()
+    .startsWith("ko")
+    ? "ko"
+    : "en";
+}
+
+/**
+ * Materialize the complete ledger as a concise human summary.
+ * The seven audit fields remain authoritative in findings.json.
+ */
+function coverageTable(rows, language) {
+  const headers =
+    language === "ko"
+      ? ["계약", "상태", "요구사항", "검토 결과"]
+      : ["Contract", "Status", "Requirement", "Review result"];
   return [
-    "| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |",
-    "| --- | --- | --- | --- | --- | --- | --- |",
+    `| ${headers.join(" | ")} |`,
+    "| --- | --- | --- | --- |",
     ...rows.map(
       (row) =>
-        `| ${tableCell(row.contractId)} | ${tableCell(row.requirement)} | ${tableCell(row.status)} | ${tableCell(row.adrBasis)} | ${tableCell(row.implementation)} | ${tableCell(row.evidence)} | ${tableCell(row.tests)} |`,
+        `| ${tableCell(row.contractId)} | ${tableCell(COVERAGE_STATUS_LABELS[language][row.status] || row.status)} | ${tableCell(row.requirement)} | ${tableCell(row.implementation)} |`,
     ),
   ].join("\n");
 }
@@ -117,7 +148,7 @@ function main() {
     report,
     "ADR contract coverage",
     "Notable implementation choices",
-    coverageTable(data.contractCoverage),
+    coverageTable(data.contractCoverage, reportLanguage(data)),
   );
   report = replaceSection(
     report,

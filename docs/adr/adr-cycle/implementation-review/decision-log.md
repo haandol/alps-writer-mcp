@@ -2,6 +2,8 @@
 
 Newest first. Record only major decision changes.
 
+- **2026-09-05 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 일반 코드 리뷰의 작업 중심 표현을 적용해 finding을 수정·결정·검증·참고로 묶고, 각 카드가 영향·기대/현재 동작·요청 변경·수정 위치·완료 조건을 먼저 보여주며 감사용 원본 근거는 접힌 상세와 JSON에 유지하도록 변경했다.
+- **2026-09-05 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 검증된 HTML Evidence Package를 생성한 뒤 운영체제 기본 애플리케이션을 자동으로 열지 않고 정확한 절대 경로만 표시하며, 명시적인 사용자 요청이 있을 때만 별도 작업으로 열도록 변경했다.
 - **2026-09-04 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 사람용 HTML을 목차와 점진적 evidence 공개 구조로 변경해 핵심 흐름과 finding을 먼저 보여주고, 상세 coverage·scope·구현 선택은 상태에 따라 접으며 Mermaid 렌더링, contract anchor, 결정 필요 finding 전용 ruling과 입력 후 self-check를 제공하도록 변경했다.
 - **2026-09-03 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — comprehension question은 HTML Evidence Package에만 기본 노출하고, 메인 세션은 일반 완료 응답에서 질문을 자동 출제하지 않으며 사용자가 명시적으로 요청한 경우에만 대화형 채점을 시작하도록 변경했다.
 - **2026-09-03 — current ADR: [risk-proportional implementation review](./0001-validated-low-risk-refactoring.md)** — 구현 리뷰가 한눈에 보기 뒤 ADR 의도를 먼저 설명하고, 고정된 배경·직관·코드 순서 대신 독자에게 중요한 사용자·운영 story나 causal flow를 따라가며 AI-slop 신호를 제거하고 사용자 언어 또는 ADR 주 언어로 작성하도록 변경했다.

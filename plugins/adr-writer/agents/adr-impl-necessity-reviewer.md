@@ -99,6 +99,12 @@ PASS | FIX_REQUIRED | INCONCLUSIVE
 ## Findings
 
 - [Unnecessary change] <summary>
+  - whyItMatters: <user, operational, correctness, safety, or maintenance consequence>
+  - expectedBehavior: <plain-language behavior that must remain>
+  - observedBehavior: <plain-language behavior the review found>
+  - requestedChange: <concrete next action>
+  - editTargets: <files and symbols to change>
+  - completionCriteria: <observable result and verification that close the item>
   - confidence: high|medium|low
   - ADR: "<quote>"
   - code: <file:line + the actual code fragment>

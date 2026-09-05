@@ -73,6 +73,7 @@ test("materializer creates the complete Markdown evidence sections from findings
     writeFileSync(
       path.join(dir, "findings.json"),
       JSON.stringify({
+        language: "en",
         verdict: "PASS",
         atAGlance: {
           impact: "No behavior regression.",
@@ -112,7 +113,7 @@ test("materializer creates the complete Markdown evidence sections from findings
 
     const report = readFileSync(path.join(dir, "implementation-review.md"), "utf8");
     assert.match(report, /- Verdict: PASS/);
-    assert.match(report, /\| D0 \| A \\\| B \| PROVEN \|/);
+    assert.match(report, /\| D0 \| Met \| A \\\| B \| Implemented \|/);
     assert.match(report, /\| fixed delay \| src\/example\.ts \|/);
     assert.match(report, /1\. Q1 — Why is the boundary preserved\?/);
     assert.match(report, /## The request reaches the boundary\n\nFlow\./);

@@ -127,6 +127,10 @@ test("every finding category is complete for both consumers", () => {
       ["fix", "skip", "defer"].includes(meta.defaultDecision),
       `${name} defaultDecision "${meta.defaultDecision}" is not a ruling the report renders`,
     );
+    assert.ok(
+      ["fix", "decide", "verify", "note"].includes(meta.actionGroup),
+      `${name} actionGroup "${meta.actionGroup}" is not a human task bucket`,
+    );
     assert.equal(
       typeof meta.priority,
       "number",

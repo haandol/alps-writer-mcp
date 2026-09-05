@@ -129,6 +129,12 @@ test("necessity and sufficiency evidence survives into the interactive report", 
         category: "Unnecessary change",
         perspective: "necessity",
         summary: "event bus is removable",
+        whyItMatters: "the extra path increases maintenance without changing cancellation",
+        expectedBehavior: "the abort signal reaches the upstream client directly",
+        observedBehavior: "an additional event bus carries the same cancellation",
+        requestedChange: "remove the event bus and keep the direct abort path",
+        editTargets: "src/stream/event-bus.ts and cancellation wiring",
+        completionCriteria: "the event bus is absent and cancellation tests pass",
         evidence: "the existing abort signal reaches the upstream client",
         test: "pnpm test -- cancel",
         testResult: "PASS",
@@ -139,6 +145,12 @@ test("necessity and sufficiency evidence survives into the interactive report", 
         category: "Unverified risk",
         perspective: "sufficiency",
         summary: "restart recovery was not exercised",
+        whyItMatters: "queued work could be lost after restart",
+        expectedBehavior: "restart recovery preserves queued work",
+        observedBehavior: "the branch exists but was not executed",
+        requestedChange: "run restart recovery against a queue fixture",
+        editTargets: "src/stream/queue.ts and restart recovery fixture",
+        completionCriteria: "the restart test passes with queued work preserved",
         testResult: "NOT RUN: no local queue",
         confidence: "low",
       },
@@ -165,17 +177,24 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   assert.match(result.stdout, /changes recovery latency and request rate/);
   assert.match(result.stdout, /Cancellation stops the upstream request/);
   assert.match(result.stdout, /Restart recovery preserves queued work/);
-  assert.match(result.stdout, /D0 · PROVEN/);
-  assert.match(result.stdout, /R1 · UNVERIFIED/);
-  assert.match(result.stdout, /PROVEN 1/);
-  assert.match(result.stdout, /How the implementation meets it/);
+  assert.match(result.stdout, /Met · D0/);
+  assert.match(result.stdout, /Verification required · R1/);
+  assert.match(result.stdout, /Met 1/);
+  assert.match(result.stdout, /Review result/);
+  assert.match(result.stdout, /Work to do · 2/);
+  assert.match(result.stdout, /Fix required · 1/);
+  assert.match(result.stdout, /Verification required · 1/);
+  assert.match(result.stdout, /Why it matters/);
+  assert.match(result.stdout, /Where to change/);
+  assert.match(result.stdout, /Done when/);
+  assert.match(result.stdout, /Technical evidence/);
   assert.match(result.stdout, /Review report/);
   assert.ok(
-    result.stdout.indexOf("finding-s1") < result.stdout.indexOf("ADR contract coverage"),
+    result.stdout.indexOf("finding-s1") < result.stdout.indexOf("Contract verification"),
     "findings must appear before detailed contract coverage",
   );
   assert.ok(
-    result.stdout.indexOf("ADR contract coverage") <
+    result.stdout.indexOf("Contract verification") <
       result.stdout.indexOf("Notable implementation choices"),
     "contract coverage must remain before implementation choices inside evidence",
   );
@@ -186,7 +205,7 @@ test("necessity and sufficiency evidence survives into the interactive report", 
   assert.match(result.stdout, /name="dec-1"/);
   assert.ok(
     result.stdout.indexOf('id="finding-n1"') < result.stdout.indexOf('id="finding-s1"'),
-    "renderer must preserve the report writer's finding order",
+    "renderer must preserve synthesis order inside action-group order",
   );
 });
 
@@ -424,7 +443,8 @@ test("HTML chrome follows the selected report language", () => {
   assert.match(result.stdout, /<html lang="ko">/);
   assert.match(result.stdout, />목차</);
   assert.match(result.stdout, />한눈에 보기</);
-  assert.match(result.stdout, />확인할 항목 · 0</);
+  assert.match(result.stdout, />해야 할 작업 · 0</);
+  assert.doesNotMatch(result.stdout, />PROVEN</);
 });
 
 test("At a glance content is escaped without duplicating PASS feedback data", () => {

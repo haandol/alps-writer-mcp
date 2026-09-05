@@ -22,6 +22,7 @@
 //                      "advisory"   decision-neutral, no ADR↔code tension
 //   defaultDecision  seeds the ruling radio so the common follow-up is
 //                    pre-selected while the user stays in control
+//   actionGroup      the human task bucket shown before technical categories
 //   priority         remediation priority retained for shared routing and
 //                    compatibility. The HTML renderer preserves the report
 //                    writer's reader-facing order instead of category-sorting
@@ -35,6 +36,7 @@ export const CATEGORIES = {
     blurb: "The code did not honor the ADR decision — the ADR is the spec, so fix the code.",
     authority: "adr",
     defaultDecision: "fix",
+    actionGroup: "fix",
     priority: 0,
   },
   "Unnecessary change": {
@@ -42,6 +44,7 @@ export const CATEGORIES = {
     blurb: "A change removable while keeping the ADR goal — shrink the diff.",
     authority: "minimality",
     defaultDecision: "fix",
+    actionGroup: "fix",
     priority: 1,
   },
   "Undecided behavior": {
@@ -50,6 +53,7 @@ export const CATEGORIES = {
       "The code adds an ADR-worthy behavior the ADR never decided — after the admission gate, add the decision vs remove the behavior.",
     authority: "contested",
     defaultDecision: "defer",
+    actionGroup: "decide",
     priority: 2,
   },
   "Best practice": {
@@ -58,6 +62,7 @@ export const CATEGORIES = {
       "Violates project conventions (primary) or general patterns (secondary) — a code-improvement candidate.",
     authority: "convention",
     defaultDecision: "fix",
+    actionGroup: "fix",
     priority: 3,
   },
   "Decision changed in code": {
@@ -66,6 +71,7 @@ export const CATEGORIES = {
       "The code implemented a different but coherent decision — update the ADR vs revert the code; user decides.",
     authority: "contested",
     defaultDecision: "defer",
+    actionGroup: "decide",
     priority: 4,
   },
   "Impl-fact mismatch": {
@@ -74,6 +80,7 @@ export const CATEGORIES = {
       "The ADR carries stale code-level facts — remove them via /adr-sync, or correct only an admitted public/architectural contract.",
     authority: "code",
     defaultDecision: "defer",
+    actionGroup: "fix",
     priority: 5,
   },
   "Simpler alternative": {
@@ -82,6 +89,7 @@ export const CATEGORIES = {
       "The same contract is met by a smaller existing structure — simplify after checking the trade-off.",
     authority: "contested",
     defaultDecision: "defer",
+    actionGroup: "note",
     priority: 6,
   },
   "Test gap": {
@@ -89,6 +97,7 @@ export const CATEGORIES = {
     blurb: "The decided behavior is not verified by tests.",
     authority: "advisory",
     defaultDecision: "defer",
+    actionGroup: "verify",
     priority: 7,
   },
   "Unverified risk": {
@@ -97,6 +106,7 @@ export const CATEGORIES = {
       "A concrete failure hypothesis or contract/safety-affecting premise lacks execution or authoritative evidence — verify it first.",
     authority: "contested",
     defaultDecision: "defer",
+    actionGroup: "verify",
     priority: 8,
   },
   Contradiction: {
@@ -104,6 +114,7 @@ export const CATEGORIES = {
     blurb: "The independent reviews' premises conflict — a human must confirm which premise holds.",
     authority: "contested",
     defaultDecision: "defer",
+    actionGroup: "decide",
     priority: 9,
   },
   Refactor: {
@@ -111,6 +122,7 @@ export const CATEGORIES = {
     blurb: "An opportunity to tidy up without changing the decision.",
     authority: "advisory",
     defaultDecision: "defer",
+    actionGroup: "note",
     priority: 10,
   },
 };

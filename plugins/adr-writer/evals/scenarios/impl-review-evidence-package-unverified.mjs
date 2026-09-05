@@ -93,7 +93,7 @@ function coverageRow(visible, contractId) {
 }
 
 function completeTableRow(row) {
-  return Boolean(row && row.split("|").filter((cell) => cell.trim()).length >= 7);
+  return Boolean(row && row.split("|").filter((cell) => cell.trim()).length >= 4);
 }
 
 function orderedSections(visible) {
@@ -257,6 +257,13 @@ export default {
           category: "Unverified risk",
           perspective: "sufficiency",
           summary: "provider failure behavior was not executed",
+          whyItMatters:
+            "A provider failure could be recorded as completion without executed evidence.",
+          expectedBehavior: "Provider failure leaves the payment pending.",
+          observedBehavior: "The failure path exists but could not be executed.",
+          requestedChange: "Run provider failure injection and verify the pending result.",
+          editTargets: "provider failure fixture and settlement failure-path test",
+          completionCriteria: "The failure-injection test passes and shows no completion record.",
           confidence: "high",
           code: "provider failure path supplied by the scenario",
           evidence: "failure injection is unavailable",

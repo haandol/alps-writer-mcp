@@ -262,6 +262,7 @@ The main session does not merge the two reviews by vote. Verify findings with th
 7. Normalize the decision ledger into contract coverage independently from findings. Derive deterministic IDs from the ADR: `D0` is the Decision and `R1..Rn` are every top-level bullet under `### Requirement contract` in source order. Every derived ID gets exactly one row with `contractId`, `requirement`, `status`, `adrBasis`, `implementation`, `evidence`, and `tests`; omissions, duplicates, and invented IDs are invalid. `D0.adrBasis` is `Decision`; each `Rn.adrBasis` is the complete source bullet verbatim. Use only `PROVEN`, `VIOLATED`, `UNVERIFIED`, or `CONTRADICTED`. `PROVEN` means the inspected or executed evidence supports the row and no counterexample was found; it is not a mathematical proof.
 8. Before normalizing implementation choices, inspect their externally checkable premises. A premise confirmed by code, tests, configuration, or an authoritative external contract may remain part of the choice's evidence. If the premise is unverified and could violate safety or an ADR contract row when false, create an `Unverified risk`, mark the affected coverage `UNVERIFIED`, and block `PASS`. Do not infer private reasoning.
 9. Normalize Notable implementation choices independently from findings. Every row has only a concrete selected value or behavior, code evidence, why it fits the ADR intent, and why it matters. Explain fit by naming the preserved contract or boundary, not by guessing why the implementer chose it. A row that changes a requirement contract or durable boundary is removed from the list and raised as `Undecided behavior`.
+10. Normalize every finding into a user-action card as well as technical evidence. Keep non-empty `whyItMatters`, `expectedBehavior`, `observedBehavior`, `requestedChange`, `editTargets`, and `completionCriteria` fields. These fields explain the task in plain language; the exact ADR quote, code fragment, evidence, command, and result remain separate audit fields.
 
 The synthesized verdict:
 
@@ -275,7 +276,7 @@ The synthesized verdict:
 Only after evidence synthesis and verdict selection, read
 `references/artifact-contract.md` completely and follow it exactly. It owns the
 common standard/full `implementation-review.md`, `findings.json`,
-materialization, validation, HTML rendering/opening, completion response, and
+materialization, validation, HTML rendering/path reporting, completion response, and
 optional interactive comprehension behavior. Do not load it during scope
 discovery or the independent review perspectives.
 
@@ -294,7 +295,7 @@ finding-free standalone review.
 - Never use ASCII or box-drawing diagrams instead of Mermaid in the junior-facing report.
 - Never invent components or call relationships in Mermaid that were not confirmed in the actual code.
 - Never expose raw Markdown list markers or a supported Mermaid fence as the primary human-facing rendering.
-- Never re-sort synthesized findings by category after the report writer has ordered them for the reader.
+- Never sort the human report by technical category. Group findings as fix, decision, verification, and suggestion tasks, then preserve the report writer's importance order inside each group.
 - Never show ruling controls for ordinary evidence-backed remediation or read-only context.
 - Never put implementation chronology ahead of ADR intent and the most
   important verified user or operational behavior.
@@ -316,5 +317,6 @@ finding-free standalone review.
 - Never report an unreproduced conjecture as though it were a confirmed finding.
 - Never treat the current diff or a caller-provided file list as the ceiling of the ADR implementation scope.
 - Never report either review mode complete without a validated, non-empty `adr-impl-review-report.html`.
-- Never finish either review mode without running `adr-impl-review-open.mjs` once and reporting its `OPENED` or `NOT_OPENED` result.
+- Never finish either review mode without running `adr-impl-review-path.mjs` and reporting the exact absolute path it prints.
+- Never open the HTML report automatically; invoke a file opener only when the user explicitly requests that separate action.
 - Never modify product code, ADRs, the mapping, or existing tests during the review.

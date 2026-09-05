@@ -10,6 +10,20 @@ const ALLOWED_MODES = new Set(["standard", "full"]);
 const ALLOWED_PERSPECTIVES = new Set(["necessity", "sufficiency", "both"]);
 const ALLOWED_CONFIDENCE = new Set(["high", "medium", "low"]);
 const ALLOWED_COVERAGE_STATUSES = new Set(["PROVEN", "VIOLATED", "UNVERIFIED", "CONTRADICTED"]);
+const COVERAGE_STATUS_LABELS = {
+  en: {
+    PROVEN: "Met",
+    VIOLATED: "Fix required",
+    UNVERIFIED: "Verification required",
+    CONTRADICTED: "Conflicting evidence",
+  },
+  ko: {
+    PROVEN: "충족됨",
+    VIOLATED: "수정 필요",
+    UNVERIFIED: "검증 필요",
+    CONTRADICTED: "근거 충돌",
+  },
+};
 const REQUIRED_REPORT_TEXT = [
   "# ADR implementation review",
   "## At a glance",
@@ -159,6 +173,12 @@ function validateFinding(finding, index, errors) {
     "perspective",
     "summary",
     "confidence",
+    "whyItMatters",
+    "expectedBehavior",
+    "observedBehavior",
+    "requestedChange",
+    "editTargets",
+    "completionCriteria",
     "code",
     "evidence",
     "test",
@@ -527,15 +547,20 @@ function validateReport(report, data, errors) {
 
   const coverageRows = tableRows(report, "ADR contract coverage", "Notable implementation choices");
   const coverageById = new Map(coverageRows.map((cells) => [cells[0], cells]));
+  const language = String(data.language || "")
+    .toLowerCase()
+    .startsWith("ko")
+    ? "ko"
+    : "en";
   for (const [index, row] of (data.contractCoverage ?? []).entries()) {
     const cells = coverageById.get(row.contractId);
     if (!cells) {
       errors.push(`implementation-review.md missing contractCoverage[${index}] table row`);
-    } else if (cells.length < 7 || cells.some((cell) => !cell)) {
+    } else if (cells.length < 4 || cells.some((cell) => !cell)) {
       errors.push(
-        `implementation-review.md contractCoverage[${index}] must have seven non-empty columns`,
+        `implementation-review.md contractCoverage[${index}] must have four non-empty summary columns`,
       );
-    } else if (cells[2] !== row.status) {
+    } else if (cells[1] !== COVERAGE_STATUS_LABELS[language][row.status]) {
       errors.push(`implementation-review.md contractCoverage[${index}] status does not match JSON`);
     }
   }

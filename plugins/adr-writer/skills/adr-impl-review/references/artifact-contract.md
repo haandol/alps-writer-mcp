@@ -2,7 +2,7 @@
 
 Read this reference completely only after the review evidence has been
 synthesized and the verdict is known. It owns the common standard/full report,
-JSON, validation, rendering, opening, completion-response, and optional
+JSON, validation, rendering, path reporting, completion-response, and optional
 interactive-comprehension contract.
 
 ## 1. Generate the concise evidence report
@@ -63,15 +63,23 @@ the fix. Never guess at an edge you could not confirm in the actual code. Never
 use ASCII or box-drawing diagrams.
 
 Render findings immediately after the narrative, before detailed evidence.
-Preserve their reader-facing synthesis order rather than re-sorting by category.
-Give every finding a `contractIds` array linking it to the affected coverage
-rows; use an empty array only for a genuinely decision-neutral item.
+Group them as `fix`, `decide`, `verify`, and `note` tasks; preserve the
+reader-facing synthesis order inside each group. Give every finding a
+`contractIds` array linking it to the affected coverage rows; use an empty array
+only for a genuinely decision-neutral item.
+
+Every finding has two layers. The action layer requires `whyItMatters`,
+`expectedBehavior`, `observedBehavior`, `requestedChange`, `editTargets`, and
+`completionCriteria`. The technical layer keeps category, confidence,
+perspective, ADR quote, exact code fragment, evidence, test command, and current
+result. Show the action layer by default and collapse the technical layer.
 
 Keep ADR contract coverage in structured JSON with `Contract ID`, `Requirement`,
 `Status`, `ADR basis`, `How the implementation meets it`, `Evidence`, and
 `Tests`. Keep the ADR wording recognizable and never merge several obligations
-into one row. The materializer writes the read-only Markdown table after
-findings.
+into one row. The materializer writes a human summary with contract ID, an
+easy-language status, requirement, and review result. The remaining audit
+fields stay in JSON and the HTML's collapsed technical evidence.
 
 Keep Notable implementation choices in structured JSON with `Selected value or
 behavior`, `Code evidence`, `Why it fits the ADR intent`, and `Why it matters`.
@@ -79,10 +87,9 @@ The materializer writes the read-only Markdown table. These rows are below ADR
 resolution and do not amend the ADR. If a row would alter the ADR contract or
 durable boundary, it must be an `Undecided behavior` finding instead.
 
-Concise means short cells, not fewer columns. Never collapse ADR basis,
-implementation, evidence, and tests into fewer columns, and never replace the
-four-column implementation-choice table with prose. The human-facing package
-must preserve these separate fields even when there is only one row.
+Concise means the default human view answers what to do next. Preserve all seven
+coverage fields in JSON, but do not force them into seven visible columns.
+Never replace the four-column implementation-choice table with prose.
 
 End the report with a generated `Comprehension check`. Keep one to five
 medium-difficulty free-response questions in the structured check. Ask only
@@ -199,6 +206,12 @@ Serialize the available role artifacts and synthesized result into
       "category": "Unnecessary change",
       "perspective": "necessity",
       "summary": "the new event bus is not needed for this ADR",
+      "whyItMatters": "the extra path increases maintenance and failure surface without changing the required behavior",
+      "expectedBehavior": "cancellation reaches the upstream request through the existing signal path",
+      "observedBehavior": "the same cancellation is routed through an additional event bus",
+      "requestedChange": "remove the event bus and keep the direct cancellation path",
+      "editTargets": "src/events/bus.ts and its checkout wiring",
+      "completionCriteria": "the event bus is absent and the cancellation test still passes",
       "confidence": "high",
       "adrQuote": "on cancellation, abort the upstream call",
       "code": "src/events/bus.ts:18 — the actual code fragment",
@@ -244,7 +257,7 @@ Validate and build the HTML in both modes:
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-materialize.mjs <artifact-dir>
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-validate.mjs <artifact-dir>
 node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-report.mjs <findings.json> --out <artifact-dir>/adr-impl-review-report.html
-node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-open.mjs <artifact-dir>/adr-impl-review-report.html
+node ${CLAUDE_PLUGIN_ROOT}/scripts/adr-impl-review-path.mjs <artifact-dir>/adr-impl-review-report.html
 ```
 
 If materialization or validation fails, do not report completion or generate the
@@ -254,18 +267,17 @@ re-run until both exit 0. In particular, fill `perspective`, `code`, `evidence`,
 write `NOT RUN — <reason>` rather than leaving it blank. If HTML rendering fails
 or produces an empty file, the review is also incomplete.
 
-In both modes, run `adr-impl-review-open.mjs` immediately after the non-empty
-check. The helper attempts the host's default local file opener exactly once and
-prints `OPENED <path>` or `NOT_OPENED <path> — <reason>`. Do not silently skip
-the command based on an assumption that the environment is headless. A
-`NOT_OPENED` result for a valid artifact does not invalidate the review; state
-the reason and provide the exact path.
+In both modes, run `adr-impl-review-path.mjs` immediately after rendering. The
+helper verifies that the report exists and is non-empty, then prints only its
+exact absolute path. Never invoke the host's default application or another file
+opener as part of the ordinary review flow. Open the report only when the user
+explicitly requests that separate action.
 
 ## 3. Completion response and comprehension interaction
 
 The ordinary main-session completion response contains only the verdict, key
 impact/action/risk, applied fixes, tests, lifecycle result, and the HTML path
-plus `OPENED` or `NOT_OPENED` result. Do not copy any comprehension question,
+reported by `adr-impl-review-path.mjs`. Do not copy any comprehension question,
 `answerCriteria`, grading evidence, or answer request into that response. A
 pre-promotion invocation by `/adr-impl` must not ask the user to rule
 `apply / skip / defer` on `PROVEN` coverage rows, implementation choices, or

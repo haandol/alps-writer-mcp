@@ -64,8 +64,24 @@ Render actionable `Findings` after the reader-facing narrative. Put
 `<!-- generated from findings.json -->` under `ADR contract coverage` and
 `Notable implementation choices`; do not manually duplicate their tables in
 Markdown. `findings.json` keeps every `D0` / `R1..Rn` coverage row and every
-material choice. The materializer writes the same seven-column coverage and
-four-column read-only choice tables before artifact validation.
+material choice. The materializer writes a concise four-column coverage summary
+and the four-column read-only choice table before artifact validation. The seven
+coverage audit fields remain in JSON.
+
+For every finding, write a plain-language action card into `findings.json`:
+
+- `whyItMatters` — the user, operational, correctness, safety, or maintenance consequence
+- `expectedBehavior` — the behavior the reviewer should expect
+- `observedBehavior` — what the review actually found
+- `requestedChange` — the concrete next action
+- `editTargets` — the files and symbols to change or inspect
+- `completionCriteria` — the observable result and verification that close the item
+
+The HTML groups these cards as `fix`, `decide`, `verify`, and `note` tasks.
+Within each task group, preserve the importance order selected during synthesis.
+Keep exact category, confidence, perspective, ADR quote, code fragment,
+reproduction evidence, command, and result in the collapsed technical evidence.
+Never make a suggestion look like a blocker.
 
 Use progressive disclosure. The default report is concise, including in full
 mode and for PASS. Keep this structure:
@@ -142,7 +158,7 @@ The standalone HTML owns progressive disclosure:
 - It shows At a glance, ADR intent, the important narrative, and Findings before detailed evidence.
 - It keeps `PROVEN` coverage, scope, metrics, and Notable implementation choices collapsed by default while opening exceptional coverage.
 - It renders Markdown lists, inline code, fenced `<pre>` code blocks, and supported Mermaid relationships. Unsupported Mermaid syntax keeps an explicit source fallback.
-- A finding includes `contractIds` when it relates to one or more `D0` / `R1..Rn` rows. Keep findings in reader order; do not re-sort them by category after synthesis.
+- A finding includes `contractIds` when it relates to one or more `D0` / `R1..Rn` rows. Group findings by human action (`fix`, `decide`, `verify`, `note`), never by technical category, and preserve importance order inside each group.
 - Ruling controls appear only for findings that require human judgment: `Decision changed in code`, admitted `Undecided behavior`, material `Unverified risk`, or `Contradiction`.
 - Comprehension questions remain collapsed. The HTML may reveal hidden criteria only after the reader enters an answer and explicitly requests self-check; this never marks the PR comprehension-ready.
 - Use the report language for the HTML `lang` and fixed interface labels.

@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Status
 
-Accepted (2026-09-04)
+Accepted (2026-09-05)
 
 ## Context
 
@@ -22,6 +22,8 @@ AI가 큰 diff를 빠르게 만들수록 코드 검토의 병목은 문법 확�
 
 계약 대조가 자유 형식 요약에 머물면 사용자는 어떤 요구사항이 구현됐고 어떤 항목이 검증되지 않았는지 다시 ADR과 diff에서 조합해야 한다. 구현 재량도 선택한 값과 중요성만 보여주면 그 선택이 ADR 의도와 양립하는지 판단하기 어렵다. 구현 리뷰는 ADR의 각 계약 행을 사람이 읽을 수 있는 달성 상태로 연결하고, ADR이 의도적으로 열어둔 중요한 구현 선택은 의도 적합성과 함께 설명해야 한다.
 
+사람용 리포트가 finding category, ADR ID, 코드 위치와 증거 필드를 기본 읽기 단위로 사용하면 사용자는 정확한 자료를 받고도 무엇을 고쳐야 하는지 다시 조합해야 한다. 일반 코드 리뷰처럼 필수 수정, 사용자 결정, 추가 검증과 참고를 먼저 구분하고 각 항목이 영향, 기대 동작, 현재 동작, 요청 변경, 수정 위치와 완료 조건에 바로 답해야 수정으로 이어질 수 있다. 기계 감사에 필요한 원본 필드는 유지하되 사람 화면의 기본 구조로 강제하지 않아야 한다.
+
 구현 선택 자체가 교체 가능한 재량이어도 그 동작이 provider 보장, 입력 출처, 순서, 유일성이나 trust boundary 같은 외부 전제에 의존할 수 있다. 그 전제가 틀릴 때 계약이나 안전이 깨지는데 검증 근거가 없다면 정상 구현 재량으로 숨기지 않고 완료를 막아야 한다.
 
 리뷰에서 ADR의 빈칸처럼 보이는 항목도 모두 사용자 질문으로 올리면 에이전트가 도메인 지식과 저장소 문맥으로 해결할 수 있는 판단까지 HITL이 된다. 리뷰는 명시 계약의 논리적 결과, 프로젝트 관례와 권위 있는 도메인 기본값을 먼저 분리하고, 여러 제품 선택지가 남는 gap만 사용자가 답할 수 있는 decision packet으로 만들어야 한다.
@@ -32,7 +34,7 @@ AI가 큰 diff를 빠르게 만들수록 코드 검토의 병목은 문법 확�
 
 구현 리뷰의 범위를 현재 diff로만 정하면 이미 `Accepted`인 ADR을 독립적으로 다시 검토할 때 현재 브랜치에서 바뀐 파일만 읽고 기존 구현 경로를 놓칠 수 있다. ADR의 계약은 변경 파일 목록이 아니라 현재 시스템 전체가 지켜야 하므로, 리뷰는 diff를 변경 설명과 필요성 판단에 사용하되 계약 충족 여부는 ADR에서 출발해 관련 구현 전체를 다시 찾아야 한다.
 
-사람용 산출물이 모드에 따라 Markdown 또는 HTML로 달라지면 사용자는 같은 명령을 실행하고도 결과를 찾고 읽는 방식이 달라진다. HTML을 생성하고도 열기 시도를 생략하면 사용자는 보고서 생성 여부를 알기 어렵다. 두 모드는 검토 강도만 달라야 하며 최종 Evidence Package의 전달 방식은 같아야 한다.
+사람용 산출물이 모드에 따라 Markdown 또는 HTML로 달라지면 사용자는 같은 명령을 실행하고도 결과를 찾고 읽는 방식이 달라진다. 반대로 HTML 생성 직후 기본 애플리케이션을 자동으로 열면 사용자가 다른 작업을 하는 중에 화면 전환과 인터럽트가 발생한다. 두 모드는 검토 강도만 달라야 하며 최종 Evidence Package는 검증된 절대 경로를 표시하는 같은 방식으로 전달해야 한다.
 
 고정된 `Background`, `Intuition`, `Code walkthrough` 순서는 예측 가능하지만 구현마다 같은 상자를 채우게 만든다. 결과는 배경·아이디어·파일 순서의 나열로 흐르기 쉽고, ADR이 왜 이 구현을 요구했는지보다 작업 순서가 앞에 나온다. 사용자는 구현 순서보다 의도, 가장 중요한 동작과 사용자·운영 결과를 먼저 이해해야 한다.
 
@@ -42,7 +44,7 @@ AI가 큰 diff를 빠르게 만들수록 코드 검토의 병목은 문법 확�
 
 - 계약과 보호 표면 변경은 실행 경로와 provider가 달라도 강도를 낮추지 않는 필요성·충분성 관점과 증거 검토가 필요하다. 구현 리뷰는 현재 diff 유무와 무관하게 ADR의 모든 결정과 계약 행에서 관련 구현 범위를 다시 찾아야 하며, 그 관점을 확보할 orchestration은 현재 모델이 판단해야 한다.
 - 사용자는 승인된 ADR의 각 계약 행별 달성 상태, finding, 테스트와 잔여 위험을 전체 diff 없이 파악하되 충족된 행과 구현 재량마다 별도 판정을 요구받지 않아야 한다. 리뷰는 직접·간접 호출 경로와 테스트를 확인하고, ADR 동작을 구현한 함수의 언어 표준 문서 주석과 ideal·edge case 테스트가 누락되거나 계약과 어긋나면 완료 전에 자동 보완해야 한다.
-- 해당 구현을 처음 보는 주니어 개발자가 결론, 영향, 변경의 배경·핵심 직관·코드 흐름과 남은 위험을 상세 증거보다 먼저 이해하고 다시 설명할 수 있어야 하며, 중요한 이해를 확인하지 못한 상태는 코드 적합성 `PASS`와 구분해 PR 전달 전에 드러내야 한다. standard와 full은 같은 독립 실행형 HTML Evidence Package를 기본 애플리케이션에서 보여주고, 관계를 재구성해야 하는 리뷰는 근거 있는 Mermaid를 사용하되 단순 PASS에 고정 형식 비용을 만들지 않아야 한다.
+- 해당 구현을 처음 보는 주니어 개발자가 결론, 영향, 변경의 배경·핵심 직관·코드 흐름과 남은 위험을 상세 증거보다 먼저 이해하고 다시 설명할 수 있어야 한다. 각 finding에서는 무엇이 필수 수정인지, 무엇을 결정하거나 검증해야 하는지, 어디를 바꾸고 어떤 결과가 나오면 완료인지 추가 해석 없이 알 수 있어야 한다. 중요한 이해를 확인하지 못한 상태는 코드 적합성 `PASS`와 구분해 PR 전달 전에 드러내야 하며, standard와 full은 같은 독립 실행형 HTML Evidence Package를 생성하고 검증된 절대 경로만 표시해야 한다. 관계를 재구성해야 하는 리뷰는 근거 있는 Mermaid를 사용하되 단순 PASS에 고정 형식 비용이나 자동 화면 전환을 만들지 않아야 한다.
 - 구현 재량은 런타임, 운영, 비용이나 향후 변경에 중요한 항목만 한 번 추출해 ADR 의도 적합성을 설명하고, 계약 핵심 경로가 의존하는 외부 전제까지 검증해 틀릴 때 계약·안전이 깨지는 미검증 전제는 완료를 막아야 한다.
 - 플러그인 제거 후에도 ADR, 코드, 테스트와 프로젝트 문서가 각각 자기 추상화 수준의 질문에 답할 수 있어야 한다.
 
@@ -58,11 +60,15 @@ AI가 큰 diff를 빠르게 만들수록 코드 검토의 병목은 문법 확�
 
 diff는 변경 전후 설명과 필요성 검토의 입력이지만 전체 구현 범위의 상한이 아니다. 충분성 검토, ADR contract coverage, 구현 설명과 테스트 선택은 전체 구현 범위를 사용한다. `full`의 필요성 검토는 변경 범위가 있으면 변경 단위를 공격하고, 독립적인 기존 구현 리뷰처럼 변경 범위가 없으면 ADR 관련 구현 단위를 대상으로 제거·축소 가설을 검토한다. 관련 구현을 완전히 좁히지 못했거나 핵심 호출 경로를 읽지 못하면 `PASS` 대신 `INCONCLUSIVE`를 반환한다.
 
-두 모드의 기본 결과는 verdict, 구현 이해 설명, ADR contract coverage, findings, tests, residual risks와 comprehension check다. 두 모드는 검증된 `findings.json`에서 목차를 가진 하나의 자체 포함 `adr-impl-review-report.html`을 항상 생성하고 비어 있지 않음을 확인한 직후 환경의 기본 파일 열기 기능으로 한 번 연다. 로컬 열기 기능이 없거나 실행에 실패하면 검증된 리뷰 자체는 실패시키지 않고 정확한 경로와 실패 이유를 사용자에게 제공한다. `implementation-review.md`와 `findings.json`은 HTML을 재생성하고 판정을 감사하기 위한 보조 artifact다. HTML 생성에 실패하거나 파일이 비어 있으면 리뷰를 완료로 보고하지 않는다. `full`도 finding이 없으면 같은 기본 결과로 끝낼 수 있다.
+두 모드의 기본 결과는 verdict, 구현 이해 설명, ADR contract coverage, findings, tests, residual risks와 comprehension check다. 두 모드는 검증된 `findings.json`에서 목차를 가진 하나의 자체 포함 `adr-impl-review-report.html`을 항상 생성하고 파일이 비어 있지 않음을 확인한 뒤 정확한 절대 경로만 사용자에게 제공한다. 일반 리뷰 흐름은 운영체제의 기본 애플리케이션이나 다른 파일 열기 기능을 호출하지 않는다. 사용자가 보고서를 열어 달라고 명시적으로 요청한 경우에만 별도 사용자 작업으로 열 수 있다. `implementation-review.md`와 `findings.json`은 HTML을 재생성하고 판정을 감사하기 위한 보조 artifact다. HTML 생성에 실패하거나 파일이 비어 있으면 리뷰를 완료로 보고하지 않는다. `full`도 finding이 없으면 같은 기본 결과로 끝낼 수 있다.
 
 ADR contract coverage는 Decision과 requirement contract의 각 독립 행을 그대로 추적한다. 각 행은 `PROVEN`, `VIOLATED`, `UNVERIFIED`, `CONTRADICTED` 중 하나의 상태와 ADR 근거, 구현 내용, 코드 또는 실행 증거, 검증한 테스트를 가진다. `PROVEN`은 실행하거나 확인한 증거가 해당 계약을 지지하고 현재 반례를 찾지 못했다는 뜻이며 수학적 완전 증명을 뜻하지 않는다.
 
 리뷰는 **Evidence Package**를 한눈에 보기, ADR 의도, 독자 중심 설명, 조치가 필요한 finding과 계약별 증거로 구성한다. 한눈에 보기는 verdict, 사용자 또는 운영 영향, 필요한 다음 조치와 남은 위험을 평이한 언어로 답한다. `ADR intent`는 이 결정이 해결하려는 문제, 채택한 방향과 구현이 반드시 보존할 계약을 짧게 연결한다. 그 뒤의 설명은 사용자 또는 운영자가 겪는 상황과 인과 흐름이 있으면 그 흐름을 따르고, 없으면 가장 중요한 동작과 결과부터 설명한다. 구현 순서, 파일 순서와 배경 지식은 이해에 필요한 시점에만 제공한다. finding은 설명 직후에 보여주고 상세 계약 증거는 뒤의 evidence section에서 점진적으로 공개한다. 완료 보고는 항상 이 package를 사용자에게 보여주지만 `PROVEN` 행마다 별도 승인을 요구하지 않는다. `VIOLATED`, `UNVERIFIED`, `CONTRADICTED`와 계약 변경만 finding과 escalation 경로로 확장한다.
+
+사람용 HTML은 finding을 `수정 필요`, `결정 필요`, `검증 필요`, `참고` 작업으로 묶고 이 순서로 표시한다. 같은 작업 그룹 안에서는 report writer가 정한 중요도순을 유지한다. 각 작업 카드는 `왜 중요한가`, `기대 동작`, `현재 동작`, `요청하는 변경`, `수정 위치`, `완료 조건`을 기본 화면에 표시한다. finding category, confidence, perspective, ADR 원문, 실제 코드 조각, 재현 명령과 결과는 접힌 `상세 기술 근거`에 둔다. 필수 수정과 제안은 같은 시각적 중요도로 보이지 않게 구분한다.
+
+계약 coverage는 JSON에서 `Contract ID`, `Requirement`, `Status`, `ADR basis`, `Implementation`, `Evidence`, `Tests`를 모두 유지한다. 사람용 Markdown과 HTML은 이를 감사 표 그대로 반복하지 않고 요구사항, 쉬운 상태와 검토 결과를 먼저 보여준다. 상태는 사용자 언어로 `충족됨`, `수정 필요`, `검증 필요`, `근거 충돌`에 해당하는 표현을 사용한다. 충족된 계약은 전체 개수와 충족 개수를 요약하고 기본으로 접으며, 정확한 ADR 근거·코드 증거·테스트는 계약별 상세 영역에서 확인할 수 있어야 한다.
 
 사람용 구현 리뷰와 refactor 결과는 해당 코드를 처음 보는 주니어 개발자를 독자로 가정한다. 피할 수 없는 도메인·기술 용어는 처음 한 번만 짧게 설명하고, finding 제목은 내부 category나 symbol보다 사용자·운영 증상을 먼저 말한다. 규칙 ID, 경로, symbol과 정확한 증거는 상세 section에 유지한다.
 
@@ -72,7 +78,7 @@ ADR contract coverage는 Decision과 requirement contract의 각 독립 행을 �
 
 `Comprehension check`는 리뷰에서 가장 중요한 개념만 골라 1개 이상 5개 이하의 중간 난이도 자유응답 질문을 제공한다. 질문은 symbol 이름이나 줄 번호 암기보다 변경 전후 동작, 인과관계, ADR 계약, 실패·경계 조건과 중요한 trade-off를 확인한다. HTML은 질문을 기본으로 접고, 사용자가 답을 입력한 뒤 명시적으로 self-check를 요청한 경우에만 판정 기준과 근거를 공개한다. 이 self-check는 comprehension readiness를 자동 판정하지 않는다.
 
-구현 verdict와 사람의 comprehension readiness는 서로 다른 판정이다. `PASS`는 코드와 ADR 계약의 검토 결과일 뿐 사용자가 구현을 이해했다는 증거가 아니다. 질문은 HTML Evidence Package에 남지만 일반 완료 응답은 질문, 채점 기준과 답변 요청을 출력하거나 대화형 퀴즈를 자동 시작하지 않는다. 완료 응답은 verdict, 핵심 결과, 테스트와 HTML 경로·열기 결과만 전달한다.
+구현 verdict와 사람의 comprehension readiness는 서로 다른 판정이다. `PASS`는 코드와 ADR 계약의 검토 결과일 뿐 사용자가 구현을 이해했다는 증거가 아니다. 질문은 HTML Evidence Package에 남지만 일반 완료 응답은 질문, 채점 기준과 답변 요청을 출력하거나 대화형 퀴즈를 자동 시작하지 않는다. 완료 응답은 verdict, 핵심 결과, 테스트와 검증된 HTML 절대 경로만 전달한다.
 
 사용자가 명시적으로 이해도 확인을 요청한 경우에만 review artifact의 질문을 한 번에 하나씩 대화형으로 진행한다. 틀리거나 불완전한 답에는 부족한 개념과 근거를 설명하고 같은 핵심 개념을 다시 확인한다. 요청이 없으면 comprehension readiness는 미확인 상태로 남지만 아키텍처 승인, ADR Status 전이, 코드 적합성 verdict와 자동 remediation을 다시 열거나 차단하지 않는다. 퀴즈 진행 상태는 영속 권위로 저장하지 않는다.
 
@@ -149,7 +155,11 @@ flowchart LR
 - 질문별 판정 기준과 ADR·코드·테스트 근거는 artifact에 포함하되 사용자가 답을 입력하고 self-check를 요청하기 전에 정답을 노출하지 않는다.
 - HTML self-check는 입력된 답이 있을 때만 판정 기준과 근거를 공개하고 comprehension readiness를 자동 판정하지 않는다.
 - 일반 완료 응답은 comprehension question, answer criteria, evidence 또는 답변 요청을 출력하지 않고 대화형 퀴즈를 자동 시작하지 않는다.
-- 일반 완료 응답은 verdict, 핵심 결과, 테스트와 HTML 경로·열기 결과만 제공한다.
+- 일반 완료 응답은 verdict, 핵심 결과, 테스트와 검증된 HTML 절대 경로만 제공한다.
+- 사람용 HTML은 finding을 `수정 필요`, `결정 필요`, `검증 필요`, `참고`로 묶고 같은 그룹에서는 중요도순을 유지한다.
+- 각 finding은 왜 중요한가, 기대 동작, 현재 동작, 요청하는 변경, 수정 위치와 완료 조건을 기본 화면에 표시한다.
+- finding category, confidence, perspective, ADR 원문, 실제 코드 조각, 증거와 테스트는 접힌 상세 기술 근거에 유지한다.
+- 필수 수정과 제안은 시각적으로 구분하며 사용자가 제안을 blocker로 오해하게 만들지 않는다.
 - 대화형 comprehension check는 사용자가 명시적으로 요청한 경우에만 시작한다.
 - 퀴즈 답은 정확한 문구가 아니라 핵심 개념과 인과관계를 기준으로 판정하고, 틀리거나 불완전하면 부족한 개념과 근거를 설명한 뒤 같은 핵심 개념을 다시 확인한다.
 - 코드 리뷰 `PASS`와 comprehension readiness를 구분하고, 명시적으로 시작한 이해도 확인에서는 준비된 모든 질문을 통과하기 전에는 PR comprehension-ready라고 안내하지 않는다.
@@ -163,6 +173,8 @@ flowchart LR
 - HTML은 한 페이지 목차와 section anchor를 제공하고 top-level 내용을 tabs로 나누지 않는다.
 - HTML은 한눈에 보기, `ADR intent`, 주제별 설명과 finding을 상세 evidence보다 먼저 표시한다.
 - 모든 contract coverage 행은 HTML에 정확히 한 번 포함하되 `PROVEN`은 기본으로 접고 나머지 상태는 펼친다.
+- contract coverage의 기계 감사 필드는 `findings.json`에 모두 유지하되 사람용 Markdown과 HTML 기본 화면에 일곱 개 독립 필드로 강제하지 않는다.
+- 사람용 coverage 상태는 사용자 언어의 쉬운 표현을 사용하고, 전체 계약 수와 충족·수정·검증·충돌 개수를 먼저 보여준다.
 - 전체 구현 범위, 변경 범위, review metrics와 Notable implementation choices는 기본으로 접는다.
 - finding은 입력된 독자 순서를 보존하고 관련 contract ID가 있으면 해당 coverage anchor로 연결한다.
 - 사용자 결정을 요구하는 finding에만 ruling control과 feedback export를 제공한다.
@@ -190,8 +202,9 @@ flowchart LR
 - Derived obligation은 부모 contract coverage에 연결하고 project/domain default는 구현 재량으로 기록한다.
 - Product decision gap은 추천안과 근거, 2~3개 대안, 영향과 정확한 ADR 문구를 포함한 Decision request로 묶는다.
 - standard와 full은 artifact validator 통과 후 같은 renderer로 자체 포함된 `adr-impl-review-report.html`을 생성한다.
-- 비어 있지 않은 HTML을 확인한 직후 환경의 기본 파일 열기 기능으로 한 번 연다.
-- 로컬 열기 기능이 없거나 열기 시도가 실패하면 리뷰 verdict를 바꾸지 않고 최종 응답에 HTML 경로와 실패 이유를 제공한다.
+- 비어 있지 않은 HTML을 확인한 뒤 정확한 절대 경로를 출력한다.
+- 일반 리뷰 흐름은 운영체제의 기본 애플리케이션이나 다른 파일 열기 기능을 호출하지 않는다.
+- 사용자가 명시적으로 요청한 경우에만 별도 사용자 작업으로 보고서를 연다.
 - HTML 생성 실패나 빈 파일은 완료로 처리하지 않으며 최종 응답은 항상 생성된 HTML 경로를 제공한다.
 - HTML은 review mode, 전체 구현 범위와 변경 범위를 구분하고 상세 evidence를 점진적으로 공개한다.
 - `implementation-review.md`와 `findings.json`은 HTML의 검증·재생성용 보조 artifact이며 별도 구현 권위가 아니다.
@@ -225,6 +238,8 @@ flowchart LR
 - 사용자 언어가 주어진 fixture는 그 언어로 설명하고, 언어 지시가 없는 fixture는 ADR 본문의 주 언어를 따른다.
 - artifact validator는 comprehension question이 1개 미만이거나 5개를 초과하고, 판정 기준·근거가 없거나 사용자 보고서가 정답을 미리 노출하면 실패한다.
 - 일반 완료 응답 fixture는 HTML에 질문이 있어도 메인 세션에 Q1, question text, answer criteria 또는 답변 요청을 출력하지 않는다.
+- 복수 finding fixture는 수정·결정·검증·참고 그룹으로 나뉘고 각 카드가 영향, 기대·현재 동작, 요청 변경, 수정 위치와 완료 조건을 보여준다.
+- 필수 수정과 참고 finding이 함께 있는 fixture는 두 항목이 다른 작업 그룹과 시각적 중요도로 표시된다.
 - 사용자가 명시적으로 이해도 확인을 요청한 fixture만 첫 질문을 출력하고 채점을 시작한다.
 - 구현의 중요 동작을 틀리게 답한 fixture는 PR-ready로 안내되지 않고 부족한 개념과 근거를 받은 뒤 재확인 경로로 이동한다.
 - 모든 질문에 의미상 맞게 답한 fixture만 PR comprehension-ready 안내를 받으며 이 결과가 구현 verdict나 ADR Status를 바꾸지 않는다.
@@ -236,7 +251,8 @@ flowchart LR
 - comprehension fixture는 답을 입력하기 전 판정 기준을 보이지 않고, 입력 뒤 self-check에서만 기준을 공개하며 PR-ready 상태를 자동 생성하지 않는다.
 - 사용자 언어가 한국어인 fixture는 HTML chrome과 `lang`을 한국어로, 영어인 fixture는 영어로 렌더링한다.
 - 중요한 구현 재량이 있으면 Markdown과 HTML이 선택 내용, 코드 근거, ADR 의도와 양립하는 이유와 중요성을 읽기 전용으로 보여준다.
-- standard와 full fixture는 모두 artifact 검증 뒤 동일한 이름의 비어 있지 않은 HTML 보고서를 생성하고 기본 열기 시도를 요구한다.
+- standard와 full fixture는 모두 artifact 검증 뒤 동일한 이름의 비어 있지 않은 HTML 보고서를 생성하고 자동 열기 없이 정확한 절대 경로만 출력한다.
+- 한국어 coverage fixture는 `PROVEN`, `VIOLATED`, `UNVERIFIED`, `CONTRADICTED` 대신 `충족됨`, `수정 필요`, `검증 필요`, `근거 충돌`을 기본 화면에 표시하고 원래 상태는 JSON에 유지한다.
 - 계약·안전에 영향을 주는 숨은 외부 전제를 fixture에 두면 reviewer가 이를 `Unverified risk`로 드러내고 `PASS`하지 않는다.
 - 언어 표준 문서 주석이 없거나 `why`·`how`가 빠지거나 ADR 파일을 직접 참조하는 fixture는 reviewer가 즉시 보완 finding을 만들고 `PASS`하지 않는다.
 - ideal case만 있고 관련 edge case가 빠진 fixture는 `Test gap`으로 실패하며, 두 범주와 문서 주석이 모두 충족된 반대 fixture는 해당 축에서 finding 없이 통과한다.
@@ -289,6 +305,14 @@ flowchart LR
     - 장점: standard 리뷰의 artifact 생성 단계가 짧다.
     - 단점: 같은 명령의 최종 전달 형식이 모드에 따라 달라진다.
 
+12. **HTML 생성 직후 운영체제 기본 애플리케이션으로 자동 열기**
+    - 장점: 사용자가 경로를 복사하거나 파일을 직접 찾지 않고 바로 읽을 수 있다.
+    - 단점: 사용자의 현재 작업과 무관하게 애플리케이션 포커스와 화면을 바꿔 인터럽트를 만든다.
+
+13. **감사 필드 전체를 사람용 기본 화면에 그대로 표시**
+    - 장점: JSON을 열지 않아도 모든 원본 근거를 한 번에 볼 수 있다.
+    - 단점: 사용자가 필수 작업, 수정 위치와 완료 조건을 직접 조합해야 한다.
+
 ## Consequences
 
 ### Positive
@@ -299,6 +323,8 @@ flowchart LR
 - 구현을 처음 보는 주니어 개발자도 ADR 의도와 중요한 사용자·운영 흐름을 먼저 이해한 뒤 필요한 증거로 내려갈 수 있다.
 - 사용자는 목차와 접힌 evidence를 이용해 긴 PASS 리포트에서 현재 판단에 필요한 부분만 읽을 수 있다.
 - 조치가 필요한 finding은 정상 coverage 전체를 지나기 전에 나타난다.
+- 사용자는 각 finding에서 필요한 작업, 수정 위치와 완료 조건을 바로 확인할 수 있다.
+- 필수 수정, 사용자 결정, 추가 검증과 참고가 분리되어 제안이 blocker처럼 보이지 않는다.
 - 사용자는 HTML의 최대 다섯 개 질문을 확인하고 필요할 때만 대화형 이해도 검사를 요청할 수 있다.
 - 구현 완료 응답이 자동 질문으로 끝나지 않아 완료 결과와 다음 사용자 입력의 경계가 분명해진다.
 - 관계가 복잡한 리뷰는 Mermaid로 흐름을 외부화하고, 단순 리뷰는 같은 형식 비용을 지불하지 않는다.
@@ -308,7 +334,8 @@ flowchart LR
 - 모델은 현재 capability와 변경 위험에 맞는 최소 orchestration을 선택할 수 있다.
 - 언어 표준 문서 주석과 ideal·edge 테스트가 구현자의 선택적 습관이 아니라 완료 검토의 검증 가능한 조건이 된다.
 - 기존 ADR을 다시 검토해도 현재 diff 밖의 구현과 간접 호출 경로를 계약별로 확인할 수 있다.
-- 사용자는 review mode와 무관하게 같은 HTML Evidence Package를 기본 애플리케이션에서 바로 확인한다.
+- 사용자는 review mode와 무관하게 같은 HTML Evidence Package의 검증된 절대 경로를 받고 원하는 시점에 연다.
+- 리뷰 완료가 다른 애플리케이션을 자동 실행하거나 현재 작업의 포커스를 바꾸지 않는다.
 - 플러그인 제거와 모델 교체가 ADR·코드·테스트의 권위 구조를 바꾸지 않는다.
 
 ### Negative
@@ -323,11 +350,12 @@ flowchart LR
 - 사용자가 대화형 이해도 확인을 요청하지 않으면 comprehension readiness는 계속 미확인 상태로 남는다.
 - 읽기 전용 구현 선택 목록은 사용자별 판정 상태를 저장하지 않는다.
 - 상세 evidence를 확인하려는 사용자는 접힌 section을 한 번 더 펼쳐야 한다.
+- 감사 필드 전체를 한 화면에서 보려면 상세 기술 근거를 펼치거나 `findings.json`을 확인해야 한다.
 - HTML의 Mermaid renderer는 지원하는 문법 범위를 벗어나면 source fallback을 보여준다.
 - 함수별 문서 주석과 edge case 검토가 추가되어 작은 구현의 완료 비용이 늘어난다.
 - 전체 구현 범위를 다시 찾으므로 오래된 ADR이나 넓게 퍼진 구현의 검토 비용이 증가한다.
 - standard도 HTML renderer를 실행하므로 파일 생성과 확인 단계가 추가된다.
-- 모든 모드가 로컬 파일 열기를 시도하므로 headless 환경에서는 실패 이유를 보고하는 단계가 추가된다.
+- 사용자가 보고서를 읽으려면 표시된 경로를 직접 열거나 명시적으로 열기를 요청해야 한다.
 - 같은 review contract라도 모델과 실행 환경에 따라 agent 수와 실행 순서가 달라질 수 있다.
 
 ### Risks
@@ -353,7 +381,7 @@ flowchart LR
 - progressive disclosure가 중요한 근거를 숨긴 것처럼 보일 수 있다. summary에 상태별 개수를 표시하고 모든 행을 목차와 anchor로 접근 가능하게 유지한다.
 - Mermaid renderer가 일부 source를 해석하지 못할 수 있다. 관계를 추측하지 않고 warning과 원문 `<pre>`를 제공한다.
 - self-check가 의미상 정답 판정으로 오해될 수 있다. 판정 기준 비교임을 표시하고 PR comprehension-ready 판정은 대화형 검사를 통해서만 제공한다.
-- 로컬 파일 열기 기능이 없거나 실행에 실패할 수 있다. 검증된 HTML 경로와 실패 이유를 표시하고 리뷰 verdict는 유지한다.
+- 모델이 기존 습관대로 로컬 파일을 자동으로 열 수 있다. artifact contract와 정적 테스트는 경로 출력만 허용하고 운영체제 opener 호출을 금지한다.
 - 상세 guide가 필요한 finding을 짧게 끝낼 수 있다. `FIX_REQUIRED`와 `BLOCK`에는 finding별 변경 범위와 완료 기준을 요구한다.
 - orchestration 자유가 관점 누락으로 이어질 수 있다. artifact validator와 behavior eval은 agent 호출 형태가 아니라 coverage, 관점, 증거와 판정을 검증한다.
 

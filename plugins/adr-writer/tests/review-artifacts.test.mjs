@@ -65,6 +65,18 @@ function validParserComprehensionCheck() {
   };
 }
 
+function actionFields(overrides = {}) {
+  return {
+    whyItMatters: "Duplicate completion creates an incorrect durable result.",
+    expectedBehavior: "One request creates at most one completion record.",
+    observedBehavior: "The current path can write two completion records.",
+    requestedChange: "Make the completion boundary reject or reuse duplicate work.",
+    editTargets: "src/stream.mjs — completion boundary",
+    completionCriteria: "The duplicate-settlement test passes with exactly one record.",
+    ...overrides,
+  };
+}
+
 function withArtifacts(run) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "adr-review-artifacts-"));
   try {
@@ -139,10 +151,10 @@ The handler records completion only after provider success.
 - Needs confirmation: none
 
 ## ADR contract coverage
-| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
-| --- | --- | --- | --- | --- | --- | --- |
-| D0 | Idempotent settlement boundary | PROVEN | Decision | Settlement has a single completion boundary | src/stream.mjs:4 | node --test test/stream.test.mjs — PASS |
-| R1 | Settlement completes at most once | VIOLATED | Settlement completes at most once | The current settlement path can write twice | src/stream.mjs:12 | node --test test/stream.test.mjs — FAIL |
+| Contract | Status | Requirement | Review result |
+| --- | --- | --- | --- |
+| D0 | Met | Idempotent settlement boundary | Settlement has a single completion boundary |
+| R1 | Fix required | Settlement completes at most once | The current settlement path can write twice |
 
 ## Notable implementation choices
 | Selected value or behavior | Code evidence | Why it fits the ADR intent | Why it matters |
@@ -168,12 +180,12 @@ Fix F1 before merge.
 function validReportWithInlineCodeCells() {
   return validReport()
     .replace(
-      "| D0 | Idempotent settlement boundary | PROVEN |",
-      "| `D0` | Idempotent settlement boundary | `PROVEN` |",
+      "| D0 | Met | Idempotent settlement boundary |",
+      "| `D0` | `Met` | Idempotent settlement boundary |",
     )
     .replace(
-      "| R1 | Settlement completes at most once | VIOLATED |",
-      "| `R1` | Settlement completes at most once | `VIOLATED` |",
+      "| R1 | Fix required | Settlement completes at most once |",
+      "| `R1` | `Fix required` | Settlement completes at most once |",
     );
 }
 
@@ -229,6 +241,7 @@ function validFindings(dir) {
     ],
     findings: [
       {
+        ...actionFields(),
         category: "Spec violation",
         perspective: "sufficiency",
         summary: "settlement can run twice",
@@ -271,10 +284,10 @@ Input validation remains ahead of output construction.
 None
 
 ## ADR contract coverage
-| Contract ID | Requirement | Status | ADR basis | How the implementation meets it | Evidence | Tests |
-| --- | --- | --- | --- | --- | --- | --- |
-| D0 | Parser compatibility | PROVEN | Decision | The parser preserves accepted inputs and outputs | src/parser.mjs | node --test test/parser.test.mjs — PASS |
-| R1 | Existing parsing behavior remains unchanged | PROVEN | Existing parsing behavior remains unchanged | The parser preserves accepted inputs and outputs | src/parser.mjs | node --test test/parser.test.mjs — PASS |
+| Contract | Status | Requirement | Review result |
+| --- | --- | --- | --- |
+| D0 | Met | Parser compatibility | The parser preserves accepted inputs and outputs |
+| R1 | Met | Existing parsing behavior remains unchanged | The parser preserves accepted inputs and outputs |
 
 ## Notable implementation choices
 None found.
@@ -320,11 +333,13 @@ test("review artifact validator rejects missing core headings and evidence field
     writeFileSync(path.join(dir, "implementation-review.md"), "# short report\n");
     const findings = validFindings(dir);
     delete findings.findings[0].evidence;
+    delete findings.findings[0].whyItMatters;
     writeFileSync(path.join(dir, "findings.json"), JSON.stringify(findings, null, 2));
 
     const result = validate(dir);
     assert.equal(result.status, 1);
     assert.match(result.stderr, /evidence must be a non-empty string/);
+    assert.match(result.stderr, /whyItMatters must be a non-empty string/);
     assert.match(result.stderr, /missing: ## ADR contract coverage/);
     assert.doesNotMatch(result.stderr, /Mermaid|flowchart|sequenceDiagram/);
   });
@@ -531,6 +546,14 @@ test("PASS rejects omitted ADR rows, duplicate IDs, unexecuted tests, and blocki
     findings.metrics.sufficiencyFindingCount = 1;
     findings.findings = [
       {
+        ...actionFields({
+          whyItMatters: "Parser compatibility is not protected by executable evidence.",
+          expectedBehavior: "Accepted parser inputs and outputs remain unchanged.",
+          observedBehavior: "The parser path has not been executed.",
+          requestedChange: "Add and run the parser compatibility test.",
+          editTargets: "test/parser.test.mjs",
+          completionCriteria: "The compatibility test detects a behavior change and passes.",
+        }),
         category: "Test gap",
         perspective: "sufficiency",
         summary: "parser behavior was not executed",
@@ -554,14 +577,14 @@ test("PASS rejects omitted ADR rows, duplicate IDs, unexecuted tests, and blocki
   });
 });
 
-test("human-facing report requires complete coverage and implementation-choice tables", () => {
+test("human-facing report requires complete coverage and implementation-choice summaries", () => {
   withArtifacts((dir) => {
     writeFileSync(
       path.join(dir, "implementation-review.md"),
       validReport()
         .replace(
-          "| R1 | Settlement completes at most once | VIOLATED | Settlement completes at most once | The current settlement path can write twice | src/stream.mjs:12 | node --test test/stream.test.mjs — FAIL |",
-          "| R1 | Settlement completes at most once | VIOLATED |",
+          "| R1 | Fix required | Settlement completes at most once | The current settlement path can write twice |",
+          "| R1 | Fix required |",
         )
         .replace(
           "| 250 ms fixed retry | src/stream.mjs:8 | Preserves bounded recovery | Affects recovery latency |",
@@ -573,7 +596,7 @@ test("human-facing report requires complete coverage and implementation-choice t
 
     const result = validate(dir);
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /must have seven non-empty columns/);
+    assert.match(result.stderr, /must have four non-empty summary columns/);
     assert.match(result.stderr, /must have four non-empty columns/);
   });
 });

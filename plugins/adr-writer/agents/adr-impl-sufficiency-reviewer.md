@@ -173,7 +173,7 @@ Separate the character of each code/ADR disagreement. This is **symmetric** with
 
 ## Report
 
-Respond in this format only — never rewrite the code or the ADR. The caller (`/adr-impl-review`) serializes this punch list into findings JSON. Every finding must carry `perspective: sufficiency`, `confidence`, the ADR/code basis, `evidence`, `test`, and `testResult`. State a test you could not run as `testResult: NOT RUN — <reason>`. Do not omit `fix`, `route`, `basis`, `weight`, or `impact` where they apply.
+Respond in this format only — never rewrite the code or the ADR. The caller (`/adr-impl-review`) serializes this punch list into findings JSON. Every finding must carry `perspective: sufficiency`, `confidence`, the ADR/code basis, `evidence`, `test`, and `testResult`, plus plain-language `whyItMatters`, `expectedBehavior`, `observedBehavior`, `requestedChange`, `editTargets`, and `completionCriteria`. State a test you could not run as `testResult: NOT RUN — <reason>`. Do not omit `fix`, `route`, `basis`, `weight`, or `impact` where they apply.
 
 Evidence discipline — **quote the actually conflicting line for code-side evidence** (no paraphrasing). A summary like "the handler does not do X" cannot be audited for false positives after the fact. Write `file:line` plus the real code fragment so the user can compare directly. Before declaring a decision `missing`, assume you have checked call paths, indirect invocations, and differently named symbols (the section-2.5 ledger). A gray-zone decision is not a precise spec — do not flag a different realization within the discretion the ADR left open. When confidence is low, mark `confidence: low` and never state it as though it were an automatic fix target.
 

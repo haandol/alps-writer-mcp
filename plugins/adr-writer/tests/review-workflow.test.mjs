@@ -392,20 +392,18 @@ test("adr-impl promotes only after verified refactoring, tests, and final review
   assert.match(artifactContract, /Validate and build the HTML in both modes/i);
   assert.match(
     artifactContract,
-    /node \$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/adr-impl-review-open\.mjs <artifact-dir>\/adr-impl-review-report\.html/i,
+    /node \$\{CLAUDE_PLUGIN_ROOT\}\/scripts\/adr-impl-review-path\.mjs <artifact-dir>\/adr-impl-review-report\.html/i,
   );
-  assert.match(
-    artifactContract,
-    /`NOT_OPENED` result for a valid artifact[\s\S]{0,160}provide the exact path/i,
-  );
+  assert.match(artifactContract, /prints only its\s+exact absolute path/i);
   assert.match(
     finalReviewContract,
     /Never report either review mode complete without a validated, non-empty `adr-impl-review-report\.html`/i,
   );
   assert.match(
     finalReviewContract,
-    /Never finish either review mode without running `adr-impl-review-open\.mjs` once/i,
+    /Never finish either review mode without running `adr-impl-review-path\.mjs`/i,
   );
+  assert.match(finalReviewContract, /Never open the HTML report automatically/i);
 
   const explainer = read("agents/adr-impl-explainer.md");
   const necessity = read("agents/adr-impl-necessity-reviewer.md");
@@ -598,7 +596,8 @@ test("implementation review keeps contract evidence without a mandatory merge ch
   assert.match(writer, /PROVEN/);
   assert.match(reviewContract, /contractCoverage/);
   assert.match(reviewContract, /PASS.*every contract-coverage row.*PROVEN/is);
-  assert.match(materializer, /How the implementation meets it/);
+  assert.match(materializer, /Review result/);
+  assert.match(materializer, /seven audit fields remain authoritative in findings\.json/i);
   assert.match(materializer, /Selected value or behavior/);
   assert.match(writer, /generated from findings\.json/);
   assert.match(artifactContract, /adr-impl-review-materialize\.mjs/);
